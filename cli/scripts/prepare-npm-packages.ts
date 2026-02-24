@@ -86,7 +86,7 @@ function generatePlatformPackageJson(
     mainPkg: MainPackageJson
 ): object {
     return {
-        name: `@twsxtd/hapi-${platform.name}`,
+        name: `@ofeiss/hapi-${platform.name}`,
         version: mainPkg.version,
         description: `hapi binary for ${platform.os} ${platform.cpu}`,
         os: [platform.os],
@@ -104,7 +104,7 @@ function buildOptionalDependencies(version: string): Record<string, string> {
     const optionalDependencies: Record<string, string> = {};
 
     for (const platform of PLATFORMS) {
-        optionalDependencies[`@twsxtd/hapi-${platform.name}`] = version;
+        optionalDependencies[`@ofeiss/hapi-${platform.name}`] = version;
     }
 
     return optionalDependencies;

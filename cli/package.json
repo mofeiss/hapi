@@ -1,6 +1,6 @@
 {
   "name": "@ofeiss/hapi",
-  "version": "0.15.2",
+  "version": "0.15.5",
   "description": "App for agentic coding - access coding agent anywhere",
   "author": "Kirill Dubovitskiy & weishu",
   "license": "AGPL-3.0-only",
@@ -26,11 +26,11 @@
     }
   },
   "optionalDependencies": {
-    "@twsxtd/hapi-darwin-arm64": "0.15.2",
-    "@twsxtd/hapi-darwin-x64": "0.15.2",
-    "@twsxtd/hapi-linux-arm64": "0.15.2",
-    "@twsxtd/hapi-linux-x64": "0.15.2",
-    "@twsxtd/hapi-win32-x64": "0.15.2"
+    "@ofeiss/hapi-darwin-arm64": "0.15.5",
+    "@ofeiss/hapi-darwin-x64": "0.15.5",
+    "@ofeiss/hapi-linux-arm64": "0.15.5",
+    "@ofeiss/hapi-linux-x64": "0.15.5",
+    "@ofeiss/hapi-win32-x64": "0.15.5"
   },
   "scripts": {
     "postinstall": "node -e \"try{require('fs').chmodSync(require('path').join(__dirname,'bin','hapi.cjs'),0o755)}catch(e){}\"",
@@ -51,7 +51,6 @@
     "release-all": "bun run scripts/release-all.ts"
   },
   "dependencies": {
-    "@hapi/protocol": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.25.1",
     "@types/cross-spawn": "^6.0.6",
     "@types/ps-list": "^6.2.1",
@@ -70,6 +69,7 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@hapi/protocol": "workspace:*",
     "@types/node": ">=25",
     "bun-types": "^1.3.5",
     "dotenv": "^17.2.3",
