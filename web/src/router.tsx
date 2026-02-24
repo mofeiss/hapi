@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
     Navigate,
@@ -94,6 +94,26 @@ function SettingsIcon(props: { className?: string }) {
     )
 }
 
+function SidebarCollapseIcon(props: { className?: string }) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 3v18" />
+            <path d="m16 15-3-3 3-3" />
+        </svg>
+    )
+}
+
+function SidebarExpandIcon(props: { className?: string }) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M9 3v18" />
+            <path d="m14 9 3 3-3 3" />
+        </svg>
+    )
+}
+
 function SessionsPage() {
     const { api } = useAppContext()
     const navigate = useNavigate()
@@ -111,15 +131,76 @@ function SessionsPage() {
     const selectedSessionId = sessionMatch && sessionMatch.sessionId !== 'new' ? sessionMatch.sessionId : null
     const isSessionsIndex = pathname === '/sessions' || pathname === '/sessions/'
 
+    // Panel resize state (persisted to localStorage)
+    const [panelWidth, setPanelWidth] = useState(() => {
+        const stored = localStorage.getItem('hapi:panel:leftWidth')
+        return stored ? Math.max(280, Number(stored)) : 420
+    })
+
+    const [collapsed, setCollapsed] = useState(() => {
+        return localStorage.getItem('hapi:panel:collapsed') === 'true'
+    })
+
+    const handleDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        const startX = e.clientX
+        const startWidth = panelWidth
+        const el = e.currentTarget
+        el.setPointerCapture(e.pointerId)
+
+        const onMove = (ev: PointerEvent) => {
+            const delta = ev.clientX - startX
+            const maxW = window.innerWidth * 0.5
+            setPanelWidth(Math.round(Math.min(Math.max(startWidth + delta, 280), maxW)))
+        }
+
+        const onUp = (ev: PointerEvent) => {
+            el.removeEventListener('pointermove', onMove)
+            el.removeEventListener('pointerup', onUp)
+            el.releasePointerCapture(ev.pointerId)
+            const delta = ev.clientX - startX
+            const maxW = window.innerWidth * 0.5
+            const finalWidth = Math.round(Math.min(Math.max(startWidth + delta, 280), maxW))
+            localStorage.setItem('hapi:panel:leftWidth', String(finalWidth))
+        }
+
+        el.addEventListener('pointermove', onMove)
+        el.addEventListener('pointerup', onUp)
+    }, [panelWidth])
+
+    const toggleCollapsed = useCallback(() => {
+        setCollapsed(prev => {
+            const next = !prev
+            localStorage.setItem('hapi:panel:collapsed', String(next))
+            return next
+        })
+    }, [])
+
+    const leftPanelVisible = collapsed
+        ? (isSessionsIndex ? 'flex lg:hidden' : 'hidden')
+        : (isSessionsIndex ? 'flex' : 'hidden lg:flex')
+
     return (
         <div className="flex h-full min-h-0">
+            {/* Left panel */}
             <div
-                className={`${isSessionsIndex ? 'flex' : 'hidden lg:flex'} w-full lg:w-[420px] xl:w-[480px] shrink-0 flex-col bg-[var(--app-bg)] lg:border-r lg:border-[var(--app-divider)]`}
+                className={`${leftPanelVisible} max-lg:!w-full shrink-0 flex-col bg-[var(--app-bg)] lg:border-r lg:border-[var(--app-divider)]`}
+                style={{ width: panelWidth }}
             >
                 <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
                     <div className="mx-auto w-full max-w-content flex items-center justify-between px-3 py-2">
-                        <div className="text-xs text-[var(--app-hint)]">
-                            {t('sessions.count', { n: sessions.length, m: projectCount })}
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={toggleCollapsed}
+                                className="hidden lg:inline-flex p-1 rounded text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                                title="Collapse sidebar"
+                            >
+                                <SidebarCollapseIcon className="h-4 w-4" />
+                            </button>
+                            <div className="text-xs text-[var(--app-hint)]">
+                                {t('sessions.count', { n: sessions.length, m: projectCount })}
+                            </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -164,6 +245,29 @@ function SessionsPage() {
                 </div>
             </div>
 
+            {/* Drag handle (PC only, when not collapsed) */}
+            {!collapsed && (
+                <div
+                    className="hidden lg:flex items-center w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-[var(--app-link)]/20 active:bg-[var(--app-link)]/40 transition-colors"
+                    onPointerDown={handleDragStart}
+                />
+            )}
+
+            {/* Expand sidebar strip (PC only, when collapsed) */}
+            {collapsed && (
+                <div className="hidden lg:flex flex-col items-center shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
+                    <button
+                        type="button"
+                        onClick={toggleCollapsed}
+                        className="p-2 mt-1.5 text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] rounded transition-colors"
+                        title="Expand sidebar"
+                    >
+                        <SidebarExpandIcon className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Right panel */}
             <div className={`${isSessionsIndex ? 'hidden lg:flex' : 'flex'} min-w-0 flex-1 flex-col bg-[var(--app-bg)]`}>
                 <div className="flex-1 min-h-0">
                     <Outlet />
