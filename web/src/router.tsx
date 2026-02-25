@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
     Navigate,
@@ -111,6 +111,8 @@ function SidebarExpandIcon(props: { className?: string }) {
     )
 }
 
+const MAX_CACHED_SESSIONS = 3
+
 function SessionsPage() {
     const { api } = useAppContext()
     const navigate = useNavigate()
@@ -142,6 +144,58 @@ function SessionsPage() {
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [newSessionOpen, setNewSessionOpen] = useState(false)
     const hasOverlay = settingsOpen || newSessionOpen
+
+    // Session keep-alive state
+    const [activeSessionId, setActiveSessionId] = useState<string | null>(selectedSessionId)
+    const [mountedSessions, setMountedSessions] = useState<string[]>(selectedSessionId ? [selectedSessionId] : [])
+    const activeSessionRef = useRef(activeSessionId)
+    activeSessionRef.current = activeSessionId
+
+    // Sync URL → state for browser back/forward
+    useEffect(() => {
+        if (selectedSessionId !== activeSessionRef.current) {
+            if (selectedSessionId) {
+                setActiveSessionId(selectedSessionId)
+                setMountedSessions(prev => {
+                    const filtered = prev.filter(id => id !== selectedSessionId)
+                    const next = [...filtered, selectedSessionId]
+                    return next.length > MAX_CACHED_SESSIONS ? next.slice(-MAX_CACHED_SESSIONS) : next
+                })
+            } else {
+                setActiveSessionId(null)
+            }
+        }
+    }, [selectedSessionId])
+
+    const handleSelectSession = useCallback((sessionId: string) => {
+        setActiveSessionId(sessionId)
+        setMountedSessions(prev => {
+            const filtered = prev.filter(id => id !== sessionId)
+            const next = [...filtered, sessionId]
+            return next.length > MAX_CACHED_SESSIONS ? next.slice(-MAX_CACHED_SESSIONS) : next
+        })
+        setSettingsOpen(false)
+        setNewSessionOpen(false)
+        navigate({ to: '/sessions/$sessionId', params: { sessionId } })
+    }, [navigate])
+
+    const handleSessionBack = useCallback(() => {
+        setActiveSessionId(null)
+        navigate({ to: '/sessions' })
+    }, [navigate])
+
+    const handleSessionDeleted = useCallback((deletedId: string) => {
+        setMountedSessions(prev => prev.filter(id => id !== deletedId))
+        if (activeSessionRef.current === deletedId) {
+            setActiveSessionId(null)
+            navigate({ to: '/sessions' })
+        }
+    }, [navigate])
+
+    const isSubRoute = activeSessionId !== null &&
+        pathname !== `/sessions/${activeSessionId}` &&
+        pathname !== `/sessions/${activeSessionId}/` &&
+        pathname.startsWith(`/sessions/${activeSessionId}/`)
 
     const handleDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         e.preventDefault()
@@ -233,11 +287,8 @@ function SessionsPage() {
                     ) : null}
                     <SessionList
                         sessions={sessions}
-                        selectedSessionId={selectedSessionId}
-                        onSelect={(sessionId) => navigate({
-                            to: '/sessions/$sessionId',
-                            params: { sessionId },
-                        })}
+                        selectedSessionId={activeSessionId}
+                        onSelect={handleSelectSession}
                         onNewSession={() => { setNewSessionOpen(true); setSettingsOpen(false) }}
                         onRefresh={handleRefresh}
                         isLoading={isLoading}
@@ -277,6 +328,20 @@ function SessionsPage() {
                     <Outlet />
                 </div>
 
+                {/* Session views (keep-alive) */}
+                {mountedSessions.map(sid => (
+                    <div
+                        key={sid}
+                        className={`absolute inset-0 z-30 bg-[var(--app-bg)] transition-opacity duration-200 ${sid === activeSessionId && !isSubRoute ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                    >
+                        <SessionView
+                            sessionId={sid}
+                            onBack={handleSessionBack}
+                            onSessionDeleted={() => handleSessionDeleted(sid)}
+                        />
+                    </div>
+                ))}
+
                 {/* Settings overlay */}
                 <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${settingsOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <SettingsPanel onClose={() => setSettingsOpen(false)} />
@@ -295,14 +360,16 @@ function SessionsIndexPage() {
     return null
 }
 
-function SessionPage() {
+function SessionView({ sessionId, onBack, onSessionDeleted }: {
+    sessionId: string
+    onBack: () => void
+    onSessionDeleted?: () => void
+}) {
     const { api } = useAppContext()
     const { t } = useTranslation()
-    const goBack = useAppGoBack()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const { addToast } = useToast()
-    const { sessionId } = useParams({ from: '/sessions/$sessionId' })
     const {
         session,
         refetch: refetchSession,
@@ -378,11 +445,9 @@ function SessionPage() {
                     url: ''
                 })
             }
-            // 'no-session' and 'pending' don't need toast - either invalid state or expected behavior
         }
     })
 
-    // Get agent type from session metadata for slash commands
     const agentType = session?.metadata?.flavor ?? 'claude'
     const {
         getSuggestions: getSlashSuggestions,
@@ -423,7 +488,7 @@ function SessionPage() {
             isSending={isSending}
             pendingCount={pendingCount}
             messagesVersion={messagesVersion}
-            onBack={goBack}
+            onBack={onBack}
             onRefresh={refreshSelectedSession}
             onLoadMore={loadMoreMessages}
             onSend={sendMessage}
@@ -431,8 +496,15 @@ function SessionPage() {
             onAtBottomChange={setAtBottom}
             onRetryMessage={retryMessage}
             autocompleteSuggestions={getAutocompleteSuggestions}
+            onSessionDeleted={onSessionDeleted}
         />
     )
+}
+
+function SessionPage() {
+    const goBack = useAppGoBack()
+    const { sessionId } = useParams({ from: '/sessions/$sessionId' })
+    return <SessionView sessionId={sessionId} onBack={goBack} />
 }
 
 function SessionDetailRoute() {
@@ -441,7 +513,8 @@ function SessionDetailRoute() {
     const basePath = `/sessions/${sessionId}`
     const isChat = pathname === basePath || pathname === `${basePath}/`
 
-    return isChat ? <SessionPage /> : <Outlet />
+    // Chat view is handled by SessionsPage's keep-alive overlay system
+    return isChat ? null : <Outlet />
 }
 
 function NewSessionPanel({ onClose }: { onClose: () => void }) {

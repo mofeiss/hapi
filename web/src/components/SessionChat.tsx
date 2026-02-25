@@ -37,6 +37,7 @@ export function SessionChat(props: {
     onFlushPending: () => void
     onAtBottomChange: (atBottom: boolean) => void
     onRetryMessage?: (localId: string) => void
+    onSessionDeleted?: () => void
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
 }) {
     const { haptic } = usePlatform()
@@ -271,7 +272,7 @@ export function SessionChat(props: {
                 onBack={props.onBack}
                 onViewFiles={props.session.metadata?.path ? handleViewFiles : undefined}
                 api={props.api}
-                onSessionDeleted={props.onBack}
+                onSessionDeleted={props.onSessionDeleted ?? props.onBack}
             />
 
             {sessionInactive ? (
