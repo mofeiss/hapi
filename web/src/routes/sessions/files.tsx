@@ -144,7 +144,8 @@ function GitFileRow(props: {
     onOpen: () => void
     showDivider: boolean
 }) {
-    const subtitle = props.file.filePath || 'project root'
+    const { t } = useTranslation()
+    const subtitle = props.file.filePath || t('files.projectRoot')
 
     return (
         <button
@@ -170,7 +171,8 @@ function SearchResultRow(props: {
     onOpen: () => void
     showDivider: boolean
 }) {
-    const subtitle = props.file.filePath || 'project root'
+    const { t } = useTranslation()
+    const subtitle = props.file.filePath || t('files.projectRoot')
     const icon = props.file.fileType === 'file'
         ? <FileIcon fileName={props.file.fileName} size={22} />
         : <FolderIcon className="text-[var(--app-link)]" />
@@ -289,12 +291,12 @@ function InlineDiffDisplay(props: { diffContent: string }) {
     )
 }
 
-function FileContentSkeleton() {
+function FileContentSkeleton(props: { label?: string }) {
     const widths = ['w-full', 'w-11/12', 'w-5/6', 'w-3/4', 'w-2/3', 'w-4/5']
 
     return (
         <div role="status" aria-live="polite">
-            <span className="sr-only">Loading file…</span>
+            <span className="sr-only">{props.label ?? 'Loading file…'}</span>
             <div className="animate-pulse space-y-2 rounded-md border border-[var(--app-border)] bg-[var(--app-code-bg)] p-3">
                 {Array.from({ length: 12 }).map((_, index) => (
                     <div key={`file-skeleton-${index}`} className={`h-3 ${widths[index % widths.length]} rounded bg-[var(--app-subtle-bg)]`} />
@@ -311,6 +313,7 @@ function InlineFileView(props: {
     onClose: () => void
 }) {
     const { api } = useAppContext()
+    const { t } = useTranslation()
     const { copied: pathCopied, copy: copyPath } = useCopyToClipboard()
     const { copied: contentCopied, copy: copyContent } = useCopyToClipboard()
 
@@ -399,7 +402,7 @@ function InlineFileView(props: {
                     type="button"
                     onClick={() => copyPath(props.filePath)}
                     className="shrink-0 rounded p-1 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)] transition-colors"
-                    title="Copy path"
+                    title={t('files.viewer.copyPath')}
                 >
                     {pathCopied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
                 </button>
@@ -412,14 +415,14 @@ function InlineFileView(props: {
                         onClick={() => setDisplayMode('diff')}
                         className={`rounded px-3 py-1 text-xs font-semibold ${displayMode === 'diff' ? 'bg-[var(--app-button)] text-[var(--app-button-text)] opacity-80' : 'bg-[var(--app-subtle-bg)] text-[var(--app-hint)]'}`}
                     >
-                        Diff
+                        {t('files.viewer.diff')}
                     </button>
                     <button
                         type="button"
                         onClick={() => setDisplayMode('file')}
                         className={`rounded px-3 py-1 text-xs font-semibold ${displayMode === 'file' ? 'bg-[var(--app-button)] text-[var(--app-button-text)] opacity-80' : 'bg-[var(--app-subtle-bg)] text-[var(--app-hint)]'}`}
                     >
-                        File
+                        {t('files.viewer.file')}
                     </button>
                 </div>
             ) : null}
@@ -431,12 +434,12 @@ function InlineFileView(props: {
                     </div>
                 ) : null}
                 {loading ? (
-                    <FileContentSkeleton />
+                    <FileContentSkeleton label={t('files.viewer.loading')} />
                 ) : fileError ? (
                     <div className="text-sm text-[var(--app-hint)]">{fileError}</div>
                 ) : binaryFile ? (
                     <div className="text-sm text-[var(--app-hint)]">
-                        This looks like a binary file. It cannot be displayed.
+                        {t('files.viewer.binary')}
                     </div>
                 ) : displayMode === 'diff' && diffContent ? (
                     <InlineDiffDisplay diffContent={diffContent} />
@@ -448,7 +451,7 @@ function InlineFileView(props: {
                                     type="button"
                                     onClick={() => copyContent(decodedContent)}
                                     className="absolute right-2 top-2 z-10 rounded p-1 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)] transition-colors"
-                                    title="Copy file content"
+                                    title={t('files.viewer.copyContent')}
                                 >
                                     {contentCopied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
                                 </button>
@@ -458,10 +461,10 @@ function InlineFileView(props: {
                             </pre>
                         </div>
                     ) : (
-                        <div className="text-sm text-[var(--app-hint)]">File is empty.</div>
+                        <div className="text-sm text-[var(--app-hint)]">{t('files.viewer.empty')}</div>
                     )
                 ) : (
-                    <div className="text-sm text-[var(--app-hint)]">No changes to display.</div>
+                    <div className="text-sm text-[var(--app-hint)]">{t('files.viewer.noChanges')}</div>
                 )}
             </div>
         </div>
@@ -539,7 +542,7 @@ export function FilesPanel({ sessionId }: { sessionId: string }) {
                         <input
                             value={searchQuery}
                             onChange={(event) => setSearchQuery(event.target.value)}
-                            placeholder="Search files"
+                            placeholder={t('files.search.placeholder')}
                             className="w-full bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none"
                             autoCapitalize="none"
                             autoCorrect="off"
@@ -548,7 +551,7 @@ export function FilesPanel({ sessionId }: { sessionId: string }) {
                             type="button"
                             onClick={handleRefresh}
                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                            title="Refresh"
+                            title={t('files.search.refresh')}
                         >
                             <RefreshIcon />
                         </button>
@@ -593,7 +596,7 @@ export function FilesPanel({ sessionId }: { sessionId: string }) {
                             <span className="font-semibold">{branchLabel}</span>
                         </div>
                         <div className="text-xs text-[var(--app-hint)]">
-                            {gitStatus.totalStaged} staged, {gitStatus.totalUnstaged} unstaged
+                            {gitStatus.totalStaged} {t('files.git.staged')}, {gitStatus.totalUnstaged} {t('files.git.unstaged')}
                         </div>
                     </div>
                 </div>
@@ -616,12 +619,12 @@ export function FilesPanel({ sessionId }: { sessionId: string }) {
                     ) : null}
                     {!selectedFile && shouldSearch ? (
                         searchResults.isLoading ? (
-                            <FileListSkeleton label="Loading files…" />
+                            <FileListSkeleton label={t('files.search.loading')} />
                         ) : searchResults.error ? (
                             <div className="p-6 text-sm text-[var(--app-hint)]">{searchResults.error}</div>
                         ) : searchResults.files.length === 0 ? (
                             <div className="p-6 text-sm text-[var(--app-hint)]">
-                                {searchQuery ? 'No files match your search.' : 'No files found in this project.'}
+                                {searchQuery ? t('files.search.noMatch') : t('files.search.noFiles')}
                             </div>
                         ) : (
                             <div className="border-t border-[var(--app-divider)]">
@@ -643,13 +646,13 @@ export function FilesPanel({ sessionId }: { sessionId: string }) {
                             onOpenFile={(path) => handleOpenFile(path)}
                         />
                     ) : !selectedFile && gitLoading ? (
-                        <FileListSkeleton label="Loading Git status…" />
+                        <FileListSkeleton label={t('files.git.loading')} />
                     ) : !selectedFile ? (
                         <div>
                             {gitStatus?.stagedFiles.length ? (
                                 <div>
                                     <div className="border-b border-[var(--app-divider)] bg-[var(--app-bg)] px-3 py-2 text-xs font-semibold text-[var(--app-git-staged-color)]">
-                                        Staged Changes ({gitStatus.stagedFiles.length})
+                                        {t('files.git.stagedChanges')} ({gitStatus.stagedFiles.length})
                                     </div>
                                     {gitStatus.stagedFiles.map((file, index) => (
                                         <GitFileRow
@@ -665,7 +668,7 @@ export function FilesPanel({ sessionId }: { sessionId: string }) {
                             {gitStatus?.unstagedFiles.length ? (
                                 <div>
                                     <div className="border-b border-[var(--app-divider)] bg-[var(--app-bg)] px-3 py-2 text-xs font-semibold text-[var(--app-git-unstaged-color)]">
-                                        Unstaged Changes ({gitStatus.unstagedFiles.length})
+                                        {t('files.git.unstagedChanges')} ({gitStatus.unstagedFiles.length})
                                     </div>
                                     {gitStatus.unstagedFiles.map((file, index) => (
                                         <GitFileRow
@@ -680,13 +683,13 @@ export function FilesPanel({ sessionId }: { sessionId: string }) {
 
                             {!gitStatus ? (
                                 <div className="p-6 text-sm text-[var(--app-hint)]">
-                                    Git status unavailable. Use Directories to browse all files, or search.
+                                    {t('files.git.unavailable')}
                                 </div>
                             ) : null}
 
                             {gitStatus && gitStatus.stagedFiles.length === 0 && gitStatus.unstagedFiles.length === 0 ? (
                                 <div className="p-6 text-sm text-[var(--app-hint)]">
-                                    No changes detected. Use Directories to browse all files, or search.
+                                    {t('files.git.noChanges')}
                                 </div>
                             ) : null}
                         </div>
