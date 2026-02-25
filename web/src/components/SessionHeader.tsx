@@ -95,7 +95,8 @@ function WidescreenIcon(props: { className?: string; active?: boolean }) {
 export function SessionHeader(props: {
     session: Session
     onBack: () => void
-    onViewFiles?: () => void
+    onToggleFiles?: () => void
+    filesOpen?: boolean
     api: ApiClient | null
     onSessionDeleted?: () => void
 }) {
@@ -186,11 +187,15 @@ export function SessionHeader(props: {
                         </div>
                     </div>
 
-                    {props.onViewFiles ? (
+                    {props.onToggleFiles ? (
                         <button
                             type="button"
-                            onClick={props.onViewFiles}
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                            onClick={props.onToggleFiles}
+                            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                                props.filesOpen
+                                    ? 'bg-[var(--app-bg)] text-[var(--app-link)]'
+                                    : 'text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
+                            }`}
                             title={t('session.title')}
                         >
                             <FilesIcon />

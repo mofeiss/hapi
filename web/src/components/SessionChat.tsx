@@ -232,8 +232,8 @@ export function SessionChat(props: {
 
     const [filesOpen, setFilesOpen] = useState(false)
 
-    const handleViewFiles = useCallback(() => {
-        setFilesOpen(true)
+    const handleToggleFiles = useCallback(() => {
+        setFilesOpen(prev => !prev)
     }, [])
 
     const handleViewTerminal = useCallback(() => {
@@ -270,7 +270,8 @@ export function SessionChat(props: {
             <SessionHeader
                 session={props.session}
                 onBack={props.onBack}
-                onViewFiles={props.session.metadata?.path ? handleViewFiles : undefined}
+                onToggleFiles={props.session.metadata?.path ? handleToggleFiles : undefined}
+                filesOpen={filesOpen}
                 api={props.api}
                 onSessionDeleted={props.onSessionDeleted ?? props.onBack}
             />
@@ -328,6 +329,11 @@ export function SessionChat(props: {
                         onVoiceToggle={voice ? handleVoiceToggle : undefined}
                         onVoiceMicToggle={voice ? handleVoiceMicToggle : undefined}
                     />
+
+                    {/* Files overlay - covers main content area only */}
+                    <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${filesOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        <FilesPanel sessionId={props.session.id} />
+                    </div>
                 </div>
             </AssistantRuntimeProvider>
 
@@ -339,11 +345,6 @@ export function SessionChat(props: {
                     onStatusChange={voice.setStatus}
                 />
             )}
-
-            {/* Files overlay */}
-            <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${filesOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                <FilesPanel sessionId={props.session.id} onClose={() => setFilesOpen(false)} />
-            </div>
         </div>
     )
 }

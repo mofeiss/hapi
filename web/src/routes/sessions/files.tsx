@@ -1,31 +1,15 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import type { FileSearchItem, GitFileStatus } from '@/types/api'
 import { FileIcon } from '@/components/FileIcon'
 import { DirectoryTree } from '@/components/SessionFiles/DirectoryTree'
 import { useAppContext } from '@/lib/app-context'
-import { useAppGoBack } from '@/hooks/useAppGoBack'
 import { useGitStatusFiles } from '@/hooks/queries/useGitStatusFiles'
 import { useSession } from '@/hooks/queries/useSession'
 import { useSessionFileSearch } from '@/hooks/queries/useSessionFileSearch'
 import { encodeBase64 } from '@/lib/utils'
 import { queryKeys } from '@/lib/query-keys'
 import { useQueryClient } from '@tanstack/react-query'
-
-function BackIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className={props.className}
-        >
-            <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z" />
-        </svg>
-    )
-}
 
 function RefreshIcon(props: { className?: string }) {
     return (
@@ -223,7 +207,7 @@ function FileListSkeleton(props: { label: string; rows?: number }) {
     )
 }
 
-export function FilesPanel({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
+export function FilesPanel({ sessionId }: { sessionId: string }) {
     const { api } = useAppContext()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
@@ -261,7 +245,6 @@ export function FilesPanel({ sessionId, onClose }: { sessionId: string; onClose:
     }, [activeTab, navigate, sessionId])
 
     const branchLabel = gitStatus?.branch ?? 'detached'
-    const subtitle = session?.metadata?.path ?? sessionId
     const showGitErrorBanner = Boolean(gitError)
     const rootLabel = useMemo(() => {
         const base = session?.metadata?.path ?? sessionId
@@ -293,30 +276,6 @@ export function FilesPanel({ sessionId, onClose }: { sessionId: string; onClose:
 
     return (
         <div className="flex h-full flex-col">
-            <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-                <div className="mx-auto w-full max-w-content flex items-center gap-2 p-3 border-b border-[var(--app-border)]">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="flex h-8 w-8 lg:-ml-[10px] items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
-                    >
-                        <BackIcon />
-                    </button>
-                    <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold">Files</div>
-                        <div className="truncate text-xs text-[var(--app-hint)]">{subtitle}</div>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleRefresh}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                        title="Refresh"
-                    >
-                        <RefreshIcon />
-                    </button>
-                </div>
-            </div>
-
             <div className="bg-[var(--app-bg)]">
                 <div className="mx-auto w-full max-w-content p-3 border-b border-[var(--app-border)]">
                     <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-2">
@@ -329,6 +288,14 @@ export function FilesPanel({ sessionId, onClose }: { sessionId: string; onClose:
                             autoCapitalize="none"
                             autoCorrect="off"
                         />
+                        <button
+                            type="button"
+                            onClick={handleRefresh}
+                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                            title="Refresh"
+                        >
+                            <RefreshIcon />
+                        </button>
                     </div>
                 </div>
             </div>
@@ -467,7 +434,6 @@ export function FilesPanel({ sessionId, onClose }: { sessionId: string; onClose:
 }
 
 export default function FilesPage() {
-    const goBack = useAppGoBack()
     const { sessionId } = useParams({ from: '/sessions/$sessionId/files' })
-    return <FilesPanel sessionId={sessionId} onClose={goBack} />
+    return <FilesPanel sessionId={sessionId} />
 }
