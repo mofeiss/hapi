@@ -539,7 +539,7 @@ function NewSessionPanel({ onClose }: { onClose: () => void }) {
     return (
         <div className="flex h-full flex-col">
             <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-                <div className="flex items-center gap-2 border-b border-[var(--app-border)] p-3">
+                <div className="mx-auto w-full max-w-content flex items-center gap-2 border-b border-[var(--app-border)] p-3">
                     {!isTelegramApp() && (
                         <button
                             type="button"
