@@ -150,7 +150,7 @@ export function SettingsPanel({ onClose }: { onClose?: () => void }) {
                     <button
                         type="button"
                         onClick={handleBack}
-                        className="flex h-8 w-8 -ml-[10px] items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
+                        className="flex h-8 w-8 lg:-ml-[10px] items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
                     >
                         <BackIcon />
                     </button>
