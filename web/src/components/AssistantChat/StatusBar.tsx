@@ -8,15 +8,15 @@ import { useTranslation } from '@/lib/use-translation'
 
 const PERMISSION_TONE_CLASSES: Record<PermissionModeTone, string> = {
     neutral: 'text-[var(--app-hint)]',
-    info: 'text-blue-500',
-    warning: 'text-amber-500',
+    info: 'text-[var(--app-badge-warning-text)]',
+    warning: 'text-emerald-600',
     danger: 'text-red-500'
 }
 
 const PERMISSION_TONE_BORDER_CLASSES: Record<PermissionModeTone, string> = {
     neutral: 'border-[var(--app-border)]',
-    info: 'border-blue-500/30',
-    warning: 'border-amber-500/30',
+    info: 'border-[var(--app-badge-warning-text)]/30',
+    warning: 'border-emerald-600/30',
     danger: 'border-red-500/30'
 }
 
@@ -33,8 +33,8 @@ function getConnectionStatus(
     if (voiceStatus === 'connecting') {
         return {
             text: t('misc.executing'),
-            color: 'text-[#007AFF]',
-            dotColor: 'bg-[#007AFF]',
+            color: 'text-[var(--app-badge-warning-text)]',
+            dotColor: 'bg-[var(--app-badge-warning-text)]',
             isPulsing: true
         }
     }
@@ -51,8 +51,8 @@ function getConnectionStatus(
     if (hasPermissions) {
         return {
             text: t('misc.permissionRequired'),
-            color: 'text-[#FF9500]',
-            dotColor: 'bg-[#FF9500]',
+            color: 'text-[var(--app-badge-warning-text)]',
+            dotColor: 'bg-[var(--app-badge-warning-text)]',
             isPulsing: true
         }
     }
@@ -60,16 +60,16 @@ function getConnectionStatus(
     if (thinking) {
         return {
             text: t('misc.executing'),
-            color: 'text-[#007AFF]',
-            dotColor: 'bg-[#007AFF]',
+            color: 'text-[var(--app-badge-warning-text)]',
+            dotColor: 'bg-[var(--app-badge-warning-text)]',
             isPulsing: true
         }
     }
 
     return {
         text: t('misc.idle'),
-        color: 'text-[#34C759]',
-        dotColor: 'bg-[#34C759]',
+        color: 'text-emerald-600',
+        dotColor: 'bg-emerald-600',
         isPulsing: false
     }
 }
@@ -127,24 +127,13 @@ export function StatusBar(props: {
     const permissionModeBorderColor = permissionModeTone ? PERMISSION_TONE_BORDER_CLASSES[permissionModeTone] : 'border-[var(--app-border)]'
 
     return (
-        <div className="flex items-center justify-between px-2 pb-1">
+        <div className="flex items-center justify-between px-2 pb-1 min-h-6">
             <div className="flex items-baseline gap-3">
                 <div className="flex items-center gap-1.5">
                     {connectionStatus.isPulsing ? (
-                        <svg
-                            className="h-2.5 w-2.5 animate-spin"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                        >
-                            <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
-                            <path d="M12 2a10 10 0 0 1 10 10" className={connectionStatus.color} strokeOpacity="0.9" />
-                        </svg>
+                        <span className={`text-xs leading-none ${connectionStatus.color} animate-[snowflake-pulse_1.5s_ease-in-out_infinite]`}>✻</span>
                     ) : (
-                        <span
-                            className={`h-2 w-2 rounded-full ${connectionStatus.dotColor}`}
-                        />
+                        <span className={`text-xs leading-none ${connectionStatus.color}`}>✻</span>
                     )}
                     <span className={`text-xs ${connectionStatus.color}`}>
                         {connectionStatus.text}

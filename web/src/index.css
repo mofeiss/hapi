@@ -246,6 +246,16 @@ html[data-theme="dark"] .shiki span {
   animation: spin 1s linear infinite;
 }
 
+/* Status bar snowflake pulse animation */
+@keyframes snowflake-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
 /* New messages indicator bounce animation */
 @keyframes bounce-in {
   0% {

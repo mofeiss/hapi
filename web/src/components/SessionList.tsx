@@ -202,20 +202,9 @@ function SessionItem(props: {
                     <div className="flex items-center gap-2 min-w-0">
                         <span className="flex h-4 w-4 items-center justify-center" aria-hidden="true">
                             {s.active && s.thinking ? (
-                                <svg
-                                    className="h-2.5 w-2.5 animate-spin text-[#007AFF]"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="3"
-                                >
-                                    <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
-                                    <path d="M12 2a10 10 0 0 1 10 10" strokeOpacity="0.9" />
-                                </svg>
+                                <span className="text-xs leading-none text-[var(--app-badge-warning-text)] animate-[snowflake-pulse_1.5s_ease-in-out_infinite]">✻</span>
                             ) : (
-                                <span
-                                    className={`h-2 w-2 rounded-full ${s.active ? 'bg-[var(--app-badge-success-text)]' : 'bg-[var(--app-hint)]'}`}
-                                />
+                                <span className={`text-xs leading-none ${s.active ? 'text-emerald-600' : 'text-[var(--app-hint)]'}`}>✻</span>
                             )}
                         </span>
                         <div className="truncate text-base font-medium">
