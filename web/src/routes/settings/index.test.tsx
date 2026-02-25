@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { I18nContext, I18nProvider } from '@/lib/i18n-context'
 import { en } from '@/lib/locales'
 import { PROTOCOL_VERSION } from '@hapi/protocol'
-import SettingsPage from './index'
+import { SettingsPanel as SettingsPage } from './index'
 
 // Mock the router hooks
 vi.mock('@tanstack/react-router', () => ({

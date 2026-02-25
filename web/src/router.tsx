@@ -34,7 +34,7 @@ import { fetchLatestMessages, seedMessageWindowFromSession } from '@/lib/message
 import FilesPage from '@/routes/sessions/files'
 import FilePage from '@/routes/sessions/file'
 import TerminalPage from '@/routes/sessions/terminal'
-import SettingsPage from '@/routes/settings'
+import { SettingsPanel } from '@/routes/settings'
 
 function BackIcon(props: { className?: string }) {
     return (
@@ -143,6 +143,7 @@ function SessionsPage() {
     })
 
     const { widescreen } = useWidescreen()
+    const [settingsOpen, setSettingsOpen] = useState(false)
 
     const handleDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         e.preventDefault()
@@ -208,7 +209,7 @@ function SessionsPage() {
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => navigate({ to: '/settings' })}
+                                onClick={() => setSettingsOpen(prev => !prev)}
                                 className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
                                 title={t('settings.title')}
                             >
@@ -277,6 +278,11 @@ function SessionsPage() {
                 <div className="flex-1 min-h-0">
                     <Outlet />
                 </div>
+            </div>
+
+            {/* Settings overlay */}
+            <div className={`fixed inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${settingsOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'} ${widescreen ? 'widescreen-mode' : ''}`}>
+                <SettingsPanel onClose={() => setSettingsOpen(false)} />
             </div>
         </div>
     )
@@ -583,12 +589,6 @@ const newSessionRoute = createRoute({
     component: NewSessionPage,
 })
 
-const settingsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/settings',
-    component: SettingsPage,
-})
-
 export const routeTree = rootRoute.addChildren([
     indexRoute,
     sessionsRoute.addChildren([
@@ -600,7 +600,6 @@ export const routeTree = rootRoute.addChildren([
             sessionFileRoute,
         ]),
     ]),
-    settingsRoute,
 ])
 
 type RouterHistory = Parameters<typeof createRouter>[0]['history']

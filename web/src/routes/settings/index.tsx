@@ -65,9 +65,10 @@ function ChevronDownIcon(props: { className?: string }) {
     )
 }
 
-export default function SettingsPage() {
+export function SettingsPanel({ onClose }: { onClose?: () => void }) {
     const { t, locale, setLocale } = useTranslation()
     const goBack = useAppGoBack()
+    const handleBack = onClose ?? goBack
     const [isOpen, setIsOpen] = useState(false)
     const [isFontOpen, setIsFontOpen] = useState(false)
     const [isVoiceOpen, setIsVoiceOpen] = useState(false)
@@ -148,7 +149,7 @@ export default function SettingsPage() {
                 <div className="mx-auto w-full max-w-content flex items-center gap-2 p-3 border-b border-[var(--app-border)]">
                     <button
                         type="button"
-                        onClick={goBack}
+                        onClick={handleBack}
                         className="flex h-8 w-8 -ml-[10px] items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
                     >
                         <BackIcon />
