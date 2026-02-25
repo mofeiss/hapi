@@ -3,7 +3,6 @@ import type { PermissionModeTone } from '@hapi/protocol'
 import { useMemo } from 'react'
 import type { AgentState, ModelMode, PermissionMode } from '@/types/api'
 import type { ConversationStatus } from '@/realtime/types'
-import { getContextBudgetTokens } from '@/chat/modelConfig'
 import { useTranslation } from '@/lib/use-translation'
 
 // Vibing messages for thinking state
@@ -87,19 +86,6 @@ function getConnectionStatus(
     }
 }
 
-function getContextWarning(contextSize: number, maxContextSize: number, t: (key: string, params?: Record<string, string | number>) => string): { text: string; color: string } | null {
-    const percentageUsed = (contextSize / maxContextSize) * 100
-    const percentageRemaining = Math.max(0, 100 - percentageUsed)
-
-    const percent = Math.round(percentageRemaining)
-    if (percentageRemaining <= 5) {
-        return { text: t('misc.percentLeft', { percent }), color: 'text-red-500' }
-    } else if (percentageRemaining <= 10) {
-        return { text: t('misc.percentLeft', { percent }), color: 'text-amber-500' }
-    } else {
-        return { text: t('misc.percentLeft', { percent }), color: 'text-[var(--app-hint)]' }
-    }
-}
 
 export function StatusBar(props: {
     active: boolean
@@ -115,16 +101,6 @@ export function StatusBar(props: {
     const connectionStatus = useMemo(
         () => getConnectionStatus(props.active, props.thinking, props.agentState, props.voiceStatus, t),
         [props.active, props.thinking, props.agentState, props.voiceStatus, t]
-    )
-
-    const contextWarning = useMemo(
-        () => {
-            if (props.contextSize === undefined) return null
-            const maxContextSize = getContextBudgetTokens(props.modelMode)
-            if (!maxContextSize) return null
-            return getContextWarning(props.contextSize, maxContextSize, t)
-        },
-        [props.contextSize, props.modelMode, t]
     )
 
     const permissionMode = props.permissionMode
@@ -149,11 +125,6 @@ export function StatusBar(props: {
                         {connectionStatus.text}
                     </span>
                 </div>
-                {contextWarning ? (
-                    <span className={`text-[10px] ${contextWarning.color}`}>
-                        {contextWarning.text}
-                    </span>
-                ) : null}
             </div>
 
             {displayPermissionMode ? (
