@@ -6,30 +6,18 @@ import type { ConversationStatus } from '@/realtime/types'
 import { getContextBudgetTokens } from '@/chat/modelConfig'
 import { useTranslation } from '@/lib/use-translation'
 
-// Vibing messages for thinking state
-const VIBING_MESSAGES = [
-    "Accomplishing", "Actioning", "Actualizing", "Baking", "Booping", "Brewing",
-    "Calculating", "Cerebrating", "Channelling", "Churning", "Clauding", "Coalescing",
-    "Cogitating", "Computing", "Combobulating", "Concocting", "Conjuring", "Considering",
-    "Contemplating", "Cooking", "Crafting", "Creating", "Crunching", "Deciphering",
-    "Deliberating", "Determining", "Discombobulating", "Divining", "Doing", "Effecting",
-    "Elucidating", "Enchanting", "Envisioning", "Finagling", "Flibbertigibbeting",
-    "Forging", "Forming", "Frolicking", "Generating", "Germinating", "Hatching",
-    "Herding", "Honking", "Ideating", "Imagining", "Incubating", "Inferring",
-    "Manifesting", "Marinating", "Meandering", "Moseying", "Mulling", "Mustering",
-    "Musing", "Noodling", "Percolating", "Perusing", "Philosophising", "Pontificating",
-    "Pondering", "Processing", "Puttering", "Puzzling", "Reticulating", "Ruminating",
-    "Scheming", "Schlepping", "Shimmying", "Simmering", "Smooshing", "Spelunking",
-    "Spinning", "Stewing", "Sussing", "Synthesizing", "Thinking", "Tinkering",
-    "Transmuting", "Unfurling", "Unravelling", "Vibing", "Wandering", "Whirring",
-    "Wibbling", "Wizarding", "Working", "Wrangling"
-]
-
 const PERMISSION_TONE_CLASSES: Record<PermissionModeTone, string> = {
     neutral: 'text-[var(--app-hint)]',
     info: 'text-blue-500',
     warning: 'text-amber-500',
     danger: 'text-red-500'
+}
+
+const PERMISSION_TONE_BORDER_CLASSES: Record<PermissionModeTone, string> = {
+    neutral: 'border-[var(--app-border)]',
+    info: 'border-blue-500/30',
+    warning: 'border-amber-500/30',
+    danger: 'border-red-500/30'
 }
 
 function getConnectionStatus(
@@ -44,7 +32,7 @@ function getConnectionStatus(
     // Voice connecting takes priority
     if (voiceStatus === 'connecting') {
         return {
-            text: t('voice.connecting'),
+            text: t('misc.executing'),
             color: 'text-[#007AFF]',
             dotColor: 'bg-[#007AFF]',
             isPulsing: true
@@ -70,9 +58,8 @@ function getConnectionStatus(
     }
 
     if (thinking) {
-        const vibingMessage = VIBING_MESSAGES[Math.floor(Math.random() * VIBING_MESSAGES.length)].toLowerCase() + '…'
         return {
-            text: vibingMessage,
+            text: t('misc.executing'),
             color: 'text-[#007AFF]',
             dotColor: 'bg-[#007AFF]',
             isPulsing: true
@@ -80,7 +67,7 @@ function getConnectionStatus(
     }
 
     return {
-        text: t('misc.online'),
+        text: t('misc.idle'),
         color: 'text-[#34C759]',
         dotColor: 'bg-[#34C759]',
         isPulsing: false
@@ -137,14 +124,28 @@ export function StatusBar(props: {
     const permissionModeLabel = displayPermissionMode ? getPermissionModeLabel(displayPermissionMode) : null
     const permissionModeTone = displayPermissionMode ? getPermissionModeTone(displayPermissionMode) : null
     const permissionModeColor = permissionModeTone ? PERMISSION_TONE_CLASSES[permissionModeTone] : 'text-[var(--app-hint)]'
+    const permissionModeBorderColor = permissionModeTone ? PERMISSION_TONE_BORDER_CLASSES[permissionModeTone] : 'border-[var(--app-border)]'
 
     return (
         <div className="flex items-center justify-between px-2 pb-1">
             <div className="flex items-baseline gap-3">
                 <div className="flex items-center gap-1.5">
-                    <span
-                        className={`h-2 w-2 rounded-full ${connectionStatus.dotColor} ${connectionStatus.isPulsing ? 'animate-pulse' : ''}`}
-                    />
+                    {connectionStatus.isPulsing ? (
+                        <svg
+                            className="h-2.5 w-2.5 animate-spin"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                        >
+                            <circle cx="12" cy="12" r="10" strokeOpacity="0.2" />
+                            <path d="M12 2a10 10 0 0 1 10 10" className={connectionStatus.color} strokeOpacity="0.9" />
+                        </svg>
+                    ) : (
+                        <span
+                            className={`h-2 w-2 rounded-full ${connectionStatus.dotColor}`}
+                        />
+                    )}
                     <span className={`text-xs ${connectionStatus.color}`}>
                         {connectionStatus.text}
                     </span>
@@ -157,7 +158,7 @@ export function StatusBar(props: {
             </div>
 
             {displayPermissionMode ? (
-                <span className={`text-xs ${permissionModeColor}`}>
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${permissionModeColor} ${permissionModeBorderColor}`}>
                     {permissionModeLabel}
                 </span>
             ) : null}

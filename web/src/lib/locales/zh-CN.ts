@@ -270,5 +270,6 @@ export default {
   'misc.offline': '离线',
   'misc.permissionRequired': '需要权限',
   'misc.percentLeft': '剩余 {percent}%',
-  'misc.online': '在线',
+  'misc.idle': '空闲',
+  'misc.executing': '执行中',
 } as const

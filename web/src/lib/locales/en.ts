@@ -268,5 +268,6 @@ export default {
   'misc.offline': 'offline',
   'misc.permissionRequired': 'permission required',
   'misc.percentLeft': '{percent}% left',
-  'misc.online': 'online',
+  'misc.idle': 'idle',
+  'misc.executing': 'executing',
 } as const

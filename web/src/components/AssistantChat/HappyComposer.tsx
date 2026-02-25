@@ -558,6 +558,7 @@ export function HappyComposer(props: {
                             canSend={canSend}
                             controlsDisabled={controlsDisabled}
                             showSettingsButton={showSettingsButton}
+                            settingsOpen={showSettings}
                             onSettingsToggle={handleSettingsToggle}
                             showTerminalButton={showTerminalButton}
                             terminalDisabled={controlsDisabled}
