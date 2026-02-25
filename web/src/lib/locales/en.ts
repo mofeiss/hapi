@@ -59,6 +59,10 @@ export default {
   'session.title': 'Files',
   'session.more': 'More actions',
 
+  // Files panel
+  'files.tab.changes': 'Changes',
+  'files.tab.directories': 'Directories',
+
   // Session actions
   'session.action.rename': 'Rename',
   'session.action.archive': 'Archive',

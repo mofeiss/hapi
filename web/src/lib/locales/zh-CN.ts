@@ -59,6 +59,10 @@ export default {
   'session.title': '文件',
   'session.more': '更多操作',
 
+  // Files panel
+  'files.tab.changes': '变更',
+  'files.tab.directories': '目录',
+
   // Session actions
   'session.action.rename': '重命名',
   'session.action.archive': '归档',
