@@ -10,48 +10,40 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 
 type SessionGroup = {
-    directory: string
-    displayName: string
+    host: string
     sessions: SessionSummary[]
     latestUpdatedAt: number
     hasActiveSession: boolean
 }
 
-function getGroupDisplayName(directory: string): string {
-    if (directory === 'Other') return directory
-    const parts = directory.split(/[\\/]+/).filter(Boolean)
-    if (parts.length === 0) return directory
+function getPathDisplayName(path: string): string {
+    const parts = path.split(/[\\/]+/).filter(Boolean)
+    if (parts.length === 0) return path
     if (parts.length === 1) return parts[0]
     return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
 }
 
-function groupSessionsByDirectory(sessions: SessionSummary[]): SessionGroup[] {
+function groupSessionsByHost(sessions: SessionSummary[]): SessionGroup[] {
     const groups = new Map<string, SessionSummary[]>()
 
     sessions.forEach(session => {
-        const path = session.metadata?.worktree?.basePath ?? session.metadata?.path ?? 'Other'
-        if (!groups.has(path)) {
-            groups.set(path, [])
+        const host = session.metadata?.host ?? 'Unknown'
+        if (!groups.has(host)) {
+            groups.set(host, [])
         }
-        groups.get(path)!.push(session)
+        groups.get(host)!.push(session)
     })
 
     return Array.from(groups.entries())
-        .map(([directory, groupSessions]) => {
-            const sortedSessions = [...groupSessions].sort((a, b) => {
-                const rankA = a.active ? (a.pendingRequestsCount > 0 ? 0 : 1) : 2
-                const rankB = b.active ? (b.pendingRequestsCount > 0 ? 0 : 1) : 2
-                if (rankA !== rankB) return rankA - rankB
-                return b.updatedAt - a.updatedAt
-            })
+        .map(([host, groupSessions]) => {
+            const sortedSessions = [...groupSessions].sort((a, b) => b.updatedAt - a.updatedAt)
             const latestUpdatedAt = groupSessions.reduce(
                 (max, s) => (s.updatedAt > max ? s.updatedAt : max),
                 -Infinity
             )
             const hasActiveSession = groupSessions.some(s => s.active)
-            const displayName = getGroupDisplayName(directory)
 
-            return { directory, displayName, sessions: sortedSessions, latestUpdatedAt, hasActiveSession }
+            return { host, sessions: sortedSessions, latestUpdatedAt, hasActiveSession }
         })
         .sort((a, b) => {
             if (a.hasActiveSession !== b.hasActiveSession) {
@@ -164,12 +156,11 @@ function formatRelativeTime(value: number, t: (key: string, params?: Record<stri
 function SessionItem(props: {
     session: SessionSummary
     onSelect: (sessionId: string) => void
-    showPath?: boolean
     api: ApiClient | null
     selected?: boolean
 }) {
     const { t } = useTranslation()
-    const { session: s, onSelect, showPath = true, api, selected = false } = props
+    const { session: s, onSelect, api, selected = false } = props
     const { haptic } = usePlatform()
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -247,28 +238,17 @@ function SessionItem(props: {
                         </span>
                     </div>
                 </div>
-                {showPath ? (
-                    <div className="truncate text-xs text-[var(--app-hint)]">
-                        {s.metadata?.path ?? s.id}
-                    </div>
-                ) : null}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--app-hint)]">
-                    <span className="inline-flex items-center gap-2">
+                <div className="flex items-center gap-x-3 text-xs text-[var(--app-hint)]">
+                    <span className="inline-flex items-center gap-2 shrink-0">
                         <span className="flex h-4 w-4 items-center justify-center" aria-hidden="true">
                             ❖
                         </span>
                         {getAgentLabel(s)}
                     </span>
-                    <span>{t('session.item.modelMode')}: {s.modelMode || 'default'}</span>
-                    {s.metadata?.worktree?.branch ? (
-                        <span>{t('session.item.worktree')}: {s.metadata.worktree.branch}</span>
-                    ) : null}
-                    {s.metadata?.host ? (
-                        <span className="inline-flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
-                            {s.metadata.host}
-                        </span>
-                    ) : null}
+                    <span className="inline-flex items-center gap-1 truncate">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                        <span className="truncate" title={s.metadata?.path}>{s.metadata?.path ? getPathDisplayName(s.metadata.path) : s.id.slice(0, 8)}</span>
+                    </span>
                 </div>
             </button>
 
@@ -330,22 +310,22 @@ export function SessionList(props: {
     const { t } = useTranslation()
     const { renderHeader = true, api, selectedSessionId } = props
     const groups = useMemo(
-        () => groupSessionsByDirectory(props.sessions),
+        () => groupSessionsByHost(props.sessions),
         [props.sessions]
     )
     const [collapseOverrides, setCollapseOverrides] = useState<Map<string, boolean>>(
         () => new Map()
     )
     const isGroupCollapsed = (group: SessionGroup): boolean => {
-        const override = collapseOverrides.get(group.directory)
+        const override = collapseOverrides.get(group.host)
         if (override !== undefined) return override
         return !group.hasActiveSession
     }
 
-    const toggleGroup = (directory: string, isCollapsed: boolean) => {
+    const toggleGroup = (host: string, isCollapsed: boolean) => {
         setCollapseOverrides(prev => {
             const next = new Map(prev)
-            next.set(directory, !isCollapsed)
+            next.set(host, !isCollapsed)
             return next
         })
     }
@@ -354,11 +334,11 @@ export function SessionList(props: {
         setCollapseOverrides(prev => {
             if (prev.size === 0) return prev
             const next = new Map(prev)
-            const knownGroups = new Set(groups.map(group => group.directory))
+            const knownGroups = new Set(groups.map(group => group.host))
             let changed = false
-            for (const directory of next.keys()) {
-                if (!knownGroups.has(directory)) {
-                    next.delete(directory)
+            for (const host of next.keys()) {
+                if (!knownGroups.has(host)) {
+                    next.delete(host)
                     changed = true
                 }
             }
@@ -388,10 +368,10 @@ export function SessionList(props: {
                 {groups.map((group) => {
                     const isCollapsed = isGroupCollapsed(group)
                     return (
-                        <div key={group.directory}>
+                        <div key={group.host}>
                             <button
                                 type="button"
-                                onClick={() => toggleGroup(group.directory, isCollapsed)}
+                                onClick={() => toggleGroup(group.host, isCollapsed)}
                                 className="sticky top-0 z-10 flex w-full items-center gap-2 px-3 py-2 text-left bg-[var(--app-bg)] border-b border-[var(--app-divider)] transition-colors hover:bg-[var(--app-secondary-bg)]"
                             >
                                 <ChevronIcon
@@ -399,8 +379,8 @@ export function SessionList(props: {
                                     collapsed={isCollapsed}
                                 />
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className="font-medium text-base break-words" title={group.directory}>
-                                        {group.displayName}
+                                    <span className="font-medium text-base break-words">
+                                        {group.host}
                                     </span>
                                     <span className="shrink-0 text-xs text-[var(--app-hint)]">
                                         ({group.sessions.length})
@@ -414,7 +394,6 @@ export function SessionList(props: {
                                             key={s.id}
                                             session={s}
                                             onSelect={props.onSelect}
-                                            showPath={false}
                                             api={api}
                                             selected={s.id === selectedSessionId}
                                         />
