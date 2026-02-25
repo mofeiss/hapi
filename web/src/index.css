@@ -270,3 +270,8 @@ html[data-theme="dark"] .shiki span {
   bottom: 50% !important;
   transform: translateY(50%);
 }
+
+/* Widescreen mode - remove content max-width constraint */
+.widescreen-mode .max-w-content {
+  max-width: 100%;
+}
