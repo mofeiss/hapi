@@ -19,6 +19,7 @@ import { LoadingState } from '@/components/LoadingState'
 import { useAppContext } from '@/lib/app-context'
 import { useAppGoBack } from '@/hooks/useAppGoBack'
 import { isTelegramApp } from '@/hooks/useTelegram'
+import { useWidescreen } from '@/hooks/useWidescreen'
 import { useMessages } from '@/hooks/queries/useMessages'
 import { useMachines } from '@/hooks/queries/useMachines'
 import { useSession } from '@/hooks/queries/useSession'
@@ -141,6 +142,8 @@ function SessionsPage() {
         return localStorage.getItem('hapi:panel:collapsed') === 'true'
     })
 
+    const { widescreen } = useWidescreen()
+
     const handleDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         e.preventDefault()
         const startX = e.clientX
@@ -255,20 +258,22 @@ function SessionsPage() {
 
             {/* Expand sidebar strip (PC only, when collapsed) */}
             {collapsed && (
-                <div className="hidden lg:flex flex-col items-center shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
-                    <button
-                        type="button"
-                        onClick={toggleCollapsed}
-                        className="p-2 mt-1.5 text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] rounded transition-colors"
-                        title="Expand sidebar"
-                    >
-                        <SidebarExpandIcon className="h-4 w-4" />
-                    </button>
+                <div className="hidden lg:flex flex-col shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
+                    <div className="px-3 py-2">
+                        <button
+                            type="button"
+                            onClick={toggleCollapsed}
+                            className="p-1 text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] rounded transition-colors"
+                            title="Expand sidebar"
+                        >
+                            <SidebarExpandIcon className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             )}
 
             {/* Right panel */}
-            <div className={`${isSessionsIndex ? 'hidden lg:flex' : 'flex'} min-w-0 flex-1 flex-col bg-[var(--app-bg)]`}>
+            <div className={`${isSessionsIndex ? 'hidden lg:flex' : 'flex'} min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? 'widescreen-mode' : ''}`}>
                 <div className="flex-1 min-h-0">
                     <Outlet />
                 </div>
