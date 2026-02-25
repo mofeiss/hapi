@@ -54,11 +54,9 @@ export function EyeIcon(props: IconProps) {
 export function FileDiffIcon(props: IconProps) {
     return createIcon(
         <>
-            <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z" />
-            <path d="M14 2v5h5" />
-            <path d="M9 12h2" />
-            <path d="M9 16h6" />
-            <path d="M13 12h2" />
+            <path d="M12 22h6a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v10" />
+            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+            <path d="M10.4 12.6a2 2 0 0 0-3 3L12 21h3v-3z" />
         </>,
         props
     )
