@@ -18,6 +18,22 @@ export function reduceTimeline(
     const toolBlocksById = new Map<string, ToolCallBlock>()
     let hasReadyEvent = false
 
+    // Collect all titles from change_title tool calls across the entire timeline
+    // so we can suppress agent text blocks that merely echo the title
+    const allChangeTitles = new Set<string>()
+    for (const title of context.titleChangesByToolUseId.values()) {
+        allChangeTitles.add(title)
+    }
+    for (const msg of messages) {
+        if (msg.role !== 'agent') continue
+        for (const c of msg.content) {
+            if (c.type === 'tool-call' && isChangeTitleToolName(c.name)) {
+                const title = extractTitleFromChangeTitleInput(c.input)
+                if (title) allChangeTitles.add(title)
+            }
+        }
+    }
+
     for (const msg of messages) {
         if (msg.role === 'event') {
             if (msg.content.type === 'ready') {
@@ -76,6 +92,9 @@ export function reduceTimeline(
             for (let idx = 0; idx < msg.content.length; idx += 1) {
                 const c = msg.content[idx]
                 if (c.type === 'text') {
+                    if (allChangeTitles.size > 0 && allChangeTitles.has(c.text.trim())) {
+                        continue
+                    }
                     if (isCliOutputText(c.text, msg.meta)) {
                         blocks.push(createCliOutputBlock({
                             id: `${msg.id}:${idx}`,
