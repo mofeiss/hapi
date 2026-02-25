@@ -144,6 +144,8 @@ function SessionsPage() {
 
     const { widescreen } = useWidescreen()
     const [settingsOpen, setSettingsOpen] = useState(false)
+    const [newSessionOpen, setNewSessionOpen] = useState(false)
+    const hasOverlay = settingsOpen || newSessionOpen
 
     const handleDragStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         e.preventDefault()
@@ -181,8 +183,8 @@ function SessionsPage() {
     }, [])
 
     const leftPanelVisible = collapsed
-        ? (isSessionsIndex ? 'flex lg:hidden' : 'hidden')
-        : (isSessionsIndex ? 'flex' : 'hidden lg:flex')
+        ? ((isSessionsIndex && !hasOverlay) ? 'flex lg:hidden' : 'hidden')
+        : ((isSessionsIndex && !hasOverlay) ? 'flex' : 'hidden lg:flex')
 
     return (
         <div className="flex h-full min-h-0">
@@ -217,7 +219,7 @@ function SessionsPage() {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => navigate({ to: '/sessions/new' })}
+                                onClick={() => setNewSessionOpen(true)}
                                 className="session-list-new-button p-1.5 rounded-full text-[var(--app-link)] transition-colors"
                                 title={t('sessions.new')}
                             >
@@ -240,7 +242,7 @@ function SessionsPage() {
                             to: '/sessions/$sessionId',
                             params: { sessionId },
                         })}
-                        onNewSession={() => navigate({ to: '/sessions/new' })}
+                        onNewSession={() => setNewSessionOpen(true)}
                         onRefresh={handleRefresh}
                         isLoading={isLoading}
                         renderHeader={false}
@@ -274,7 +276,7 @@ function SessionsPage() {
             )}
 
             {/* Right panel */}
-            <div className={`${isSessionsIndex ? 'hidden lg:flex' : 'flex'} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!collapsed ? 'lg:pr-[7px]' : ''}` : ''}`}>
+            <div className={`${(isSessionsIndex && !hasOverlay) ? 'hidden lg:flex' : 'flex'} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!collapsed ? 'lg:pr-[7px]' : ''}` : ''}`}>
                 <div className="flex-1 min-h-0">
                     <Outlet />
                 </div>
@@ -282,6 +284,11 @@ function SessionsPage() {
                 {/* Settings overlay */}
                 <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${settingsOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}>
                     <SettingsPanel onClose={() => setSettingsOpen(false)} />
+                </div>
+
+                {/* New session overlay */}
+                <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${newSessionOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}>
+                    <NewSessionPanel onClose={() => setNewSessionOpen(false)} />
                 </div>
             </div>
         </div>
@@ -441,60 +448,64 @@ function SessionDetailRoute() {
     return isChat ? <SessionPage /> : <Outlet />
 }
 
-function NewSessionPage() {
+function NewSessionPanel({ onClose }: { onClose: () => void }) {
     const { api } = useAppContext()
     const navigate = useNavigate()
-    const goBack = useAppGoBack()
     const queryClient = useQueryClient()
     const { machines, isLoading: machinesLoading, error: machinesError } = useMachines(api, true)
 
     const handleCancel = useCallback(() => {
-        navigate({ to: '/sessions' })
-    }, [navigate])
+        onClose()
+    }, [onClose])
 
     const handleSuccess = useCallback((sessionId: string) => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.sessions })
-        // Replace current page with /sessions to clear spawn flow from history
-        navigate({ to: '/sessions', replace: true })
-        // Then navigate to new session
-        requestAnimationFrame(() => {
-            navigate({
-                to: '/sessions/$sessionId',
-                params: { sessionId },
-            })
+        onClose()
+        navigate({
+            to: '/sessions/$sessionId',
+            params: { sessionId },
         })
-    }, [navigate, queryClient])
+    }, [navigate, queryClient, onClose])
 
     return (
-        <div className="flex-1 overflow-y-auto">
-            <div className="flex items-center gap-2 border-b border-[var(--app-border)] bg-[var(--app-bg)] p-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
-                {!isTelegramApp() && (
-                    <button
-                        type="button"
-                        onClick={goBack}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                    >
-                        <BackIcon />
-                    </button>
-                )}
-                <div className="flex-1 font-semibold">Create Session</div>
+        <div className="flex h-full flex-col">
+            <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
+                <div className="flex items-center gap-2 border-b border-[var(--app-border)] p-3">
+                    {!isTelegramApp() && (
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                        >
+                            <BackIcon />
+                        </button>
+                    )}
+                    <div className="flex-1 font-semibold">Create Session</div>
+                </div>
             </div>
 
-            {machinesError ? (
-                <div className="p-3 text-sm text-red-600">
-                    {machinesError}
-                </div>
-            ) : null}
+            <div className="flex-1 overflow-y-auto">
+                {machinesError ? (
+                    <div className="p-3 text-sm text-red-600">
+                        {machinesError}
+                    </div>
+                ) : null}
 
-            <NewSession
-                api={api}
-                machines={machines}
-                isLoading={machinesLoading}
-                onCancel={handleCancel}
-                onSuccess={handleSuccess}
-            />
+                <NewSession
+                    api={api}
+                    machines={machines}
+                    isLoading={machinesLoading}
+                    onCancel={handleCancel}
+                    onSuccess={handleSuccess}
+                />
+            </div>
         </div>
     )
+}
+
+function NewSessionPage() {
+    const goBack = useAppGoBack()
+    return <NewSessionPanel onClose={goBack} />
 }
 
 const rootRoute = createRootRoute({
