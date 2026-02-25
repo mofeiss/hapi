@@ -39,7 +39,7 @@ export function getEventPresentation(event: AgentEvent): EventPresentation {
     }
     if (event.type === 'switch') {
         const mode = event.mode === 'local' ? 'local' : 'remote'
-        return { icon: '🔄', text: `Switched to ${mode}`, source: s }
+        return { icon: null, text: `Switched to ${mode}`, source: s }
     }
     if (event.type === 'title-changed') {
         const title = typeof event.title === 'string' ? event.title : ''
