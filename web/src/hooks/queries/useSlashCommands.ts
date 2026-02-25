@@ -4,6 +4,7 @@ import type { ApiClient } from '@/api/client'
 import type { SlashCommand } from '@/types/api'
 import type { Suggestion } from '@/hooks/useActiveSuggestions'
 import { queryKeys } from '@/lib/query-keys'
+import { useTranslation } from '@/lib/use-translation'
 
 function levenshteinDistance(a: string, b: string): number {
     if (a.length === 0) return b.length
@@ -25,30 +26,30 @@ function levenshteinDistance(a: string, b: string): number {
  * Built-in slash commands per agent type.
  * These are shown immediately without waiting for RPC.
  */
-const BUILTIN_COMMANDS: Record<string, SlashCommand[]> = {
+const BUILTIN_COMMANDS: Record<string, { name: string; source: 'builtin' }[]> = {
     claude: [
-        { name: 'clear', description: 'Clear conversation history and free up context', source: 'builtin' },
-        { name: 'compact', description: 'Clear conversation history but keep a summary in context', source: 'builtin' },
-        { name: 'context', description: 'Visualize current context usage as a colored grid', source: 'builtin' },
-        { name: 'cost', description: 'Show the total cost and duration of the current session', source: 'builtin' },
-        { name: 'doctor', description: 'Diagnose and verify your Claude Code installation and settings', source: 'builtin' },
-        { name: 'plan', description: 'View or open the current session plan', source: 'builtin' },
-        { name: 'stats', description: 'Show your Claude Code usage statistics and activity', source: 'builtin' },
-        { name: 'status', description: 'Show Claude Code status including version, model, account, and API connectivity', source: 'builtin' },
+        { name: 'clear', source: 'builtin' },
+        { name: 'compact', source: 'builtin' },
+        { name: 'context', source: 'builtin' },
+        { name: 'cost', source: 'builtin' },
+        { name: 'doctor', source: 'builtin' },
+        { name: 'plan', source: 'builtin' },
+        { name: 'stats', source: 'builtin' },
+        { name: 'status', source: 'builtin' },
     ],
     codex: [
-        { name: 'review', description: 'Review current changes and find issues', source: 'builtin' },
-        { name: 'new', description: 'Start a new chat during a conversation', source: 'builtin' },
-        { name: 'compat', description: 'Summarize conversation to prevent hitting the context limit', source: 'builtin' },
-        { name: 'undo', description: 'Ask Codex to undo a turn', source: 'builtin' },
-        { name: 'diff', description: 'Show git diff including untracked files', source: 'builtin' },
-        { name: 'status', description: 'Show current session configuration and token usage', source: 'builtin' },
+        { name: 'review', source: 'builtin' },
+        { name: 'new', source: 'builtin' },
+        { name: 'compat', source: 'builtin' },
+        { name: 'undo', source: 'builtin' },
+        { name: 'diff', source: 'builtin' },
+        { name: 'status', source: 'builtin' },
     ],
     gemini: [
-        { name: 'about', description: 'Show version info', source: 'builtin' },
-        { name: 'clear', description: 'Clear the screen and conversation history', source: 'builtin' },
-        { name: 'compress', description: 'Compress the context by replacing it with a summary', source: 'builtin' },
-        { name: 'stats', description: 'Check session stats', source: 'builtin' },
+        { name: 'about', source: 'builtin' },
+        { name: 'clear', source: 'builtin' },
+        { name: 'compress', source: 'builtin' },
+        { name: 'stats', source: 'builtin' },
     ],
     opencode: [],
 }
@@ -63,6 +64,7 @@ export function useSlashCommands(
     error: string | null
     getSuggestions: (query: string) => Promise<Suggestion[]>
 } {
+    const { t } = useTranslation()
     const resolvedSessionId = sessionId ?? 'unknown'
 
     // Fetch user-defined commands from the CLI (requires active session)
@@ -80,9 +82,16 @@ export function useSlashCommands(
         retry: false, // Don't retry RPC failures
     })
 
+    // Resolve agent type key for i18n lookups
+    const resolvedAgentType = (BUILTIN_COMMANDS[agentType] ? agentType : 'claude')
+
     // Merge built-in commands with user-defined and plugin commands from API
     const commands = useMemo(() => {
-        const builtin = BUILTIN_COMMANDS[agentType] ?? BUILTIN_COMMANDS['claude'] ?? []
+        const rawBuiltin = BUILTIN_COMMANDS[resolvedAgentType] ?? []
+        const builtin: SlashCommand[] = rawBuiltin.map(cmd => ({
+            ...cmd,
+            description: t(`command.${resolvedAgentType}.${cmd.name}`),
+        }))
 
         // If API succeeded, add user-defined and plugin commands
         if (query.data?.success && query.data.commands) {
@@ -94,7 +103,7 @@ export function useSlashCommands(
 
         // Fallback to built-in commands only
         return builtin
-    }, [agentType, query.data])
+    }, [resolvedAgentType, query.data, t])
 
     const getSuggestions = useCallback(async (queryText: string): Promise<Suggestion[]> => {
         const searchTerm = queryText.startsWith('/')
@@ -106,7 +115,7 @@ export function useSlashCommands(
                 key: `/${cmd.name}`,
                 text: `/${cmd.name}`,
                 label: `/${cmd.name}`,
-                description: cmd.description ?? (cmd.source === 'user' ? 'Custom command' : undefined),
+                description: cmd.description ?? (cmd.source === 'user' ? t('command.customCommand') : undefined),
                 content: cmd.content,
                 source: cmd.source
             }))
@@ -132,16 +141,16 @@ export function useSlashCommands(
                 key: `/${cmd.name}`,
                 text: `/${cmd.name}`,
                 label: `/${cmd.name}`,
-                description: cmd.description ?? (cmd.source === 'user' ? 'Custom command' : undefined),
+                description: cmd.description ?? (cmd.source === 'user' ? t('command.customCommand') : undefined),
                 content: cmd.content,
                 source: cmd.source
             }))
-    }, [commands])
+    }, [commands, t])
 
     return {
         commands,
         isLoading: query.isLoading,
-        error: query.error instanceof Error ? query.error.message : query.error ? 'Failed to load commands' : null,
+        error: query.error instanceof Error ? query.error.message : query.error ? t('command.loadError') : null,
         getSuggestions,
     }
 }
