@@ -193,7 +193,7 @@ export function SessionHeader(props: {
                             onClick={props.onToggleFiles}
                             className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
                                 props.filesOpen
-                                    ? 'bg-[var(--app-bg)] text-[var(--app-link)]'
+                                    ? 'bg-[var(--app-secondary-bg)] text-[var(--app-fg)]'
                                     : 'text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
                             }`}
                             title={t('session.title')}
