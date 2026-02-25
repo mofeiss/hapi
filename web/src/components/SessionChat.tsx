@@ -340,7 +340,7 @@ export function SessionChat(props: {
             )}
 
             {/* Files overlay */}
-            <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${filesOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}>
+            <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${filesOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 <FilesPanel sessionId={props.session.id} onClose={() => setFilesOpen(false)} />
             </div>
         </div>

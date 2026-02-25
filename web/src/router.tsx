@@ -207,7 +207,7 @@ function SessionsPage() {
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => setSettingsOpen(prev => !prev)}
+                                onClick={() => { setSettingsOpen(prev => !prev); setNewSessionOpen(false) }}
                                 className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
                                 title={t('settings.title')}
                             >
@@ -215,7 +215,7 @@ function SessionsPage() {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setNewSessionOpen(true)}
+                                onClick={() => { setNewSessionOpen(prev => !prev); setSettingsOpen(false) }}
                                 className="session-list-new-button p-1.5 rounded-full text-[var(--app-link)] transition-colors"
                                 title={t('sessions.new')}
                             >
@@ -238,7 +238,7 @@ function SessionsPage() {
                             to: '/sessions/$sessionId',
                             params: { sessionId },
                         })}
-                        onNewSession={() => setNewSessionOpen(true)}
+                        onNewSession={() => { setNewSessionOpen(true); setSettingsOpen(false) }}
                         onRefresh={handleRefresh}
                         isLoading={isLoading}
                         renderHeader={false}
@@ -278,12 +278,12 @@ function SessionsPage() {
                 </div>
 
                 {/* Settings overlay */}
-                <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${settingsOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}>
+                <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${settingsOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <SettingsPanel onClose={() => setSettingsOpen(false)} />
                 </div>
 
                 {/* New session overlay */}
-                <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${newSessionOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}>
+                <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${newSessionOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <NewSessionPanel onClose={() => setNewSessionOpen(false)} />
                 </div>
             </div>
