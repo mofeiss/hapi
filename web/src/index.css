@@ -121,10 +121,15 @@ body {
     }
 }
 
-/* Desktop-only: move the sidebar scrollbar to the left without flipping content. */
+/* Desktop-only: move the sidebar scrollbar to the left without flipping content, and hide it. */
 @media (min-width: 1024px) {
     .desktop-scrollbar-left {
         direction: rtl;
+        scrollbar-width: none; /* Firefox */
+    }
+
+    .desktop-scrollbar-left::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Edge */
     }
 
     .desktop-scrollbar-left > * {
