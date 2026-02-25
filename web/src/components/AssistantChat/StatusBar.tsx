@@ -33,8 +33,8 @@ function getConnectionStatus(
     if (voiceStatus === 'connecting') {
         return {
             text: t('misc.executing'),
-            color: 'text-[var(--app-badge-warning-text)]',
-            dotColor: 'bg-[var(--app-badge-warning-text)]',
+            color: 'text-emerald-600',
+            dotColor: 'bg-emerald-600',
             isPulsing: true
         }
     }
@@ -51,8 +51,8 @@ function getConnectionStatus(
     if (hasPermissions) {
         return {
             text: t('misc.permissionRequired'),
-            color: 'text-[var(--app-badge-warning-text)]',
-            dotColor: 'bg-[var(--app-badge-warning-text)]',
+            color: 'text-emerald-600',
+            dotColor: 'bg-emerald-600',
             isPulsing: true
         }
     }
@@ -60,8 +60,8 @@ function getConnectionStatus(
     if (thinking) {
         return {
             text: t('misc.executing'),
-            color: 'text-[var(--app-badge-warning-text)]',
-            dotColor: 'bg-[var(--app-badge-warning-text)]',
+            color: 'text-emerald-600',
+            dotColor: 'bg-emerald-600',
             isPulsing: true
         }
     }
@@ -129,9 +129,9 @@ export function StatusBar(props: {
     return (
         <div className="flex items-center justify-between px-2 pb-1 min-h-6">
             <div className="flex items-baseline gap-3">
-                <div className="flex items-center gap-1.5">
+                <div className={`flex items-center gap-1.5 ${connectionStatus.isPulsing ? 'animate-[snowflake-pulse_1.5s_ease-in-out_infinite]' : ''}`}>
                     {connectionStatus.isPulsing ? (
-                        <span className={`text-xs leading-none ${connectionStatus.color} animate-[snowflake-pulse_1.5s_ease-in-out_infinite]`}>✻</span>
+                        <span className={`inline-block text-xs leading-none ${connectionStatus.color} animate-[spin_3s_linear_infinite]`}>✻</span>
                     ) : (
                         <span className={`text-xs leading-none ${connectionStatus.color}`}>✻</span>
                     )}

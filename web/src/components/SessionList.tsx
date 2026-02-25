@@ -200,9 +200,9 @@ function SessionItem(props: {
             >
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                        <span className={`flex h-4 w-4 items-center justify-center ${s.active ? 'rounded-[4px]' : ''} ${s.active && s.thinking ? 'bg-[var(--app-badge-warning-text)]' : s.active ? 'bg-emerald-600' : ''}`} aria-hidden="true">
+                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active ? 'rounded-[4px] bg-emerald-600' : ''}`} aria-hidden="true">
                             {s.active && s.thinking ? (
-                                <span className="text-[10px] leading-none text-white animate-[snowflake-pulse_1.5s_ease-in-out_infinite]">✻</span>
+                                <span className="inline-block text-[10px] leading-none text-white animate-[spin_3s_linear_infinite]">✻</span>
                             ) : s.active ? (
                                 <span className="text-[10px] leading-none text-white">✻</span>
                             ) : (
