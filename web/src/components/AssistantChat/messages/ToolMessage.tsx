@@ -96,9 +96,12 @@ function HappyNestedBlockList(props: {
 
                 if (block.kind === 'agent-event') {
                     const presentation = getEventPresentation(block.event)
+                    const alignCls = presentation.source === 'user'
+                        ? 'ml-auto w-fit max-w-[92%] px-1 text-right'
+                        : 'max-w-[92%] px-1'
                     return (
                         <div key={`event:${block.id}`} className="py-1">
-                            <div className="mx-auto w-fit max-w-[92%] px-2 text-center text-xs text-[var(--app-hint)] opacity-80">
+                            <div className={`${alignCls} text-xs text-[var(--app-hint)] opacity-80`}>
                                 <span className="inline-flex items-center gap-1">
                                     {presentation.icon ? <span aria-hidden="true">{presentation.icon}</span> : null}
                                     <span>{presentation.text}</span>
