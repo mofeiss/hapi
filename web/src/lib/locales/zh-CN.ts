@@ -39,7 +39,7 @@ export default {
   'login.footer.copyright': '©',
 
   // Sessions page
-  'sessions.count': '{n} 个会话，{m} 个项目',
+  'sessions.count': '{m} 台设备',
   'sessions.new': '新建会话',
 
   // Session list
@@ -275,6 +275,32 @@ export default {
   'event.toolLabel': '工具：{name}',
   'event.toolError': 'Error',
   'event.toolRunning': 'Running…',
+
+  // Slash commands - Claude
+  'command.claude.clear': '清除对话历史并释放上下文空间',
+  'command.claude.compact': '清除对话历史但保留摘要在上下文中',
+  'command.claude.context': '以彩色网格可视化当前上下文使用情况',
+  'command.claude.cost': '显示当前会话的总费用和时长',
+  'command.claude.doctor': '诊断并验证 Claude Code 的安装和设置',
+  'command.claude.plan': '查看或打开当前会话计划',
+  'command.claude.stats': '显示 Claude Code 的使用统计和活动',
+  'command.claude.status': '显示 Claude Code 状态，包括版本、模型、账户和 API 连接',
+
+  // Slash commands - Codex
+  'command.codex.review': '检查当前更改并查找问题',
+  'command.codex.new': '在对话中开始新聊天',
+  'command.codex.compat': '总结对话以防止达到上下文限制',
+  'command.codex.undo': '请求 Codex 撤销一个回合',
+  'command.codex.diff': '显示 git diff，包括未跟踪的文件',
+  'command.codex.status': '显示当前会话配置和 token 使用情况',
+
+  // Slash commands - Gemini
+  'command.gemini.about': '显示版本信息',
+  'command.gemini.clear': '清除屏幕和对话历史',
+  'command.gemini.compress': '将上下文替换为摘要以压缩空间',
+  'command.gemini.stats': '查看会话统计',
+  'command.customCommand': '自定义命令',
+  'command.loadError': '加载命令失败',
 
   // Misc
   'misc.noMachines': '无可用机器',

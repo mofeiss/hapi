@@ -39,7 +39,7 @@ export default {
   'login.footer.copyright': '©',
 
   // Sessions page
-  'sessions.count': '{n} sessions in {m} projects',
+  'sessions.count': '{m} devices',
   'sessions.new': 'New Session',
 
   // Session list
@@ -273,6 +273,32 @@ export default {
   'event.toolLabel': 'Tool: {name}',
   'event.toolError': 'Error',
   'event.toolRunning': 'Running…',
+
+  // Slash commands - Claude
+  'command.claude.clear': 'Clear conversation history and free up context',
+  'command.claude.compact': 'Clear conversation history but keep a summary in context',
+  'command.claude.context': 'Visualize current context usage as a colored grid',
+  'command.claude.cost': 'Show the total cost and duration of the current session',
+  'command.claude.doctor': 'Diagnose and verify your Claude Code installation and settings',
+  'command.claude.plan': 'View or open the current session plan',
+  'command.claude.stats': 'Show your Claude Code usage statistics and activity',
+  'command.claude.status': 'Show Claude Code status including version, model, account, and API connectivity',
+
+  // Slash commands - Codex
+  'command.codex.review': 'Review current changes and find issues',
+  'command.codex.new': 'Start a new chat during a conversation',
+  'command.codex.compat': 'Summarize conversation to prevent hitting the context limit',
+  'command.codex.undo': 'Ask Codex to undo a turn',
+  'command.codex.diff': 'Show git diff including untracked files',
+  'command.codex.status': 'Show current session configuration and token usage',
+
+  // Slash commands - Gemini
+  'command.gemini.about': 'Show version info',
+  'command.gemini.clear': 'Clear the screen and conversation history',
+  'command.gemini.compress': 'Compress the context by replacing it with a summary',
+  'command.gemini.stats': 'Check session stats',
+  'command.customCommand': 'Custom command',
+  'command.loadError': 'Failed to load commands',
 
   // Misc
   'misc.noMachines': 'No machines available',

@@ -53,7 +53,7 @@ function groupSessionsByHost(sessions: SessionSummary[]): SessionGroup[] {
         })
 }
 
-function PlusIcon(props: { className?: string }) {
+function NewChatIcon(props: { className?: string }) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -67,8 +67,9 @@ function PlusIcon(props: { className?: string }) {
             strokeLinejoin="round"
             className={props.className}
         >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <line x1="12" y1="7" x2="12" y2="13" />
+            <line x1="9" y1="10" x2="15" y2="10" />
         </svg>
     )
 }
@@ -389,7 +390,7 @@ export function SessionList(props: {
                         className="session-list-new-button p-1.5 rounded-full text-[var(--app-link)] transition-colors"
                         title={t('sessions.new')}
                     >
-                        <PlusIcon className="h-5 w-5" />
+                        <NewChatIcon className="h-5 w-5" />
                     </button>
                 </div>
             ) : null}
@@ -404,6 +405,7 @@ export function SessionList(props: {
                                 onClick={() => toggleGroup(group.host, isCollapsed)}
                                 className="sticky top-0 z-10 flex w-full items-center gap-2 px-3 py-2 text-left bg-[var(--app-bg)] border-b border-[var(--app-divider)] transition-colors hover:bg-[var(--app-secondary-bg)]"
                             >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-[var(--app-hint)]" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2" ry="2" /><rect x="2" y="14" width="20" height="8" rx="2" ry="2" /><line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" /></svg>
                                 <ChevronIcon
                                     className="h-4 w-4 text-[var(--app-hint)]"
                                     collapsed={isCollapsed}
