@@ -1,7 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { RouterProvider, createMemoryHistory } from '@tanstack/react-router'
 import './index.css'
 import { registerSW } from 'virtual:pwa-register'
@@ -72,7 +71,6 @@ async function bootstrap() {
             <I18nProvider>
                 <QueryClientProvider client={queryClient}>
                     <RouterProvider router={router} />
-                    {import.meta.env.DEV ? <ReactQueryDevtools initialIsOpen={false} /> : null}
                 </QueryClientProvider>
             </I18nProvider>
         </React.StrictMode>

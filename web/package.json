@@ -21,7 +21,6 @@
         "@shikijs/langs": "^3.20.0",
         "@shikijs/themes": "^3.20.0",
         "@tanstack/react-query": "^5.90.12",
-        "@tanstack/react-query-devtools": "^5.91.1",
         "@tanstack/react-router": "^1.143.6",
         "@xterm/addon-canvas": "^0.7.0",
         "@xterm/addon-fit": "^0.11.0",

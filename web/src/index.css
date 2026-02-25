@@ -265,12 +265,6 @@ html[data-theme="dark"] .shiki span {
   animation: bounce-in 0.3s ease-out;
 }
 
-/* ReactQueryDevtools button - move to middle-right to avoid blocking UI */
-.tsqd-open-btn-container {
-  bottom: 50% !important;
-  transform: translateY(50%);
-}
-
 /* Widescreen mode - remove content max-width constraint */
 .widescreen-mode .max-w-content {
   max-width: 100%;
