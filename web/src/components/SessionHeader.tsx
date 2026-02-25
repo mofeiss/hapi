@@ -142,6 +142,23 @@ export function SessionHeader(props: {
         <>
             <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
                 <div className="mx-auto w-full max-w-content flex items-center gap-2 p-3 border-b border-[var(--app-border)]">
+                    {/* Back button (mobile only) */}
+                    <button
+                        type="button"
+                        onClick={props.onBack}
+                        className="flex lg:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                        >
+                            <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z" />
+                        </svg>
+                    </button>
+
                     {/* Session info - two lines: title and path */}
                     <div className="min-w-0 flex-1">
                         <div className="truncate font-semibold">
