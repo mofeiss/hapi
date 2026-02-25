@@ -10,6 +10,7 @@ import { MessageStatusIndicator } from '@/components/AssistantChat/messages/Mess
 import { ToolCard } from '@/components/ToolCard/ToolCard'
 import { useHappyChatContext } from '@/components/AssistantChat/context'
 import { CliOutputBlock } from '@/components/CliOutputBlock'
+import { useTranslation } from '@/lib/use-translation'
 
 function isToolCallBlock(value: unknown): value is ToolCallBlock {
     if (!isObject(value)) return false
@@ -49,6 +50,7 @@ function HappyNestedBlockList(props: {
     blocks: ChatBlock[]
 }) {
     const ctx = useHappyChatContext()
+    const { t } = useTranslation()
 
     return (
         <div className="flex flex-col gap-3">
@@ -95,15 +97,14 @@ function HappyNestedBlockList(props: {
                 }
 
                 if (block.kind === 'agent-event') {
-                    const presentation = getEventPresentation(block.event)
+                    const presentation = getEventPresentation(block.event, t)
                     const alignCls = presentation.source === 'user'
                         ? 'ml-auto w-fit max-w-[92%] px-1 text-right'
                         : 'max-w-[92%] px-1'
                     return (
                         <div key={`event:${block.id}`} className="py-1">
                             <div className={`${alignCls} text-xs text-[var(--app-hint)] opacity-80`}>
-                                <span className="inline-flex items-center gap-1">
-                                    {presentation.icon ? <span aria-hidden="true">{presentation.icon}</span> : null}
+                                <span className="inline-flex items-center border-l-2 border-[var(--app-border)] pl-1.5">
                                     <span>{presentation.text}</span>
                                 </span>
                             </div>
@@ -136,7 +137,7 @@ function HappyNestedBlockList(props: {
                                         {taskChildren && taskChildren.rest.length > 0 ? (
                                             <details className="mt-2">
                                                 <summary className="cursor-pointer text-xs text-[var(--app-hint)]">
-                                                    Task details ({taskChildren.rest.length})
+                                                    {t('event.taskDetails', { count: taskChildren.rest.length })}
                                                 </summary>
                                                 <div className="mt-2 pl-3">
                                                     <HappyNestedBlockList blocks={taskChildren.rest} />
@@ -162,6 +163,7 @@ function HappyNestedBlockList(props: {
 
 export function HappyToolMessage(props: ToolCallMessagePartProps) {
     const ctx = useHappyChatContext()
+    const { t } = useTranslation()
     const artifact = props.artifact
 
     if (!isToolCallBlock(artifact)) {
@@ -175,13 +177,13 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
                 <div className="rounded-xl bg-[var(--app-secondary-bg)] p-3 shadow-sm">
                     <div className="flex items-center gap-2 text-xs">
                         <div className="font-mono text-[var(--app-hint)]">
-                            Tool: {props.toolName}
+                            {t('event.toolLabel', { name: props.toolName })}
                         </div>
                         {props.isError ? (
-                            <span className="text-red-500">Error</span>
+                            <span className="text-red-500">{t('event.toolError')}</span>
                         ) : null}
                         {props.status.type === 'running' && !hasResult ? (
-                            <span className="text-[var(--app-hint)]">Running…</span>
+                            <span className="text-[var(--app-hint)]">{t('event.toolRunning')}</span>
                         ) : null}
                     </div>
 

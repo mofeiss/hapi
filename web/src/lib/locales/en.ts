@@ -254,6 +254,26 @@ export default {
   'settings.about.appVersion': 'App Version',
   'settings.about.protocolVersion': 'Protocol Version',
 
+  // Event messages
+  'event.apiError': 'API error',
+  'event.apiError.maxRetries': 'API error: Max retries reached',
+  'event.apiError.retrying': 'API error: Retrying ({attempt}/{max})',
+  'event.apiError.retryingGeneric': 'API error: Retrying...',
+  'event.switchedTo': 'Switched to {mode}',
+  'event.titleChangedTo': 'Title changed to "{title}"',
+  'event.titleChanged': 'Title changed',
+  'event.permissionMode': 'Permission mode: {mode}',
+  'event.limitReachedUntil': 'Usage limit reached until {time}',
+  'event.limitReached': 'Usage limit reached',
+  'event.message': 'Message',
+  'event.turnDuration': 'Turn: {duration}',
+  'event.contextCompacted': 'Context compacted (saved {tokens} tokens)',
+  'event.conversationCompacted': 'Conversation compacted',
+  'event.taskDetails': 'Task details ({count})',
+  'event.toolLabel': 'Tool: {name}',
+  'event.toolError': 'Error',
+  'event.toolRunning': 'Running…',
+
   // Misc
   'misc.noMachines': 'No machines available',
   'misc.machine': 'Machine',

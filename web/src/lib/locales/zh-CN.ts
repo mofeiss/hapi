@@ -256,6 +256,26 @@ export default {
   'settings.about.appVersion': '应用版本',
   'settings.about.protocolVersion': '协议版本',
 
+  // Event messages
+  'event.apiError': 'API error',
+  'event.apiError.maxRetries': 'API error：已达最大重试次数',
+  'event.apiError.retrying': 'API error：重试中 ({attempt}/{max})',
+  'event.apiError.retryingGeneric': 'API error：重试中…',
+  'event.switchedTo': '已切换至{mode}',
+  'event.titleChangedTo': '标题已更改为「{title}」',
+  'event.titleChanged': '标题已更改',
+  'event.permissionMode': '权限模式：{mode}',
+  'event.limitReachedUntil': '用量已达上限，{time}后恢复',
+  'event.limitReached': '用量已达上限',
+  'event.message': 'Message',
+  'event.turnDuration': '耗时：{duration}',
+  'event.contextCompacted': '上下文已压缩（节省 {tokens} tokens）',
+  'event.conversationCompacted': '对话已压缩',
+  'event.taskDetails': '任务详情 ({count})',
+  'event.toolLabel': '工具：{name}',
+  'event.toolError': 'Error',
+  'event.toolRunning': 'Running…',
+
   // Misc
   'misc.noMachines': '无可用机器',
   'misc.machine': '机器',
