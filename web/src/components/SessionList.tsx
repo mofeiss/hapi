@@ -194,20 +194,22 @@ function SessionItem(props: {
             <button
                 type="button"
                 {...longPressHandlers}
-                className={`session-list-item flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none ${selected ? 'bg-[var(--app-secondary-bg)]' : ''}`}
+                className={`session-list-item flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none ${selected ? 'bg-[var(--app-secondary-bg)]' : ''} ${!s.active ? 'opacity-70' : ''}`}
                 style={{ WebkitTouchCallout: 'none' }}
                 aria-current={selected ? 'page' : undefined}
             >
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
-                        <span className="flex h-4 w-4 items-center justify-center" aria-hidden="true">
+                        <span className={`flex h-4 w-4 items-center justify-center ${s.active ? 'rounded-[4px]' : ''} ${s.active && s.thinking ? 'bg-[var(--app-badge-warning-text)]' : s.active ? 'bg-emerald-600' : ''}`} aria-hidden="true">
                             {s.active && s.thinking ? (
-                                <span className="text-xs leading-none text-[var(--app-badge-warning-text)] animate-[snowflake-pulse_1.5s_ease-in-out_infinite]">✻</span>
+                                <span className="text-[10px] leading-none text-white animate-[snowflake-pulse_1.5s_ease-in-out_infinite]">✻</span>
+                            ) : s.active ? (
+                                <span className="text-[10px] leading-none text-white">✻</span>
                             ) : (
-                                <span className={`text-xs leading-none ${s.active ? 'text-emerald-600' : 'text-[var(--app-hint)]'}`}>✻</span>
+                                <span className="text-xs leading-none text-[var(--app-hint)]">✻</span>
                             )}
                         </span>
-                        <div className="truncate text-base font-medium">
+                        <div className={`truncate text-base ${!s.active ? 'font-normal text-[var(--app-hint)]' : 'font-medium'}`}>
                             {sessionName}
                         </div>
                     </div>
