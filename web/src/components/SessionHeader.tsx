@@ -146,7 +146,7 @@ export function SessionHeader(props: {
                     <button
                         type="button"
                         onClick={props.onBack}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                        className="flex h-8 w-8 -ml-[10px] items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -166,11 +166,8 @@ export function SessionHeader(props: {
                         </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--app-hint)]">
                             <span className="inline-flex items-center gap-1">
-                                <span aria-hidden="true">❖</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
                                 {session.metadata?.flavor?.trim() || 'unknown'}
-                            </span>
-                            <span>
-                                {t('session.item.modelMode')}: {session.modelMode || 'default'}
                             </span>
                             {worktreeBranch ? (
                                 <span>{t('session.item.worktree')}: {worktreeBranch}</span>
@@ -179,6 +176,12 @@ export function SessionHeader(props: {
                                 <span className="inline-flex items-center gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
                                     {session.metadata.host}
+                                </span>
+                            ) : null}
+                            {session.metadata?.path ? (
+                                <span className="inline-flex items-center gap-1 truncate">
+                                    <span className="shrink-0 text-[10px]" aria-hidden="true">📂</span>
+                                    {session.metadata.path}
                                 </span>
                             ) : null}
                         </div>

@@ -263,7 +263,7 @@ function SessionsPage() {
                         <button
                             type="button"
                             onClick={toggleCollapsed}
-                            className="p-1 text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] rounded transition-colors"
+                            className="mt-1 p-1 text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] rounded transition-colors"
                             title="Expand sidebar"
                         >
                             <SidebarExpandIcon className="h-4 w-4" />
@@ -273,7 +273,7 @@ function SessionsPage() {
             )}
 
             {/* Right panel */}
-            <div className={`${isSessionsIndex ? 'hidden lg:flex' : 'flex'} min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? 'widescreen-mode' : ''}`}>
+            <div className={`${isSessionsIndex ? 'hidden lg:flex' : 'flex'} min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!collapsed ? 'lg:pr-[7px]' : ''}` : ''}`}>
                 <div className="flex-1 min-h-0">
                     <Outlet />
                 </div>
