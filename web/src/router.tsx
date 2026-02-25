@@ -274,15 +274,15 @@ function SessionsPage() {
             )}
 
             {/* Right panel */}
-            <div className={`${isSessionsIndex ? 'hidden lg:flex' : 'flex'} min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!collapsed ? 'lg:pr-[7px]' : ''}` : ''}`}>
+            <div className={`${isSessionsIndex ? 'hidden lg:flex' : 'flex'} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!collapsed ? 'lg:pr-[7px]' : ''}` : ''}`}>
                 <div className="flex-1 min-h-0">
                     <Outlet />
                 </div>
-            </div>
 
-            {/* Settings overlay */}
-            <div className={`fixed inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${settingsOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'} ${widescreen ? 'widescreen-mode' : ''}`}>
-                <SettingsPanel onClose={() => setSettingsOpen(false)} />
+                {/* Settings overlay */}
+                <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${settingsOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}>
+                    <SettingsPanel onClose={() => setSettingsOpen(false)} />
+                </div>
             </div>
         </div>
     )
