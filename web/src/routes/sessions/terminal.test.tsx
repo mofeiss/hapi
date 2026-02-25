@@ -17,10 +17,6 @@ vi.mock('@/lib/app-context', () => ({
     })
 }))
 
-vi.mock('@/hooks/useAppGoBack', () => ({
-    useAppGoBack: () => vi.fn()
-}))
-
 vi.mock('@/hooks/queries/useSession', () => ({
     useSession: () => ({
         session: {
