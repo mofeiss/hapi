@@ -13,6 +13,7 @@ import { HappyThread } from '@/components/AssistantChat/HappyThread'
 import { useHappyRuntime } from '@/lib/assistant-runtime'
 import { createAttachmentAdapter } from '@/lib/attachmentAdapter'
 import { SessionHeader } from '@/components/SessionHeader'
+import { FilesPanel } from '@/routes/sessions/files'
 import { usePlatform } from '@/hooks/usePlatform'
 import { useSessionActions } from '@/hooks/mutations/useSessionActions'
 import { useVoiceOptional } from '@/lib/voice-context'
@@ -228,12 +229,11 @@ export function SessionChat(props: {
         props.onRefresh()
     }, [switchSession, props.onRefresh])
 
+    const [filesOpen, setFilesOpen] = useState(false)
+
     const handleViewFiles = useCallback(() => {
-        navigate({
-            to: '/sessions/$sessionId/files',
-            params: { sessionId: props.session.id }
-        })
-    }, [navigate, props.session.id])
+        setFilesOpen(true)
+    }, [])
 
     const handleViewTerminal = useCallback(() => {
         navigate({
@@ -265,7 +265,7 @@ export function SessionChat(props: {
     })
 
     return (
-        <div className="flex h-full flex-col">
+        <div className="relative flex h-full flex-col">
             <SessionHeader
                 session={props.session}
                 onBack={props.onBack}
@@ -338,6 +338,11 @@ export function SessionChat(props: {
                     onStatusChange={voice.setStatus}
                 />
             )}
+
+            {/* Files overlay */}
+            <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-transform duration-200 ${filesOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'}`}>
+                <FilesPanel sessionId={props.session.id} onClose={() => setFilesOpen(false)} />
+            </div>
         </div>
     )
 }

@@ -227,18 +227,14 @@ function FileListSkeleton(props: { label: string; rows?: number }) {
     )
 }
 
-export default function FilesPage() {
+export function FilesPanel({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
     const { api } = useAppContext()
     const navigate = useNavigate()
     const queryClient = useQueryClient()
-    const goBack = useAppGoBack()
-    const { sessionId } = useParams({ from: '/sessions/$sessionId/files' })
-    const search = useSearch({ from: '/sessions/$sessionId/files' })
     const { session } = useSession(api, sessionId)
     const [searchQuery, setSearchQuery] = useState('')
 
-    const initialTab = search.tab === 'directories' ? 'directories' : 'changes'
-    const [activeTab, setActiveTab] = useState<'changes' | 'directories'>(initialTab)
+    const [activeTab, setActiveTab] = useState<'changes' | 'directories'>('changes')
 
     const {
         status: gitStatus,
@@ -297,13 +293,7 @@ export default function FilesPage() {
 
     const handleTabChange = useCallback((nextTab: 'changes' | 'directories') => {
         setActiveTab(nextTab)
-        navigate({
-            to: '/sessions/$sessionId/files',
-            params: { sessionId },
-            search: nextTab === 'changes' ? {} : { tab: nextTab },
-            replace: true,
-        })
-    }, [navigate, sessionId])
+    }, [])
 
     return (
         <div className="flex h-full flex-col">
@@ -311,7 +301,7 @@ export default function FilesPage() {
                 <div className="mx-auto w-full max-w-content flex items-center gap-2 p-3 border-b border-[var(--app-border)]">
                     <button
                         type="button"
-                        onClick={goBack}
+                        onClick={onClose}
                         className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
                     >
                         <BackIcon />
@@ -478,4 +468,10 @@ export default function FilesPage() {
             </div>
         </div>
     )
+}
+
+export default function FilesPage() {
+    const goBack = useAppGoBack()
+    const { sessionId } = useParams({ from: '/sessions/$sessionId/files' })
+    return <FilesPanel sessionId={sessionId} onClose={goBack} />
 }
