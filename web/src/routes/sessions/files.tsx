@@ -19,14 +19,10 @@ function BackIcon(props: { className?: string }) {
             width="20"
             height="20"
             viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            fill="currentColor"
             className={props.className}
         >
-            <polyline points="15 18 9 12 15 6" />
+            <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z" />
         </svg>
     )
 }
@@ -302,7 +298,7 @@ export function FilesPanel({ sessionId, onClose }: { sessionId: string; onClose:
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                        className="flex h-8 w-8 -ml-[10px] items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
                     >
                         <BackIcon />
                     </button>
