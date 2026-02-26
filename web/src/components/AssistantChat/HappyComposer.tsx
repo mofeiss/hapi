@@ -141,6 +141,13 @@ export function HappyComposer(props: {
     const composerTextRef = useRef(composerText)
     composerTextRef.current = composerText
     const preVoiceTextRef = useRef('')
+
+    // Reset pre-voice text when composer is cleared (e.g. after sending)
+    useEffect(() => {
+        if (!composerText) {
+            preVoiceTextRef.current = ''
+        }
+    }, [composerText])
     useEffect(() => {
         if (!onTranscript) return
         onTranscript((text: string) => {
@@ -418,6 +425,8 @@ export function HappyComposer(props: {
 
     const handleSend = useCallback(() => {
         api.composer().send()
+        // Keep focus on textarea after sending (especially useful during voice input)
+        setTimeout(() => textareaRef.current?.focus(), 0)
     }, [api])
 
     const overlays = useMemo(() => {
