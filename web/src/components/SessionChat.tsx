@@ -18,6 +18,7 @@ import { usePlatform } from '@/hooks/usePlatform'
 import { useSessionActions } from '@/hooks/mutations/useSessionActions'
 import { useVoiceOptional } from '@/lib/voice-context'
 import { RealtimeVoiceSession, registerSessionStore, registerVoiceHooksStore, voiceHooks } from '@/realtime'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
 
 export function SessionChat(props: {
     api: ApiClient
@@ -54,6 +55,14 @@ export function SessionChat(props: {
 
     // Voice assistant integration
     const voice = useVoiceOptional()
+
+    // Speech-to-text voice input (replaces ConvAI voice call)
+    const stt = useVoiceInput(props.api)
+
+    // Map STT status to ConversationStatus for existing UI
+    const sttVoiceStatus = stt.status === 'recording' ? 'connected' as const
+        : stt.status === 'transcribing' ? 'connecting' as const
+        : 'disconnected' as const
 
     // Register session store for voice client tools
     useEffect(() => {
@@ -129,13 +138,8 @@ export function SessionChat(props: {
     }, [props.session.agentState?.requests, props.session.id])
 
     const handleVoiceToggle = useCallback(async () => {
-        if (!voice) return
-        if (voice.status === 'connected' || voice.status === 'connecting') {
-            await voice.stopVoice()
-        } else {
-            await voice.startVoice(props.session.id)
-        }
-    }, [voice, props.session.id])
+        stt.toggle()
+    }, [stt])
 
     const handleVoiceMicToggle = useCallback(() => {
         if (!voice) return
@@ -356,10 +360,9 @@ export function SessionChat(props: {
                         onPlanToggle={handlePlanToggle}
                         onSwitchToRemote={handleSwitchToRemote}
                         autocompleteSuggestions={props.autocompleteSuggestions}
-                        voiceStatus={voice?.status}
-                        voiceMicMuted={voice?.micMuted}
-                        onVoiceToggle={voice ? handleVoiceToggle : undefined}
-                        onVoiceMicToggle={voice ? handleVoiceMicToggle : undefined}
+                        voiceStatus={sttVoiceStatus}
+                        onVoiceToggle={handleVoiceToggle}
+                        onTranscript={stt.setOnTranscript}
                     />
 
                     {/* Files overlay - covers main content area only */}

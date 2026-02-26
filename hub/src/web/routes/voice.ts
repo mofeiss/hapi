@@ -193,5 +193,50 @@ export function createVoiceRoutes(): Hono<WebAppEnv> {
         }
     })
 
+    // Speech-to-text transcription via ElevenLabs Scribe v2
+    app.post('/voice/transcribe', async (c) => {
+        const apiKey = process.env.ELEVENLABS_API_KEY
+        if (!apiKey) {
+            return c.json({ error: 'ElevenLabs API key not configured' }, 400)
+        }
+
+        const body = await c.req.parseBody()
+        const file = body['file']
+        if (!(file instanceof File)) {
+            return c.json({ error: 'No audio file provided' }, 400)
+        }
+
+        const language = typeof body['language'] === 'string' ? body['language'] : undefined
+
+        try {
+            const formData = new FormData()
+            formData.append('file', file, file.name || 'recording.webm')
+            formData.append('model_id', 'scribe_v2')
+            if (language) {
+                formData.append('language_code', language)
+            }
+
+            const response = await fetch(`${ELEVENLABS_API_BASE}/speech-to-text`, {
+                method: 'POST',
+                headers: { 'xi-api-key': apiKey },
+                body: formData
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({})) as { detail?: { message?: string } | string }
+                const errorMessage = typeof errorData.detail === 'string'
+                    ? errorData.detail
+                    : (errorData.detail as { message?: string })?.message || `ElevenLabs API error: ${response.status}`
+                return c.json({ error: errorMessage }, 500)
+            }
+
+            const data = await response.json() as { text?: string; language_code?: string }
+            return c.json({ text: data.text ?? '', language_code: data.language_code })
+        } catch (error) {
+            console.error('[Voice] Transcription error:', error)
+            return c.json({ error: error instanceof Error ? error.message : 'Transcription failed' }, 500)
+        }
+    })
+
     return app
 }

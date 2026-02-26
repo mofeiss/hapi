@@ -59,6 +59,7 @@ export function HappyComposer(props: {
     voiceMicMuted?: boolean
     onVoiceToggle?: () => void
     onVoiceMicToggle?: () => void
+    onTranscript?: (cb: (text: string) => void) => void
 }) {
     const { t } = useTranslation()
     const {
@@ -81,7 +82,8 @@ export function HappyComposer(props: {
         voiceStatus = 'disconnected',
         voiceMicMuted = false,
         onVoiceToggle,
-        onVoiceMicToggle
+        onVoiceMicToggle,
+        onTranscript
     } = props
 
     // Use ?? so missing values fall back to default (destructuring defaults only handle undefined)
@@ -132,6 +134,18 @@ export function HappyComposer(props: {
             return { text: composerText, selection: { start: newPos, end: newPos } }
         })
     }, [composerText])
+
+    // Register STT transcript callback — appends transcribed text to composer
+    const composerTextRef = useRef(composerText)
+    composerTextRef.current = composerText
+    useEffect(() => {
+        if (!onTranscript) return
+        onTranscript((text: string) => {
+            const current = composerTextRef.current
+            const newText = current ? `${current} ${text}` : text
+            api.composer().setText(newText)
+        })
+    }, [onTranscript, api])
 
     // Track one-time "continue" hint after switching from local to remote.
     useEffect(() => {

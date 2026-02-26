@@ -421,4 +421,33 @@ export class ApiClient {
             body: JSON.stringify(options || {})
         })
     }
+
+    async transcribeAudio(audioBlob: Blob, language?: string): Promise<{ text: string; language_code?: string }> {
+        const formData = new FormData()
+        formData.append('file', audioBlob, 'recording.webm')
+        if (language) {
+            formData.append('language', language)
+        }
+
+        const headers = new Headers()
+        const liveToken = this.getToken ? this.getToken() : null
+        const authToken = liveToken ?? this.token
+        if (authToken) {
+            headers.set('authorization', `Bearer ${authToken}`)
+        }
+        // Do NOT set content-type — browser sets multipart boundary automatically
+
+        const res = await fetch(this.buildUrl('/api/voice/transcribe'), {
+            method: 'POST',
+            headers,
+            body: formData
+        })
+
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({})) as { error?: string }
+            throw new Error(data.error || `Transcription failed: ${res.status}`)
+        }
+
+        return await res.json() as { text: string; language_code?: string }
+    }
 }
