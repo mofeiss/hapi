@@ -36,7 +36,10 @@ function groupSessionsByHost(sessions: SessionSummary[]): SessionGroup[] {
 
     return Array.from(groups.entries())
         .map(([host, groupSessions]) => {
-            const sortedSessions = [...groupSessions].sort((a, b) => b.updatedAt - a.updatedAt)
+            const sortedSessions = [...groupSessions].sort((a, b) => {
+                if (a.active !== b.active) return a.active ? -1 : 1
+                return b.updatedAt - a.updatedAt
+            })
             const latestUpdatedAt = groupSessions.reduce(
                 (max, s) => (s.updatedAt > max ? s.updatedAt : max),
                 -Infinity
