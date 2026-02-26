@@ -113,6 +113,8 @@ export default {
   'batch.confirm.tooltip': 'Confirm',
   'batch.cancel.tooltip': 'Cancel',
   'batch.selected': '{n} selected',
+  'batch.selectAll': 'All',
+  'batch.deselectAll': 'None',
   'batch.archive.title': 'Batch Archive',
   'batch.archive.description': 'Archive {count} selected sessions? This will disconnect active sessions.',
   'batch.delete.title': 'Batch Delete',

@@ -159,9 +159,12 @@ function SessionItem(props: {
     onSelect: (sessionId: string) => void
     api: ApiClient | null
     selected?: boolean
+    batchMode?: 'archive' | 'delete' | null
+    batchSelected?: boolean
+    onBatchToggleSelect?: () => void
 }) {
     const { t } = useTranslation()
-    const { session: s, onSelect, api, selected = false } = props
+    const { session: s, onSelect, api, selected = false, batchMode, batchSelected, onBatchToggleSelect } = props
     const { haptic } = usePlatform()
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -204,13 +207,21 @@ function SessionItem(props: {
         <>
             <button
                 type="button"
-                {...longPressHandlers}
-                className={`session-list-item flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none ${selected ? 'bg-[var(--app-secondary-bg)]' : ''} ${!s.active ? 'opacity-70' : ''}`}
+                {...(batchMode ? { onClick: onBatchToggleSelect } : longPressHandlers)}
+                className={`session-list-item flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none ${batchMode ? (batchSelected ? 'bg-[var(--app-link)]/10' : '') : (selected ? 'bg-[var(--app-secondary-bg)]' : '')} ${!s.active ? 'opacity-70' : ''}`}
                 style={{ WebkitTouchCallout: 'none' }}
-                aria-current={selected ? 'page' : undefined}
+                aria-current={!batchMode && selected ? 'page' : undefined}
             >
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
+                        {batchMode ? (
+                            <input
+                                type="checkbox"
+                                checked={batchSelected ?? false}
+                                readOnly
+                                className="h-4 w-4 shrink-0 rounded accent-[var(--app-link)] pointer-events-none"
+                            />
+                        ) : null}
                         <span className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active ? 'rounded-[4px] bg-emerald-600' : ''}`} aria-hidden="true">
                             {s.active && s.thinking ? (
                                 <span className="inline-block text-[10px] leading-none text-white animate-[spin_3s_linear_infinite]">✻</span>
@@ -282,49 +293,53 @@ function SessionItem(props: {
                 </div>
             </button>
 
-            <SessionActionMenu
-                isOpen={menuOpen}
-                onClose={() => setMenuOpen(false)}
-                sessionActive={s.active}
-                onRename={() => setRenameOpen(true)}
-                onArchive={() => skipArchiveConfirm ? handleQuickArchive() : setArchiveOpen(true)}
-                onDelete={() => skipDeleteConfirm ? handleQuickDelete() : setDeleteOpen(true)}
-                anchorPoint={menuAnchorPoint}
-            />
+            {!batchMode ? (
+                <>
+                    <SessionActionMenu
+                        isOpen={menuOpen}
+                        onClose={() => setMenuOpen(false)}
+                        sessionActive={s.active}
+                        onRename={() => setRenameOpen(true)}
+                        onArchive={() => skipArchiveConfirm ? handleQuickArchive() : setArchiveOpen(true)}
+                        onDelete={() => skipDeleteConfirm ? handleQuickDelete() : setDeleteOpen(true)}
+                        anchorPoint={menuAnchorPoint}
+                    />
 
-            <RenameSessionDialog
-                isOpen={renameOpen}
-                onClose={() => setRenameOpen(false)}
-                currentName={sessionName}
-                onRename={renameSession}
-                isPending={isPending}
-            />
+                    <RenameSessionDialog
+                        isOpen={renameOpen}
+                        onClose={() => setRenameOpen(false)}
+                        currentName={sessionName}
+                        onRename={renameSession}
+                        isPending={isPending}
+                    />
 
-            <ConfirmDialog
-                isOpen={archiveOpen}
-                onClose={() => setArchiveOpen(false)}
-                title={t('dialog.archive.title')}
-                description={t('dialog.archive.description', { name: sessionName })}
-                confirmLabel={t('dialog.archive.confirm')}
-                confirmingLabel={t('dialog.archive.confirming')}
-                onConfirm={archiveSession}
-                isPending={isPending}
-                destructive
-                dontAskAgainKey="hapi:skip-confirm:archive"
-            />
+                    <ConfirmDialog
+                        isOpen={archiveOpen}
+                        onClose={() => setArchiveOpen(false)}
+                        title={t('dialog.archive.title')}
+                        description={t('dialog.archive.description', { name: sessionName })}
+                        confirmLabel={t('dialog.archive.confirm')}
+                        confirmingLabel={t('dialog.archive.confirming')}
+                        onConfirm={archiveSession}
+                        isPending={isPending}
+                        destructive
+                        dontAskAgainKey="hapi:skip-confirm:archive"
+                    />
 
-            <ConfirmDialog
-                isOpen={deleteOpen}
-                onClose={() => setDeleteOpen(false)}
-                title={t('dialog.delete.title')}
-                description={t('dialog.delete.description', { name: sessionName })}
-                confirmLabel={t('dialog.delete.confirm')}
-                confirmingLabel={t('dialog.delete.confirming')}
-                onConfirm={deleteSession}
-                isPending={isPending}
-                destructive
-                dontAskAgainKey="hapi:skip-confirm:delete"
-            />
+                    <ConfirmDialog
+                        isOpen={deleteOpen}
+                        onClose={() => setDeleteOpen(false)}
+                        title={t('dialog.delete.title')}
+                        description={t('dialog.delete.description', { name: sessionName })}
+                        confirmLabel={t('dialog.delete.confirm')}
+                        confirmingLabel={t('dialog.delete.confirming')}
+                        onConfirm={deleteSession}
+                        isPending={isPending}
+                        destructive
+                        dontAskAgainKey="hapi:skip-confirm:delete"
+                    />
+                </>
+            ) : null}
         </>
     )
 }
@@ -338,12 +353,22 @@ export function SessionList(props: {
     renderHeader?: boolean
     api: ApiClient | null
     selectedSessionId?: string | null
+    batchMode?: 'archive' | 'delete' | null
+    batchSelectedIds?: Set<string>
+    onBatchToggleSelect?: (sessionId: string) => void
 }) {
     const { t } = useTranslation()
-    const { renderHeader = true, api, selectedSessionId } = props
+    const { renderHeader = true, api, selectedSessionId, batchMode, batchSelectedIds, onBatchToggleSelect } = props
+
+    const filteredSessions = useMemo(() => {
+        if (!batchMode) return props.sessions
+        if (batchMode === 'archive') return props.sessions.filter(s => s.active)
+        return props.sessions.filter(s => !s.active)
+    }, [props.sessions, batchMode])
+
     const groups = useMemo(
-        () => groupSessionsByHost(props.sessions),
-        [props.sessions]
+        () => groupSessionsByHost(filteredSessions),
+        [filteredSessions]
     )
     const [collapseOverrides, setCollapseOverrides] = useState<Map<string, boolean>>(
         () => {
@@ -355,6 +380,7 @@ export function SessionList(props: {
         }
     )
     const isGroupCollapsed = (group: SessionGroup): boolean => {
+        if (batchMode) return false
         const override = collapseOverrides.get(group.host)
         if (override !== undefined) return override
         return false
@@ -440,6 +466,9 @@ export function SessionList(props: {
                                             onSelect={props.onSelect}
                                             api={api}
                                             selected={s.id === selectedSessionId}
+                                            batchMode={batchMode}
+                                            batchSelected={batchSelectedIds?.has(s.id)}
+                                            onBatchToggleSelect={onBatchToggleSelect ? () => onBatchToggleSelect(s.id) : undefined}
                                         />
                                     ))}
                                 </div>

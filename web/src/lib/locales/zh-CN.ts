@@ -115,6 +115,8 @@ export default {
   'batch.confirm.tooltip': '确认',
   'batch.cancel.tooltip': '取消',
   'batch.selected': '已选择 {n} 个',
+  'batch.selectAll': '全选',
+  'batch.deselectAll': '取消全选',
   'batch.archive.title': '批量归档',
   'batch.archive.description': '确定要归档选中的 {count} 个会话吗？这将断开活动会话。',
   'batch.delete.title': '批量删除',

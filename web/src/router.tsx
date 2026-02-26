@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Navigate,
@@ -33,11 +33,13 @@ import { useTranslation } from "@/lib/use-translation";
 import {
   fetchLatestMessages,
   seedMessageWindowFromSession,
+  clearMessageWindow,
 } from "@/lib/message-window-store";
 import FilesPage from "@/routes/sessions/files";
 import FilePage from "@/routes/sessions/file";
 import TerminalPage from "@/routes/sessions/terminal";
 import { SettingsPanel } from "@/routes/settings";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 function BackIcon(props: { className?: string }) {
   return (
@@ -139,6 +141,77 @@ function SidebarExpandIcon(props: { className?: string }) {
 
 const MAX_CACHED_SESSIONS = 3;
 
+function BatchArchiveIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <rect width="20" height="5" x="2" y="3" rx="1" />
+      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+      <path d="M10 12h4" />
+    </svg>
+  );
+}
+
+function BatchTrashIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    </svg>
+  );
+}
+
+function BatchCheckIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function BatchXIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function BatchSelectAllIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function BatchDeselectAllIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M9 12h6" />
+    </svg>
+  );
+}
+
+function ThemeToggleIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </svg>
+  );
+}
+
 function SessionsPage() {
   const { api } = useAppContext();
   const navigate = useNavigate();
@@ -177,6 +250,56 @@ function SessionsPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const hasOverlay = settingsOpen || newSessionOpen;
+
+  // Batch mode state
+  const queryClient = useQueryClient();
+  const [batchMode, setBatchMode] = useState<"archive" | "delete" | null>(null);
+  const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
+  const [batchPending, setBatchPending] = useState(false);
+
+  const handleEnterBatchMode = useCallback(
+    (mode: "archive" | "delete") => {
+      setBatchMode(mode);
+      setBatchSelectedIds(new Set());
+      setSettingsOpen(false);
+      setNewSessionOpen(false);
+    },
+    [],
+  );
+
+  const handleExitBatchMode = useCallback(() => {
+    setBatchMode(null);
+    setBatchSelectedIds(new Set());
+    setBatchConfirmOpen(false);
+  }, []);
+
+  const handleBatchToggleSelect = useCallback((sessionId: string) => {
+    setBatchSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      return next;
+    });
+  }, []);
+
+  const batchFilteredIds = useMemo(() => {
+    if (!batchMode) return new Set<string>();
+    return new Set(
+      sessions
+        .filter((s) => (batchMode === "archive" ? s.active : !s.active))
+        .map((s) => s.id),
+    );
+  }, [sessions, batchMode]);
+
+  const handleBatchSelectAll = useCallback(() => {
+    setBatchSelectedIds(new Set(batchFilteredIds));
+  }, [batchFilteredIds]);
 
   // Session keep-alive state
   const [activeSessionId, setActiveSessionId] = useState<string | null>(
@@ -238,6 +361,59 @@ function SessionsPage() {
     },
     [navigate],
   );
+
+  const executeBatchOperation = useCallback(async () => {
+    if (!api || batchSelectedIds.size === 0 || !batchMode) return;
+    setBatchPending(true);
+    const ids = [...batchSelectedIds];
+
+    for (const id of ids) {
+      try {
+        if (batchMode === "archive") {
+          await api.archiveSession(id);
+        } else {
+          await api.deleteSession(id);
+          clearMessageWindow(id);
+        }
+      } catch {
+        // continue with remaining sessions
+      }
+    }
+
+    if (batchMode === "delete") {
+      setMountedSessions((prev) =>
+        prev.filter((sid) => !batchSelectedIds.has(sid)),
+      );
+      if (activeSessionId && batchSelectedIds.has(activeSessionId)) {
+        setActiveSessionId(null);
+        navigate({ to: "/sessions" });
+      }
+    }
+
+    await queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
+    setBatchPending(false);
+    handleExitBatchMode();
+  }, [api, batchMode, batchSelectedIds, activeSessionId, navigate, queryClient, handleExitBatchMode]);
+
+  const handleBatchConfirmClick = useCallback(() => {
+    if (batchSelectedIds.size === 0) return;
+    const skipKey =
+      batchMode === "archive"
+        ? "hapi:skip-confirm:archive"
+        : "hapi:skip-confirm:delete";
+    const skip = (() => {
+      try {
+        return localStorage.getItem(skipKey) === "1";
+      } catch {
+        return false;
+      }
+    })();
+    if (skip) {
+      void executeBatchOperation();
+    } else {
+      setBatchConfirmOpen(true);
+    }
+  }, [batchMode, batchSelectedIds, executeBatchOperation]);
 
   const isSubRoute =
     activeSessionId !== null &&
@@ -314,10 +490,73 @@ function SessionsPage() {
                 <SidebarCollapseIcon className="h-5 w-5" />
               </button>
               <div className="text-xs text-[var(--app-hint)]">
-                {t("sessions.count", { n: sessions.length, m: projectCount })}
+                {batchMode
+                  ? t("batch.selected", { n: batchSelectedIds.size })
+                  : t("sessions.count", { n: sessions.length, m: projectCount })}
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {batchMode ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? () => setBatchSelectedIds(new Set()) : handleBatchSelectAll}
+                    disabled={batchPending || batchFilteredIds.size === 0}
+                    className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                    title={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? t("batch.deselectAll") : t("batch.selectAll")}
+                  >
+                    {batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0
+                      ? <BatchDeselectAllIcon className="h-5 w-5" />
+                      : <BatchSelectAllIcon className="h-5 w-5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBatchConfirmClick}
+                    disabled={batchSelectedIds.size === 0 || batchPending}
+                    className={`p-1.5 rounded-full transition-colors ${batchSelectedIds.size > 0 ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-[var(--app-hint)] opacity-50 cursor-not-allowed'}`}
+                    title={t("batch.confirm.tooltip")}
+                  >
+                    <BatchCheckIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExitBatchMode}
+                    disabled={batchPending}
+                    className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                    title={t("batch.cancel.tooltip")}
+                  >
+                    <BatchXIcon className="h-5 w-5" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleEnterBatchMode("archive")}
+                    className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                    title={t("batch.archive.tooltip")}
+                  >
+                    <BatchArchiveIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEnterBatchMode("delete")}
+                    className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                    title={t("batch.delete.tooltip")}
+                  >
+                    <BatchTrashIcon className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+              {!batchMode && (
+                <button
+                  type="button"
+                  className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                  title="Theme"
+                >
+                  <ThemeToggleIcon className="h-5 w-5" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -362,8 +601,28 @@ function SessionsPage() {
             isLoading={isLoading}
             renderHeader={false}
             api={api}
+            batchMode={batchMode}
+            batchSelectedIds={batchSelectedIds}
+            onBatchToggleSelect={handleBatchToggleSelect}
           />
         </div>
+
+        {/* Batch operation confirm dialog */}
+        <ConfirmDialog
+          isOpen={batchConfirmOpen}
+          onClose={() => setBatchConfirmOpen(false)}
+          title={t(batchMode === "archive" ? "batch.archive.title" : "batch.delete.title")}
+          description={t(
+            batchMode === "archive" ? "batch.archive.description" : "batch.delete.description",
+            { count: batchSelectedIds.size },
+          )}
+          confirmLabel={t(batchMode === "archive" ? "dialog.archive.confirm" : "dialog.delete.confirm")}
+          confirmingLabel={t(batchMode === "archive" ? "dialog.archive.confirming" : "dialog.delete.confirming")}
+          onConfirm={executeBatchOperation}
+          isPending={batchPending}
+          destructive
+          dontAskAgainKey={batchMode === "archive" ? "hapi:skip-confirm:archive" : "hapi:skip-confirm:delete"}
+        />
       </div>
 
       {/* Drag handle (PC only, when not collapsed) */}
