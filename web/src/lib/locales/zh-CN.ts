@@ -107,6 +107,7 @@ export default {
   'dialog.delete.confirm': '删除',
   'dialog.delete.confirming': '删除中…',
   'dialog.error.default': '操作失败，请重试。',
+  'dialog.dontAskAgain': '不再提示',
 
   // Common buttons
   'button.cancel': '取消',

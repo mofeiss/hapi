@@ -175,6 +175,16 @@ function SessionItem(props: {
         s.metadata?.flavor ?? null
     )
 
+    const skipArchiveConfirm = (() => { try { return localStorage.getItem('hapi:skip-confirm:archive') === '1' } catch { return false } })()
+    const skipDeleteConfirm = (() => { try { return localStorage.getItem('hapi:skip-confirm:delete') === '1' } catch { return false } })()
+
+    const handleQuickArchive = async () => {
+        try { await archiveSession() } catch { /* toast handles errors */ }
+    }
+    const handleQuickDelete = async () => {
+        try { await deleteSession() } catch { /* toast handles errors */ }
+    }
+
     const longPressHandlers = useLongPress({
         onLongPress: (point) => {
             haptic.impact('medium')
@@ -277,8 +287,8 @@ function SessionItem(props: {
                 onClose={() => setMenuOpen(false)}
                 sessionActive={s.active}
                 onRename={() => setRenameOpen(true)}
-                onArchive={() => setArchiveOpen(true)}
-                onDelete={() => setDeleteOpen(true)}
+                onArchive={() => skipArchiveConfirm ? handleQuickArchive() : setArchiveOpen(true)}
+                onDelete={() => skipDeleteConfirm ? handleQuickDelete() : setDeleteOpen(true)}
                 anchorPoint={menuAnchorPoint}
             />
 
@@ -300,6 +310,7 @@ function SessionItem(props: {
                 onConfirm={archiveSession}
                 isPending={isPending}
                 destructive
+                dontAskAgainKey="hapi:skip-confirm:archive"
             />
 
             <ConfirmDialog
@@ -312,6 +323,7 @@ function SessionItem(props: {
                 onConfirm={deleteSession}
                 isPending={isPending}
                 destructive
+                dontAskAgainKey="hapi:skip-confirm:delete"
             />
         </>
     )

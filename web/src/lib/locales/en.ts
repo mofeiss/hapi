@@ -105,6 +105,7 @@ export default {
   'dialog.delete.confirm': 'Delete',
   'dialog.delete.confirming': 'Deleting…',
   'dialog.error.default': 'Operation failed. Please try again.',
+  'dialog.dontAskAgain': 'Don\'t ask again',
 
   // Common buttons
   'button.cancel': 'Cancel',

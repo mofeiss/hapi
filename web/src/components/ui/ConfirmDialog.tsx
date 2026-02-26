@@ -19,6 +19,8 @@ type ConfirmDialogProps = {
     onConfirm: () => Promise<void>
     isPending: boolean
     destructive?: boolean
+    /** When set, shows a "don't ask again" checkbox. On confirm with it checked, saves preference to localStorage under this key. */
+    dontAskAgainKey?: string
 }
 
 export function ConfirmDialog(props: ConfirmDialogProps) {
@@ -32,21 +34,27 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         confirmingLabel,
         onConfirm,
         isPending,
-        destructive = false
+        destructive = false,
+        dontAskAgainKey
     } = props
 
     const [error, setError] = useState<string | null>(null)
+    const [dontAskAgain, setDontAskAgain] = useState(false)
 
-    // Clear error when dialog opens/closes
+    // Clear error and checkbox when dialog opens/closes
     useEffect(() => {
         if (isOpen) {
             setError(null)
+            setDontAskAgain(false)
         }
     }, [isOpen])
 
     const handleConfirm = async () => {
         setError(null)
         try {
+            if (dontAskAgain && dontAskAgainKey) {
+                try { localStorage.setItem(dontAskAgainKey, '1') } catch { /* ignore */ }
+            }
             await onConfirm()
             onClose()
         } catch (err) {
@@ -55,6 +63,10 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
                     ? err.message
                     : t('dialog.error.default')
             setError(message)
+            // Revert localStorage if action failed
+            if (dontAskAgain && dontAskAgainKey) {
+                try { localStorage.removeItem(dontAskAgainKey) } catch { /* ignore */ }
+            }
         }
     }
 
@@ -72,6 +84,18 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
                     <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
                         {error}
                     </div>
+                ) : null}
+
+                {dontAskAgainKey ? (
+                    <label className="mt-3 flex items-center gap-2 cursor-pointer select-none text-sm text-[var(--app-hint)]">
+                        <input
+                            type="checkbox"
+                            checked={dontAskAgain}
+                            onChange={(e) => setDontAskAgain(e.target.checked)}
+                            className="h-4 w-4 rounded border-[var(--app-border)] accent-[var(--app-link)]"
+                        />
+                        {t('dialog.dontAskAgain')}
+                    </label>
                 ) : null}
 
                 <div className="mt-4 flex gap-2 justify-end">
