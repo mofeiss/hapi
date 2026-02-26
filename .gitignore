@@ -43,6 +43,3 @@ execplan/
 
 # Generated npm bundle output (local)
 cli/npm/main/
-
-pnpm-lock.yaml
-cli/package.json
