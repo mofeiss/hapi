@@ -102,10 +102,9 @@ export function useVoiceInput(api: ApiClient) {
 
         recognition.onend = () => {
             recognitionRef.current = null
-            // Emit final transcript
-            if (finalTranscriptRef.current) {
-                onTranscriptRef.current?.(finalTranscriptRef.current)
-            }
+            // Don't re-emit finalTranscriptRef here — it was already emitted
+            // in onresult as each segment became final. Re-emitting would
+            // overwrite any manual edits the user made after recognition.
             onInterimRef.current?.('')
             setStatus('idle')
         }
