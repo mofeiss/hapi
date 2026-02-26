@@ -188,7 +188,10 @@ function MiniSelect(props: {
                 }`}
             >
                 {props.icon}
-                <span>{selectedLabel}</span>
+                <span className="inline-grid">
+                    {props.options.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label}</span>)}
+                    <span className="col-start-1 row-start-1">{selectedLabel}</span>
+                </span>
                 <ChevronDownIcon />
             </button>
             {open ? createPortal(
@@ -388,7 +391,7 @@ function QrCodeButton() {
                 type="button"
                 aria-label={t('composer.mobileAccess')}
                 title={t('composer.mobileAccess')}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]"
                 onClick={() => setOpen(true)}
             >
                 <SwitchToRemoteIcon />
@@ -408,6 +411,125 @@ function QrCodeButton() {
                             {t('composer.scanToOpen')}
                         </p>
                     </div>
+                </div>,
+                document.body
+            ) : null}
+        </>
+    )
+}
+
+function PermissionPlanPill(props: {
+    showPermission: boolean
+    permissionMode: string
+    permissionOptions: { value: string; label: string }[]
+    onPermissionChange: (value: string) => void
+    showPlan: boolean
+    isPlanActive: boolean
+    onPlanToggle: () => void
+    disabled?: boolean
+}) {
+    const { t: _t } = useTranslation()
+    const [open, setOpen] = useState(false)
+    const buttonRef = useRef<HTMLButtonElement>(null)
+    const dropdownRef = useRef<HTMLDivElement>(null)
+    const [pos, setPos] = useState({ bottom: 0, left: 0 })
+
+    useEffect(() => {
+        if (!open) return
+        const handler = (e: MouseEvent) => {
+            const target = e.target as Node
+            if (
+                buttonRef.current && !buttonRef.current.contains(target) &&
+                dropdownRef.current && !dropdownRef.current.contains(target)
+            ) {
+                setOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [open])
+
+    const handleToggle = useCallback(() => {
+        if (!open && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect()
+            setPos({
+                bottom: window.innerHeight - rect.top + 4,
+                left: rect.left,
+            })
+        }
+        setOpen(!open)
+    }, [open])
+
+    const selectedLabel = props.permissionOptions.find(o => o.value === props.permissionMode)?.label ?? props.permissionMode
+    const shortLabel = selectedLabel.split(' ')[0]
+    const showBoth = props.showPermission && props.showPlan
+
+    return (
+        <>
+            <div className="flex items-center h-8 rounded-full overflow-hidden bg-[var(--app-fg)]/[0.04]">
+                {props.showPermission ? (
+                    <button
+                        ref={buttonRef}
+                        type="button"
+                        disabled={props.disabled}
+                        onClick={handleToggle}
+                        className={`flex items-center gap-1 h-full px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            open
+                                ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
+                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        }`}
+                    >
+                        <ShieldIcon />
+                        <span className="inline-grid">
+                            {props.permissionOptions.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label.split(' ')[0]}</span>)}
+                            <span className="col-start-1 row-start-1">{shortLabel}</span>
+                        </span>
+                        <ChevronDownIcon />
+                    </button>
+                ) : null}
+                {showBoth ? (
+                    <div className="w-px h-3.5 bg-[var(--app-fg)]/10 shrink-0" />
+                ) : null}
+                {props.showPlan ? (
+                    <button
+                        type="button"
+                        aria-label="Plan Mode"
+                        title="Plan Mode"
+                        disabled={props.disabled}
+                        onClick={props.onPlanToggle}
+                        className={`flex items-center gap-1 h-full px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            props.isPlanActive
+                                ? 'bg-[var(--app-badge-warning-text)]/15 text-[var(--app-badge-warning-text)]'
+                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        }`}
+                    >
+                        <PlanIcon />
+                        <span>Plan</span>
+                    </button>
+                ) : null}
+            </div>
+            {open && props.showPermission ? createPortal(
+                <div
+                    ref={dropdownRef}
+                    className="fixed min-w-[120px] rounded-lg bg-[var(--app-secondary-bg)] border border-[var(--app-divider)] shadow-lg overflow-hidden z-[9999]"
+                    style={{ bottom: pos.bottom, left: pos.left }}
+                >
+                    {props.permissionOptions.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            className={`w-full px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--app-bg)] ${
+                                option.value === props.permissionMode ? 'text-[var(--app-link)] font-medium' : 'text-[var(--app-fg)]'
+                            }`}
+                            onClick={() => {
+                                props.onPermissionChange(option.value)
+                                setOpen(false)
+                            }}
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
                 </div>,
                 document.body
             ) : null}
@@ -466,31 +588,17 @@ export function ComposerButtons(props: {
                     />
                 ) : null}
 
-                {props.showPermissionSelect && props.permissionModeOptions.length > 0 ? (
-                    <MiniSelect
-                        value={props.permissionMode}
-                        options={props.permissionModeOptions}
-                        onChange={props.onPermissionModeChange}
+                {(props.showPermissionSelect && props.permissionModeOptions.length > 0) || props.showPlanToggle ? (
+                    <PermissionPlanPill
+                        showPermission={props.showPermissionSelect && props.permissionModeOptions.length > 0}
+                        permissionMode={props.permissionMode}
+                        permissionOptions={props.permissionModeOptions}
+                        onPermissionChange={props.onPermissionModeChange}
+                        showPlan={props.showPlanToggle}
+                        isPlanActive={props.isPlanActive}
+                        onPlanToggle={props.onPlanToggle}
                         disabled={props.controlsDisabled}
-                        icon={<ShieldIcon />}
                     />
-                ) : null}
-
-                {props.showPlanToggle ? (
-                    <button
-                        type="button"
-                        aria-label="Plan Mode"
-                        title="Plan Mode"
-                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-                            props.isPlanActive
-                                ? 'bg-[var(--app-badge-warning-text)]/15 text-[var(--app-badge-warning-text)]'
-                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
-                        }`}
-                        onClick={props.onPlanToggle}
-                        disabled={props.controlsDisabled}
-                    >
-                        <PlanIcon />
-                    </button>
                 ) : null}
 
                 {props.voiceEnabled || isVoiceConnected || props.voiceStatus === 'connecting' ? (() => {
@@ -519,7 +627,7 @@ export function ComposerButtons(props: {
                             className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                                 isVoiceActive
                                     ? 'text-[var(--app-fg)]'
-                                    : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                                    : 'bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                             }`}
                             onClick={props.onVoiceToggle}
                         >
