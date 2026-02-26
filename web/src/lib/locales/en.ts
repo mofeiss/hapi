@@ -107,6 +107,17 @@ export default {
   'dialog.error.default': 'Operation failed. Please try again.',
   'dialog.dontAskAgain': 'Don\'t ask again',
 
+  // Batch operations
+  'batch.archive.tooltip': 'Batch Archive',
+  'batch.delete.tooltip': 'Batch Delete',
+  'batch.confirm.tooltip': 'Confirm',
+  'batch.cancel.tooltip': 'Cancel',
+  'batch.selected': '{n} selected',
+  'batch.archive.title': 'Batch Archive',
+  'batch.archive.description': 'Archive {count} selected sessions? This will disconnect active sessions.',
+  'batch.delete.title': 'Batch Delete',
+  'batch.delete.description': 'Delete {count} selected sessions? This action cannot be undone.',
+
   // Common buttons
   'button.cancel': 'Cancel',
   'button.save': 'Save',
@@ -225,7 +236,7 @@ export default {
   'composer.terminal': 'Terminal',
   'composer.abort': 'Abort',
   'composer.switchRemote': 'Switch to remote mode',
-  'composer.controlledByTerminal': 'Controlled by terminal',
+  'composer.controlledByTerminal': 'Terminal in control \u00b7 Type to take over\u2026',
   'composer.mobileAccess': 'Mobile access',
   'composer.scanToOpen': 'Scan to open on mobile',
   'composer.attach': 'Attach file',

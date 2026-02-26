@@ -109,6 +109,17 @@ export default {
   'dialog.error.default': '操作失败，请重试。',
   'dialog.dontAskAgain': '不再提示',
 
+  // Batch operations
+  'batch.archive.tooltip': '批量归档',
+  'batch.delete.tooltip': '批量删除',
+  'batch.confirm.tooltip': '确认',
+  'batch.cancel.tooltip': '取消',
+  'batch.selected': '已选择 {n} 个',
+  'batch.archive.title': '批量归档',
+  'batch.archive.description': '确定要归档选中的 {count} 个会话吗？这将断开活动会话。',
+  'batch.delete.title': '批量删除',
+  'batch.delete.description': '确定要删除选中的 {count} 个会话吗？此操作无法撤销。',
+
   // Common buttons
   'button.cancel': '取消',
   'button.save': '保存',
@@ -227,7 +238,7 @@ export default {
   'composer.terminal': '终端',
   'composer.abort': '中止',
   'composer.switchRemote': '切换到远程模式',
-  'composer.controlledByTerminal': '终端控制中',
+  'composer.controlledByTerminal': '终端控制中 \u00b7 输入消息接管会话\u2026',
   'composer.mobileAccess': '手机访问',
   'composer.scanToOpen': '扫码在手机上打开',
   'composer.attach': '添加文件',
