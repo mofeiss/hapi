@@ -323,26 +323,22 @@ function LoadingIcon() {
 
 function UnifiedButton(props: {
     canSend: boolean
-    voiceStatus: ConversationStatus
-    voiceEnabled: boolean
     controlsDisabled: boolean
+    showAbortButton: boolean
+    abortDisabled: boolean
+    isAborting: boolean
     onSend: () => void
-    onVoiceToggle: () => void
+    onAbort: () => void
 }) {
     const { t } = useTranslation()
 
-    const isConnecting = props.voiceStatus === 'connecting'
-    const isConnected = props.voiceStatus === 'connected'
-    const isVoiceActive = isConnecting || isConnected
     const hasText = props.canSend
 
     const handleClick = () => {
-        if (isVoiceActive) {
-            props.onVoiceToggle()
+        if (props.showAbortButton) {
+            props.onAbort()
         } else if (hasText) {
             props.onSend()
-        } else if (props.voiceEnabled) {
-            props.onVoiceToggle()
         }
     }
 
@@ -350,29 +346,23 @@ function UnifiedButton(props: {
     let className: string
     let ariaLabel: string
 
-    if (isConnecting) {
-        icon = <LoadingIcon />
+    if (props.showAbortButton) {
+        icon = <AbortIcon spinning={props.isAborting} />
         className = 'bg-black text-white'
-        ariaLabel = t('voice.connecting')
-    } else if (isConnected) {
-        icon = <StopIcon />
-        className = 'bg-black text-white'
-        ariaLabel = t('composer.stop')
+        ariaLabel = t('composer.abort')
     } else if (hasText) {
         icon = <SendIcon />
         className = 'bg-black text-white'
         ariaLabel = t('composer.send')
-    } else if (props.voiceEnabled) {
-        icon = <VoiceAssistantIcon />
-        className = 'bg-black text-white'
-        ariaLabel = t('composer.voice')
     } else {
         icon = <SendIcon />
         className = 'bg-[#C0C0C0] text-white'
         ariaLabel = t('composer.send')
     }
 
-    const isDisabled = props.controlsDisabled || (!hasText && !props.voiceEnabled && !isVoiceActive)
+    const isDisabled = props.showAbortButton
+        ? props.abortDisabled
+        : (props.controlsDisabled || !hasText)
 
     return (
         <button
@@ -503,18 +493,40 @@ export function ComposerButtons(props: {
                     </button>
                 ) : null}
 
-                {props.showAbortButton ? (
-                    <button
-                        type="button"
-                        aria-label={t('composer.abort')}
-                        title={t('composer.abort')}
-                        disabled={props.abortDisabled}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={props.onAbort}
-                    >
-                        <AbortIcon spinning={props.isAborting} />
-                    </button>
-                ) : null}
+                {props.voiceEnabled || isVoiceConnected || props.voiceStatus === 'connecting' ? (() => {
+                    const isConnecting = props.voiceStatus === 'connecting'
+                    const isVoiceActive = isConnecting || isVoiceConnected
+
+                    let voiceIcon: React.ReactNode
+                    let voiceLabel: string
+                    if (isConnecting) {
+                        voiceIcon = <LoadingIcon />
+                        voiceLabel = t('voice.connecting')
+                    } else if (isVoiceConnected) {
+                        voiceIcon = <StopIcon />
+                        voiceLabel = t('composer.stop')
+                    } else {
+                        voiceIcon = <VoiceAssistantIcon />
+                        voiceLabel = t('composer.voice')
+                    }
+
+                    return (
+                        <button
+                            type="button"
+                            aria-label={voiceLabel}
+                            title={voiceLabel}
+                            disabled={props.controlsDisabled && !isVoiceActive}
+                            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                isVoiceActive
+                                    ? 'text-[var(--app-fg)]'
+                                    : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                            }`}
+                            onClick={props.onVoiceToggle}
+                        >
+                            {voiceIcon}
+                        </button>
+                    )
+                })() : null}
 
                 {props.showQrButton ? (
                     <QrCodeButton />
@@ -539,11 +551,12 @@ export function ComposerButtons(props: {
 
             <UnifiedButton
                 canSend={props.canSend}
-                voiceStatus={props.voiceStatus}
-                voiceEnabled={props.voiceEnabled}
                 controlsDisabled={props.controlsDisabled}
+                showAbortButton={props.showAbortButton}
+                abortDisabled={props.abortDisabled}
+                isAborting={props.isAborting}
                 onSend={props.onSend}
-                onVoiceToggle={props.onVoiceToggle}
+                onAbort={props.onAbort}
             />
         </div>
     )

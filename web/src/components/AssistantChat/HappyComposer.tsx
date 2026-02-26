@@ -372,7 +372,7 @@ export function HappyComposer(props: {
 
     const showPermissionSettings = Boolean(onPermissionModeChange && permissionModeOptions.length > 0)
     const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor))
-    const showAbortButton = true
+    const showAbortButton = threadIsRunning
     const voiceEnabled = Boolean(onVoiceToggle)
 
     const handleSend = useCallback(() => {
