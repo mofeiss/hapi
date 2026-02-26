@@ -161,6 +161,7 @@ function MiniSelect(props: {
     onChange: (value: string) => void
     disabled?: boolean
     icon?: React.ReactNode
+    compactOnMobile?: boolean
 }) {
     const [open, setOpen] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
@@ -194,6 +195,7 @@ function MiniSelect(props: {
     }, [open])
 
     const selectedLabel = props.options.find((o) => o.value === props.value)?.label ?? props.value
+    const shortLabel = selectedLabel.charAt(0).toUpperCase()
 
     return (
         <>
@@ -205,14 +207,26 @@ function MiniSelect(props: {
                 className={`flex items-center gap-1 h-8 px-2 rounded-full text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                     open
                         ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
-                        : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        : 'bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                 }`}
             >
                 {props.icon}
-                <span className="inline-grid">
-                    {props.options.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label}</span>)}
-                    <span className="col-start-1 row-start-1">{selectedLabel}</span>
-                </span>
+                {props.compactOnMobile ? (
+                    <>
+                        <span className="inline-grid sm:hidden">
+                            <span className="col-start-1 row-start-1">{shortLabel}</span>
+                        </span>
+                        <span className="hidden sm:inline-grid">
+                            {props.options.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label}</span>)}
+                            <span className="col-start-1 row-start-1">{selectedLabel}</span>
+                        </span>
+                    </>
+                ) : (
+                    <span className="inline-grid">
+                        {props.options.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label}</span>)}
+                        <span className="col-start-1 row-start-1">{selectedLabel}</span>
+                    </span>
+                )}
                 <ChevronDownIcon />
             </button>
             {open ? createPortal(
@@ -483,6 +497,7 @@ function PermissionPlanPill(props: {
 
     const selectedLabel = props.permissionOptions.find(o => o.value === props.permissionMode)?.label ?? props.permissionMode
     const shortLabel = selectedLabel.split(' ')[0]
+    const initialLabel = shortLabel.charAt(0).toUpperCase()
     const showBoth = props.showPermission && props.showPlan
 
     return (
@@ -501,7 +516,10 @@ function PermissionPlanPill(props: {
                         }`}
                     >
                         <ShieldIcon />
-                        <span className="inline-grid">
+                        <span className="inline-grid sm:hidden">
+                            <span className="col-start-1 row-start-1">{initialLabel}</span>
+                        </span>
+                        <span className="hidden sm:inline-grid">
                             {props.permissionOptions.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label.split(' ')[0]}</span>)}
                             <span className="col-start-1 row-start-1">{shortLabel}</span>
                         </span>
@@ -606,6 +624,7 @@ export function ComposerButtons(props: {
                         onChange={props.onModelModeChange}
                         disabled={props.controlsDisabled}
                         icon={<ModelIcon />}
+                        compactOnMobile
                     />
                 ) : null}
 
