@@ -42,6 +42,13 @@ export const claudeCommand: CommandDefinition = {
             } else if (arg === '--dangerously-skip-permissions') {
                 options.permissionMode = 'bypassPermissions'
                 unknownArgs.push(arg)
+            } else if (arg === '--permission-mode') {
+                options.permissionMode = args[++i] as any
+                unknownArgs.push('--permission-mode', options.permissionMode as string)
+            } else if (arg === '--base-permission-mode') {
+                options.basePermissionMode = args[++i] as any
+                unknownArgs.push('--base-permission-mode', options.basePermissionMode as string)
+
             } else if (arg === '--model') {
                 const model = args[++i]
                 if (!model) {

@@ -8,7 +8,8 @@ type SpawnInput = {
     directory: string
     agent?: 'claude' | 'codex' | 'gemini' | 'opencode'
     model?: string
-    yolo?: boolean
+    permissionMode?: string
+    basePermissionMode?: string
     sessionType?: 'simple' | 'worktree'
     worktreeName?: string
 }
@@ -30,7 +31,8 @@ export function useSpawnSession(api: ApiClient | null): {
                 input.directory,
                 input.agent,
                 input.model,
-                input.yolo,
+                input.permissionMode,
+                input.basePermissionMode,
                 input.sessionType,
                 input.worktreeName
             )

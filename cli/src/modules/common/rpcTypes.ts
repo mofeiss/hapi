@@ -6,7 +6,8 @@ export interface SpawnSessionOptions {
     approvedNewDirectoryCreation?: boolean
     agent?: 'claude' | 'codex' | 'gemini' | 'opencode'
     model?: string
-    yolo?: boolean
+    permissionMode?: string
+    basePermissionMode?: string
     token?: string
     sessionType?: 'simple' | 'worktree'
     worktreeName?: string

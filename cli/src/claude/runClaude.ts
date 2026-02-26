@@ -21,6 +21,7 @@ import { formatMessageWithAttachments } from '@/utils/attachmentFormatter';
 export interface StartOptions {
     model?: string
     permissionMode?: PermissionMode
+    basePermissionMode?: PermissionMode
     startingMode?: 'local' | 'remote'
     shouldStartRunner?: boolean
     claudeEnvVars?: Record<string, string>

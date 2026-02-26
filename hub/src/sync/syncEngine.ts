@@ -304,12 +304,13 @@ export class SyncEngine {
         directory: string,
         agent: 'claude' | 'codex' | 'gemini' | 'opencode' = 'claude',
         model?: string,
-        yolo?: boolean,
+        permissionMode?: string,
+        basePermissionMode?: string,
         sessionType?: 'simple' | 'worktree',
         worktreeName?: string,
         resumeSessionId?: string
     ): Promise<{ type: 'success'; sessionId: string } | { type: 'error'; message: string }> {
-        return await this.rpcGateway.spawnSession(machineId, directory, agent, model, yolo, sessionType, worktreeName, resumeSessionId)
+        return await this.rpcGateway.spawnSession(machineId, directory, agent, model, permissionMode, basePermissionMode, sessionType, worktreeName, resumeSessionId)
     }
 
     async resumeSession(sessionId: string, namespace: string): Promise<ResumeSessionResult> {
@@ -373,7 +374,8 @@ export class SyncEngine {
             metadata.path,
             flavor,
             undefined,
-            undefined,
+            undefined, // permissionMode
+            undefined, // basePermissionMode
             undefined,
             undefined,
             resumeToken

@@ -1,7 +1,8 @@
 import type { AgentType } from './types'
 
 const AGENT_STORAGE_KEY = 'hapi:newSession:agent'
-const YOLO_STORAGE_KEY = 'hapi:newSession:yolo'
+const PERMISSION_MODE_STORAGE_KEY = 'hapi:newSession:permissionMode'
+const PLAN_ACTIVE_STORAGE_KEY = 'hapi:newSession:planActive'
 
 const VALID_AGENTS: AgentType[] = ['claude', 'codex', 'gemini', 'opencode']
 
@@ -25,17 +26,35 @@ export function savePreferredAgent(agent: AgentType): void {
     }
 }
 
-export function loadPreferredYoloMode(): boolean {
+export function loadPreferredPermissionMode(): import('@/types/api').PermissionMode {
     try {
-        return localStorage.getItem(YOLO_STORAGE_KEY) === 'true'
+        const stored = localStorage.getItem(PERMISSION_MODE_STORAGE_KEY)
+        if (stored) return stored as import('@/types/api').PermissionMode
+    } catch {
+        // Ignore storage errors
+    }
+    return 'default'
+}
+
+export function savePreferredPermissionMode(mode: import('@/types/api').PermissionMode): void {
+    try {
+        localStorage.setItem(PERMISSION_MODE_STORAGE_KEY, mode)
+    } catch {
+        // Ignore storage errors
+    }
+}
+
+export function loadPreferredPlanActive(): boolean {
+    try {
+        return localStorage.getItem(PLAN_ACTIVE_STORAGE_KEY) === 'true'
     } catch {
         return false
     }
 }
 
-export function savePreferredYoloMode(enabled: boolean): void {
+export function savePreferredPlanActive(enabled: boolean): void {
     try {
-        localStorage.setItem(YOLO_STORAGE_KEY, enabled ? 'true' : 'false')
+        localStorage.setItem(PLAN_ACTIVE_STORAGE_KEY, enabled ? 'true' : 'false')
     } catch {
         // Ignore storage errors
     }

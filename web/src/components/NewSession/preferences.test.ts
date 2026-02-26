@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
     loadPreferredAgent,
-    loadPreferredYoloMode,
+    loadPreferredPermissionMode,
+    loadPreferredPlanActive,
     savePreferredAgent,
-    savePreferredYoloMode,
+    savePreferredPermissionMode,
+    savePreferredPlanActive,
 } from './preferences'
 
 describe('NewSession preferences', () => {
@@ -13,15 +15,18 @@ describe('NewSession preferences', () => {
 
     it('loads defaults when storage is empty', () => {
         expect(loadPreferredAgent()).toBe('claude')
-        expect(loadPreferredYoloMode()).toBe(false)
+        expect(loadPreferredPermissionMode()).toBe('default')
+        expect(loadPreferredPlanActive()).toBe(false)
     })
 
     it('loads saved values from storage', () => {
         localStorage.setItem('hapi:newSession:agent', 'codex')
-        localStorage.setItem('hapi:newSession:yolo', 'true')
+        localStorage.setItem('hapi:newSession:permissionMode', 'bypassPermissions')
+        localStorage.setItem('hapi:newSession:planActive', 'true')
 
         expect(loadPreferredAgent()).toBe('codex')
-        expect(loadPreferredYoloMode()).toBe(true)
+        expect(loadPreferredPermissionMode()).toBe('bypassPermissions')
+        expect(loadPreferredPlanActive()).toBe(true)
     })
 
     it('falls back to default agent on invalid stored value', () => {
@@ -32,9 +37,11 @@ describe('NewSession preferences', () => {
 
     it('persists new values to storage', () => {
         savePreferredAgent('gemini')
-        savePreferredYoloMode(true)
+        savePreferredPermissionMode('bypassPermissions')
+        savePreferredPlanActive(true)
 
         expect(localStorage.getItem('hapi:newSession:agent')).toBe('gemini')
-        expect(localStorage.getItem('hapi:newSession:yolo')).toBe('true')
+        expect(localStorage.getItem('hapi:newSession:permissionMode')).toBe('bypassPermissions')
+        expect(localStorage.getItem('hapi:newSession:planActive')).toBe('true')
     })
 })

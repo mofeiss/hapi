@@ -15,12 +15,15 @@ import { MachineSelector } from './MachineSelector'
 import { ModelSelector } from './ModelSelector'
 import {
     loadPreferredAgent,
-    loadPreferredYoloMode,
+    loadPreferredPermissionMode,
+    loadPreferredPlanActive,
     savePreferredAgent,
-    savePreferredYoloMode,
+    savePreferredPermissionMode,
+    savePreferredPlanActive,
 } from './preferences'
 import { SessionTypeSelector } from './SessionTypeSelector'
-import { YoloToggle } from './YoloToggle'
+import { PermissionSelector } from './PermissionSelector'
+import type { PermissionMode } from '@/types/api'
 
 export function NewSession(props: {
     api: ApiClient
@@ -42,7 +45,8 @@ export function NewSession(props: {
     const [pathExistence, setPathExistence] = useState<Record<string, boolean>>({})
     const [agent, setAgent] = useState<AgentType>(loadPreferredAgent)
     const [model, setModel] = useState('auto')
-    const [yoloMode, setYoloMode] = useState(loadPreferredYoloMode)
+    const [basePermissionMode, setBasePermissionMode] = useState<PermissionMode>(loadPreferredPermissionMode)
+    const [isPlanActive, setIsPlanActive] = useState<boolean>(loadPreferredPlanActive)
     const [sessionType, setSessionType] = useState<SessionType>('simple')
     const [worktreeName, setWorktreeName] = useState('')
     const [error, setError] = useState<string | null>(null)
@@ -63,8 +67,12 @@ export function NewSession(props: {
     }, [agent])
 
     useEffect(() => {
-        savePreferredYoloMode(yoloMode)
-    }, [yoloMode])
+        savePreferredPermissionMode(basePermissionMode)
+    }, [basePermissionMode])
+
+    useEffect(() => {
+        savePreferredPlanActive(isPlanActive)
+    }, [isPlanActive])
 
     useEffect(() => {
         if (props.machines.length === 0) return
@@ -215,7 +223,8 @@ export function NewSession(props: {
                 directory: directory.trim(),
                 agent,
                 model: resolvedModel,
-                yolo: yoloMode,
+                permissionMode: isPlanActive ? 'plan' : basePermissionMode,
+                basePermissionMode: basePermissionMode,
                 sessionType,
                 worktreeName: sessionType === 'worktree' ? (worktreeName.trim() || undefined) : undefined
             })
@@ -279,10 +288,13 @@ export function NewSession(props: {
                 isDisabled={isFormDisabled}
                 onModelChange={setModel}
             />
-            <YoloToggle
-                yoloMode={yoloMode}
-                isDisabled={isFormDisabled}
-                onToggle={setYoloMode}
+            <PermissionSelector
+                agentFlavor={agent}
+                basePermissionMode={basePermissionMode}
+                onBasePermissionModeChange={setBasePermissionMode}
+                isPlanActive={isPlanActive}
+                onPlanToggle={setIsPlanActive}
+                disabled={isFormDisabled}
             />
 
             {(error ?? spawnError) ? (

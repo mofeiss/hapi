@@ -179,7 +179,8 @@ export async function startRunner(): Promise<void> {
 
       const { directory, sessionId, machineId, approvedNewDirectoryCreation = true } = options;
       const agent = options.agent ?? 'claude';
-      const yolo = options.yolo === true;
+      const permissionMode = options.permissionMode;
+      const basePermissionMode = options.basePermissionMode;
       const sessionType = options.sessionType ?? 'simple';
       const worktreeName = options.worktreeName;
       let directoryCreated = false;
@@ -342,8 +343,11 @@ export async function startRunner(): Promise<void> {
         if (options.model && agent !== 'opencode') {
           args.push('--model', options.model);
         }
-        if (yolo) {
-          args.push('--yolo');
+        if (permissionMode) {
+          args.push('--permission-mode', permissionMode);
+        }
+        if (basePermissionMode) {
+          args.push('--base-permission-mode', basePermissionMode);
         }
 
         // sessionId reserved for future use
