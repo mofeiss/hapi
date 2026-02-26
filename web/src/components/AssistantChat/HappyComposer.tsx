@@ -60,6 +60,7 @@ export function HappyComposer(props: {
     onVoiceToggle?: () => void
     onVoiceMicToggle?: () => void
     onTranscript?: (cb: (text: string) => void) => void
+    onInterim?: (cb: (text: string) => void) => void
 }) {
     const { t } = useTranslation()
     const {
@@ -83,7 +84,8 @@ export function HappyComposer(props: {
         voiceMicMuted = false,
         onVoiceToggle,
         onVoiceMicToggle,
-        onTranscript
+        onTranscript,
+        onInterim
     } = props
 
     // Use ?? so missing values fall back to default (destructuring defaults only handle undefined)
@@ -135,17 +137,42 @@ export function HappyComposer(props: {
         })
     }, [composerText])
 
-    // Register STT transcript callback — appends transcribed text to composer
+    // Register STT transcript callback — sets final transcribed text in composer
     const composerTextRef = useRef(composerText)
     composerTextRef.current = composerText
+    const preVoiceTextRef = useRef('')
     useEffect(() => {
         if (!onTranscript) return
         onTranscript((text: string) => {
-            const current = composerTextRef.current
-            const newText = current ? `${current} ${text}` : text
-            api.composer().setText(newText)
+            api.composer().setText(preVoiceTextRef.current ? `${preVoiceTextRef.current} ${text}` : text)
+            textareaRef.current?.focus()
         })
     }, [onTranscript, api])
+
+    // Register STT interim callback — shows real-time partial text while speaking
+    useEffect(() => {
+        if (!onInterim) return
+        onInterim((text: string) => {
+            if (text) {
+                // Save pre-voice text on first interim
+                if (!preVoiceTextRef.current && composerTextRef.current) {
+                    preVoiceTextRef.current = composerTextRef.current
+                }
+                api.composer().setText(preVoiceTextRef.current ? `${preVoiceTextRef.current} ${text}` : text)
+                textareaRef.current?.focus()
+            } else {
+                // Interim cleared (recording stopped) — reset pre-voice text
+                preVoiceTextRef.current = ''
+            }
+        })
+    }, [onInterim, api])
+
+    // Auto-focus textarea when voice recording starts
+    useEffect(() => {
+        if (voiceStatus === 'connected') {
+            textareaRef.current?.focus()
+        }
+    }, [voiceStatus])
 
     // Track one-time "continue" hint after switching from local to remote.
     useEffect(() => {

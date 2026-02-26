@@ -363,6 +363,7 @@ export function SessionChat(props: {
                         voiceStatus={sttVoiceStatus}
                         onVoiceToggle={handleVoiceToggle}
                         onTranscript={stt.setOnTranscript}
+                        onInterim={stt.setOnInterim}
                     />
 
                     {/* Files overlay - covers main content area only */}

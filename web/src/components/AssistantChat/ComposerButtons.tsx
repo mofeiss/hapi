@@ -5,7 +5,7 @@ import { ComposerPrimitive } from '@assistant-ui/react'
 import type { ConversationStatus } from '@/realtime/types'
 import { useTranslation } from '@/lib/use-translation'
 
-function VoiceAssistantIcon() {
+function VoiceAssistantIcon({ animated = false }: { animated?: boolean } = {}) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -18,12 +18,33 @@ function VoiceAssistantIcon() {
             strokeLinecap="round"
             strokeLinejoin="round"
         >
-            {/* 三条声波线，代表语音助手的输出 */}
-            <path d="M12 6v12" />
-            <path d="M8 9v6" />
-            <path d="M16 9v6" />
-            <path d="M4 11v2" />
-            <path d="M20 11v2" />
+            {animated ? (
+                <>
+                    <path d="M4 11v2">
+                        <animate attributeName="d" values="M4 11v2;M4 8v8;M4 11v2" dur="0.8s" repeatCount="indefinite" begin="0s" />
+                    </path>
+                    <path d="M8 9v6">
+                        <animate attributeName="d" values="M8 9v6;M8 5v14;M8 9v6" dur="0.8s" repeatCount="indefinite" begin="0.15s" />
+                    </path>
+                    <path d="M12 6v12">
+                        <animate attributeName="d" values="M12 6v12;M12 3v18;M12 6v12" dur="0.8s" repeatCount="indefinite" begin="0.3s" />
+                    </path>
+                    <path d="M16 9v6">
+                        <animate attributeName="d" values="M16 9v6;M16 5v14;M16 9v6" dur="0.8s" repeatCount="indefinite" begin="0.45s" />
+                    </path>
+                    <path d="M20 11v2">
+                        <animate attributeName="d" values="M20 11v2;M20 8v8;M20 11v2" dur="0.8s" repeatCount="indefinite" begin="0.6s" />
+                    </path>
+                </>
+            ) : (
+                <>
+                    <path d="M12 6v12" />
+                    <path d="M8 9v6" />
+                    <path d="M16 9v6" />
+                    <path d="M4 11v2" />
+                    <path d="M20 11v2" />
+                </>
+            )}
         </svg>
     )
 }
@@ -611,7 +632,7 @@ export function ComposerButtons(props: {
                         voiceIcon = <LoadingIcon />
                         voiceLabel = t('voice.connecting')
                     } else if (isVoiceConnected) {
-                        voiceIcon = <StopIcon />
+                        voiceIcon = <VoiceAssistantIcon animated />
                         voiceLabel = t('composer.stop')
                     } else {
                         voiceIcon = <VoiceAssistantIcon />
@@ -626,7 +647,7 @@ export function ComposerButtons(props: {
                             disabled={props.controlsDisabled && !isVoiceActive}
                             className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                                 isVoiceActive
-                                    ? 'text-[var(--app-fg)]'
+                                    ? 'bg-black text-white hover:bg-black/80'
                                     : 'bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                             }`}
                             onClick={props.onVoiceToggle}
