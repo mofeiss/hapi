@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import { ComposerPrimitive } from '@assistant-ui/react'
 import type { ConversationStatus } from '@/realtime/types'
 import { useTranslation } from '@/lib/use-translation'
@@ -387,6 +388,43 @@ function UnifiedButton(props: {
     )
 }
 
+function QrCodeButton() {
+    const { t } = useTranslation()
+    const [open, setOpen] = useState(false)
+
+    return (
+        <>
+            <button
+                type="button"
+                aria-label={t('composer.mobileAccess')}
+                title={t('composer.mobileAccess')}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]"
+                onClick={() => setOpen(true)}
+            >
+                <SwitchToRemoteIcon />
+            </button>
+            {open ? createPortal(
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center"
+                    onClick={() => setOpen(false)}
+                >
+                    <div className="fixed inset-0 bg-black/30" />
+                    <div
+                        className="relative rounded-2xl bg-white p-6 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <QRCodeSVG value={window.location.href} size={200} />
+                        <p className="mt-3 max-w-[200px] text-center text-xs text-gray-500">
+                            {t('composer.scanToOpen')}
+                        </p>
+                    </div>
+                </div>,
+                document.body
+            ) : null}
+        </>
+    )
+}
+
 export function ComposerButtons(props: {
     canSend: boolean
     controlsDisabled: boolean
@@ -405,10 +443,7 @@ export function ComposerButtons(props: {
     abortDisabled: boolean
     isAborting: boolean
     onAbort: () => void
-    showSwitchButton: boolean
-    switchDisabled: boolean
-    isSwitching: boolean
-    onSwitch: () => void
+    showQrButton: boolean
     voiceEnabled: boolean
     voiceStatus: ConversationStatus
     voiceMicMuted?: boolean
@@ -481,17 +516,8 @@ export function ComposerButtons(props: {
                     </button>
                 ) : null}
 
-                {props.showSwitchButton ? (
-                    <button
-                        type="button"
-                        aria-label={t('composer.switchRemote')}
-                        title={t('composer.switchRemote')}
-                        disabled={props.switchDisabled}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={props.onSwitch}
-                    >
-                        <SwitchToRemoteIcon />
-                    </button>
+                {props.showQrButton ? (
+                    <QrCodeButton />
                 ) : null}
 
                 {isVoiceConnected && props.onVoiceMicToggle ? (
