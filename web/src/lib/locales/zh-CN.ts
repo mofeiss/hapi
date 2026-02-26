@@ -109,6 +109,10 @@ export default {
   'dialog.error.default': '操作失败，请重试。',
   'dialog.dontAskAgain': '不再提示',
 
+  // Theme
+  'theme.switchToLight': '切换到亮色模式',
+  'theme.switchToDark': '切换到暗色模式',
+
   // Batch operations
   'batch.archive.tooltip': '批量归档',
   'batch.delete.tooltip': '批量删除',

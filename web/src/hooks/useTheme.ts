@@ -3,7 +3,17 @@ import { getTelegramWebApp } from './useTelegram'
 
 type ColorScheme = 'light' | 'dark'
 
+const THEME_OVERRIDE_KEY = 'hapi:theme:override'
+
 function getColorScheme(): ColorScheme {
+    // User manual override takes priority
+    if (typeof window !== 'undefined') {
+        const override = localStorage.getItem(THEME_OVERRIDE_KEY)
+        if (override === 'light' || override === 'dark') {
+            return override
+        }
+    }
+
     const tg = getTelegramWebApp()
     if (tg?.colorScheme) {
         return tg.colorScheme === 'dark' ? 'dark' : 'light'
@@ -59,12 +69,21 @@ function updateScheme(): void {
 // Track if theme listeners have been set up
 let listenersInitialized = false
 
-export function useTheme(): { colorScheme: ColorScheme; isDark: boolean } {
+function toggleTheme(): void {
+    const newScheme: ColorScheme = currentScheme === 'dark' ? 'light' : 'dark'
+    localStorage.setItem(THEME_OVERRIDE_KEY, newScheme)
+    currentScheme = newScheme
+    applyTheme(newScheme)
+    listeners.forEach((cb) => cb())
+}
+
+export function useTheme(): { colorScheme: ColorScheme; isDark: boolean; toggleTheme: () => void } {
     const colorScheme = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
     return {
         colorScheme,
         isDark: colorScheme === 'dark',
+        toggleTheme,
     }
 }
 

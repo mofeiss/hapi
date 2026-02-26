@@ -107,6 +107,10 @@ export default {
   'dialog.error.default': 'Operation failed. Please try again.',
   'dialog.dontAskAgain': 'Don\'t ask again',
 
+  // Theme
+  'theme.switchToLight': 'Switch to light mode',
+  'theme.switchToDark': 'Switch to dark mode',
+
   // Batch operations
   'batch.archive.tooltip': 'Batch Archive',
   'batch.delete.tooltip': 'Batch Delete',

@@ -30,6 +30,7 @@ import { useSendMessage } from "@/hooks/mutations/useSendMessage";
 import { queryKeys } from "@/lib/query-keys";
 import { useToast } from "@/lib/toast-context";
 import { useTranslation } from "@/lib/use-translation";
+import { useTheme } from "@/hooks/useTheme";
 import {
   fetchLatestMessages,
   seedMessageWindowFromSession,
@@ -196,7 +197,7 @@ function BatchDeselectAllIcon(props: { className?: string }) {
   );
 }
 
-function ThemeToggleIcon(props: { className?: string }) {
+function SunIcon(props: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
       <circle cx="12" cy="12" r="4" />
@@ -212,12 +213,21 @@ function ThemeToggleIcon(props: { className?: string }) {
   );
 }
 
+function MoonIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </svg>
+  );
+}
+
 function SessionsPage() {
   const { api } = useAppContext();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
   const matchRoute = useMatchRoute();
   const { t } = useTranslation();
+  const { isDark, toggleTheme } = useTheme();
   const { sessions, isLoading, error, refetch } = useSessions(api);
 
   const handleRefresh = useCallback(() => {
@@ -551,10 +561,11 @@ function SessionsPage() {
               {!batchMode && (
                 <button
                   type="button"
+                  onClick={toggleTheme}
                   className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                  title="Theme"
+                  title={isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
                 >
-                  <ThemeToggleIcon className="h-5 w-5" />
+                  {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
                 </button>
               )}
               <button
