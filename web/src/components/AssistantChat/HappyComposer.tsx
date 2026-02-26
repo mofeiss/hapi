@@ -1,4 +1,4 @@
-import { getPermissionModeOptionsForFlavor, MODEL_MODE_LABELS, MODEL_MODES } from '@hapi/protocol'
+import { getBasePermissionModeOptionsForFlavor, supportsPlanToggle, MODEL_MODE_LABELS, MODEL_MODES } from '@hapi/protocol'
 import { ComposerPrimitive, useAssistantApi, useAssistantState } from '@assistant-ui/react'
 import {
     type ChangeEvent as ReactChangeEvent,
@@ -39,6 +39,7 @@ const defaultSuggestionHandler = async (): Promise<Suggestion[]> => []
 export function HappyComposer(props: {
     disabled?: boolean
     permissionMode?: PermissionMode
+    basePermissionMode?: PermissionMode
     modelMode?: ModelMode
     active?: boolean
     allowSendWhenInactive?: boolean
@@ -49,6 +50,7 @@ export function HappyComposer(props: {
     agentFlavor?: string | null
     onPermissionModeChange?: (mode: PermissionMode) => void
     onModelModeChange?: (mode: ModelMode) => void
+    onPlanToggle?: () => void
     onSwitchToRemote?: () => void
     autocompletePrefixes?: string[]
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
@@ -62,6 +64,7 @@ export function HappyComposer(props: {
     const {
         disabled = false,
         permissionMode: rawPermissionMode,
+        basePermissionMode: rawBasePermissionMode,
         modelMode: rawModelMode,
         active = true,
         allowSendWhenInactive = false,
@@ -72,6 +75,7 @@ export function HappyComposer(props: {
         agentFlavor,
         onPermissionModeChange,
         onModelModeChange,
+        onPlanToggle,
         onSwitchToRemote,
         autocompletePrefixes = ['@', '/', '$'],
         autocompleteSuggestions = defaultSuggestionHandler,
@@ -83,7 +87,10 @@ export function HappyComposer(props: {
 
     // Use ?? so missing values fall back to default (destructuring defaults only handle undefined)
     const permissionMode = rawPermissionMode ?? 'default'
+    const basePermissionMode = rawBasePermissionMode ?? (permissionMode === 'plan' ? 'default' : permissionMode)
     const modelMode = rawModelMode ?? 'default'
+    const isPlan = permissionMode === 'plan'
+    const showPlanToggle = Boolean(onPlanToggle && supportsPlanToggle(agentFlavor))
 
     const api = useAssistantApi()
     const composerText = useAssistantState(({ composer }) => composer.text)
@@ -111,7 +118,6 @@ export function HappyComposer(props: {
         text: '',
         selection: { start: 0, end: 0 }
     })
-    const [showSettings, setShowSettings] = useState(false)
     const [isAborting, setIsAborting] = useState(false)
     const [isSwitching, setIsSwitching] = useState(false)
     const [showContinueHint, setShowContinueHint] = useState(false)
@@ -239,11 +245,19 @@ export function HappyComposer(props: {
     }, [switchDisabled, onSwitchToRemote, haptic])
 
     const permissionModeOptions = useMemo(
-        () => getPermissionModeOptionsForFlavor(agentFlavor),
+        () => getBasePermissionModeOptionsForFlavor(agentFlavor),
         [agentFlavor]
     )
     const permissionModes = useMemo(
         () => permissionModeOptions.map((option) => option.mode),
+        [permissionModeOptions]
+    )
+    const modelModeSelectOptions = useMemo(
+        () => MODEL_MODES.map((mode) => ({ value: mode, label: MODEL_MODE_LABELS[mode] })),
+        []
+    )
+    const permissionSelectOptions = useMemo(
+        () => permissionModeOptions.map((option) => ({ value: option.mode, label: option.label })),
         [permissionModeOptions]
     )
 
@@ -287,7 +301,7 @@ export function HappyComposer(props: {
 
         if (key === 'Tab' && e.shiftKey && onPermissionModeChange && permissionModes.length > 0) {
             e.preventDefault()
-            const currentIndex = permissionModes.indexOf(permissionMode)
+            const currentIndex = permissionModes.indexOf(basePermissionMode)
             const nextIndex = (currentIndex + 1) % permissionModes.length
             const nextMode = permissionModes[nextIndex] ?? 'default'
             onPermissionModeChange(nextMode)
@@ -304,6 +318,7 @@ export function HappyComposer(props: {
         handleAbort,
         onPermissionModeChange,
         permissionMode,
+        basePermissionMode,
         permissionModes,
         haptic
     ])
@@ -356,11 +371,6 @@ export function HappyComposer(props: {
         }
     }, [api])
 
-    const handleSettingsToggle = useCallback(() => {
-        haptic('light')
-        setShowSettings(prev => !prev)
-    }, [haptic])
-
     const handleSubmit = useCallback((event?: ReactFormEvent<HTMLFormElement>) => {
         if (event && !attachmentsReady) {
             event.preventDefault()
@@ -369,23 +379,20 @@ export function HappyComposer(props: {
         setShowContinueHint(false)
     }, [attachmentsReady])
 
-    const handlePermissionChange = useCallback((mode: PermissionMode) => {
+    const handlePermissionChange = useCallback((mode: string) => {
         if (!onPermissionModeChange || controlsDisabled) return
-        onPermissionModeChange(mode)
-        setShowSettings(false)
+        onPermissionModeChange(mode as PermissionMode)
         haptic('light')
     }, [onPermissionModeChange, controlsDisabled, haptic])
 
-    const handleModelChange = useCallback((mode: ModelMode) => {
+    const handleModelChange = useCallback((mode: string) => {
         if (!onModelModeChange || controlsDisabled) return
-        onModelModeChange(mode)
-        setShowSettings(false)
+        onModelModeChange(mode as ModelMode)
         haptic('light')
     }, [onModelModeChange, controlsDisabled, haptic])
 
     const showPermissionSettings = Boolean(onPermissionModeChange && permissionModeOptions.length > 0)
     const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor))
-    const showSettingsButton = Boolean(showPermissionSettings || showModelSettings)
     const showAbortButton = true
     const voiceEnabled = Boolean(onVoiceToggle)
 
@@ -394,92 +401,6 @@ export function HappyComposer(props: {
     }, [api])
 
     const overlays = useMemo(() => {
-        if (showSettings && (showPermissionSettings || showModelSettings)) {
-            return (
-                <div className="absolute bottom-[100%] mb-2 w-full">
-                    <FloatingOverlay maxHeight={320}>
-                        {showPermissionSettings ? (
-                            <div className="py-2">
-                                <div className="px-3 pb-1 text-xs font-semibold text-[var(--app-hint)]">
-                                    {t('misc.permissionMode')}
-                                </div>
-                                {permissionModeOptions.map((option) => (
-                                    <button
-                                        key={option.mode}
-                                        type="button"
-                                        disabled={controlsDisabled}
-                                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
-                                            controlsDisabled
-                                                ? 'cursor-not-allowed opacity-50'
-                                                : 'cursor-pointer hover:bg-[var(--app-secondary-bg)]'
-                                        }`}
-                                        onClick={() => handlePermissionChange(option.mode)}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                    >
-                                        <div
-                                            className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${
-                                                permissionMode === option.mode
-                                                    ? 'border-[var(--app-link)]'
-                                                    : 'border-[var(--app-hint)]'
-                                            }`}
-                                        >
-                                            {permissionMode === option.mode && (
-                                                <div className="h-2 w-2 rounded-full bg-[var(--app-link)]" />
-                                            )}
-                                        </div>
-                                        <span className={permissionMode === option.mode ? 'text-[var(--app-link)]' : ''}>
-                                            {option.label}
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : null}
-
-                        {showPermissionSettings && showModelSettings ? (
-                            <div className="mx-3 h-px bg-[var(--app-divider)]" />
-                        ) : null}
-
-                        {showModelSettings ? (
-                            <div className="py-2">
-                                <div className="px-3 pb-1 text-xs font-semibold text-[var(--app-hint)]">
-                                    {t('misc.model')}
-                                </div>
-                                {MODEL_MODES.map((mode) => (
-                                    <button
-                                        key={mode}
-                                        type="button"
-                                        disabled={controlsDisabled}
-                                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
-                                            controlsDisabled
-                                                ? 'cursor-not-allowed opacity-50'
-                                                : 'cursor-pointer hover:bg-[var(--app-secondary-bg)]'
-                                        }`}
-                                        onClick={() => handleModelChange(mode)}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                    >
-                                        <div
-                                            className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${
-                                                modelMode === mode
-                                                    ? 'border-[var(--app-link)]'
-                                                    : 'border-[var(--app-hint)]'
-                                            }`}
-                                        >
-                                            {modelMode === mode && (
-                                                <div className="h-2 w-2 rounded-full bg-[var(--app-link)]" />
-                                            )}
-                                        </div>
-                                        <span className={modelMode === mode ? 'text-[var(--app-link)]' : ''}>
-                                            {MODEL_MODE_LABELS[mode]}
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : null}
-                    </FloatingOverlay>
-                </div>
-            )
-        }
-
         if (suggestions.length > 0) {
             return (
                 <div className="absolute bottom-[100%] mb-2 w-full">
@@ -495,20 +416,7 @@ export function HappyComposer(props: {
         }
 
         return null
-    }, [
-        showSettings,
-        showPermissionSettings,
-        showModelSettings,
-        suggestions,
-        selectedIndex,
-        controlsDisabled,
-        permissionMode,
-        modelMode,
-        permissionModeOptions,
-        handlePermissionChange,
-        handleModelChange,
-        handleSuggestionSelect
-    ])
+    }, [suggestions, selectedIndex, handleSuggestionSelect])
 
     return (
         <div className={`px-3 ${bottomPaddingClass} pt-2 bg-[var(--app-bg)]`}>
@@ -522,8 +430,6 @@ export function HappyComposer(props: {
                         agentState={agentState}
                         contextSize={contextSize}
                         modelMode={modelMode}
-                        permissionMode={permissionMode}
-                        agentFlavor={agentFlavor}
                         voiceStatus={voiceStatus}
                     />
 
@@ -554,9 +460,17 @@ export function HappyComposer(props: {
                         <ComposerButtons
                             canSend={canSend}
                             controlsDisabled={controlsDisabled}
-                            showSettingsButton={showSettingsButton}
-                            settingsOpen={showSettings}
-                            onSettingsToggle={handleSettingsToggle}
+                            showModelSelect={showModelSettings}
+                            modelMode={modelMode}
+                            modelModeOptions={modelModeSelectOptions}
+                            onModelModeChange={handleModelChange}
+                            showPermissionSelect={showPermissionSettings}
+                            permissionMode={basePermissionMode}
+                            permissionModeOptions={permissionSelectOptions}
+                            onPermissionModeChange={handlePermissionChange}
+                            showPlanToggle={showPlanToggle}
+                            isPlanActive={isPlan}
+                            onPlanToggle={onPlanToggle ?? (() => {})}
                             showAbortButton={showAbortButton}
                             abortDisabled={abortDisabled}
                             isAborting={isAborting}

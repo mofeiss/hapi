@@ -306,10 +306,10 @@ export class ApiClient {
         })
     }
 
-    async setPermissionMode(sessionId: string, mode: PermissionMode): Promise<void> {
+    async setPermissionMode(sessionId: string, mode: PermissionMode, basePermissionMode?: PermissionMode): Promise<void> {
         await this.request(`/api/sessions/${encodeURIComponent(sessionId)}/permission-mode`, {
             method: 'POST',
-            body: JSON.stringify({ mode })
+            body: JSON.stringify({ mode, ...(basePermissionMode && { basePermissionMode }) })
         })
     }
 

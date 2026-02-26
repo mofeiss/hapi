@@ -187,6 +187,7 @@ export class SyncEngine {
         thinking?: boolean
         mode?: 'local' | 'remote'
         permissionMode?: PermissionMode
+        basePermissionMode?: PermissionMode
         modelMode?: ModelMode
     }): void {
         this.sessionCache.handleSessionAlive(payload)
@@ -281,6 +282,7 @@ export class SyncEngine {
         sessionId: string,
         config: {
             permissionMode?: PermissionMode
+            basePermissionMode?: PermissionMode
             modelMode?: ModelMode
         }
     ): Promise<void> {
@@ -288,7 +290,7 @@ export class SyncEngine {
         if (!result || typeof result !== 'object') {
             throw new Error('Invalid response from session config RPC')
         }
-        const obj = result as { applied?: { permissionMode?: Session['permissionMode']; modelMode?: Session['modelMode'] } }
+        const obj = result as { applied?: { permissionMode?: Session['permissionMode']; basePermissionMode?: Session['basePermissionMode']; modelMode?: Session['modelMode'] } }
         const applied = obj.applied
         if (!applied || typeof applied !== 'object') {
             throw new Error('Missing applied session config')

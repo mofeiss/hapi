@@ -1,6 +1,9 @@
 export const CLAUDE_PERMISSION_MODES = ['default', 'acceptEdits', 'bypassPermissions', 'plan'] as const
 export type ClaudePermissionMode = typeof CLAUDE_PERMISSION_MODES[number]
 
+export const CLAUDE_BASE_PERMISSION_MODES = ['default', 'acceptEdits', 'bypassPermissions'] as const
+export type ClaudeBasePermissionMode = typeof CLAUDE_BASE_PERMISSION_MODES[number]
+
 export const CODEX_PERMISSION_MODES = ['default', 'read-only', 'safe-yolo', 'yolo'] as const
 export type CodexPermissionMode = typeof CODEX_PERMISSION_MODES[number]
 
@@ -30,7 +33,7 @@ export const PERMISSION_MODE_LABELS: Record<PermissionMode, string> = {
     default: 'Default',
     acceptEdits: 'Accept Edits',
     plan: 'Plan Mode',
-    bypassPermissions: 'Yolo',
+    bypassPermissions: 'Bypass',
     'read-only': 'Read Only',
     'safe-yolo': 'Safe Yolo',
     yolo: 'Yolo'
@@ -102,4 +105,23 @@ export function getModelModesForFlavor(flavor?: string | null): readonly ModelMo
 
 export function isModelModeAllowedForFlavor(mode: ModelMode, flavor?: string | null): boolean {
     return getModelModesForFlavor(flavor).includes(mode)
+}
+
+export function getBasePermissionModesForFlavor(flavor?: string | null): readonly PermissionMode[] {
+    if (flavor === 'codex') return CODEX_PERMISSION_MODES
+    if (flavor === 'gemini') return GEMINI_PERMISSION_MODES
+    if (flavor === 'opencode') return OPENCODE_PERMISSION_MODES
+    return CLAUDE_BASE_PERMISSION_MODES
+}
+
+export function getBasePermissionModeOptionsForFlavor(flavor?: string | null): PermissionModeOption[] {
+    return getBasePermissionModesForFlavor(flavor).map((mode) => ({
+        mode,
+        label: getPermissionModeLabel(mode),
+        tone: getPermissionModeTone(mode)
+    }))
+}
+
+export function supportsPlanToggle(flavor?: string | null): boolean {
+    return !flavor || flavor === 'claude'
 }

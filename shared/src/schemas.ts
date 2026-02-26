@@ -134,6 +134,7 @@ export const SessionSchema = z.object({
     thinkingAt: z.number(),
     todos: TodosSchema.optional(),
     permissionMode: PermissionModeSchema.optional(),
+    basePermissionMode: PermissionModeSchema.optional(),
     modelMode: ModelModeSchema.optional()
 })
 

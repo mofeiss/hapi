@@ -14,7 +14,7 @@ export function useSessionActions(
     abortSession: () => Promise<void>
     archiveSession: () => Promise<void>
     switchSession: () => Promise<void>
-    setPermissionMode: (mode: PermissionMode) => Promise<void>
+    setPermissionMode: (mode: PermissionMode, basePermissionMode?: PermissionMode) => Promise<void>
     setModelMode: (mode: ModelMode) => Promise<void>
     renameSession: (name: string) => Promise<void>
     deleteSession: () => Promise<void>
@@ -59,14 +59,14 @@ export function useSessionActions(
     })
 
     const permissionMutation = useMutation({
-        mutationFn: async (mode: PermissionMode) => {
+        mutationFn: async ({ mode, basePermissionMode }: { mode: PermissionMode; basePermissionMode?: PermissionMode }) => {
             if (!api || !sessionId) {
                 throw new Error('Session unavailable')
             }
             if (isKnownFlavor(agentFlavor) && !isPermissionModeAllowedForFlavor(mode, agentFlavor)) {
                 throw new Error('Invalid permission mode for session flavor')
             }
-            await api.setPermissionMode(sessionId, mode)
+            await api.setPermissionMode(sessionId, mode, basePermissionMode)
         },
         onSuccess: () => void invalidateSession(),
     })
@@ -110,7 +110,8 @@ export function useSessionActions(
         abortSession: abortMutation.mutateAsync,
         archiveSession: archiveMutation.mutateAsync,
         switchSession: switchMutation.mutateAsync,
-        setPermissionMode: permissionMutation.mutateAsync,
+        setPermissionMode: (mode: PermissionMode, basePermissionMode?: PermissionMode) =>
+            permissionMutation.mutateAsync({ mode, basePermissionMode }),
         setModelMode: modelMutation.mutateAsync,
         renameSession: renameMutation.mutateAsync,
         deleteSession: deleteMutation.mutateAsync,

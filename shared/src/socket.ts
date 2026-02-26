@@ -139,6 +139,7 @@ export interface ClientToServerEvents {
         thinking: boolean
         mode?: 'local' | 'remote'
         permissionMode?: PermissionMode
+        basePermissionMode?: PermissionMode
         modelMode?: ModelMode
     }) => void
     'session-end': (data: { sid: string; time: number }) => void

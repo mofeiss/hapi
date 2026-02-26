@@ -14,6 +14,7 @@ type SessionAlivePayload = {
     thinking?: boolean
     mode?: 'local' | 'remote'
     permissionMode?: PermissionMode
+    basePermissionMode?: PermissionMode
     modelMode?: ModelMode
 }
 

@@ -143,6 +143,9 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
 
     // Forward messages to the queue
     let currentPermissionMode: PermissionMode = options.permissionMode ?? 'default';
+    let currentBasePermissionMode: PermissionMode = options.permissionMode === 'plan'
+        ? 'default'
+        : (options.permissionMode ?? 'default');
     let currentModelMode: SessionModelMode = options.model === 'sonnet' || options.model === 'opus' ? options.model : 'default';
     let currentFallbackModel: string | undefined = undefined; // Track current fallback model
     let currentCustomSystemPrompt: string | undefined = undefined; // Track current custom system prompt
@@ -157,7 +160,8 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
         }
         sessionInstance.setPermissionMode(currentPermissionMode);
         sessionInstance.setModelMode(currentModelMode);
-        logger.debug(`[loop] Synced session modes for keepalive: permissionMode=${currentPermissionMode}, modelMode=${currentModelMode}`);
+        sessionInstance.setBasePermissionMode(currentBasePermissionMode);
+        logger.debug(`[loop] Synced session modes for keepalive: permissionMode=${currentPermissionMode}, basePermissionMode=${currentBasePermissionMode}, modelMode=${currentModelMode}`);
     };
     session.onUserMessage((message) => {
         const sessionPermissionMode = currentSessionRef.current?.getPermissionMode();
@@ -294,10 +298,17 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
         if (!payload || typeof payload !== 'object') {
             throw new Error('Invalid session config payload');
         }
-        const config = payload as { permissionMode?: unknown; modelMode?: unknown };
+        const config = payload as { permissionMode?: unknown; modelMode?: unknown; basePermissionMode?: unknown };
+
+        if (config.basePermissionMode !== undefined) {
+            currentBasePermissionMode = resolvePermissionMode(config.basePermissionMode);
+        }
 
         if (config.permissionMode !== undefined) {
             currentPermissionMode = resolvePermissionMode(config.permissionMode);
+            if (currentPermissionMode !== 'plan') {
+                currentBasePermissionMode = currentPermissionMode;
+            }
         }
 
         if (config.modelMode !== undefined) {
@@ -306,7 +317,7 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
         }
 
         syncSessionModes();
-        return { applied: { permissionMode: currentPermissionMode, modelMode: currentModelMode } };
+        return { applied: { permissionMode: currentPermissionMode, modelMode: currentModelMode, basePermissionMode: currentBasePermissionMode } };
     });
 
     let loopError: unknown = null;

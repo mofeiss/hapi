@@ -193,17 +193,43 @@ export function SessionChat(props: {
         blocksByIdRef.current = reconciled.byId
     }, [reconciled.byId])
 
-    // Permission mode change handler
+    // Permission mode change handler (base mode)
     const handlePermissionModeChange = useCallback(async (mode: PermissionMode) => {
         try {
-            await setPermissionMode(mode)
+            const isPlan = props.session.permissionMode === 'plan'
+            if (isPlan) {
+                // Plan is ON: change base mode while keeping plan active
+                await setPermissionMode('plan', mode)
+            } else {
+                await setPermissionMode(mode)
+            }
             haptic.notification('success')
             props.onRefresh()
         } catch (e) {
             haptic.notification('error')
             console.error('Failed to set permission mode:', e)
         }
-    }, [setPermissionMode, props.onRefresh, haptic])
+    }, [setPermissionMode, props.onRefresh, haptic, props.session.permissionMode])
+
+    // Plan toggle handler
+    const handlePlanToggle = useCallback(async () => {
+        try {
+            const currentMode = props.session.permissionMode
+            if (currentMode === 'plan') {
+                // Turn off plan: revert to basePermissionMode
+                const baseMode = props.session.basePermissionMode ?? 'default'
+                await setPermissionMode(baseMode)
+            } else {
+                // Turn on plan: remember current mode as base
+                await setPermissionMode('plan', currentMode ?? 'default')
+            }
+            haptic.notification('success')
+            props.onRefresh()
+        } catch (e) {
+            haptic.notification('error')
+            console.error('Failed to toggle plan mode:', e)
+        }
+    }, [setPermissionMode, props.onRefresh, haptic, props.session.permissionMode, props.session.basePermissionMode])
 
     // Model mode change handler
     const handleModelModeChange = useCallback(async (mode: ModelMode) => {
@@ -316,6 +342,7 @@ export function SessionChat(props: {
                     <HappyComposer
                         disabled={props.isSending}
                         permissionMode={props.session.permissionMode}
+                        basePermissionMode={props.session.basePermissionMode}
                         modelMode={props.session.modelMode}
                         agentFlavor={agentFlavor}
                         active={props.session.active}
@@ -326,6 +353,7 @@ export function SessionChat(props: {
                         controlledByUser={props.session.agentState?.controlledByUser === true}
                         onPermissionModeChange={handlePermissionModeChange}
                         onModelModeChange={handleModelModeChange}
+                        onPlanToggle={handlePlanToggle}
                         onSwitchToRemote={handleSwitchToRemote}
                         autocompleteSuggestions={props.autocompleteSuggestions}
                         voiceStatus={voice?.status}

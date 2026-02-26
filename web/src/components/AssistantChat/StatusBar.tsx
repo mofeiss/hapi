@@ -1,24 +1,8 @@
-import { getPermissionModeLabel, getPermissionModeTone, isPermissionModeAllowedForFlavor } from '@hapi/protocol'
-import type { PermissionModeTone } from '@hapi/protocol'
 import { useMemo } from 'react'
-import type { AgentState, ModelMode, PermissionMode } from '@/types/api'
+import type { AgentState, ModelMode } from '@/types/api'
 import type { ConversationStatus } from '@/realtime/types'
 import { getContextBudgetTokens } from '@/chat/modelConfig'
 import { useTranslation } from '@/lib/use-translation'
-
-const PERMISSION_TONE_CLASSES: Record<PermissionModeTone, string> = {
-    neutral: 'text-[var(--app-hint)]',
-    info: 'text-[var(--app-badge-warning-text)]',
-    warning: 'text-emerald-600',
-    danger: 'text-red-500'
-}
-
-const PERMISSION_TONE_BORDER_CLASSES: Record<PermissionModeTone, string> = {
-    neutral: 'border-[var(--app-border)]',
-    info: 'border-[var(--app-badge-warning-text)]/30',
-    warning: 'border-emerald-600/30',
-    danger: 'border-red-500/30'
-}
 
 function getConnectionStatus(
     active: boolean,
@@ -94,8 +78,6 @@ export function StatusBar(props: {
     agentState: AgentState | null | undefined
     contextSize?: number
     modelMode?: ModelMode
-    permissionMode?: PermissionMode
-    agentFlavor?: string | null
     voiceStatus?: ConversationStatus
 }) {
     const { t } = useTranslation()
@@ -113,18 +95,6 @@ export function StatusBar(props: {
         },
         [props.contextSize, props.modelMode, t]
     )
-
-    const permissionMode = props.permissionMode
-    const displayPermissionMode = permissionMode
-        && permissionMode !== 'default'
-        && isPermissionModeAllowedForFlavor(permissionMode, props.agentFlavor)
-        ? permissionMode
-        : null
-
-    const permissionModeLabel = displayPermissionMode ? getPermissionModeLabel(displayPermissionMode) : null
-    const permissionModeTone = displayPermissionMode ? getPermissionModeTone(displayPermissionMode) : null
-    const permissionModeColor = permissionModeTone ? PERMISSION_TONE_CLASSES[permissionModeTone] : 'text-[var(--app-hint)]'
-    const permissionModeBorderColor = permissionModeTone ? PERMISSION_TONE_BORDER_CLASSES[permissionModeTone] : 'border-[var(--app-border)]'
 
     return (
         <div className="flex items-center justify-between px-2 pb-1 min-h-6">
@@ -145,12 +115,6 @@ export function StatusBar(props: {
                     </span>
                 ) : null}
             </div>
-
-            {displayPermissionMode ? (
-                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${permissionModeColor} ${permissionModeBorderColor}`}>
-                    {permissionModeLabel}
-                </span>
-            ) : null}
         </div>
     )
 }

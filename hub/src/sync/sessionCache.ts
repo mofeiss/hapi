@@ -141,6 +141,7 @@ export class SessionCache {
         thinking?: boolean
         mode?: 'local' | 'remote'
         permissionMode?: PermissionMode
+        basePermissionMode?: PermissionMode
         modelMode?: ModelMode
     }): void {
         const t = clampAliveTime(payload.time)
@@ -152,6 +153,7 @@ export class SessionCache {
         const wasActive = session.active
         const wasThinking = session.thinking
         const previousPermissionMode = session.permissionMode
+        const previousBasePermissionMode = session.basePermissionMode
         const previousModelMode = session.modelMode
 
         session.active = true
@@ -161,13 +163,16 @@ export class SessionCache {
         if (payload.permissionMode !== undefined) {
             session.permissionMode = payload.permissionMode
         }
+        if (payload.basePermissionMode !== undefined) {
+            session.basePermissionMode = payload.basePermissionMode
+        }
         if (payload.modelMode !== undefined) {
             session.modelMode = payload.modelMode
         }
 
         const now = Date.now()
         const lastBroadcastAt = this.lastBroadcastAtBySessionId.get(session.id) ?? 0
-        const modeChanged = previousPermissionMode !== session.permissionMode || previousModelMode !== session.modelMode
+        const modeChanged = previousPermissionMode !== session.permissionMode || previousBasePermissionMode !== session.basePermissionMode || previousModelMode !== session.modelMode
         const shouldBroadcast = (!wasActive && session.active)
             || (wasThinking !== session.thinking)
             || modeChanged
@@ -182,6 +187,7 @@ export class SessionCache {
                     activeAt: session.activeAt,
                     thinking: session.thinking,
                     permissionMode: session.permissionMode,
+                    basePermissionMode: session.basePermissionMode,
                     modelMode: session.modelMode
                 }
             })
@@ -217,7 +223,7 @@ export class SessionCache {
         }
     }
 
-    applySessionConfig(sessionId: string, config: { permissionMode?: PermissionMode; modelMode?: ModelMode }): void {
+    applySessionConfig(sessionId: string, config: { permissionMode?: PermissionMode; basePermissionMode?: PermissionMode; modelMode?: ModelMode }): void {
         const session = this.sessions.get(sessionId) ?? this.refreshSession(sessionId)
         if (!session) {
             return
@@ -225,6 +231,9 @@ export class SessionCache {
 
         if (config.permissionMode !== undefined) {
             session.permissionMode = config.permissionMode
+        }
+        if (config.basePermissionMode !== undefined) {
+            session.basePermissionMode = config.basePermissionMode
         }
         if (config.modelMode !== undefined) {
             session.modelMode = config.modelMode

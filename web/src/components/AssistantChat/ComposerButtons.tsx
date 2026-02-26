@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { ComposerPrimitive } from '@assistant-ui/react'
 import type { ConversationStatus } from '@/realtime/types'
 import { useTranslation } from '@/lib/use-translation'
@@ -27,7 +29,6 @@ function VoiceAssistantIcon() {
 
 function SpeakerIcon(props: { muted?: boolean }) {
     if (props.muted) {
-        // Speaker with X (muted)
         return (
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -47,7 +48,6 @@ function SpeakerIcon(props: { muted?: boolean }) {
         )
     }
 
-    // Speaker with sound waves
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -63,25 +63,6 @@ function SpeakerIcon(props: { muted?: boolean }) {
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
             <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-        </svg>
-    )
-}
-
-function SettingsIcon() {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
     )
 }
@@ -102,6 +83,139 @@ function SwitchToRemoteIcon() {
             <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
             <line x1="12" y1="18" x2="12.01" y2="18" />
         </svg>
+    )
+}
+
+function PlanIcon() {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+            <path d="M9 12h6" />
+            <path d="M9 16h6" />
+        </svg>
+    )
+}
+
+function ChevronDownIcon() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+        </svg>
+    )
+}
+
+function ModelIcon() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
+            <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
+            <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
+        </svg>
+    )
+}
+
+function ShieldIcon() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+        </svg>
+    )
+}
+
+function MiniSelect(props: {
+    value: string
+    options: { value: string; label: string }[]
+    onChange: (value: string) => void
+    disabled?: boolean
+    icon?: React.ReactNode
+}) {
+    const [open, setOpen] = useState(false)
+    const buttonRef = useRef<HTMLButtonElement>(null)
+    const dropdownRef = useRef<HTMLDivElement>(null)
+    const [pos, setPos] = useState({ bottom: 0, left: 0 })
+
+    useEffect(() => {
+        if (!open) return
+        const handler = (e: MouseEvent) => {
+            const target = e.target as Node
+            if (
+                buttonRef.current && !buttonRef.current.contains(target) &&
+                dropdownRef.current && !dropdownRef.current.contains(target)
+            ) {
+                setOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [open])
+
+    const handleToggle = useCallback(() => {
+        if (!open && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect()
+            setPos({
+                bottom: window.innerHeight - rect.top + 4,
+                left: rect.left,
+            })
+        }
+        setOpen(!open)
+    }, [open])
+
+    const selectedLabel = props.options.find((o) => o.value === props.value)?.label ?? props.value
+
+    return (
+        <>
+            <button
+                ref={buttonRef}
+                type="button"
+                disabled={props.disabled}
+                onClick={handleToggle}
+                className={`flex items-center gap-1 h-8 px-2 rounded-full text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                    open
+                        ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
+                        : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                }`}
+            >
+                {props.icon}
+                <span>{selectedLabel}</span>
+                <ChevronDownIcon />
+            </button>
+            {open ? createPortal(
+                <div
+                    ref={dropdownRef}
+                    className="fixed min-w-[120px] rounded-lg bg-[var(--app-secondary-bg)] border border-[var(--app-divider)] shadow-lg overflow-hidden z-[9999]"
+                    style={{ bottom: pos.bottom, left: pos.left }}
+                >
+                    {props.options.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            className={`w-full px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--app-bg)] ${
+                                option.value === props.value ? 'text-[var(--app-link)] font-medium' : 'text-[var(--app-fg)]'
+                            }`}
+                            onClick={() => {
+                                props.onChange(option.value)
+                                setOpen(false)
+                            }}
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>,
+                document.body
+            ) : null}
+        </>
     )
 }
 
@@ -216,24 +330,21 @@ function UnifiedButton(props: {
 }) {
     const { t } = useTranslation()
 
-    // Determine button state
     const isConnecting = props.voiceStatus === 'connecting'
     const isConnected = props.voiceStatus === 'connected'
     const isVoiceActive = isConnecting || isConnected
     const hasText = props.canSend
 
-    // Determine button behavior
     const handleClick = () => {
         if (isVoiceActive) {
-            props.onVoiceToggle() // Stop voice
+            props.onVoiceToggle()
         } else if (hasText) {
-            props.onSend() // Send message
+            props.onSend()
         } else if (props.voiceEnabled) {
-            props.onVoiceToggle() // Start voice
+            props.onVoiceToggle()
         }
     }
 
-    // Determine button style and icon
     let icon: React.ReactNode
     let className: string
     let ariaLabel: string
@@ -279,9 +390,17 @@ function UnifiedButton(props: {
 export function ComposerButtons(props: {
     canSend: boolean
     controlsDisabled: boolean
-    showSettingsButton: boolean
-    settingsOpen: boolean
-    onSettingsToggle: () => void
+    showModelSelect: boolean
+    modelMode: string
+    modelModeOptions: { value: string; label: string }[]
+    onModelModeChange: (value: string) => void
+    showPermissionSelect: boolean
+    permissionMode: string
+    permissionModeOptions: { value: string; label: string }[]
+    onPermissionModeChange: (value: string) => void
+    showPlanToggle: boolean
+    isPlanActive: boolean
+    onPlanToggle: () => void
     showAbortButton: boolean
     abortDisabled: boolean
     isAborting: boolean
@@ -312,20 +431,40 @@ export function ComposerButtons(props: {
                     <AttachmentIcon />
                 </ComposerPrimitive.AddAttachment>
 
-                {props.showSettingsButton ? (
+                {props.showModelSelect && props.modelModeOptions.length > 0 ? (
+                    <MiniSelect
+                        value={props.modelMode}
+                        options={props.modelModeOptions}
+                        onChange={props.onModelModeChange}
+                        disabled={props.controlsDisabled}
+                        icon={<ModelIcon />}
+                    />
+                ) : null}
+
+                {props.showPermissionSelect && props.permissionModeOptions.length > 0 ? (
+                    <MiniSelect
+                        value={props.permissionMode}
+                        options={props.permissionModeOptions}
+                        onChange={props.onPermissionModeChange}
+                        disabled={props.controlsDisabled}
+                        icon={<ShieldIcon />}
+                    />
+                ) : null}
+
+                {props.showPlanToggle ? (
                     <button
                         type="button"
-                        aria-label={t('composer.settings')}
-                        title={t('composer.settings')}
-                        className={`settings-button flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-                            props.settingsOpen
-                                ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
+                        aria-label="Plan Mode"
+                        title="Plan Mode"
+                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                            props.isPlanActive
+                                ? 'bg-[var(--app-badge-warning-text)]/15 text-[var(--app-badge-warning-text)]'
                                 : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                         }`}
-                        onClick={props.onSettingsToggle}
+                        onClick={props.onPlanToggle}
                         disabled={props.controlsDisabled}
                     >
-                        <SettingsIcon />
+                        <PlanIcon />
                     </button>
                 ) : null}
 

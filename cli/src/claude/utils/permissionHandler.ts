@@ -144,6 +144,7 @@ export class PermissionHandler extends BasePermissionHandler<PermissionResponse,
     private allowedBashLiterals = new Set<string>();
     private allowedBashPrefixes = new Set<string>();
     private permissionMode: PermissionMode = 'default';
+    private basePermissionMode: PermissionMode = 'default';
     private onPermissionRequestCallback?: (toolCallId: string) => void;
 
     constructor(session: Session) {
@@ -161,6 +162,19 @@ export class PermissionHandler extends BasePermissionHandler<PermissionResponse,
     handleModeChange(mode: PermissionMode) {
         this.permissionMode = mode;
         this.session.setPermissionMode(mode);
+        // Sync basePermissionMode from session
+        const baseMode = this.session.getBasePermissionMode();
+        if (baseMode) {
+            this.basePermissionMode = baseMode;
+        }
+    }
+
+    setBasePermissionMode(mode: PermissionMode) {
+        this.basePermissionMode = mode;
+    }
+
+    getBasePermissionMode(): PermissionMode {
+        return this.basePermissionMode;
     }
 
     /**
@@ -235,12 +249,12 @@ export class PermissionHandler extends BasePermissionHandler<PermissionResponse,
             logger.debug('Plan mode result received', response);
             if (response.approved) {
                 logger.debug('Plan approved - injecting PLAN_FAKE_RESTART');
+                // Use response.mode if provided, otherwise fall back to basePermissionMode
+                const exitMode = (response.mode && PLAN_EXIT_MODES.includes(response.mode))
+                    ? response.mode
+                    : this.basePermissionMode;
                 // Inject the approval message at the beginning of the queue
-                if (response.mode && PLAN_EXIT_MODES.includes(response.mode)) {
-                    this.session.queue.unshift(PLAN_FAKE_RESTART, { permissionMode: response.mode });
-                } else {
-                    this.session.queue.unshift(PLAN_FAKE_RESTART, { permissionMode: 'default' });
-                }
+                this.session.queue.unshift(PLAN_FAKE_RESTART, { permissionMode: exitMode });
                 pending.resolve({ behavior: 'deny', message: PLAN_FAKE_REJECT });
             } else {
                 pending.resolve({ behavior: 'deny', message: response.reason || 'Plan rejected' });
@@ -295,6 +309,12 @@ export class PermissionHandler extends BasePermissionHandler<PermissionResponse,
 
         if (!isQuestionTool && this.permissionMode === 'acceptEdits' && descriptor.edit) {
             return { behavior: 'allow', updatedInput: input as Record<string, unknown> };
+        }
+
+        if (!isQuestionTool && this.permissionMode === 'plan') {
+            if (toolName !== 'exit_plan_mode' && toolName !== 'ExitPlanMode') {
+                return { behavior: 'allow', updatedInput: input as Record<string, unknown> };
+            }
         }
 
         //
@@ -458,6 +478,7 @@ export class PermissionHandler extends BasePermissionHandler<PermissionResponse,
         this.allowedTools.clear();
         this.allowedBashLiterals.clear();
         this.allowedBashPrefixes.clear();
+        this.basePermissionMode = 'default';
 
         this.cancelPendingRequests({
             completedReason: 'Session switched to local mode',

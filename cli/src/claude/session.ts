@@ -75,6 +75,14 @@ export class Session extends AgentSessionBase<EnhancedMode> {
         this.permissionMode = mode;
     };
 
+    setBasePermissionMode = (mode: PermissionMode): void => {
+        this.basePermissionMode = mode;
+    };
+
+    getBasePermissionMode = (): PermissionMode | undefined => {
+        return this.basePermissionMode as PermissionMode | undefined;
+    };
+
     setModelMode = (mode: SessionModelMode): void => {
         this.modelMode = mode;
     };

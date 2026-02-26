@@ -7,7 +7,8 @@ import type { WebAppEnv } from '../middleware/auth'
 import { requireSessionFromParam, requireSyncEngine } from './guards'
 
 const permissionModeSchema = z.object({
-    mode: PermissionModeSchema
+    mode: PermissionModeSchema,
+    basePermissionMode: PermissionModeSchema.optional()
 })
 
 const modelModeSchema = z.object({
@@ -248,7 +249,10 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
         }
 
         try {
-            await engine.applySessionConfig(sessionResult.sessionId, { permissionMode: mode })
+            await engine.applySessionConfig(sessionResult.sessionId, {
+                permissionMode: mode,
+                basePermissionMode: parsed.data.basePermissionMode
+            })
             return c.json({ ok: true })
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to apply permission mode'
