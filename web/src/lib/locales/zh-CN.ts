@@ -119,6 +119,7 @@ export default {
   'button.paste': '粘贴',
 
   // New session form
+  'newSession.title': '创建会话',
   'newSession.machine': '机器',
   'newSession.directory': '目录',
   'newSession.placeholder': '/path/to/project',
@@ -226,6 +227,9 @@ export default {
   'composer.terminal': '终端',
   'composer.abort': '中止',
   'composer.switchRemote': '切换到远程模式',
+  'composer.controlledByTerminal': '终端控制中',
+  'composer.mobileAccess': '手机访问',
+  'composer.scanToOpen': '扫码在手机上打开',
   'composer.attach': '添加文件',
   'composer.send': '发送',
   'composer.stop': '停止',

@@ -117,6 +117,7 @@ export default {
   'button.paste': 'Paste',
 
   // New session form
+  'newSession.title': 'Create Session',
   'newSession.machine': 'Machine',
   'newSession.directory': 'Directory',
   'newSession.placeholder': '/path/to/project',
@@ -224,6 +225,9 @@ export default {
   'composer.terminal': 'Terminal',
   'composer.abort': 'Abort',
   'composer.switchRemote': 'Switch to remote mode',
+  'composer.controlledByTerminal': 'Controlled by terminal',
+  'composer.mobileAccess': 'Mobile access',
+  'composer.scanToOpen': 'Scan to open on mobile',
   'composer.attach': 'Attach file',
   'composer.send': 'Send',
   'composer.stop': 'Stop',

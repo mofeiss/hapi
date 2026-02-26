@@ -597,6 +597,7 @@ function SessionDetailRoute() {
 
 function NewSessionPanel({ onClose }: { onClose: () => void }) {
   const { api } = useAppContext();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const {
@@ -634,22 +635,24 @@ function NewSessionPanel({ onClose }: { onClose: () => void }) {
               <BackIcon />
             </button>
           )}
-          <div className="flex-1 font-semibold">Create Session</div>
+          <div className="flex-1 font-semibold">{t('newSession.title')}</div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {machinesError ? (
-          <div className="p-3 text-sm text-red-600">{machinesError}</div>
-        ) : null}
+        <div className="mx-auto w-full max-w-content">
+          {machinesError ? (
+            <div className="p-3 text-sm text-red-600">{machinesError}</div>
+          ) : null}
 
-        <NewSession
-          api={api}
-          machines={machines}
-          isLoading={machinesLoading}
-          onCancel={handleCancel}
-          onSuccess={handleSuccess}
-        />
+          <NewSession
+            api={api}
+            machines={machines}
+            isLoading={machinesLoading}
+            onCancel={handleCancel}
+            onSuccess={handleSuccess}
+          />
+        </div>
       </div>
     </div>
   );
