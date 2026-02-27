@@ -17,8 +17,8 @@ function getConnectionStatus(
     if (voiceStatus === 'connecting') {
         return {
             text: t('misc.executing'),
-            color: 'text-emerald-600',
-            dotColor: 'bg-emerald-600',
+            color: 'text-amber-500',
+            dotColor: 'bg-amber-500',
             isPulsing: true
         }
     }
@@ -35,8 +35,8 @@ function getConnectionStatus(
     if (hasPermissions) {
         return {
             text: t('misc.permissionRequired'),
-            color: 'text-emerald-600',
-            dotColor: 'bg-emerald-600',
+            color: 'text-amber-500',
+            dotColor: 'bg-amber-500',
             isPulsing: true
         }
     }
@@ -44,8 +44,8 @@ function getConnectionStatus(
     if (thinking) {
         return {
             text: t('misc.executing'),
-            color: 'text-emerald-600',
-            dotColor: 'bg-emerald-600',
+            color: 'text-amber-500',
+            dotColor: 'bg-amber-500',
             isPulsing: true
         }
     }
