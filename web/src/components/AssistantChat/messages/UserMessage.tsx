@@ -7,9 +7,9 @@ import { MessageAttachments } from '@/components/AssistantChat/messages/MessageA
 import { CliOutputBlock } from '@/components/CliOutputBlock'
 
 function formatTimeGap(ms: number): string | null {
-    if (ms < 10_000) return null
-    const seconds = Math.floor(ms / 1000)
-    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'always', style: 'long' })
+    const normalizedMs = Math.max(0, ms)
+    const seconds = Math.floor(normalizedMs / 1000)
+    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'long' })
     if (seconds < 60) return rtf.format(-seconds, 'second')
     const minutes = Math.floor(seconds / 60)
     if (minutes < 60) return rtf.format(-minutes, 'minute')

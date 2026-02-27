@@ -287,11 +287,13 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             if (msgType === 'task_started') {
                 if (useAppServer) {
                     turnInFlight = true;
+                    setThinking(true, 'task_started');
                 }
             }
             if (msgType === 'task_complete' || msgType === 'turn_aborted' || msgType === 'task_failed') {
                 if (useAppServer) {
                     turnInFlight = false;
+                    setThinking(false, msgType);
                 }
                 diffProcessor.reset();
                 appServerEventConverter?.reset();
@@ -460,6 +462,15 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             session.sendSessionEvent({ type: 'ready' });
         };
 
+        const setThinking = (thinking: boolean, reason: string) => {
+            if (session.thinking === thinking) {
+                return;
+            }
+
+            logger.debug(`[Codex] thinking=${thinking} (${reason})`);
+            session.onThinkingChange(thinking);
+        };
+
         const syncSessionId = () => {
             if (!mcpClient) return;
             const clientSessionId = mcpClient.getSessionId();
@@ -519,14 +530,14 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 permissionHandler.reset();
                 reasoningProcessor.abort();
                 diffProcessor.reset();
-                session.onThinkingChange(false);
+                setThinking(false, 'mode_changed_restart');
                 continue;
             }
 
             messageBuffer.addMessage(message.message, 'user');
             currentModeHash = message.hash;
 
-            session.onThinkingChange(true);
+            setThinking(true, 'turn_dispatch');
             try {
                 if (!wasCreated) {
                     if (useAppServer && appServerClient) {
@@ -663,8 +674,8 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 reasoningProcessor.abort();
                 diffProcessor.reset();
                 appServerEventConverter?.reset();
-                session.onThinkingChange(false);
                 if (!useAppServer || !turnInFlight) {
+                    setThinking(false, 'turn_finally');
                     emitReadyIfIdle({
                         pending,
                         queueSize: () => session.queue.size(),
