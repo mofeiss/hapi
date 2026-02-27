@@ -8,6 +8,8 @@ import { HappyUserMessage } from '@/components/AssistantChat/messages/UserMessag
 import { HappySystemMessage } from '@/components/AssistantChat/messages/SystemMessage'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/Spinner'
+import { QueuedMessages } from '@/components/AssistantChat/QueuedMessages'
+import type { QueuedMessage } from '@/hooks/useMessageQueue'
 import { useTranslation } from '@/lib/use-translation'
 
 function NewMessagesIndicator(props: { count: number; onClick: () => void }) {
@@ -74,6 +76,7 @@ export function HappyThread(props: {
     normalizedMessagesCount: number
     messagesVersion: number
     forceScrollToken: number
+    queuedMessages?: QueuedMessage[]
 }) {
     const { t } = useTranslation()
     const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -328,6 +331,7 @@ export function HappyThread(props: {
                             )}
                             <div className="flex flex-col gap-3">
                                 <ThreadPrimitive.Messages components={THREAD_MESSAGE_COMPONENTS} />
+                                <QueuedMessages messages={props.queuedMessages ?? []} />
                             </div>
                         </div>
                     </div>

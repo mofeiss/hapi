@@ -61,6 +61,10 @@ export function HappyComposer(props: {
     onVoiceMicToggle?: () => void
     onTranscript?: (cb: (text: string) => void) => void
     onInterim?: (cb: (text: string) => void) => void
+    // Queue send props
+    onQueueSend?: (text: string) => void
+    hasQueue?: boolean
+    onFlushQueue?: () => void
 }) {
     const { t } = useTranslation()
     const {
@@ -85,7 +89,10 @@ export function HappyComposer(props: {
         onVoiceToggle,
         onVoiceMicToggle,
         onTranscript,
-        onInterim
+        onInterim,
+        onQueueSend,
+        hasQueue = false,
+        onFlushQueue
     } = props
 
     // Use ?? so missing values fall back to default (destructuring defaults only handle undefined)
@@ -115,7 +122,7 @@ export function HappyComposer(props: {
         const path = (attachment as { path?: string }).path
         return typeof path === 'string' && path.length > 0
     })
-    const canSend = (hasText || hasAttachments) && attachmentsReady && !controlsDisabled && !threadIsRunning
+    const canSend = (hasText || hasAttachments) && attachmentsReady && !controlsDisabled
 
     const [inputState, setInputState] = useState<TextInputState>({
         text: '',
@@ -326,6 +333,30 @@ export function HappyComposer(props: {
             return
         }
 
+        // When agent is running, intercept Enter to queue/interrupt
+        if (key === 'Enter' && !e.shiftKey && threadIsRunning && onQueueSend && hasText) {
+            e.preventDefault()
+            if (e.metaKey || e.ctrlKey) {
+                // Cmd/Ctrl+Enter = interrupt: queue current text, then abort (flush will send all)
+                onQueueSend(trimmed)
+                api.composer().setText('')
+                handleAbort()
+            } else {
+                // Plain Enter = auto-queue
+                onQueueSend(trimmed)
+                api.composer().setText('')
+            }
+            setTimeout(() => textareaRef.current?.focus(), 0)
+            return
+        }
+
+        // Empty input + has queued messages: Enter = flush queue now
+        if (key === 'Enter' && !e.shiftKey && !hasText && hasQueue && onFlushQueue) {
+            e.preventDefault()
+            onFlushQueue()
+            return
+        }
+
         if (key === 'Tab' && e.shiftKey && onPermissionModeChange && permissionModes.length > 0) {
             e.preventDefault()
             const currentIndex = permissionModes.indexOf(basePermissionMode)
@@ -343,6 +374,12 @@ export function HappyComposer(props: {
         handleSuggestionSelect,
         threadIsRunning,
         handleAbort,
+        onQueueSend,
+        hasText,
+        hasQueue,
+        onFlushQueue,
+        trimmed,
+        api,
         onPermissionModeChange,
         permissionMode,
         basePermissionMode,
@@ -420,14 +457,25 @@ export function HappyComposer(props: {
 
     const showPermissionSettings = Boolean(onPermissionModeChange && permissionModeOptions.length > 0)
     const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor))
-    const showAbortButton = threadIsRunning
+    const showAbortButton = threadIsRunning && !hasText && !hasQueue
     const voiceEnabled = Boolean(onVoiceToggle)
 
     const handleSend = useCallback(() => {
+        // Empty input + has queue: flush now
+        if (!hasText && hasQueue && onFlushQueue) {
+            onFlushQueue()
+            return
+        }
+        if (threadIsRunning && onQueueSend) {
+            // Auto-queue: enqueue the text and clear composer
+            onQueueSend(trimmed)
+            api.composer().setText('')
+            setTimeout(() => textareaRef.current?.focus(), 0)
+            return
+        }
         api.composer().send()
-        // Keep focus on textarea after sending (especially useful during voice input)
         setTimeout(() => textareaRef.current?.focus(), 0)
-    }, [api])
+    }, [api, threadIsRunning, onQueueSend, trimmed, hasText, hasQueue, onFlushQueue])
 
     const overlays = useMemo(() => {
         if (suggestions.length > 0) {
@@ -511,6 +559,8 @@ export function HappyComposer(props: {
                             onVoiceToggle={onVoiceToggle ?? (() => {})}
                             onVoiceMicToggle={onVoiceMicToggle}
                             onSend={handleSend}
+                            hasQueue={hasQueue}
+                            onFlush={onFlushQueue}
                         />
                     </div>
                 </ComposerPrimitive.Root>

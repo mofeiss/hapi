@@ -347,6 +347,24 @@ function SendIcon() {
     )
 }
 
+function FlushIcon() {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+        </svg>
+    )
+}
+
 function StopIcon() {
     return (
         <svg
@@ -385,15 +403,20 @@ function UnifiedButton(props: {
     showAbortButton: boolean
     abortDisabled: boolean
     isAborting: boolean
+    hasQueue: boolean
     onSend: () => void
     onAbort: () => void
+    onFlush?: () => void
 }) {
     const { t } = useTranslation()
 
     const hasText = props.canSend
+    const showFlush = !hasText && props.hasQueue
 
     const handleClick = () => {
-        if (props.showAbortButton) {
+        if (showFlush && props.onFlush) {
+            props.onFlush()
+        } else if (props.showAbortButton) {
             props.onAbort()
         } else if (hasText) {
             props.onSend()
@@ -404,7 +427,11 @@ function UnifiedButton(props: {
     let className: string
     let ariaLabel: string
 
-    if (props.showAbortButton) {
+    if (showFlush) {
+        icon = <FlushIcon />
+        className = 'bg-black text-white'
+        ariaLabel = t('queue.flushNow')
+    } else if (props.showAbortButton) {
         icon = <AbortIcon spinning={props.isAborting} />
         className = 'bg-black text-white'
         ariaLabel = t('composer.abort')
@@ -418,9 +445,11 @@ function UnifiedButton(props: {
         ariaLabel = t('composer.send')
     }
 
-    const isDisabled = props.showAbortButton
-        ? props.abortDisabled
-        : (props.controlsDisabled || !hasText)
+    const isDisabled = showFlush
+        ? false
+        : props.showAbortButton
+            ? props.abortDisabled
+            : (props.controlsDisabled || !hasText)
 
     return (
         <button
@@ -621,6 +650,8 @@ export function ComposerButtons(props: {
     onVoiceToggle: () => void
     onVoiceMicToggle?: () => void
     onSend: () => void
+    hasQueue?: boolean
+    onFlush?: () => void
 }) {
     const { t } = useTranslation()
     const isVoiceConnected = props.voiceStatus === 'connected'
@@ -723,8 +754,10 @@ export function ComposerButtons(props: {
                 showAbortButton={props.showAbortButton}
                 abortDisabled={props.abortDisabled}
                 isAborting={props.isAborting}
+                hasQueue={props.hasQueue ?? false}
                 onSend={props.onSend}
                 onAbort={props.onAbort}
+                onFlush={props.onFlush}
             />
         </div>
     )
