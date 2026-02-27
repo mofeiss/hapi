@@ -288,18 +288,10 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 if (useAppServer) {
                     turnInFlight = true;
                 }
-                if (!session.thinking) {
-                    logger.debug('thinking started');
-                    session.onThinkingChange(true);
-                }
             }
             if (msgType === 'task_complete' || msgType === 'turn_aborted' || msgType === 'task_failed') {
                 if (useAppServer) {
                     turnInFlight = false;
-                }
-                if (session.thinking) {
-                    logger.debug('thinking completed');
-                    session.onThinkingChange(false);
                 }
                 diffProcessor.reset();
                 appServerEventConverter?.reset();
@@ -534,6 +526,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             messageBuffer.addMessage(message.message, 'user');
             currentModeHash = message.hash;
 
+            session.onThinkingChange(true);
             try {
                 if (!wasCreated) {
                     if (useAppServer && appServerClient) {
