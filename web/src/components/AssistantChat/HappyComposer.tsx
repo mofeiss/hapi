@@ -403,12 +403,17 @@ export function HappyComposer(props: {
     }, [modelMode, onModelModeChange, haptic, agentFlavor])
 
     const handleChange = useCallback((e: ReactChangeEvent<HTMLTextAreaElement>) => {
+        // If user manually edits while voice is recording, stop voice input
+        // to prevent accumulated transcript from overwriting their edits
+        if (voiceStatus === 'connected' && onVoiceToggle) {
+            onVoiceToggle()
+        }
         const selection = {
             start: e.target.selectionStart,
             end: e.target.selectionEnd
         }
         setInputState({ text: e.target.value, selection })
-    }, [])
+    }, [voiceStatus, onVoiceToggle])
 
     const handleSelect = useCallback((e: ReactSyntheticEvent<HTMLTextAreaElement>) => {
         const target = e.target as HTMLTextAreaElement
