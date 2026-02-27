@@ -372,4 +372,15 @@ export default {
   'misc.percentLeft': '剩余 {percent}%',
   'misc.idle': '空闲中',
   'misc.executing': '执行中',
+  'misc.newChat': '新对话',
+
+  // Queue send
+  'queue.title': '代理工作中',
+  'queue.description': '代理正在处理任务，你希望如何发送消息？',
+  'queue.enqueue': '排队发送',
+  'queue.enqueue.desc': '等代理完成后再发送',
+  'queue.interrupt': '立刻发送',
+  'queue.interrupt.desc': '停止代理并立即发送',
+  'queue.tag': '排队中',
+  'queue.flushNow': '立即发送',
 } as const

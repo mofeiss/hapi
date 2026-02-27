@@ -19,6 +19,8 @@ import { useSessionActions } from '@/hooks/mutations/useSessionActions'
 import { useVoiceOptional } from '@/lib/voice-context'
 import { RealtimeVoiceSession, registerSessionStore, registerVoiceHooksStore, voiceHooks } from '@/realtime'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
+import { useMessageQueue } from '@/hooks/useMessageQueue'
+import { setSessionTitleOverride, clearSessionTitleOverride, useSessionTitleOverride } from '@/lib/session-title-override-store'
 
 export function SessionChat(props: {
     api: ApiClient
@@ -52,6 +54,11 @@ export function SessionChat(props: {
         props.session.id,
         agentFlavor
     )
+
+    // Override context size after /clear (reset to 0 = 100% remaining)
+    const [contextSizeOverride, setContextSizeOverride] = useState<number | null>(null)
+    // Override title after /clear (show "New Chat" until agent sets a new title)
+    const titleOverride = useSessionTitleOverride(props.session.id)
 
     // Voice assistant integration
     const voice = useVoiceOptional()
@@ -197,6 +204,21 @@ export function SessionChat(props: {
         blocksByIdRef.current = reconciled.byId
     }, [reconciled.byId])
 
+    // Clear context size override when new usage data arrives from backend
+    useEffect(() => {
+        if (contextSizeOverride !== null && reduced.latestUsage) {
+            setContextSizeOverride(null)
+        }
+    }, [reduced.latestUsage?.timestamp])
+
+    // Clear title override when agent sets a new title (via change_title MCP tool)
+    const sessionName = props.session.metadata?.name
+    useEffect(() => {
+        if (titleOverride !== null && sessionName) {
+            clearSessionTitleOverride(props.session.id)
+        }
+    }, [sessionName])
+
     // Permission mode change handler (base mode)
     const handlePermissionModeChange = useCallback(async (mode: PermissionMode) => {
         try {
@@ -279,7 +301,22 @@ export function SessionChat(props: {
     const handleSend = useCallback((text: string, attachments?: AttachmentMetadata[]) => {
         props.onSend(text, attachments)
         setForceScrollToken((token) => token + 1)
-    }, [props.onSend])
+
+        // Detect /clear command: reset context size and title
+        if (text.trim() === '/clear') {
+            setContextSizeOverride(0)
+            setSessionTitleOverride(props.session.id, 'New Chat')
+        }
+    }, [props.onSend, props.session.id])
+
+    // Message queue for sending while agent is running
+    const messageQueue = useMessageQueue(!!props.session.thinking, handleSend)
+
+    const handleFlushNow = useCallback(() => {
+        messageQueue.flushNow()
+        abortSession()
+        props.onRefresh()
+    }, [messageQueue.flushNow, abortSession, props.onRefresh])
 
     const attachmentAdapter = useMemo(() => {
         if (!props.session.active) {
@@ -341,6 +378,7 @@ export function SessionChat(props: {
                         normalizedMessagesCount={normalizedMessages.length}
                         messagesVersion={props.messagesVersion}
                         forceScrollToken={forceScrollToken}
+                        queuedMessages={messageQueue.queue}
                     />
 
                     <HappyComposer
@@ -353,7 +391,7 @@ export function SessionChat(props: {
                         allowSendWhenInactive
                         thinking={props.session.thinking}
                         agentState={props.session.agentState}
-                        contextSize={reduced.latestUsage?.contextSize}
+                        contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
                         controlledByUser={props.session.agentState?.controlledByUser === true}
                         onPermissionModeChange={handlePermissionModeChange}
                         onModelModeChange={handleModelModeChange}
@@ -364,6 +402,9 @@ export function SessionChat(props: {
                         onVoiceToggle={handleVoiceToggle}
                         onTranscript={stt.setOnTranscript}
                         onInterim={stt.setOnInterim}
+                        onQueueSend={messageQueue.enqueue}
+                        hasQueue={messageQueue.queue.length > 0}
+                        onFlushQueue={handleFlushNow}
                     />
 
                     {/* Files overlay - covers main content area only */}

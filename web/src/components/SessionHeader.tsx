@@ -8,6 +8,7 @@ import { RenameSessionDialog } from '@/components/RenameSessionDialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { useWidescreen } from '@/hooks/useWidescreen'
+import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 
 function getSessionTitle(session: Session): string {
     if (session.metadata?.name) {
@@ -115,6 +116,7 @@ function WidescreenIcon(props: { className?: string; active?: boolean }) {
 
 export function SessionHeader(props: {
     session: Session
+    titleOverride?: string | null // deprecated, now reads from store
     onBack: () => void
     onToggleTerminal?: () => void
     terminalOpen?: boolean
@@ -126,7 +128,8 @@ export function SessionHeader(props: {
     const { t } = useTranslation()
     const { widescreen, toggleWidescreen } = useWidescreen()
     const { session, api, onSessionDeleted } = props
-    const title = useMemo(() => getSessionTitle(session), [session])
+    const titleFromStore = useSessionTitleOverride(session.id)
+    const title = useMemo(() => titleFromStore ?? getSessionTitle(session), [session, titleFromStore])
     const worktreeBranch = session.metadata?.worktree?.branch
 
     const [menuOpen, setMenuOpen] = useState(false)

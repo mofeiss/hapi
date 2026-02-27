@@ -370,4 +370,15 @@ export default {
   'misc.percentLeft': '{percent}% left',
   'misc.idle': 'idle',
   'misc.executing': 'executing',
+  'misc.newChat': 'New Chat',
+
+  // Queue send
+  'queue.title': 'Agent is working',
+  'queue.description': 'The agent is currently processing. How would you like to send your message?',
+  'queue.enqueue': 'Queue',
+  'queue.enqueue.desc': 'Send after agent finishes',
+  'queue.interrupt': 'Send Now',
+  'queue.interrupt.desc': 'Stop agent and send immediately',
+  'queue.tag': 'queued',
+  'queue.flushNow': 'Send now',
 } as const

@@ -8,6 +8,7 @@ import { SessionActionMenu } from '@/components/SessionActionMenu'
 import { RenameSessionDialog } from '@/components/RenameSessionDialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
+import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 
 type SessionGroup = {
     host: string
@@ -205,7 +206,7 @@ function SessionItem(props: {
         threshold: 500
     })
 
-    const sessionName = getSessionTitle(s)
+    const sessionName = useSessionTitleOverride(s.id) ?? getSessionTitle(s)
     return (
         <>
             <button
