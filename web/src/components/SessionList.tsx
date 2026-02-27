@@ -226,13 +226,16 @@ function SessionItem(props: {
                                 className="h-4 w-4 shrink-0 rounded accent-[var(--app-link)] pointer-events-none"
                             />
                         ) : null}
-                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active ? 'rounded-[4px] bg-emerald-600' : ''}`} aria-hidden="true">
+                        <span
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-emerald-600' : ''}`}
+                            aria-hidden="true"
+                        >
                             {s.active && s.thinking ? (
-                                <span className="inline-block text-[10px] leading-none text-white animate-[spin_3s_linear_infinite]">✻</span>
+                                <span className="inline-block text-[15px] leading-none text-white" style={{ animation: 'spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite' }}>✻</span>
                             ) : s.active ? (
-                                <span className="text-[10px] leading-none text-white">✻</span>
+                                <span className="text-[15px] leading-none text-emerald-500">✻</span>
                             ) : (
-                                <span className="text-xs leading-none text-[var(--app-hint)]">✻</span>
+                                <span className="text-[15px] leading-none text-[var(--app-hint)]">✻</span>
                             )}
                         </span>
                         <div className={`truncate text-base ${!s.active ? 'font-normal text-[var(--app-hint)]' : 'font-medium'}`}>

@@ -738,13 +738,15 @@ function SessionsPage() {
                     className={`flex items-center justify-center w-full py-1 px-1 transition-colors hover:bg-[var(--app-subtle-bg)] ${s.id === activeSessionId ? 'bg-[var(--app-secondary-bg)]' : ''}`}
                     title={getSessionTitle(s)}
                   >
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center ${s.active ? 'rounded-[4px] bg-emerald-600' : ''}`}>
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-emerald-600' : ''}`}
+                    >
                       {s.active && s.thinking ? (
-                        <span className="inline-block text-[10px] leading-none text-white animate-[spin_3s_linear_infinite]">✻</span>
+                        <span className="inline-block text-[15px] leading-none text-white" style={{ animation: 'spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite' }}>✻</span>
                       ) : s.active ? (
-                        <span className="text-[10px] leading-none text-white">✻</span>
+                        <span className="text-[15px] leading-none text-emerald-500">✻</span>
                       ) : (
-                        <span className="text-xs leading-none text-[var(--app-hint)]">✻</span>
+                        <span className="text-[15px] leading-none text-[var(--app-hint)]">✻</span>
                       )}
                     </span>
                   </button>
