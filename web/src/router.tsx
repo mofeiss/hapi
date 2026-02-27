@@ -236,7 +236,7 @@ function SessionsPage() {
 
   const projectCount = new Set(
     sessions.map(
-      (s) => s.metadata?.worktree?.basePath ?? s.metadata?.path ?? "Other",
+      (s) => s.metadata?.host ?? "Unknown",
     ),
   ).size;
   const sessionMatch = matchRoute({ to: "/sessions/$sessionId", fuzzy: true });
