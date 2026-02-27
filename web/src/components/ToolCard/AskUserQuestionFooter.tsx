@@ -352,18 +352,20 @@ export function AskUserQuestionFooter(props: {
 
     return (
         <div className="mt-3 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] p-3">
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <Badge variant="default">
-                            {t('tool.question')}
-                        </Badge>
-                        <span className="font-mono text-xs text-[var(--app-hint)]">
-                            [{clampedStep + 1}/{total}]
-                        </span>
+            {questions.length > 1 ? (
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                            <Badge variant="default">
+                                {t('tool.question')}
+                            </Badge>
+                            <span className="font-mono text-xs text-[var(--app-hint)]">
+                                [{clampedStep + 1}/{total}]
+                            </span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            ) : null}
 
             {error ? (
                 <div className="mt-2 text-xs text-red-600">
@@ -386,25 +388,11 @@ export function AskUserQuestionFooter(props: {
                 </div>
             ) : (
                 <div className="mt-3">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                            {questions[clampedStep]?.header ? (
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="default">
-                                        {questions[clampedStep].header}
-                                    </Badge>
-                                </div>
-                            ) : null}
-                            {questions[clampedStep]?.question ? (
-                                <div className={cn(
-                                    "text-sm text-[var(--app-fg)] break-words",
-                                    questions[clampedStep]?.header ? "mt-2" : ""
-                                )}>
-                                    {questions[clampedStep].question}
-                                </div>
-                            ) : null}
+                    {questions[clampedStep]?.question ? (
+                        <div className="text-sm font-medium text-[var(--app-fg)] break-words">
+                            {questions[clampedStep].question}
                         </div>
-                    </div>
+                    ) : null}
 
                     <div className="mt-3 flex flex-col gap-1">
                         {questions[clampedStep].options.map((opt, optIdx) => {
@@ -422,24 +410,28 @@ export function AskUserQuestionFooter(props: {
                             )
                         })}
 
-                        <OptionRow
-                            checked={otherSelectedByQuestion[clampedStep] ?? false}
-                            mode={mode}
+                        <button
+                            type="button"
+                            className={cn(
+                                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-all',
+                                (otherSelectedByQuestion[clampedStep] ?? false)
+                                    ? 'bg-[var(--app-subtle-bg)]'
+                                    : ((selectedByQuestion[clampedStep] ?? []).length > 0 ? 'opacity-50' : 'hover:bg-[var(--app-subtle-bg)]')
+                            )}
                             disabled={props.disabled || loading}
-                            title={t('tool.other')}
-                            description={t('tool.otherDescription')}
                             onClick={() => toggleOther(clampedStep)}
-                        />
-
-                        {(otherSelectedByQuestion[clampedStep] ?? false) ? (
-                            <textarea
+                        >
+                            <SelectionMark checked={otherSelectedByQuestion[clampedStep] ?? false} mode={mode} />
+                            <input
+                                type="text"
                                 value={otherTextByQuestion[clampedStep] ?? ''}
-                                onChange={(e) => updateOtherText(clampedStep, e.target.value)}
+                                onChange={(e) => { e.stopPropagation(); updateOtherText(clampedStep, e.target.value) }}
+                                onClick={(e) => { e.stopPropagation(); if (!(otherSelectedByQuestion[clampedStep] ?? false)) toggleOther(clampedStep) }}
                                 disabled={props.disabled || loading}
                                 placeholder={t('tool.askUserQuestion.otherPlaceholder')}
-                                className="mt-2 w-full min-h-[88px] resize-y rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none focus:ring-2 focus:ring-[var(--app-button)] focus:border-transparent disabled:opacity-50"
+                                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none disabled:opacity-50"
                             />
-                        ) : null}
+                        </button>
                     </div>
                 </div>
             )}
