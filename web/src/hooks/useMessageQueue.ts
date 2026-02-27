@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export type QueuedMessage = {
     text: string
@@ -10,7 +10,6 @@ export function useMessageQueue(
     onSend: (text: string) => void,
 ) {
     const [queue, setQueue] = useState<QueuedMessage[]>([])
-    const prevRunningRef = useRef(isAgentRunning)
 
     const enqueue = useCallback((text: string) => {
         setQueue((prev) => [...prev, { text, timestamp: Date.now() }])
@@ -30,12 +29,13 @@ export function useMessageQueue(
         })
     }, [onSend])
 
-    // When agent transitions from running → idle, flush the queue
+    // When agent is idle and queue has items, flush them.
+    // This replaces the previous transition-based detection (running → idle via ref)
+    // which had a race condition: if isAgentRunning went false before the setQueue
+    // update was processed by React, the transition was "consumed" on an empty queue,
+    // and subsequent queue updates were never flushed.
     useEffect(() => {
-        const wasRunning = prevRunningRef.current
-        prevRunningRef.current = isAgentRunning
-
-        if (wasRunning && !isAgentRunning && queue.length > 0) {
+        if (!isAgentRunning && queue.length > 0) {
             const merged = queue.map((m) => m.text).join('\n')
             setQueue([])
             onSend(merged)
