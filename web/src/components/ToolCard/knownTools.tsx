@@ -306,7 +306,10 @@ export const knownTools: Record<string, {
                 ? first.header.trim() : ''
 
             if (count > 1) {
-                return `${count} Questions`
+                const question = isObject(first) && typeof first.question === 'string'
+                    ? first.question.trim() : ''
+                const display = question.length > 0 ? truncate(question, 80) : (header.length > 0 ? header : 'Question')
+                return `${display}  (+${count - 1} more)`
             }
             return header.length > 0 ? header : 'Question'
         },
@@ -314,13 +317,12 @@ export const knownTools: Record<string, {
             const questions = isObject(opts.input) && Array.isArray(opts.input.questions)
                 ? opts.input.questions : []
             const count = questions.length
+
+            if (count > 1) return null
+
             const first = questions[0] ?? null
             const question = isObject(first) && typeof first.question === 'string'
                 ? first.question.trim() : ''
-
-            if (count > 1 && question.length > 0) {
-                return truncate(question, 100) + ` (+${count - 1} more)`
-            }
             return question.length > 0 ? truncate(question, 120) : null
         },
         minimal: true
@@ -336,7 +338,10 @@ export const knownTools: Record<string, {
                 ? first.header.trim() : ''
 
             if (count > 1) {
-                return `${count} Questions`
+                const question = isObject(first) && typeof first.question === 'string'
+                    ? first.question.trim() : ''
+                const display = question.length > 0 ? truncate(question, 80) : (header.length > 0 ? header : 'Question')
+                return `${display}  (+${count - 1} more)`
             }
             return header.length > 0 ? header : 'Question'
         },
@@ -344,13 +349,12 @@ export const knownTools: Record<string, {
             const questions = isObject(opts.input) && Array.isArray(opts.input.questions)
                 ? opts.input.questions : []
             const count = questions.length
+
+            if (count > 1) return null
+
             const first = questions[0] ?? null
             const question = isObject(first) && typeof first.question === 'string'
                 ? first.question.trim() : ''
-
-            if (count > 1 && question.length > 0) {
-                return truncate(question, 100) + ` (+${count - 1} more)`
-            }
             return question.length > 0 ? truncate(question, 120) : null
         },
         minimal: true

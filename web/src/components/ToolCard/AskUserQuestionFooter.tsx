@@ -24,6 +24,7 @@ function OptionRow(props: {
     checked: boolean
     mode: 'single' | 'multi'
     disabled: boolean
+    dimmed?: boolean
     title: string
     description?: string | null
     onClick: () => void
@@ -32,19 +33,23 @@ function OptionRow(props: {
         <button
             type="button"
             className={cn(
-                'flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-[var(--app-subtle-bg)] disabled:pointer-events-none disabled:opacity-50',
-                props.checked ? 'bg-[var(--app-subtle-bg)]' : null
+                'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-all disabled:pointer-events-none disabled:opacity-50',
+                props.checked
+                    ? 'bg-[var(--app-subtle-bg)]'
+                    : props.dimmed
+                        ? 'opacity-50'
+                        : 'hover:bg-[var(--app-subtle-bg)]'
             )}
             disabled={props.disabled}
             onClick={props.onClick}
         >
             <SelectionMark checked={props.checked} mode={props.mode} />
-            <span className="min-w-0 flex-1">
-                <div className="font-medium text-[var(--app-fg)] break-words">{props.title}</div>
+            <span className="min-w-0 flex-1 break-words">
+                <span className="font-medium text-[var(--app-fg)]">{props.title}</span>
                 {props.description ? (
-                    <div className="mt-0.5 text-xs text-[var(--app-hint)] break-words">
+                    <span className="ml-1.5 text-xs text-[var(--app-hint)]">
                         {props.description}
-                    </div>
+                    </span>
                 ) : null}
             </span>
         </button>
@@ -255,6 +260,94 @@ export function AskUserQuestionFooter(props: {
                 return nextOther
             })
         }
+    }
+
+    // --- Multi-question vertical list ---
+    if (questions.length > 1) {
+        return (
+            <div className="mt-1.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] p-3">
+                {error ? (
+                    <div className="mb-2 text-xs text-red-600">{error}</div>
+                ) : null}
+
+                {questions.map((q, qIdx) => {
+                    const qMode: 'single' | 'multi' = q.multiSelect ? 'multi' : 'single'
+                    const hasSelection = (selectedByQuestion[qIdx] ?? []).length > 0 || (otherSelectedByQuestion[qIdx] ?? false)
+                    return (
+                        <div key={qIdx} className={cn(qIdx > 0 && 'mt-4')}>
+                            <div className="flex items-start gap-2 rounded-md px-2 py-2 mb-1">
+                                {q.header ? (
+                                    <Badge variant="default" className="shrink-0">{q.header}</Badge>
+                                ) : null}
+                                <span className="text-sm font-medium text-[var(--app-fg)] break-words min-w-0">
+                                    {q.question}
+                                </span>
+                            </div>
+                            <div className="flex flex-col ml-3">
+                                {q.options.map((opt, optIdx) => {
+                                    const selected = (selectedByQuestion[qIdx] ?? []).includes(optIdx)
+                                    return (
+                                        <OptionRow
+                                            key={optIdx}
+                                            checked={selected}
+                                            dimmed={hasSelection && !selected}
+                                            mode={qMode}
+                                            disabled={props.disabled || loading}
+                                            title={opt.label}
+                                            description={opt.description}
+                                            onClick={() => toggleOption(qIdx, optIdx)}
+                                        />
+                                    )
+                                })}
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-all',
+                                        (otherSelectedByQuestion[qIdx] ?? false)
+                                            ? 'bg-[var(--app-subtle-bg)]'
+                                            : (hasSelection ? 'opacity-50' : 'hover:bg-[var(--app-subtle-bg)]')
+                                    )}
+                                    disabled={props.disabled || loading}
+                                    onClick={() => toggleOther(qIdx)}
+                                >
+                                    <SelectionMark checked={otherSelectedByQuestion[qIdx] ?? false} mode={qMode} />
+                                    <input
+                                        type="text"
+                                        value={otherTextByQuestion[qIdx] ?? ''}
+                                        onChange={(e) => { e.stopPropagation(); updateOtherText(qIdx, e.target.value) }}
+                                        onClick={(e) => { e.stopPropagation(); if (!(otherSelectedByQuestion[qIdx] ?? false)) toggleOther(qIdx) }}
+                                        disabled={props.disabled || loading}
+                                        placeholder={t('tool.askUserQuestion.otherPlaceholder')}
+                                        className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none disabled:opacity-50"
+                                    />
+                                </button>
+                            </div>
+                        </div>
+                    )
+                })}
+
+                <div className="mt-3 flex items-center justify-end">
+                    <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        disabled={props.disabled || loading}
+                        onClick={submit}
+                        aria-busy={loading}
+                        className="gap-2"
+                    >
+                        {loading ? (
+                            <>
+                                <Spinner size="sm" label={null} className="text-[var(--app-button-text)]" />
+                                {t('tool.submitting')}
+                            </>
+                        ) : (
+                            t('tool.submit')
+                        )}
+                    </Button>
+                </div>
+            </div>
+        )
     }
 
     return (

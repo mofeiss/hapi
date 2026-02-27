@@ -372,7 +372,7 @@ function ToolCardInner(props: ToolCardProps) {
                         </button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
-                        <DialogHeader>
+                        <DialogHeader className="text-left">
                             <DialogTitle>{toolTitle}</DialogTitle>
                         </DialogHeader>
                         {(() => {
