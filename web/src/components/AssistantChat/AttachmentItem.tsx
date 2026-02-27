@@ -1,5 +1,12 @@
+import { createContext, useContext, useState } from 'react'
 import { AttachmentPrimitive, useThreadComposerAttachment } from '@assistant-ui/react'
 import { Spinner } from '@/components/Spinner'
+import { isImageMimeType } from '@/lib/fileAttachments'
+
+// Context for composer-level image preview coordination
+export const ComposerImagePreviewContext = createContext<{
+    openPreview: (attachmentId: string) => void
+} | null>(null)
 
 function ErrorIcon() {
     return (
@@ -31,12 +38,37 @@ function RemoveIcon() {
 }
 
 export function AttachmentItem() {
-    const { name, status } = useThreadComposerAttachment()
+    const attachment = useThreadComposerAttachment()
+    const { name, status } = attachment
+    const attachmentId = (attachment as { id?: string }).id ?? ''
+    const contentType = (attachment as { contentType?: string }).contentType ?? ''
+    const previewUrl = (attachment as { previewUrl?: string }).previewUrl
+    const isImage = isImageMimeType(contentType) && !!previewUrl
     const isUploading = status.type === 'running'
     const isError = status.type === 'incomplete'
 
+    const previewCtx = useContext(ComposerImagePreviewContext)
+
+    const handleClick = () => {
+        if (isImage && previewCtx) {
+            previewCtx.openPreview(attachmentId)
+        }
+    }
+
     return (
-        <AttachmentPrimitive.Root className="flex items-center gap-2 rounded-lg bg-[var(--app-subtle-bg)] px-3 py-2 text-base text-[var(--app-fg)]">
+        <AttachmentPrimitive.Root
+            className="flex items-center gap-2 rounded-lg bg-[var(--app-subtle-bg)] px-3 py-2 text-base text-[var(--app-fg)] cursor-pointer"
+            onClick={isImage ? handleClick : undefined}
+        >
+            {isImage ? (
+                <div className="flex-shrink-0 overflow-hidden rounded">
+                    <img
+                        src={previewUrl}
+                        alt={name}
+                        className="h-6 w-6 object-cover"
+                    />
+                </div>
+            ) : null}
             {isUploading ? <Spinner size="sm" label={null} className="text-[var(--app-hint)]" /> : null}
             {isError ? (
                 <span className="text-red-500">
@@ -48,6 +80,7 @@ export function AttachmentItem() {
                 className="ml-auto flex h-5 w-5 items-center justify-center rounded text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)]"
                 aria-label="Remove attachment"
                 title="Remove attachment"
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
                 <RemoveIcon />
             </AttachmentPrimitive.Remove>

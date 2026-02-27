@@ -26,7 +26,9 @@ import { FloatingOverlay } from '@/components/ChatInput/FloatingOverlay'
 import { Autocomplete } from '@/components/ChatInput/Autocomplete'
 import { StatusBar } from '@/components/AssistantChat/StatusBar'
 import { ComposerButtons } from '@/components/AssistantChat/ComposerButtons'
-import { AttachmentItem } from '@/components/AssistantChat/AttachmentItem'
+import { AttachmentItem, ComposerImagePreviewContext } from '@/components/AssistantChat/AttachmentItem'
+import { ImagePreviewModal, type PreviewImage } from '@/components/AssistantChat/ImagePreviewModal'
+import { isImageMimeType } from '@/lib/fileAttachments'
 import { useTranslation } from '@/lib/use-translation'
 
 export interface TextInputState {
@@ -130,6 +132,33 @@ export function HappyComposer(props: {
     })
     const [isAborting, setIsAborting] = useState(false)
     const [showContinueHint, setShowContinueHint] = useState(false)
+    const [previewAttachmentId, setPreviewAttachmentId] = useState<string | null>(null)
+
+    // Compute image attachments for the shared preview modal
+    const imageAttachments = useMemo(() => {
+        return attachments.filter(a => {
+            const ct = (a as { contentType?: string }).contentType ?? ''
+            const pu = (a as { previewUrl?: string }).previewUrl
+            return isImageMimeType(ct) && !!pu
+        })
+    }, [attachments])
+
+    const previewImages: PreviewImage[] = useMemo(() => {
+        return imageAttachments.map(a => ({
+            src: (a as { previewUrl?: string }).previewUrl!,
+            alt: a.name
+        }))
+    }, [imageAttachments])
+
+    const previewSelectedIndex = useMemo(() => {
+        if (!previewAttachmentId) return 0
+        const idx = imageAttachments.findIndex(a => (a as { id?: string }).id === previewAttachmentId)
+        return idx >= 0 ? idx : 0
+    }, [previewAttachmentId, imageAttachments])
+
+    const imagePreviewCtx = useMemo(() => ({
+        openPreview: (id: string) => setPreviewAttachmentId(id)
+    }), [])
 
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const prevControlledByUser = useRef(controlledByUser)
@@ -518,7 +547,9 @@ export function HappyComposer(props: {
                     <div className="overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)]">
                         {attachments.length > 0 ? (
                             <div className="flex flex-wrap gap-2 px-4 pt-3">
-                                <ComposerPrimitive.Attachments components={{ Attachment: AttachmentItem }} />
+                                <ComposerImagePreviewContext.Provider value={imagePreviewCtx}>
+                                    <ComposerPrimitive.Attachments components={{ Attachment: AttachmentItem }} />
+                                </ComposerImagePreviewContext.Provider>
                             </div>
                         ) : null}
 
@@ -569,6 +600,19 @@ export function HappyComposer(props: {
                         />
                     </div>
                 </ComposerPrimitive.Root>
+
+                {previewAttachmentId && previewImages.length > 0 && (
+                    <ImagePreviewModal
+                        open={!!previewAttachmentId}
+                        onOpenChange={(open) => { if (!open) setPreviewAttachmentId(null) }}
+                        images={previewImages}
+                        selectedIndex={previewSelectedIndex}
+                        onSelectedIndexChange={(i) => {
+                            const att = imageAttachments[i]
+                            if (att) setPreviewAttachmentId((att as { id?: string }).id ?? null)
+                        }}
+                    />
+                )}
             </div>
         </div>
     )

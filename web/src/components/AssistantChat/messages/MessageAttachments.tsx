@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import type { AttachmentMetadata } from '@/types/api'
 import { FileIcon } from '@/components/FileIcon'
 import { isImageMimeType } from '@/lib/fileAttachments'
+import { ImagePreviewModal, type PreviewImage } from '@/components/AssistantChat/ImagePreviewModal'
 
 function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`
@@ -8,10 +10,14 @@ function formatFileSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function ImageAttachment(props: { attachment: AttachmentMetadata }) {
-    const { attachment } = props
+function ImageAttachment(props: { attachment: AttachmentMetadata; onClick: () => void }) {
+    const { attachment, onClick } = props
     return (
-        <div className="relative overflow-hidden rounded-lg">
+        <button
+            type="button"
+            onClick={onClick}
+            className="relative overflow-hidden rounded-lg cursor-pointer transition-opacity hover:opacity-90"
+        >
             <img
                 src={attachment.previewUrl}
                 alt={attachment.filename}
@@ -22,7 +28,7 @@ function ImageAttachment(props: { attachment: AttachmentMetadata }) {
                     {attachment.filename}
                 </span>
             </div>
-        </div>
+        </button>
     )
 }
 
@@ -45,27 +51,50 @@ function FileAttachment(props: { attachment: AttachmentMetadata }) {
 
 export function MessageAttachments(props: { attachments: AttachmentMetadata[] }) {
     const { attachments } = props
+    const [previewIndex, setPreviewIndex] = useState(-1)
+
     if (!attachments || attachments.length === 0) return null
 
     const images = attachments.filter(a => isImageMimeType(a.mimeType) && a.previewUrl)
     const files = attachments.filter(a => !isImageMimeType(a.mimeType) || !a.previewUrl)
 
+    const previewImages: PreviewImage[] = images.map(a => ({
+        src: a.previewUrl!,
+        alt: a.filename
+    }))
+
     return (
-        <div className="mt-2 flex flex-col gap-2">
-            {images.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                    {images.map(attachment => (
-                        <ImageAttachment key={attachment.id} attachment={attachment} />
-                    ))}
-                </div>
+        <>
+            <div className="mt-2 flex flex-col gap-2">
+                {images.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {images.map((attachment, i) => (
+                            <ImageAttachment
+                                key={attachment.id}
+                                attachment={attachment}
+                                onClick={() => setPreviewIndex(i)}
+                            />
+                        ))}
+                    </div>
+                )}
+                {files.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                        {files.map(attachment => (
+                            <FileAttachment key={attachment.id} attachment={attachment} />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {previewIndex >= 0 && (
+                <ImagePreviewModal
+                    open={previewIndex >= 0}
+                    onOpenChange={(open) => { if (!open) setPreviewIndex(-1) }}
+                    images={previewImages}
+                    selectedIndex={previewIndex}
+                    onSelectedIndexChange={setPreviewIndex}
+                />
             )}
-            {files.length > 0 && (
-                <div className="flex flex-col gap-1.5">
-                    {files.map(attachment => (
-                        <FileAttachment key={attachment.id} attachment={attachment} />
-                    ))}
-                </div>
-            )}
-        </div>
+        </>
     )
 }
