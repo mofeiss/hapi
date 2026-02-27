@@ -7,12 +7,14 @@ export type RequestUserInputOption = {
 
 export type RequestUserInputQuestion = {
     id: string
+    header: string | null
     question: string
     options: RequestUserInputOption[]
 }
 
 export type RequestUserInputQuestionInfo = {
     id: string
+    header: string | null
     question: string | null
 }
 
@@ -34,7 +36,10 @@ export function parseRequestUserInputInput(input: unknown): { questions: Request
         if (!isObject(raw)) continue
 
         const id = typeof raw.id === 'string' ? raw.id.trim() : ''
-        const question = typeof raw.question === 'string' ? raw.question.trim() : ''
+        const headerRaw = typeof raw.header === 'string' ? raw.header.trim() : ''
+        const questionRaw = typeof raw.question === 'string' ? raw.question.trim() : ''
+        const descriptionRaw = typeof raw.description === 'string' ? raw.description.trim() : ''
+        const question = questionRaw.length > 0 ? questionRaw : descriptionRaw
 
         // Skip questions without id
         if (!id) continue
@@ -51,6 +56,7 @@ export function parseRequestUserInputInput(input: unknown): { questions: Request
 
         questions.push({
             id,
+            header: headerRaw.length > 0 ? headerRaw : id,
             question,
             options
         })
@@ -68,10 +74,14 @@ export function extractRequestUserInputQuestionsInfo(input: unknown): RequestUse
     for (const q of raw) {
         if (!isObject(q)) continue
         const id = typeof q.id === 'string' ? q.id.trim() : ''
-        const question = typeof q.question === 'string' ? q.question.trim() : null
+        const header = typeof q.header === 'string' ? q.header.trim() : null
+        const questionRaw = typeof q.question === 'string' ? q.question.trim() : null
+        const descriptionRaw = typeof q.description === 'string' ? q.description.trim() : null
+        const question = questionRaw && questionRaw.length > 0 ? questionRaw : descriptionRaw
         if (!id) continue
         questions.push({
             id,
+            header: header && header.length > 0 ? header : id,
             question: question && question.length > 0 ? question : null
         })
     }

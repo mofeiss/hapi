@@ -34,19 +34,19 @@ function OptionRow(props: {
         <button
             type="button"
             className={cn(
-                'flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors hover:bg-[var(--app-subtle-bg)] disabled:pointer-events-none disabled:opacity-50',
+                'flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-[var(--app-subtle-bg)] disabled:pointer-events-none disabled:opacity-50',
                 props.checked ? 'bg-[var(--app-subtle-bg)]' : null
             )}
             disabled={props.disabled}
             onClick={props.onClick}
         >
             <SelectionMark checked={props.checked} />
-            <span className="min-w-0 flex-1">
-                <div className="font-medium text-[var(--app-fg)] break-words">{props.title}</div>
+            <span className="min-w-0 flex-1 break-words">
+                <span className="font-medium text-[var(--app-fg)]">{props.title}</span>
                 {props.description ? (
-                    <div className="mt-0.5 text-xs text-[var(--app-hint)] break-words">
+                    <span className="ml-1.5 text-xs text-[var(--app-hint)]">
                         {props.description}
-                    </div>
+                    </span>
                 ) : null}
             </span>
         </button>
@@ -183,18 +183,20 @@ export function RequestUserInputFooter(props: {
 
     return (
         <div className="mt-3 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] p-3">
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <Badge variant="default">
-                            {t('tool.question')}
-                        </Badge>
-                        <span className="font-mono text-xs text-[var(--app-hint)]">
-                            [{clampedStep + 1}/{total}]
-                        </span>
+            {questions.length > 1 ? (
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                            <Badge variant="default">
+                                {t('tool.question')}
+                            </Badge>
+                            <span className="font-mono text-xs text-[var(--app-hint)]">
+                                [{clampedStep + 1}/{total}]
+                            </span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            ) : null}
 
             {error ? (
                 <div className="mt-2 text-xs text-red-600">
@@ -204,9 +206,18 @@ export function RequestUserInputFooter(props: {
 
             {currentQuestion ? (
                 <div className="mt-3">
-                    {currentQuestion.question ? (
-                        <div className="text-sm text-[var(--app-fg)] break-words">
-                            {currentQuestion.question}
+                    {(currentQuestion.header || currentQuestion.question) ? (
+                        <div className="flex items-start gap-2 rounded-md px-2 py-2 mb-1">
+                            {currentQuestion.header ? (
+                                <Badge variant="default" className="shrink-0">
+                                    {currentQuestion.header}
+                                </Badge>
+                            ) : null}
+                            {currentQuestion.question ? (
+                                <span className="text-sm font-medium text-[var(--app-fg)] break-words min-w-0">
+                                    {currentQuestion.question}
+                                </span>
+                            ) : null}
                         </div>
                     ) : null}
 
@@ -217,12 +228,12 @@ export function RequestUserInputFooter(props: {
                             onChange={(e) => updateUserNote(currentQuestion.id, e.target.value)}
                             disabled={props.disabled || loading}
                             placeholder={t('tool.requestUserInput.textPlaceholder')}
-                            className="mt-3 w-full min-h-[88px] resize-y rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none focus:ring-2 focus:ring-[var(--app-button)] focus:border-transparent disabled:opacity-50"
+                            className="mt-2 w-full min-h-[88px] resize-y rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none focus:ring-2 focus:ring-[var(--app-button)] focus:border-transparent disabled:opacity-50"
                         />
                     ) : (
                         // Question with options
                         <>
-                            <div className="mt-3 flex flex-col gap-1">
+                            <div className="mt-2 flex flex-col gap-1">
                                 {currentQuestion.options.map((opt, optIdx) => {
                                     const isSelected = currentState?.selected === opt.label
                                     return (

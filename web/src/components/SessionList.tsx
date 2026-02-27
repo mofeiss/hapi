@@ -227,7 +227,7 @@ function SessionItem(props: {
                             />
                         ) : null}
                         <span
-                            className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-emerald-600' : ''}`}
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-amber-500' : ''}`}
                             aria-hidden="true"
                         >
                             {s.active && s.thinking ? (

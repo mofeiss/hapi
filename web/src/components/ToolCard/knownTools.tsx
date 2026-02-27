@@ -313,18 +313,7 @@ export const knownTools: Record<string, {
             }
             return header.length > 0 ? header : 'Question'
         },
-        subtitle: (opts) => {
-            const questions = isObject(opts.input) && Array.isArray(opts.input.questions)
-                ? opts.input.questions : []
-            const count = questions.length
-
-            if (count > 1) return null
-
-            const first = questions[0] ?? null
-            const question = isObject(first) && typeof first.question === 'string'
-                ? first.question.trim() : ''
-            return question.length > 0 ? truncate(question, 120) : null
-        },
+        subtitle: () => null,
         minimal: true
     },
     ask_user_question: {
@@ -345,18 +334,7 @@ export const knownTools: Record<string, {
             }
             return header.length > 0 ? header : 'Question'
         },
-        subtitle: (opts) => {
-            const questions = isObject(opts.input) && Array.isArray(opts.input.questions)
-                ? opts.input.questions : []
-            const count = questions.length
-
-            if (count > 1) return null
-
-            const first = questions[0] ?? null
-            const question = isObject(first) && typeof first.question === 'string'
-                ? first.question.trim() : ''
-            return question.length > 0 ? truncate(question, 120) : null
-        },
+        subtitle: () => null,
         minimal: true
     },
     request_user_input: {
