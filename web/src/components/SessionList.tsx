@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 
-type SessionGroup = {
+export type SessionGroup = {
     host: string
     sessions: SessionSummary[]
     latestUpdatedAt: number
@@ -24,7 +24,7 @@ function getPathDisplayName(path: string): string {
     return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`
 }
 
-function groupSessionsByHost(sessions: SessionSummary[]): SessionGroup[] {
+export function groupSessionsByHost(sessions: SessionSummary[]): SessionGroup[] {
     const groups = new Map<string, SessionSummary[]>()
 
     sessions.forEach(session => {
@@ -118,7 +118,7 @@ function ChevronIcon(props: { className?: string; collapsed?: boolean }) {
     )
 }
 
-function getSessionTitle(session: SessionSummary): string {
+export function getSessionTitle(session: SessionSummary): string {
     if (session.metadata?.name) {
         return session.metadata.name
     }

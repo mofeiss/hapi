@@ -13,7 +13,7 @@ import {
 } from "@tanstack/react-router";
 import { App } from "@/App";
 import { SessionChat } from "@/components/SessionChat";
-import { SessionList } from "@/components/SessionList";
+import { SessionList, groupSessionsByHost, getSessionTitle } from "@/components/SessionList";
 import { NewSession } from "@/components/NewSession";
 import { LoadingState } from "@/components/LoadingState";
 import { useAppContext } from "@/lib/app-context";
@@ -259,15 +259,15 @@ function SessionsPage() {
     return sessions.filter(s => s.active);
   }, [sessions, filterOnlineOnly]);
 
+  const collapsedGroups = useMemo(
+    () => groupSessionsByHost(displaySessions),
+    [displaySessions],
+  );
+
   const handleRefresh = useCallback(() => {
     void refetch();
   }, [refetch]);
 
-  const projectCount = new Set(
-    displaySessions.map(
-      (s) => s.metadata?.host ?? "Unknown",
-    ),
-  ).size;
   const sessionMatch = matchRoute({ to: "/sessions/$sessionId", fuzzy: true });
   const selectedSessionId =
     sessionMatch && sessionMatch.sessionId !== "new"
@@ -298,6 +298,8 @@ function SessionsPage() {
   );
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
   const [batchPending, setBatchPending] = useState(false);
+  const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
+  const toolbarMenuRef = useRef<HTMLDivElement>(null);
 
   const handleEnterBatchMode = useCallback(
     (mode: "archive" | "delete") => {
@@ -349,6 +351,18 @@ function SessionsPage() {
   );
   const activeSessionRef = useRef(activeSessionId);
   activeSessionRef.current = activeSessionId;
+
+  // Close toolbar menu on click outside
+  useEffect(() => {
+    if (!toolbarMenuOpen) return;
+    const handler = (e: PointerEvent) => {
+      if (toolbarMenuRef.current && !toolbarMenuRef.current.contains(e.target as Node)) {
+        setToolbarMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [toolbarMenuOpen]);
 
   // Sync URL → state for browser back/forward
   useEffect(() => {
@@ -529,11 +543,8 @@ function SessionsPage() {
               >
                 <SidebarCollapseIcon className="h-5 w-5" />
               </button>
-              <div className="text-xs text-[var(--app-hint)] whitespace-nowrap overflow-hidden">
-                {batchMode
-                  ? t("batch.selected", { n: batchSelectedIds.size })
-                  : t("sessions.count", { n: displaySessions.length, m: projectCount })}
-              </div>
+              <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-semibold text-[var(--app-fg)] select-none">HAPI</span>
             </div>
             <div className="flex items-center gap-0 shrink-0">
               {batchMode ? (
@@ -599,36 +610,44 @@ function SessionsPage() {
                 </button>
               )}
               <div className="mx-1 h-5 w-0.5 bg-[var(--app-divider)]" />
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                title={isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
-              >
-                {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSettingsOpen((prev) => !prev);
-                  setNewSessionOpen(false);
-                }}
-                className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                title={t("settings.title")}
-              >
-                <SettingsIcon className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewSessionOpen((prev) => !prev);
-                  setSettingsOpen(false);
-                }}
-                className="session-list-new-button p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                title={t("sessions.new")}
-              >
-                <NewChatIcon className="h-5 w-5" />
-              </button>
+              <div className="relative" ref={toolbarMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setToolbarMenuOpen((prev) => !prev)}
+                  className={`p-1.5 rounded-full transition-colors ${toolbarMenuOpen ? "bg-[var(--app-subtle-bg)] text-[var(--app-fg)]" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+                  title={t("menu")}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                </button>
+                {toolbarMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1 z-[100] min-w-[180px] rounded-lg border border-[var(--app-divider)] bg-[var(--app-bg)] shadow-lg py-1">
+                    <button
+                      type="button"
+                      onClick={() => { toggleTheme(); setToolbarMenuOpen(false); }}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                    >
+                      {isDark ? <SunIcon className="h-4 w-4 text-[var(--app-hint)]" /> : <MoonIcon className="h-4 w-4 text-[var(--app-hint)]" />}
+                      {isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSettingsOpen((prev) => !prev); setNewSessionOpen(false); setToolbarMenuOpen(false); }}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                    >
+                      <SettingsIcon className="h-4 w-4 text-[var(--app-hint)]" />
+                      {t("settings.title")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setNewSessionOpen((prev) => !prev); setSettingsOpen(false); setToolbarMenuOpen(false); }}
+                      className="session-list-new-button flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                    >
+                      <NewChatIcon className="h-4 w-4 text-[var(--app-hint)]" />
+                      {t("sessions.new")}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -685,8 +704,9 @@ function SessionsPage() {
 
       {/* Expand sidebar strip (PC only, when collapsed) */}
       {collapsed && (
-        <div className="hidden lg:flex flex-col shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
-          <div className="px-3 py-2">
+        <div className="hidden lg:flex flex-col h-[100dvh] shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
+          {/* Top: expand button */}
+          <div className="px-3 py-2 shrink-0">
             <button
               type="button"
               onClick={toggleCollapsed}
@@ -695,6 +715,110 @@ function SessionsPage() {
             >
               <SidebarExpandIcon className="h-5 w-5" />
             </button>
+          </div>
+          <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
+
+          {/* Middle: scrollable session groups */}
+          <div className="flex-1 min-h-0 overflow-y-auto py-1">
+            {collapsedGroups.map((group, gi) => (
+              <div key={group.host}>
+                {gi > 0 && <div className="mx-2 my-1 h-px bg-[var(--app-divider)]" />}
+                {/* Group label: first character */}
+                <div className="flex items-center justify-center py-1.5 px-1" title={group.host}>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--app-subtle-bg)] text-[10px] font-medium text-[var(--app-hint)] select-none">
+                    {group.host.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                {/* Session icons */}
+                {group.sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => handleSelectSession(s.id)}
+                    className={`flex items-center justify-center w-full py-1 px-1 transition-colors hover:bg-[var(--app-subtle-bg)] ${s.id === activeSessionId ? 'bg-[var(--app-secondary-bg)]' : ''}`}
+                    title={getSessionTitle(s)}
+                  >
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center ${s.active ? 'rounded-[4px] bg-emerald-600' : ''}`}>
+                      {s.active && s.thinking ? (
+                        <span className="inline-block text-[10px] leading-none text-white animate-[spin_3s_linear_infinite]">✻</span>
+                      ) : s.active ? (
+                        <span className="text-[10px] leading-none text-white">✻</span>
+                      ) : (
+                        <span className="text-xs leading-none text-[var(--app-hint)]">✻</span>
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom: toolbar buttons (vertical) */}
+          <div className="shrink-0 flex flex-col items-center py-2 gap-0.5">
+            <div className="mx-2 mb-1 h-px w-full bg-[var(--app-divider)]" />
+            <button
+              type="button"
+              onClick={() => handleEnterBatchMode("archive")}
+              className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+              title={t("batch.archive.tooltip")}
+            >
+              <BatchArchiveIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleEnterBatchMode("delete")}
+              className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+              title={t("batch.delete.tooltip")}
+            >
+              <BatchTrashIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={toggleFilterOnline}
+              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? 'bg-emerald-500/15 text-emerald-500' : 'text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]'}`}
+              title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
+            >
+              <OnlineFilterIcon className="h-5 w-5" />
+            </button>
+            <div className="mx-2 my-0.5 h-px w-full bg-[var(--app-divider)]" />
+            <div className="relative" ref={toolbarMenuRef}>
+              <button
+                type="button"
+                onClick={() => setToolbarMenuOpen((prev) => !prev)}
+                className={`p-1.5 rounded-full transition-colors ${toolbarMenuOpen ? "bg-[var(--app-subtle-bg)] text-[var(--app-fg)]" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+                title={t("menu")}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+              </button>
+              {toolbarMenuOpen && (
+                <div className="absolute left-full bottom-0 ml-1 z-[100] min-w-[180px] rounded-lg border border-[var(--app-divider)] bg-[var(--app-bg)] shadow-lg py-1">
+                  <button
+                    type="button"
+                    onClick={() => { toggleTheme(); setToolbarMenuOpen(false); }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                  >
+                    {isDark ? <SunIcon className="h-4 w-4 text-[var(--app-hint)]" /> : <MoonIcon className="h-4 w-4 text-[var(--app-hint)]" />}
+                    {isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSettingsOpen((prev) => !prev); setNewSessionOpen(false); setToolbarMenuOpen(false); }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                  >
+                    <SettingsIcon className="h-4 w-4 text-[var(--app-hint)]" />
+                    {t("settings.title")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setNewSessionOpen((prev) => !prev); setSettingsOpen(false); setToolbarMenuOpen(false); }}
+                    className="session-list-new-button flex w-full items-center gap-2.5 px-3 py-2 text-sm text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                  >
+                    <NewChatIcon className="h-4 w-4 text-[var(--app-hint)]" />
+                    {t("sessions.new")}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -41,6 +41,7 @@ export default {
   // Sessions page
   'sessions.count': '{m} devices',
   'sessions.new': 'New Session',
+  'menu': 'Menu',
 
   // Session list
   'session.item.path': 'path',
@@ -108,8 +109,8 @@ export default {
   'dialog.dontAskAgain': 'Don\'t ask again',
 
   // Theme
-  'theme.switchToLight': 'Switch to light mode',
-  'theme.switchToDark': 'Switch to dark mode',
+  'theme.switchToLight': 'Light Mode',
+  'theme.switchToDark': 'Dark Mode',
 
   // Filter
   'filter.onlineOnly': 'Show online only',

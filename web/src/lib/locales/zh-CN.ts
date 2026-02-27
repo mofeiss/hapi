@@ -41,6 +41,7 @@ export default {
   // Sessions page
   'sessions.count': '{m} 台设备',
   'sessions.new': '新建会话',
+  'menu': '菜单',
 
   // Session list
   'session.item.path': '路径',
@@ -110,8 +111,8 @@ export default {
   'dialog.dontAskAgain': '不再提示',
 
   // Theme
-  'theme.switchToLight': '切换到亮色模式',
-  'theme.switchToDark': '切换到暗色模式',
+  'theme.switchToLight': '亮色模式',
+  'theme.switchToDark': '暗色模式',
 
   // Filter
   'filter.onlineOnly': '仅显示在线',
