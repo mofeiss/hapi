@@ -221,6 +221,18 @@ function MoonIcon(props: { className?: string }) {
   );
 }
 
+function OnlineFilterIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+      <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
+      <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
+      <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19" />
+    </svg>
+  );
+}
+
 function SessionsPage() {
   const { api } = useAppContext();
   const navigate = useNavigate();
@@ -230,12 +242,29 @@ function SessionsPage() {
   const { isDark, toggleTheme } = useTheme();
   const { sessions, isLoading, error, refetch } = useSessions(api);
 
+  const [filterOnlineOnly, setFilterOnlineOnly] = useState(() => {
+    try { return localStorage.getItem('hapi:filter:onlineOnly') === '1' } catch { return false }
+  });
+
+  const toggleFilterOnline = useCallback(() => {
+    setFilterOnlineOnly(prev => {
+      const next = !prev;
+      try { localStorage.setItem('hapi:filter:onlineOnly', next ? '1' : '0') } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const displaySessions = useMemo(() => {
+    if (!filterOnlineOnly) return sessions;
+    return sessions.filter(s => s.active);
+  }, [sessions, filterOnlineOnly]);
+
   const handleRefresh = useCallback(() => {
     void refetch();
   }, [refetch]);
 
   const projectCount = new Set(
-    sessions.map(
+    displaySessions.map(
       (s) => s.metadata?.host ?? "Unknown",
     ),
   ).size;
@@ -490,22 +519,22 @@ function SessionsPage() {
       >
         <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
           <div className="mx-auto w-full max-w-content flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               <button
                 type="button"
                 onClick={toggleCollapsed}
-                className="hidden ml-[-5px] lg:inline-flex p-1 rounded text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                className="hidden ml-[-5px] lg:inline-flex p-1 rounded text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors shrink-0"
                 title="Collapse sidebar"
               >
                 <SidebarCollapseIcon className="h-5 w-5" />
               </button>
-              <div className="text-xs text-[var(--app-hint)]">
+              <div className="text-xs text-[var(--app-hint)] whitespace-nowrap overflow-hidden">
                 {batchMode
                   ? t("batch.selected", { n: batchSelectedIds.size })
-                  : t("sessions.count", { n: sessions.length, m: projectCount })}
+                  : t("sessions.count", { n: displaySessions.length, m: projectCount })}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0 shrink-0">
               {batchMode ? (
                 <>
                   <button
@@ -561,13 +590,21 @@ function SessionsPage() {
               {!batchMode && (
                 <button
                   type="button"
-                  onClick={toggleTheme}
-                  className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                  title={isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
+                  onClick={toggleFilterOnline}
+                  className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? 'bg-emerald-500/15 text-emerald-500' : 'text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]'}`}
+                  title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
                 >
-                  {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+                  <OnlineFilterIcon className="h-5 w-5" />
                 </button>
               )}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                title={isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
+              >
+                {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -601,7 +638,7 @@ function SessionsPage() {
             </div>
           ) : null}
           <SessionList
-            sessions={sessions}
+            sessions={displaySessions}
             selectedSessionId={activeSessionId}
             onSelect={handleSelectSession}
             onNewSession={() => {

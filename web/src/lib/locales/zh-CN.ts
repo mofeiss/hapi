@@ -113,6 +113,10 @@ export default {
   'theme.switchToLight': '切换到亮色模式',
   'theme.switchToDark': '切换到暗色模式',
 
+  // Filter
+  'filter.onlineOnly': '仅显示在线',
+  'filter.showAll': '显示全部会话',
+
   // Batch operations
   'batch.archive.tooltip': '批量归档',
   'batch.delete.tooltip': '批量删除',

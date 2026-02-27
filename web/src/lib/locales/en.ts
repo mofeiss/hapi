@@ -111,6 +111,10 @@ export default {
   'theme.switchToLight': 'Switch to light mode',
   'theme.switchToDark': 'Switch to dark mode',
 
+  // Filter
+  'filter.onlineOnly': 'Show online only',
+  'filter.showAll': 'Show all sessions',
+
   // Batch operations
   'batch.archive.tooltip': 'Batch Archive',
   'batch.delete.tooltip': 'Batch Delete',
