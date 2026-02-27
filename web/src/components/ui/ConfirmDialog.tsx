@@ -16,7 +16,7 @@ type ConfirmDialogProps = {
     description: string
     confirmLabel: string
     confirmingLabel: string
-    onConfirm: () => Promise<void>
+    onConfirm: () => void | Promise<void>
     isPending: boolean
     destructive?: boolean
     /** When set, shows a "don't ask again" checkbox. On confirm with it checked, saves preference to localStorage under this key. */

@@ -401,37 +401,38 @@ function SessionsPage() {
     [navigate],
   );
 
-  const executeBatchOperation = useCallback(async () => {
+  const executeBatchOperation = useCallback(() => {
     if (!api || batchSelectedIds.size === 0 || !batchMode) return;
-    setBatchPending(true);
+    const mode = batchMode;
     const ids = [...batchSelectedIds];
 
-    for (const id of ids) {
-      try {
-        if (batchMode === "archive") {
-          await api.archiveSession(id);
-        } else {
-          await api.deleteSession(id);
-          clearMessageWindow(id);
-        }
-      } catch {
-        // continue with remaining sessions
-      }
-    }
-
-    if (batchMode === "delete") {
-      setMountedSessions((prev) =>
-        prev.filter((sid) => !batchSelectedIds.has(sid)),
-      );
-      if (activeSessionId && batchSelectedIds.has(activeSessionId)) {
+    // Optimistic: immediately update UI and close dialog
+    if (mode === "delete") {
+      const idSet = new Set(ids);
+      setMountedSessions((prev) => prev.filter((sid) => !idSet.has(sid)));
+      if (activeSessionId && idSet.has(activeSessionId)) {
         setActiveSessionId(null);
         navigate({ to: "/sessions" });
       }
     }
-
-    await queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
-    setBatchPending(false);
     handleExitBatchMode();
+
+    // Fire-and-forget: run API calls in background
+    (async () => {
+      for (const id of ids) {
+        try {
+          if (mode === "archive") {
+            await api.archiveSession(id);
+          } else {
+            await api.deleteSession(id);
+            clearMessageWindow(id);
+          }
+        } catch {
+          // continue with remaining sessions
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
+    })();
   }, [api, batchMode, batchSelectedIds, activeSessionId, navigate, queryClient, handleExitBatchMode]);
 
   const handleBatchConfirmClick = useCallback(() => {
