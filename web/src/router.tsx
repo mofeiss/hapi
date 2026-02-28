@@ -589,9 +589,14 @@ function SessionsPage() {
               ) : (
                 <>
                   {compactToolbar ? (
-                    <span className="inline-flex items-center px-1.5 text-sm font-semibold text-[var(--app-hint)] select-none">
-                      ...
-                    </span>
+                    <button
+                      type="button"
+                      onClick={toggleFilterOnline}
+                      className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+                      title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
+                    >
+                      <OnlineFilterIcon className="h-5 w-5" />
+                    </button>
                   ) : (
                     <>
                       <button
