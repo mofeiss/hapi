@@ -177,11 +177,13 @@ export function HappyComposer(props: {
     const composerTextRef = useRef(composerText)
     composerTextRef.current = composerText
     const preVoiceTextRef = useRef('')
+    const interimAppliedRef = useRef(false)
 
     // Reset pre-voice text when composer is cleared (e.g. after sending)
     useEffect(() => {
         if (!composerText) {
             preVoiceTextRef.current = ''
+            interimAppliedRef.current = false
         }
     }, [composerText])
     useEffect(() => {
@@ -197,15 +199,20 @@ export function HappyComposer(props: {
         if (!onInterim) return
         onInterim((text: string) => {
             if (text) {
-                // Save pre-voice text on first interim
-                if (!preVoiceTextRef.current && composerTextRef.current) {
+                // Save pre-voice text only when current composer text is user-owned text.
+                // If current text was already written by previous interim update,
+                // capturing it as prefix would cause duplicated head like:
+                // "你好 你好，今天..."
+                if (!preVoiceTextRef.current && composerTextRef.current && !interimAppliedRef.current) {
                     preVoiceTextRef.current = composerTextRef.current
                 }
+                interimAppliedRef.current = true
                 api.composer().setText(preVoiceTextRef.current ? `${preVoiceTextRef.current} ${text}` : text)
                 textareaRef.current?.focus()
             } else {
                 // Interim cleared (recording stopped) — reset pre-voice text
                 preVoiceTextRef.current = ''
+                interimAppliedRef.current = false
             }
         })
     }, [onInterim, api])
