@@ -20,6 +20,7 @@ import { startRunnerControlServer } from './controlServer';
 import { createWorktree, removeWorktree, type WorktreeInfo } from './worktree';
 import { join } from 'path';
 import { buildMachineMetadata } from '@/agent/sessionFactory';
+import { resolveUserPath } from '@/utils/userPath';
 
 export async function startRunner(): Promise<void> {
   // We don't have cleanup function at the time of server construction
@@ -177,7 +178,8 @@ export async function startRunner(): Promise<void> {
     const spawnSession = async (options: SpawnSessionOptions): Promise<SpawnSessionResult> => {
       logger.debugLargeJson('[RUNNER RUN] Spawning session', options);
 
-      const { directory, sessionId, machineId, approvedNewDirectoryCreation = true } = options;
+      const { directory: requestedDirectory, sessionId, machineId, approvedNewDirectoryCreation = true } = options;
+      const directory = resolveUserPath(requestedDirectory);
       const agent = options.agent ?? 'claude';
       const permissionMode = options.permissionMode;
       const basePermissionMode = options.basePermissionMode;
@@ -400,7 +402,7 @@ export async function startRunner(): Promise<void> {
           pid,
           childProcess: happyProcess,
           directoryCreated,
-          message: directoryCreated ? `The path '${directory}' did not exist. We created a new folder and spawned a new session there.` : undefined
+          message: directoryCreated ? `The path '${requestedDirectory}' did not exist. We created a new folder and spawned a new session there.` : undefined
         };
 
         pidToTrackedSession.set(pid, trackedSession);

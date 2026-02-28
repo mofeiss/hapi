@@ -1,5 +1,15 @@
 import type { SessionMetadataSummary } from '@/types/api'
 
+export function normalizeProjectPath(path: string): string {
+    const normalized = path.replace(/\\/g, '/')
+    const mixedHomePrefix = normalized.match(/^((?:[A-Za-z]:)?\/(?:Users|home)\/[^/]+)\/~(?:\/(.*))?$/)
+    if (!mixedHomePrefix) {
+        return path
+    }
+    const suffix = mixedHomePrefix[2]
+    return suffix && suffix.length > 0 ? `${mixedHomePrefix[1]}/${suffix}` : mixedHomePrefix[1]
+}
+
 export function resolveDisplayPath(path: string, metadata: SessionMetadataSummary | null): string {
     if (!metadata?.path) return path
 

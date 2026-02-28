@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { useWidescreen } from '@/hooks/useWidescreen'
 import { useSessionTitleOverride } from '@/lib/session-title-override-store'
+import { normalizeProjectPath } from '@/utils/path'
 
 function getSessionTitle(session: Session): string {
     if (session.metadata?.name) {
@@ -131,6 +132,7 @@ export function SessionHeader(props: {
     const titleFromStore = useSessionTitleOverride(session.id)
     const title = useMemo(() => titleFromStore ?? getSessionTitle(session), [session, titleFromStore])
     const worktreeBranch = session.metadata?.worktree?.branch
+    const displayPath = session.metadata?.path ? normalizeProjectPath(session.metadata.path) : null
 
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -204,10 +206,10 @@ export function SessionHeader(props: {
                                     {session.metadata.host}
                                 </span>
                             ) : null}
-                            {session.metadata?.path ? (
+                            {displayPath ? (
                                 <span className="inline-flex items-center gap-1 truncate">
                                     <span className="shrink-0 text-[10px]" aria-hidden="true">📂</span>
-                                    {session.metadata.path}
+                                    {displayPath}
                                 </span>
                             ) : null}
                         </div>

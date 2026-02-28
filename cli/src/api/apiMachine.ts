@@ -14,6 +14,7 @@ import { RpcHandlerManager } from './rpc/RpcHandlerManager'
 import { registerCommonHandlers } from '../modules/common/registerCommonHandlers'
 import type { SpawnSessionOptions, SpawnSessionResult } from '../modules/common/rpcTypes'
 import { applyVersionedAck } from './versionedUpdate'
+import { resolveUserPath } from '@/utils/userPath'
 
 interface ServerToRunnerEvents {
     update: (data: Update) => void
@@ -88,7 +89,7 @@ export class ApiMachineClient {
                 const trimmed = path.trim()
                 if (!trimmed) return
                 try {
-                    const stats = await stat(trimmed)
+                    const stats = await stat(resolveUserPath(trimmed))
                     exists[trimmed] = stats.isDirectory()
                 } catch {
                     exists[trimmed] = false
