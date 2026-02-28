@@ -397,6 +397,25 @@ function LoadingIcon() {
     )
 }
 
+function ClearInputIcon() {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+        </svg>
+    )
+}
+
 function UnifiedButton(props: {
     canSend: boolean
     controlsDisabled: boolean
@@ -647,8 +666,10 @@ export function ComposerButtons(props: {
     voiceEnabled: boolean
     voiceStatus: ConversationStatus
     voiceMicMuted?: boolean
-    onVoiceToggle: () => void
+    onVoiceToggle: (options?: { discard?: boolean }) => void
     onVoiceMicToggle?: () => void
+    canClear: boolean
+    onClear: () => void
     onSend: () => void
     hasQueue?: boolean
     onFlush?: () => void
@@ -720,7 +741,7 @@ export function ComposerButtons(props: {
                                     ? 'bg-black text-white hover:bg-black/80'
                                     : 'bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                             }`}
-                            onClick={props.onVoiceToggle}
+                            onClick={() => props.onVoiceToggle()}
                         >
                             {voiceIcon}
                         </button>
@@ -748,17 +769,30 @@ export function ComposerButtons(props: {
                 ) : null}
             </div>
 
-            <UnifiedButton
-                canSend={props.canSend}
-                controlsDisabled={props.controlsDisabled}
-                showAbortButton={props.showAbortButton}
-                abortDisabled={props.abortDisabled}
-                isAborting={props.isAborting}
-                hasQueue={props.hasQueue ?? false}
-                onSend={props.onSend}
-                onAbort={props.onAbort}
-                onFlush={props.onFlush}
-            />
+            <div className="flex items-center gap-1">
+                <button
+                    type="button"
+                    aria-label={t('composer.clear')}
+                    title={t('composer.clear')}
+                    disabled={props.controlsDisabled || !props.canClear}
+                    onClick={props.onClear}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <ClearInputIcon />
+                </button>
+
+                <UnifiedButton
+                    canSend={props.canSend}
+                    controlsDisabled={props.controlsDisabled}
+                    showAbortButton={props.showAbortButton}
+                    abortDisabled={props.abortDisabled}
+                    isAborting={props.isAborting}
+                    hasQueue={props.hasQueue ?? false}
+                    onSend={props.onSend}
+                    onAbort={props.onAbort}
+                    onFlush={props.onFlush}
+                />
+            </div>
         </div>
     )
 }

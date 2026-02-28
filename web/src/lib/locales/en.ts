@@ -258,6 +258,7 @@ export default {
   'composer.mobileAccess': 'Mobile access',
   'composer.scanToOpen': 'Scan to open on mobile',
   'composer.attach': 'Attach file',
+  'composer.clear': 'Clear input',
   'composer.send': 'Send',
   'composer.stop': 'Stop',
   'composer.voice': 'Voice assistant',

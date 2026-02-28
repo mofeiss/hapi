@@ -260,6 +260,7 @@ export default {
   'composer.mobileAccess': '手机访问',
   'composer.scanToOpen': '扫码在手机上打开',
   'composer.attach': '添加文件',
+  'composer.clear': '清空输入',
   'composer.send': '发送',
   'composer.stop': '停止',
   'composer.voice': '语音助手',

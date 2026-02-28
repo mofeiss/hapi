@@ -58,8 +58,10 @@ export function HappyComposer(props: {
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
     // Voice assistant props
     voiceStatus?: ConversationStatus
+    voiceRawText?: string
+    voiceError?: string | null
     voiceMicMuted?: boolean
-    onVoiceToggle?: () => void
+    onVoiceToggle?: (options?: { discard?: boolean }) => void
     onVoiceMicToggle?: () => void
     onTranscript?: (cb: (text: string) => void) => void
     onInterim?: (cb: (text: string) => void) => void
@@ -87,6 +89,8 @@ export function HappyComposer(props: {
         autocompletePrefixes = ['@', '/', '$'],
         autocompleteSuggestions = defaultSuggestionHandler,
         voiceStatus = 'disconnected',
+        voiceRawText = '',
+        voiceError = null,
         voiceMicMuted = false,
         onVoiceToggle,
         onVoiceMicToggle,
@@ -162,6 +166,7 @@ export function HappyComposer(props: {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const prevControlledByUser = useRef(controlledByUser)
+    const pendingSendAfterVoiceRef = useRef(false)
 
     useEffect(() => {
         setInputState((prev) => {
@@ -238,6 +243,10 @@ export function HappyComposer(props: {
     const { haptic: platformHaptic, isTouch } = usePlatform()
     const { isStandalone, isIOS } = usePWAInstall()
     const isIOSPWA = isIOS && isStandalone
+    const isVoiceFocusMode = voiceStatus !== 'disconnected'
+    const voicePanelHeightClass = isVoiceFocusMode
+        ? (isTouch ? 'h-[72dvh]' : 'h-[min(62vh,560px)]')
+        : ''
     const bottomPaddingClass = isIOSPWA ? 'pb-0' : 'pb-3'
     const activeWord = useActiveWord(inputState.text, inputState.selection, autocompletePrefixes)
     const [suggestions, selectedIndex, moveUp, moveDown, clearSuggestions] = useActiveSuggestions(
@@ -339,6 +348,16 @@ export function HappyComposer(props: {
             return
         }
 
+        // In voice focus mode, Enter means "exit voice input mode" instead of send.
+        if (key === 'Enter' && !e.shiftKey && voiceStatus !== 'disconnected') {
+            e.preventDefault()
+            pendingSendAfterVoiceRef.current = false
+            if (voiceStatus === 'connected' && onVoiceToggle) {
+                onVoiceToggle()
+            }
+            return
+        }
+
         if (suggestions.length > 0) {
             if (key === 'ArrowUp') {
                 e.preventDefault()
@@ -416,6 +435,8 @@ export function HappyComposer(props: {
         onFlushQueue,
         trimmed,
         api,
+        voiceStatus,
+        onVoiceToggle,
         onPermissionModeChange,
         permissionMode,
         basePermissionMode,
@@ -442,7 +463,7 @@ export function HappyComposer(props: {
         // If user manually edits while voice is recording, stop voice input
         // to prevent accumulated transcript from overwriting their edits
         if (voiceStatus === 'connected' && onVoiceToggle) {
-            onVoiceToggle()
+            onVoiceToggle({ discard: true })
         }
         const selection = {
             start: e.target.selectionStart,
@@ -477,12 +498,20 @@ export function HappyComposer(props: {
     }, [api])
 
     const handleSubmit = useCallback((event?: ReactFormEvent<HTMLFormElement>) => {
+        if (event && voiceStatus !== 'disconnected') {
+            event.preventDefault()
+            pendingSendAfterVoiceRef.current = false
+            if (voiceStatus === 'connected' && onVoiceToggle) {
+                onVoiceToggle()
+            }
+            return
+        }
         if (event && !attachmentsReady) {
             event.preventDefault()
             return
         }
         setShowContinueHint(false)
-    }, [attachmentsReady])
+    }, [attachmentsReady, onVoiceToggle, voiceStatus])
 
     const handlePermissionChange = useCallback((mode: string) => {
         if (!onPermissionModeChange || controlsDisabled) return
@@ -501,7 +530,10 @@ export function HappyComposer(props: {
     const showAbortButton = threadIsRunning && !hasText && !hasQueue
     const voiceEnabled = Boolean(onVoiceToggle)
 
-    const handleSend = useCallback(() => {
+    const sendNow = useCallback(() => {
+        if (!hasText && !hasAttachments && !hasQueue) {
+            return
+        }
         // Empty input + has queue: flush now
         if (!hasText && hasQueue && onFlushQueue) {
             onFlushQueue()
@@ -516,7 +548,37 @@ export function HappyComposer(props: {
         }
         api.composer().send()
         setTimeout(() => textareaRef.current?.focus(), 0)
-    }, [api, threadIsRunning, onQueueSend, trimmed, hasText, hasQueue, onFlushQueue])
+    }, [api, threadIsRunning, onQueueSend, trimmed, hasText, hasAttachments, hasQueue, onFlushQueue])
+
+    const handleClear = useCallback(() => {
+        if (voiceStatus === 'connected' && onVoiceToggle) {
+            onVoiceToggle({ discard: true })
+        }
+        pendingSendAfterVoiceRef.current = false
+        preVoiceTextRef.current = ''
+        interimAppliedRef.current = false
+        api.composer().setText('')
+        setTimeout(() => textareaRef.current?.focus(), 0)
+    }, [api, onVoiceToggle, voiceStatus])
+
+    const handleSend = useCallback(() => {
+        if (voiceStatus !== 'disconnected') {
+            pendingSendAfterVoiceRef.current = true
+            if (voiceStatus === 'connected' && onVoiceToggle) {
+                onVoiceToggle()
+            }
+            return
+        }
+        sendNow()
+    }, [voiceStatus, onVoiceToggle, sendNow])
+
+    useEffect(() => {
+        if (!pendingSendAfterVoiceRef.current) return
+        if (voiceStatus !== 'disconnected') return
+
+        pendingSendAfterVoiceRef.current = false
+        sendNow()
+    }, [voiceStatus, sendNow])
 
     const overlays = useMemo(() => {
         if (suggestions.length > 0) {
@@ -551,60 +613,136 @@ export function HappyComposer(props: {
                         voiceStatus={voiceStatus}
                     />
 
-                    <div className="overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)]">
-                        {attachments.length > 0 ? (
-                            <div className="flex flex-wrap gap-2 px-4 pt-3">
-                                <ComposerImagePreviewContext.Provider value={imagePreviewCtx}>
-                                    <ComposerPrimitive.Attachments components={{ Attachment: AttachmentItem }} />
-                                </ComposerImagePreviewContext.Provider>
+                    <div className={`overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)] ${voicePanelHeightClass}`}>
+                        {isVoiceFocusMode ? (
+                            <div className="flex h-full min-h-0 flex-col">
+                                <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+                                    <div className="flex min-h-0 flex-[3] flex-col overflow-hidden rounded-xl bg-[var(--app-bg)] p-3">
+                                        <div className="mb-2 flex items-center justify-between text-xs text-[var(--app-hint)]">
+                                            <span>语音原文（待修正）</span>
+                                            <span>{voiceStatus === 'connected' ? '识别中' : '收尾修正中'}</span>
+                                        </div>
+                                        <div className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--app-fg)]">
+                                            {voiceRawText || '...'}
+                                        </div>
+                                        {voiceError ? (
+                                            <div className="mt-2 text-xs text-red-500">
+                                                {voiceError}
+                                            </div>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="flex min-h-0 flex-[7] flex-col overflow-hidden rounded-xl bg-[var(--app-bg)] p-3">
+                                        <div className="mb-2 text-xs text-[var(--app-hint)]">
+                                            实时修正结果（可编辑）
+                                        </div>
+                                        <ComposerPrimitive.Input
+                                            ref={textareaRef}
+                                            autoFocus={!controlsDisabled && !isTouch}
+                                            placeholder={controlledByUser ? t('composer.controlledByTerminal') : showContinueHint ? t('misc.typeMessage') : t('misc.typeAMessage')}
+                                            disabled={controlsDisabled}
+                                            maxRows={18}
+                                            submitOnEnter={!isTouch}
+                                            cancelOnEscape={false}
+                                            onChange={handleChange}
+                                            onSelect={handleSelect}
+                                            onKeyDown={handleKeyDown}
+                                            onPaste={handlePaste}
+                                            className="min-h-0 flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                        />
+                                    </div>
+                                </div>
+
+                                <ComposerButtons
+                                    canSend={canSend}
+                                    controlsDisabled={controlsDisabled}
+                                    showModelSelect={showModelSettings}
+                                    modelMode={modelMode}
+                                    modelModeOptions={modelModeSelectOptions}
+                                    onModelModeChange={handleModelChange}
+                                    showPermissionSelect={showPermissionSettings}
+                                    permissionMode={basePermissionMode}
+                                    permissionModeOptions={permissionSelectOptions}
+                                    onPermissionModeChange={handlePermissionChange}
+                                    showPlanToggle={showPlanToggle}
+                                    isPlanActive={isPlan}
+                                    onPlanToggle={onPlanToggle ?? (() => {})}
+                                    showAbortButton={showAbortButton}
+                                    abortDisabled={abortDisabled}
+                                    isAborting={isAborting}
+                                    onAbort={handleAbort}
+                                    showQrButton={!isTouch}
+                                    voiceEnabled={voiceEnabled}
+                                    voiceStatus={voiceStatus}
+                                    voiceMicMuted={voiceMicMuted}
+                                    onVoiceToggle={onVoiceToggle ?? (() => {})}
+                                    onVoiceMicToggle={onVoiceMicToggle}
+                                    canClear={hasText}
+                                    onClear={handleClear}
+                                    onSend={handleSend}
+                                    hasQueue={hasQueue}
+                                    onFlush={onFlushQueue}
+                                />
                             </div>
-                        ) : null}
+                        ) : (
+                            <>
+                                {attachments.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2 px-4 pt-3">
+                                        <ComposerImagePreviewContext.Provider value={imagePreviewCtx}>
+                                            <ComposerPrimitive.Attachments components={{ Attachment: AttachmentItem }} />
+                                        </ComposerImagePreviewContext.Provider>
+                                    </div>
+                                ) : null}
 
-                        <div className="flex items-center px-4 py-3">
-                            <ComposerPrimitive.Input
-                                ref={textareaRef}
-                                autoFocus={!controlsDisabled && !isTouch}
-                                placeholder={controlledByUser ? t('composer.controlledByTerminal') : showContinueHint ? t('misc.typeMessage') : t('misc.typeAMessage')}
-                                disabled={controlsDisabled}
-                                maxRows={5}
-                                submitOnEnter={!isTouch}
-                                cancelOnEscape={false}
-                                onChange={handleChange}
-                                onSelect={handleSelect}
-                                onKeyDown={handleKeyDown}
-                                onPaste={handlePaste}
-                                className="flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                            />
-                        </div>
+                                <div className="flex items-center px-4 py-3">
+                                    <ComposerPrimitive.Input
+                                        ref={textareaRef}
+                                        autoFocus={!controlsDisabled && !isTouch}
+                                        placeholder={controlledByUser ? t('composer.controlledByTerminal') : showContinueHint ? t('misc.typeMessage') : t('misc.typeAMessage')}
+                                        disabled={controlsDisabled}
+                                        maxRows={5}
+                                        submitOnEnter={!isTouch}
+                                        cancelOnEscape={false}
+                                        onChange={handleChange}
+                                        onSelect={handleSelect}
+                                        onKeyDown={handleKeyDown}
+                                        onPaste={handlePaste}
+                                        className="flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    />
+                                </div>
 
-                        <ComposerButtons
-                            canSend={canSend}
-                            controlsDisabled={controlsDisabled}
-                            showModelSelect={showModelSettings}
-                            modelMode={modelMode}
-                            modelModeOptions={modelModeSelectOptions}
-                            onModelModeChange={handleModelChange}
-                            showPermissionSelect={showPermissionSettings}
-                            permissionMode={basePermissionMode}
-                            permissionModeOptions={permissionSelectOptions}
-                            onPermissionModeChange={handlePermissionChange}
-                            showPlanToggle={showPlanToggle}
-                            isPlanActive={isPlan}
-                            onPlanToggle={onPlanToggle ?? (() => {})}
-                            showAbortButton={showAbortButton}
-                            abortDisabled={abortDisabled}
-                            isAborting={isAborting}
-                            onAbort={handleAbort}
-                            showQrButton={!isTouch}
-                            voiceEnabled={voiceEnabled}
-                            voiceStatus={voiceStatus}
-                            voiceMicMuted={voiceMicMuted}
-                            onVoiceToggle={onVoiceToggle ?? (() => {})}
-                            onVoiceMicToggle={onVoiceMicToggle}
-                            onSend={handleSend}
-                            hasQueue={hasQueue}
-                            onFlush={onFlushQueue}
-                        />
+                                <ComposerButtons
+                                    canSend={canSend}
+                                    controlsDisabled={controlsDisabled}
+                                    showModelSelect={showModelSettings}
+                                    modelMode={modelMode}
+                                    modelModeOptions={modelModeSelectOptions}
+                                    onModelModeChange={handleModelChange}
+                                    showPermissionSelect={showPermissionSettings}
+                                    permissionMode={basePermissionMode}
+                                    permissionModeOptions={permissionSelectOptions}
+                                    onPermissionModeChange={handlePermissionChange}
+                                    showPlanToggle={showPlanToggle}
+                                    isPlanActive={isPlan}
+                                    onPlanToggle={onPlanToggle ?? (() => {})}
+                                    showAbortButton={showAbortButton}
+                                    abortDisabled={abortDisabled}
+                                    isAborting={isAborting}
+                                    onAbort={handleAbort}
+                                    showQrButton={!isTouch}
+                                    voiceEnabled={voiceEnabled}
+                                    voiceStatus={voiceStatus}
+                                    voiceMicMuted={voiceMicMuted}
+                                    onVoiceToggle={onVoiceToggle ?? (() => {})}
+                                    onVoiceMicToggle={onVoiceMicToggle}
+                                    canClear={hasText}
+                                    onClear={handleClear}
+                                    onSend={handleSend}
+                                    hasQueue={hasQueue}
+                                    onFlush={onFlushQueue}
+                                />
+                            </>
+                        )}
                     </div>
                 </ComposerPrimitive.Root>
 
