@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { getBasePermissionModesForFlavor, supportsPlanToggle } from '@hapi/protocol'
 import type { ApiClient } from '@/api/client'
 import type { Machine } from '@/types/api'
 import { usePlatform } from '@/hooks/usePlatform'
@@ -45,7 +46,7 @@ export function NewSession(props: {
     const [pathExistence, setPathExistence] = useState<Record<string, boolean>>({})
     const [agent, setAgent] = useState<AgentType>(loadPreferredAgent)
     const [model, setModel] = useState('auto')
-    const [basePermissionMode, setBasePermissionMode] = useState<PermissionMode>(loadPreferredPermissionMode)
+    const [basePermissionMode, setBasePermissionMode] = useState<PermissionMode>(() => loadPreferredPermissionMode(loadPreferredAgent()))
     const [isPlanActive, setIsPlanActive] = useState<boolean>(loadPreferredPlanActive)
     const [sessionType, setSessionType] = useState<SessionType>('simple')
     const [worktreeName, setWorktreeName] = useState('')
@@ -61,6 +62,18 @@ export function NewSession(props: {
     useEffect(() => {
         setModel('auto')
     }, [agent])
+
+    useEffect(() => {
+        if (!getBasePermissionModesForFlavor(agent).includes(basePermissionMode)) {
+            setBasePermissionMode(loadPreferredPermissionMode(agent))
+        }
+    }, [agent, basePermissionMode])
+
+    useEffect(() => {
+        if (!supportsPlanToggle(agent) && isPlanActive) {
+            setIsPlanActive(false)
+        }
+    }, [agent, isPlanActive])
 
     useEffect(() => {
         savePreferredAgent(agent)
@@ -218,12 +231,13 @@ export function NewSession(props: {
         setError(null)
         try {
             const resolvedModel = model !== 'auto' && agent !== 'opencode' ? model : undefined
+            const shouldUsePlanMode = supportsPlanToggle(agent) && isPlanActive
             const result = await spawnSession({
                 machineId,
                 directory: directory.trim(),
                 agent,
                 model: resolvedModel,
-                permissionMode: isPlanActive ? 'plan' : basePermissionMode,
+                permissionMode: shouldUsePlanMode ? 'plan' : basePermissionMode,
                 basePermissionMode: basePermissionMode,
                 sessionType,
                 worktreeName: sessionType === 'worktree' ? (worktreeName.trim() || undefined) : undefined

@@ -5,6 +5,13 @@ import { maybeAutoStartServer } from '@/utils/autoStartServer'
 import type { CommandDefinition } from './types'
 import type { CodexPermissionMode } from '@hapi/protocol/types'
 
+function isCodexPermissionMode(value: string): value is CodexPermissionMode {
+    return value === 'default'
+        || value === 'read-only'
+        || value === 'safe-yolo'
+        || value === 'yolo'
+}
+
 export const codexCommand: CommandDefinition = {
     name: 'codex',
     requiresRuntimeAssets: true,
@@ -34,9 +41,24 @@ export const codexCommand: CommandDefinition = {
                 }
                 if (arg === '--started-by') {
                     options.startedBy = commandArgs[++i] as 'runner' | 'terminal'
+                } else if (arg === '--hapi-starting-mode') {
+                    // Codex determines starting mode from startedBy; consume this internal flag.
+                    i += 1
                 } else if (arg === '--yolo' || arg === '--dangerously-bypass-approvals-and-sandbox') {
                     options.permissionMode = 'yolo'
                     unknownArgs.push(arg)
+                } else if (arg === '--permission-mode') {
+                    const mode = commandArgs[++i]
+                    if (!mode || !isCodexPermissionMode(mode)) {
+                        throw new Error('Invalid --permission-mode for codex')
+                    }
+                    options.permissionMode = mode
+                } else if (arg.startsWith('--permission-mode=')) {
+                    const mode = arg.slice('--permission-mode='.length)
+                    if (!isCodexPermissionMode(mode)) {
+                        throw new Error('Invalid --permission-mode for codex')
+                    }
+                    options.permissionMode = mode
                 } else if (arg === '--model') {
                     const model = commandArgs[++i]
                     if (!model) {

@@ -6,6 +6,14 @@ import { queryKeys } from '@/lib/query-keys'
 import { clearMessageWindow } from '@/lib/message-window-store'
 import { isKnownFlavor } from '@/lib/agentFlavorUtils'
 
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isSessionInactiveError(error: unknown): boolean {
+    return error instanceof Error && error.message.includes('Session is inactive')
+}
+
 export function useSessionActions(
     api: ApiClient | null,
     sessionId: string | null,
@@ -66,7 +74,18 @@ export function useSessionActions(
             if (isKnownFlavor(agentFlavor) && !isPermissionModeAllowedForFlavor(mode, agentFlavor)) {
                 throw new Error('Invalid permission mode for session flavor')
             }
-            await api.setPermissionMode(sessionId, mode, basePermissionMode)
+            const maxAttempts = 8
+            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+                try {
+                    await api.setPermissionMode(sessionId, mode, basePermissionMode)
+                    return
+                } catch (error) {
+                    if (!isSessionInactiveError(error) || attempt === maxAttempts) {
+                        throw error
+                    }
+                    await delay(Math.min(250 * attempt, 1000))
+                }
+            }
         },
         onSuccess: () => void invalidateSession(),
     })

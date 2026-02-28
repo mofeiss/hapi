@@ -120,6 +120,7 @@ export class SessionCache {
             thinkingAt: existing?.thinkingAt ?? 0,
             todos,
             permissionMode: existing?.permissionMode,
+            basePermissionMode: existing?.basePermissionMode,
             modelMode: existing?.modelMode
         }
 

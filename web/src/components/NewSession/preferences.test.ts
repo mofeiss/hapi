@@ -15,18 +15,29 @@ describe('NewSession preferences', () => {
 
     it('loads defaults when storage is empty', () => {
         expect(loadPreferredAgent()).toBe('claude')
-        expect(loadPreferredPermissionMode()).toBe('default')
+        expect(loadPreferredPermissionMode()).toBe('bypassPermissions')
+        expect(loadPreferredPermissionMode('codex')).toBe('yolo')
         expect(loadPreferredPlanActive()).toBe(false)
     })
 
     it('loads saved values from storage', () => {
         localStorage.setItem('hapi:newSession:agent', 'codex')
-        localStorage.setItem('hapi:newSession:permissionMode', 'bypassPermissions')
+        localStorage.setItem('hapi:newSession:permissionMode:v2', 'safe-yolo')
         localStorage.setItem('hapi:newSession:planActive', 'true')
 
         expect(loadPreferredAgent()).toBe('codex')
-        expect(loadPreferredPermissionMode()).toBe('bypassPermissions')
+        expect(loadPreferredPermissionMode()).toBe('safe-yolo')
         expect(loadPreferredPlanActive()).toBe(true)
+    })
+
+    it('falls back to highest mode for target agent when saved mode is not allowed', () => {
+        localStorage.setItem('hapi:newSession:permissionMode:v2', 'bypassPermissions')
+        expect(loadPreferredPermissionMode('codex')).toBe('yolo')
+    })
+
+    it('ignores legacy permission key and uses new defaults', () => {
+        localStorage.setItem('hapi:newSession:permissionMode', 'default')
+        expect(loadPreferredPermissionMode('codex')).toBe('yolo')
     })
 
     it('falls back to default agent on invalid stored value', () => {
@@ -41,7 +52,7 @@ describe('NewSession preferences', () => {
         savePreferredPlanActive(true)
 
         expect(localStorage.getItem('hapi:newSession:agent')).toBe('gemini')
-        expect(localStorage.getItem('hapi:newSession:permissionMode')).toBe('bypassPermissions')
+        expect(localStorage.getItem('hapi:newSession:permissionMode:v2')).toBe('bypassPermissions')
         expect(localStorage.getItem('hapi:newSession:planActive')).toBe('true')
     })
 })

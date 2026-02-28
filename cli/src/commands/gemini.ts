@@ -5,6 +5,13 @@ import { maybeAutoStartServer } from '@/utils/autoStartServer'
 import type { CommandDefinition } from './types'
 import type { GeminiPermissionMode } from '@hapi/protocol/types'
 
+function isGeminiPermissionMode(value: string): value is GeminiPermissionMode {
+    return value === 'default'
+        || value === 'read-only'
+        || value === 'safe-yolo'
+        || value === 'yolo'
+}
+
 export const geminiCommand: CommandDefinition = {
     name: 'gemini',
     requiresRuntimeAssets: true,
@@ -30,6 +37,18 @@ export const geminiCommand: CommandDefinition = {
                     }
                 } else if (arg === '--yolo') {
                     options.permissionMode = 'yolo'
+                } else if (arg === '--permission-mode') {
+                    const mode = commandArgs[++i]
+                    if (!mode || !isGeminiPermissionMode(mode)) {
+                        throw new Error('Invalid --permission-mode for gemini')
+                    }
+                    options.permissionMode = mode
+                } else if (arg.startsWith('--permission-mode=')) {
+                    const mode = arg.slice('--permission-mode='.length)
+                    if (!isGeminiPermissionMode(mode)) {
+                        throw new Error('Invalid --permission-mode for gemini')
+                    }
+                    options.permissionMode = mode
                 } else if (arg === '--model') {
                     const model = commandArgs[++i]
                     if (!model) {

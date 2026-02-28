@@ -47,6 +47,13 @@ export class ApiSessionClient extends EventEmitter {
     private backfillInFlight: Promise<void> | null = null
     private needsBackfill = false
     private hasConnectedOnce = false
+    private latestKeepAlive:
+        | {
+            thinking: boolean
+            mode: 'local' | 'remote'
+            runtime?: { permissionMode?: SessionPermissionMode; basePermissionMode?: SessionPermissionMode; modelMode?: SessionModelMode }
+        }
+        | null = null
     readonly rpcHandlerManager: RpcHandlerManager
     private readonly terminalManager: TerminalManager
     private agentStateLock = new AsyncLock()
@@ -102,10 +109,13 @@ export class ApiSessionClient extends EventEmitter {
             }
             void this.backfillIfNeeded()
             this.hasConnectedOnce = true
+            const payload = this.latestKeepAlive
             this.socket.emit('session-alive', {
                 sid: this.sessionId,
                 time: Date.now(),
-                thinking: false
+                thinking: payload?.thinking ?? false,
+                mode: payload?.mode,
+                ...(payload?.runtime ?? {})
             })
         })
 
@@ -441,6 +451,7 @@ export class ApiSessionClient extends EventEmitter {
         runtime?: { permissionMode?: SessionPermissionMode; basePermissionMode?: SessionPermissionMode; modelMode?: SessionModelMode },
         options?: { reliable?: boolean }
     ): void {
+        this.latestKeepAlive = { thinking, mode, runtime };
         const payload = {
             sid: this.sessionId,
             time: Date.now(),

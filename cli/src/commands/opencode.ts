@@ -5,6 +5,10 @@ import { maybeAutoStartServer } from '@/utils/autoStartServer'
 import type { CommandDefinition } from './types'
 import type { OpencodePermissionMode } from '@hapi/protocol/types'
 
+function isOpencodePermissionMode(value: string): value is OpencodePermissionMode {
+    return value === 'default' || value === 'yolo'
+}
+
 export const opencodeCommand: CommandDefinition = {
     name: 'opencode',
     requiresRuntimeAssets: true,
@@ -30,6 +34,18 @@ export const opencodeCommand: CommandDefinition = {
                     }
                 } else if (arg === '--yolo') {
                     options.permissionMode = 'yolo'
+                } else if (arg === '--permission-mode') {
+                    const mode = commandArgs[++i]
+                    if (!mode || !isOpencodePermissionMode(mode)) {
+                        throw new Error('Invalid --permission-mode for opencode')
+                    }
+                    options.permissionMode = mode
+                } else if (arg.startsWith('--permission-mode=')) {
+                    const mode = arg.slice('--permission-mode='.length)
+                    if (!isOpencodePermissionMode(mode)) {
+                        throw new Error('Invalid --permission-mode for opencode')
+                    }
+                    options.permissionMode = mode
                 } else if (arg === '--resume') {
                     const sessionId = commandArgs[++i]
                     if (!sessionId) {
