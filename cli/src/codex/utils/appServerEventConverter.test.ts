@@ -70,6 +70,46 @@ describe('AppServerEventConverter', () => {
         }]);
     });
 
+    it('maps codex/event exec command wrappers with stdout', () => {
+        const converter = new AppServerEventConverter();
+
+        const started = converter.handleNotification('codex/event/exec_command_begin', {
+            msg: {
+                call_id: 'call-1',
+                command: ['/bin/zsh', '-lc', 'cat /tmp/SKILL.md'],
+                cwd: '/tmp',
+                parsed_cmd: [{ type: 'read', path: '/tmp/SKILL.md' }]
+            }
+        });
+        expect(started).toEqual([{
+            type: 'exec_command_begin',
+            call_id: 'call-1',
+            command: '/bin/zsh -lc cat /tmp/SKILL.md',
+            cwd: '/tmp',
+            parsed_cmd: [{ type: 'read', path: '/tmp/SKILL.md' }]
+        }]);
+
+        const completed = converter.handleNotification('codex/event/exec_command_end', {
+            msg: {
+                call_id: 'call-1',
+                command: ['/bin/zsh', '-lc', 'cat /tmp/SKILL.md'],
+                cwd: '/tmp',
+                stdout: '# skill',
+                exit_code: 0,
+                status: 'completed'
+            }
+        });
+        expect(completed).toEqual([{
+            type: 'exec_command_end',
+            call_id: 'call-1',
+            command: '/bin/zsh -lc cat /tmp/SKILL.md',
+            cwd: '/tmp',
+            stdout: '# skill',
+            exit_code: 0,
+            status: 'completed'
+        }]);
+    });
+
     it('maps reasoning deltas', () => {
         const converter = new AppServerEventConverter();
 

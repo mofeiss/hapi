@@ -67,6 +67,57 @@ bun run dev             # hub + web concurrently
 bun run build:single-exe # All-in-one binary
 ```
 
+## Local debug playbook (voice correction + local hub)
+
+Use when user says: default config points to remote hub, but needs local testing now.
+
+Default user context (important):
+- user talks to agent through this product's **online stable** deployment
+- local machine's stable runner is usually configured to silently connect to **online stable hub** via config file
+- therefore, local debug must use temporary env override (`HAPI_API_URL`) to avoid touching persisted config
+- do **not** operate/stop/restart stable runner service unless user explicitly asks
+- do **not** use runner to start debug session; use `cli/` debug version directly
+
+Goal:
+- keep persisted config untouched
+- keep stable service untouched
+- force one local CLI session to local hub
+- verify web/ngrok can see live session
+
+Steps:
+
+1) Start local hub+web dev with temporary env (same shell only):
+```bash
+env ANTHROPIC_BASE_URL="<your-base-url>" \
+    ANTHROPIC_AUTH_TOKEN="<your-token>" \
+    bun run dev
+```
+
+2) Start debug session from `cli/` with **HAPI_** temp var (do not edit settings.json):
+
+Codex:
+```bash
+# 默认yolo模式启动codex 方便调试
+cd cli
+HAPI_API_URL="http://127.0.0.1:3006" bun run dev codex --yolo
+```
+
+Claude:
+```bash
+cd cli
+HAPI_API_URL="http://127.0.0.1:3006" bun run dev claude --yolo
+```
+
+3) Verify connected to local hub (both Codex/Claude same checks):
+- hub logs show `POST /cli/machines` 200
+- hub logs show `POST /cli/sessions` 200
+
+Notes:
+- this voice-text-correction flow does **not** depend on runner; hub is enough
+- user often tests remotely via ngrok to local Vite (`:5173`)
+- never store real tokens in repo docs/logs; placeholders only
+- avoid impacting stable services/processes during debug; if conflict risk, ask user first
+
 ## Key source dirs
 
 ### CLI (`cli/src/`)

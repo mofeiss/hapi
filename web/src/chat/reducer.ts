@@ -4,6 +4,7 @@ import { traceMessages, type TracedMessage } from '@/chat/tracer'
 import { dedupeAgentEvents, foldApiErrorEvents } from '@/chat/reducerEvents'
 import { collectTitleChanges, collectToolIdsFromMessages, ensureToolBlock, getPermissions } from '@/chat/reducerTools'
 import { reduceTimeline } from '@/chat/reducerTimeline'
+import { normalizeToolNameAsSkillRead } from '@/lib/skillRead'
 
 // Calculate context size from usage data
 function calculateContextSize(usage: UsageData): number {
@@ -43,11 +44,21 @@ export function reduceChatBlocks(
 
     const consumedGroupIds = new Set<string>()
     const emittedTitleChangeToolUseIds = new Set<string>()
-    const reducerContext = { permissionsById, groups, consumedGroupIds, titleChangesByToolUseId, emittedTitleChangeToolUseIds }
+    const seenSkillReadContents = new Set<string>()
+    const reducerContext = {
+        permissionsById,
+        groups,
+        consumedGroupIds,
+        titleChangesByToolUseId,
+        emittedTitleChangeToolUseIds,
+        seenSkillReadContents
+    }
     const rootResult = reduceTimeline(root, reducerContext)
     let hasReadyEvent = rootResult.hasReadyEvent
 
-    // Only create permission-only tool cards when there is no tool call/result in the transcript.
+    // Only create permission-only tool cards for *pending* requests.
+    // Completed/approved requests can linger in agentState and should not be re-materialized
+    // as sticky cards in newer turns/sessions.
     // Also skip if the permission is older than the oldest message in the current view,
     // to avoid mixing old tool cards with newer messages when paginating.
     const oldestMessageTime = normalized.length > 0
@@ -55,6 +66,7 @@ export function reduceChatBlocks(
         : null
 
     for (const [id, entry] of permissionsById) {
+        if (entry.permission.status !== 'pending') continue
         if (toolIdsInMessages.has(id)) continue
         if (rootResult.toolBlocksById.has(id)) continue
 
@@ -69,25 +81,12 @@ export function reduceChatBlocks(
         const block = ensureToolBlock(rootResult.blocks, rootResult.toolBlocksById, id, {
             createdAt,
             localId: null,
-            name: entry.toolName,
+            name: normalizeToolNameAsSkillRead(entry.toolName, entry.input),
             input: entry.input,
             description: null,
             permission: entry.permission
         })
-
-        if (entry.permission.status === 'approved') {
-            block.tool.state = 'completed'
-            block.tool.completedAt = entry.permission.completedAt ?? createdAt
-            if (block.tool.result === undefined) {
-                block.tool.result = 'Approved'
-            }
-        } else if (entry.permission.status === 'denied' || entry.permission.status === 'canceled') {
-            block.tool.state = 'error'
-            block.tool.completedAt = entry.permission.completedAt ?? createdAt
-            if (block.tool.result === undefined && entry.permission.reason) {
-                block.tool.result = { error: entry.permission.reason }
-            }
-        }
+        block.tool.state = 'pending'
     }
 
     // Calculate latest usage from messages (find the most recent message with usage data)

@@ -1,7 +1,7 @@
 import type { ToolCallBlock } from '@/chat/types'
 import type { ApiClient } from '@/api/client'
 import type { SessionMetadataSummary } from '@/types/api'
-import { memo, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { isObject, safeStringify } from '@hapi/protocol'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeBlock } from '@/components/CodeBlock'
@@ -274,6 +274,18 @@ function DetailsIcon() {
     )
 }
 
+function ExpandIcon(props: { expanded: boolean }) {
+    return (
+        <svg
+            className={cn('h-4 w-4 transition-transform', props.expanded ? 'rotate-180' : 'rotate-0')}
+            viewBox="0 0 16 16"
+            fill="none"
+        >
+            <path d="M3.5 6l4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    )
+}
+
 type ToolCardProps = {
     api: ApiClient
     sessionId: string
@@ -314,13 +326,41 @@ function ToolCardInner(props: ToolCardProps) {
     const isAskUserQuestion = isAskUserQuestionToolName(toolName)
     const isRequestUserInput = isRequestUserInputToolName(toolName)
     const isQuestionTool = isAskUserQuestion || isRequestUserInput
+    const disableDialog = toolName === 'SkillRead'
+    const isSkillRead = toolName === 'SkillRead'
+    const [skillExpanded, setSkillExpanded] = useState(false)
+    const cardRef = useRef<HTMLDivElement | null>(null)
+    const expanded = isSkillRead ? skillExpanded : true
     const showsPermissionFooter = Boolean(permission && (
         permission.status === 'pending'
         || ((permission.status === 'denied' || permission.status === 'canceled') && Boolean(permission.reason))
     ))
-    const hasBody = showInline || taskSummary !== null || showsPermissionFooter
+    const hasBody = expanded && (showInline || taskSummary !== null || showsPermissionFooter)
     const stateColor = statusColorClass(props.block.tool.state)
     const { suppressFocusRing, onTriggerPointerDown, onTriggerKeyDown, onTriggerBlur } = usePointerFocusRing()
+
+    const toggleSkillExpanded = () => {
+        if (!isSkillRead) return
+
+        const next = !skillExpanded
+        const cardEl = cardRef.current
+        const viewport = cardEl?.closest('[data-chat-viewport="true"]') as HTMLElement | null
+        const wasAtBottom = viewport
+            ? (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) <= 2
+            : false
+
+        setSkillExpanded(next)
+
+        // 当滚动条已在最底部时，展开后需要把卡片头部重新锚定到可视区顶部，
+        // 避免“看起来向上展开”导致用户焦点落在内容底部。
+        if (next && wasAtBottom && cardEl) {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    cardEl.scrollIntoView({ block: 'start', inline: 'nearest' })
+                })
+            })
+        }
+    }
 
     const header = (
         <div className="flex flex-col gap-1">
@@ -336,12 +376,19 @@ function ToolCardInner(props: ToolCardProps) {
 
                 <div className="flex items-center gap-2 shrink-0">
                     <ElapsedView from={runningFrom} active={props.block.tool.state === 'running'} />
+                    {isSkillRead ? (
+                        <span className="text-[var(--app-hint)]">
+                            <ExpandIcon expanded={expanded} />
+                        </span>
+                    ) : null}
                     <span className={stateColor}>
                         <StatusIcon state={props.block.tool.state} />
                     </span>
-                    <span className="text-[var(--app-hint)]">
-                        <DetailsIcon />
-                    </span>
+                    {!disableDialog && !isSkillRead ? (
+                        <span className="text-[var(--app-hint)]">
+                            <DetailsIcon />
+                        </span>
+                    ) : null}
                 </div>
             </div>
 
@@ -354,55 +401,75 @@ function ToolCardInner(props: ToolCardProps) {
     )
 
     return (
-        <Card className="overflow-hidden shadow-sm">
+        <Card ref={cardRef} className="overflow-hidden shadow-sm">
             <CardHeader className="p-3 space-y-0">
-                <Dialog>
-                    <DialogTrigger asChild>
+                {disableDialog ? (
+                    isSkillRead ? (
                         <button
                             type="button"
                             className={cn(
                                 'w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]',
                                 suppressFocusRing && 'focus-visible:ring-0'
                             )}
+                            onClick={toggleSkillExpanded}
                             onPointerDown={onTriggerPointerDown}
                             onKeyDown={onTriggerKeyDown}
                             onBlur={onTriggerBlur}
                         >
                             {header}
                         </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader className="text-left">
-                            <DialogTitle>{toolTitle}</DialogTitle>
-                        </DialogHeader>
-                        {(() => {
-                            const isQuestionToolWithAnswers = isQuestionTool
-                                && permission?.answers
-                                && Object.keys(permission.answers).length > 0
+                    ) : (
+                        <div>{header}</div>
+                    )
+                ) : (
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <button
+                                type="button"
+                                className={cn(
+                                    'w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]',
+                                    suppressFocusRing && 'focus-visible:ring-0'
+                                )}
+                                onPointerDown={onTriggerPointerDown}
+                                onKeyDown={onTriggerKeyDown}
+                                onBlur={onTriggerBlur}
+                            >
+                                {header}
+                            </button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader className="text-left">
+                                <DialogTitle>{toolTitle}</DialogTitle>
+                            </DialogHeader>
+                            {(() => {
+                                const isQuestionToolWithAnswers = isQuestionTool
+                                    && permission?.answers
+                                    && Object.keys(permission.answers).length > 0
 
-                            return (
-                                <div className="mt-3 flex max-h-[75vh] flex-col gap-4 overflow-auto">
-                                    <div>
-                                        <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">
-                                            {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                                return (
+                                    <div className="mt-3 flex max-h-[75vh] flex-col gap-4 overflow-auto">
+                                        <div>
+                                            <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">
+                                                {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                                            </div>
+                                            {FullToolView ? (
+                                                <FullToolView block={props.block} metadata={props.metadata} />
+                                            ) : (
+                                                renderToolInput(props.block)
+                                            )}
                                         </div>
-                                        {FullToolView ? (
-                                            <FullToolView block={props.block} metadata={props.metadata} />
-                                        ) : (
-                                            renderToolInput(props.block)
+                                        {!isQuestionToolWithAnswers && (
+                                            <div>
+                                                <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                                                <ResultToolView block={props.block} metadata={props.metadata} />
+                                            </div>
                                         )}
                                     </div>
-                                    {!isQuestionToolWithAnswers && (
-                                        <div>
-                                            <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                                            <ResultToolView block={props.block} metadata={props.metadata} />
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })()}
-                    </DialogContent>
-                </Dialog>
+                                )
+                            })()}
+                        </DialogContent>
+                    </Dialog>
+                )}
             </CardHeader>
 
             {hasBody ? (

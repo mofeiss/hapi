@@ -86,6 +86,7 @@ export class AppServerEventConverter {
     handleNotification(method: string, params: unknown): ConvertedEvent[] {
         const events: ConvertedEvent[] = [];
         const paramsRecord = asRecord(params) ?? {};
+        const wrappedMsg = asRecord(paramsRecord.msg);
 
         if (method === 'thread/started' || method === 'thread/resumed') {
             const thread = asRecord(paramsRecord.thread) ?? paramsRecord;
@@ -145,6 +146,66 @@ export class AppServerEventConverter {
             if (message) {
                 events.push({ type: 'task_failed', error: message });
             }
+            return events;
+        }
+
+        if (method === 'codex/event/exec_command_begin') {
+            const source = wrappedMsg ?? paramsRecord;
+            const callId = asString(source.call_id ?? source.callId ?? source.id);
+            if (!callId) return events;
+
+            const command = extractCommand(source.command ?? source.cmd);
+            const cwd = asString(source.cwd ?? source.workingDirectory ?? source.working_directory);
+            const parsedCmd = Array.isArray(source.parsed_cmd) ? source.parsed_cmd : null;
+            const outputSource = asString(source.source);
+            const processId = asString(source.process_id ?? source.processId);
+
+            const event: ConvertedEvent = {
+                type: 'exec_command_begin',
+                call_id: callId,
+                ...(command ? { command } : {}),
+                ...(cwd ? { cwd } : {}),
+                ...(parsedCmd ? { parsed_cmd: parsedCmd } : {}),
+                ...(outputSource ? { source: outputSource } : {}),
+                ...(processId ? { process_id: processId } : {})
+            };
+            events.push(event);
+            return events;
+        }
+
+        if (method === 'codex/event/exec_command_end') {
+            const source = wrappedMsg ?? paramsRecord;
+            const callId = asString(source.call_id ?? source.callId ?? source.id);
+            if (!callId) return events;
+
+            const command = extractCommand(source.command ?? source.cmd);
+            const cwd = asString(source.cwd ?? source.workingDirectory ?? source.working_directory);
+            const parsedCmd = Array.isArray(source.parsed_cmd) ? source.parsed_cmd : null;
+            const outputSource = asString(source.source);
+            const processId = asString(source.process_id ?? source.processId);
+            const stdout = asString(source.stdout);
+            const stderr = asString(source.stderr);
+            const aggregatedOutput = asString(source.formatted_output ?? source.aggregated_output ?? source.output);
+            const status = asString(source.status);
+            const error = asString(source.error);
+            const exitCode = asNumber(source.exit_code ?? source.exitCode ?? source.exitcode);
+
+            const event: ConvertedEvent = {
+                type: 'exec_command_end',
+                call_id: callId,
+                ...(command ? { command } : {}),
+                ...(cwd ? { cwd } : {}),
+                ...(parsedCmd ? { parsed_cmd: parsedCmd } : {}),
+                ...(outputSource ? { source: outputSource } : {}),
+                ...(processId ? { process_id: processId } : {}),
+                ...(stdout ? { stdout } : {}),
+                ...(stderr ? { stderr } : {}),
+                ...(aggregatedOutput ? { output: aggregatedOutput } : {}),
+                ...(error ? { error } : {}),
+                ...(exitCode !== null ? { exit_code: exitCode } : {}),
+                ...(status ? { status } : {})
+            };
+            events.push(event);
             return events;
         }
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ThreadPrimitive } from '@assistant-ui/react'
 import type { ApiClient } from '@/api/client'
-import type { SessionMetadataSummary } from '@/types/api'
+import type { AttachmentMetadata, SessionMetadataSummary } from '@/types/api'
 import { HappyChatProvider } from '@/components/AssistantChat/context'
 import { HappyAssistantMessage } from '@/components/AssistantChat/messages/AssistantMessage'
 import { HappyUserMessage } from '@/components/AssistantChat/messages/UserMessage'
@@ -64,6 +64,18 @@ export function HappyThread(props: {
     disabled: boolean
     onRefresh: () => void
     onRetryMessage?: (localId: string) => void
+    onResendMessage?: (text: string, attachments?: AttachmentMetadata[]) => void
+    onStartEditMessage?: (messageId: string) => Promise<void>
+    onCommitEditMessage?: (payload: {
+        messageId: string
+        text: string
+        attachments?: AttachmentMetadata[]
+    }) => void
+    editedMessageTextById?: Record<string, string>
+    hasEditedResend?: boolean
+    collapsedSupersededCount?: number
+    showSupersededMessages?: boolean
+    onToggleSupersededMessages?: () => void
     onFlushPending: () => void
     onAtBottomChange: (atBottom: boolean) => void
     isLoadingMessages: boolean
@@ -278,11 +290,19 @@ export function HappyThread(props: {
             metadata: props.metadata,
             disabled: props.disabled,
             onRefresh: props.onRefresh,
-            onRetryMessage: props.onRetryMessage
+            onRetryMessage: props.onRetryMessage,
+            onResendMessage: props.onResendMessage,
+            onStartEditMessage: props.onStartEditMessage,
+            onCommitEditMessage: props.onCommitEditMessage,
+            editedMessageTextById: props.editedMessageTextById
         }}>
             <ThreadPrimitive.Root className="flex min-h-0 flex-1 flex-col relative">
                 <ThreadPrimitive.Viewport asChild autoScroll={autoScrollEnabled}>
-                    <div ref={viewportRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+                    <div
+                        ref={viewportRef}
+                        data-chat-viewport="true"
+                        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+                    >
                         <div className="mx-auto w-full max-w-content min-w-0 p-3">
                             <div ref={topSentinelRef} className="h-px w-full" aria-hidden="true" />
                             {showSkeleton ? (
@@ -292,6 +312,23 @@ export function HappyThread(props: {
                                     {props.messagesWarning ? (
                                         <div className="mb-3 rounded-md bg-amber-500/10 p-2 text-xs">
                                             {props.messagesWarning}
+                                        </div>
+                                    ) : null}
+
+                                    {props.hasEditedResend ? (
+                                        <div className="mb-3 rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2.5 py-2 text-xs text-[var(--app-hint)]">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span>{t('chat.edited.notice', { n: props.collapsedSupersededCount ?? 0 })}</span>
+                                                {(props.collapsedSupersededCount ?? 0) > 0 && props.onToggleSupersededMessages ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={props.onToggleSupersededMessages}
+                                                        className="underline underline-offset-2 hover:opacity-80"
+                                                    >
+                                                        {props.showSupersededMessages ? t('chat.edited.hide') : t('chat.edited.show')}
+                                                    </button>
+                                                ) : null}
+                                            </div>
                                         </div>
                                     ) : null}
 

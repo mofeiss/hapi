@@ -1,8 +1,10 @@
 import type { ChatBlock, ToolCallBlock, ToolPermission } from '@/chat/types'
 import type { TracedMessage } from '@/chat/tracer'
+import { isObject } from '@hapi/protocol'
 import { createCliOutputBlock, isCliOutputText, mergeCliOutputBlocks } from '@/chat/reducerCliOutput'
 import { parseMessageAsEvent } from '@/chat/reducerEvents'
 import { ensureToolBlock, extractTitleFromChangeTitleInput, isChangeTitleToolName, type PermissionEntry } from '@/chat/reducerTools'
+import { extractSkillReadContent, normalizeToolNameAsSkillRead, parseSkillPayloadText } from '@/lib/skillRead'
 
 export function reduceTimeline(
     messages: TracedMessage[],
@@ -12,11 +14,50 @@ export function reduceTimeline(
         consumedGroupIds: Set<string>
         titleChangesByToolUseId: Map<string, string>
         emittedTitleChangeToolUseIds: Set<string>
+        seenSkillReadContents: Set<string>
     }
 ): { blocks: ChatBlock[]; toolBlocksById: Map<string, ToolCallBlock>; hasReadyEvent: boolean } {
     const blocks: ChatBlock[] = []
     const toolBlocksById = new Map<string, ToolCallBlock>()
     let hasReadyEvent = false
+    const findLatestSkillReadBlock = (): ToolCallBlock | null => {
+        let candidate: ToolCallBlock | null = null
+        for (const block of toolBlocksById.values()) {
+            if (block.tool.name !== 'SkillRead') continue
+            const existing = extractSkillReadContent(block.tool.result)
+            if (existing && existing.trim().length > 0) continue
+            if (!candidate || block.createdAt > candidate.createdAt) {
+                candidate = block
+            }
+        }
+        return candidate
+    }
+    const bindSkillPayloadToLatestBlock = (payload: { path: string | null; content: string }, createdAt: number): boolean => {
+        const target = findLatestSkillReadBlock()
+        if (!target) return false
+
+        target.tool.result = payload.content
+        if (target.tool.state !== 'error') {
+            target.tool.state = 'completed'
+        }
+        target.tool.completedAt = createdAt
+
+        if (payload.path && target.tool.input && typeof target.tool.input === 'object' && !Array.isArray(target.tool.input)) {
+            const inputRecord = target.tool.input as Record<string, unknown>
+            if (typeof inputRecord.path !== 'string' && typeof inputRecord.file_path !== 'string') {
+                target.tool.input = {
+                    ...inputRecord,
+                    path: payload.path
+                }
+            }
+        }
+
+        const normalized = payload.content.trim()
+        if (normalized.length > 0) {
+            context.seenSkillReadContents.add(normalized)
+        }
+        return true
+    }
 
     // Collect all titles from change_title tool calls across the entire timeline
     // so we can suppress agent text blocks that merely echo the title
@@ -63,6 +104,11 @@ export function reduceTimeline(
         }
 
         if (msg.role === 'user') {
+            const skillPayload = parseSkillPayloadText(msg.content.text)
+            if (skillPayload && bindSkillPayloadToLatestBlock(skillPayload, msg.createdAt)) {
+                continue
+            }
+
             if (isCliOutputText(msg.content.text, msg.meta)) {
                 blocks.push(createCliOutputBlock({
                     id: msg.id,
@@ -92,6 +138,15 @@ export function reduceTimeline(
             for (let idx = 0; idx < msg.content.length; idx += 1) {
                 const c = msg.content[idx]
                 if (c.type === 'text') {
+                    const skillPayload = parseSkillPayloadText(c.text)
+                    if (skillPayload && bindSkillPayloadToLatestBlock(skillPayload, msg.createdAt)) {
+                        continue
+                    }
+
+                    const normalizedText = c.text.trim()
+                    if (normalizedText.length > 0 && context.seenSkillReadContents.has(normalizedText)) {
+                        continue
+                    }
                     if (allChangeTitles.size > 0 && allChangeTitles.has(c.text.trim())) {
                         continue
                     }
@@ -156,13 +211,14 @@ export function reduceTimeline(
                         continue
                     }
 
+                    const normalizedToolName = normalizeToolNameAsSkillRead(c.name, c.input)
                     const permission = context.permissionsById.get(c.id)?.permission
 
                     const block = ensureToolBlock(blocks, toolBlocksById, c.id, {
                         createdAt: msg.createdAt,
                         localId: msg.localId,
                         meta: msg.meta,
-                        name: c.name,
+                        name: normalizedToolName,
                         input: c.input,
                         description: c.description,
                         permission
@@ -227,15 +283,42 @@ export function reduceTimeline(
                         createdAt: msg.createdAt,
                         localId: msg.localId,
                         meta: msg.meta,
-                        name: permissionEntry?.toolName ?? 'Tool',
+                        name: normalizeToolNameAsSkillRead(
+                            permissionEntry?.toolName ?? 'Tool',
+                            permissionEntry?.input ?? null,
+                            c.content
+                        ),
                         input: permissionEntry?.input ?? null,
                         description: null,
                         permission
                     })
 
-                    block.tool.result = c.content
+                    const previousResult = block.tool.result
+                    const previousSkillContent = block.tool.name === 'SkillRead'
+                        ? extractSkillReadContent(previousResult)?.trim()
+                        : null
+                    const incomingSkillContent = block.tool.name === 'SkillRead'
+                        ? extractSkillReadContent(c.content)?.trim()
+                        : null
+
+                    if (block.tool.name === 'SkillRead' && previousSkillContent && !incomingSkillContent) {
+                        if (isObject(previousResult) && isObject(c.content)) {
+                            block.tool.result = { ...previousResult, ...c.content }
+                        } else {
+                            block.tool.result = previousResult
+                        }
+                    } else {
+                        block.tool.result = c.content
+                    }
                     block.tool.completedAt = msg.createdAt
                     block.tool.state = c.is_error ? 'error' : 'completed'
+                    if (block.tool.name === 'SkillRead') {
+                        const content = extractSkillReadContent(block.tool.result)
+                        const normalizedContent = content?.trim()
+                        if (normalizedContent) {
+                            context.seenSkillReadContents.add(normalizedContent)
+                        }
+                    }
                     continue
                 }
 

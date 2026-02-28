@@ -136,6 +136,8 @@ export default {
   'button.close': 'Close',
   'button.dismiss': 'Dismiss',
   'button.copy': 'Copy',
+  'button.edit': 'Edit',
+  'button.resend': 'Resend',
   'button.paste': 'Paste',
 
   // New session form
@@ -186,6 +188,10 @@ export default {
   'chat.settings': 'Settings',
   'chat.terminal': 'Terminal',
   'chat.switchRemote': 'Switch to remote mode',
+  'chat.edited.badge': 'Edited',
+  'chat.edited.notice': 'Edited resend active · {n} previous messages collapsed',
+  'chat.edited.show': 'Show previous',
+  'chat.edited.hide': 'Hide previous',
 
   // Terminal
   'terminal.commandName': 'Command',
@@ -224,6 +230,9 @@ export default {
   'tool.input': 'Input',
   'tool.result': 'Result',
   'tool.questionsAnswers': 'Questions & Answers',
+  'tool.skillContent': 'View skill content',
+  'tool.skillContentFor': 'Skill content: {name}',
+  'tool.skillContentUnavailable': 'Skill content unavailable',
   'tool.submit': 'Submit',
   'tool.submitting': 'Submitting…',
   'tool.prev': '← Prev',
@@ -330,6 +339,7 @@ export default {
   'event.contextCompacted': 'Context compacted (saved {tokens} tokens)',
   'event.conversationCompacted': 'Conversation compacted',
   'event.taskDetails': 'Task details ({count})',
+  'event.toolDetails': 'Tool details ({count})',
   'event.toolLabel': 'Tool: {name}',
   'event.toolError': 'Error',
   'event.toolRunning': 'Running…',

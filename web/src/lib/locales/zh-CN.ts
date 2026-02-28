@@ -138,6 +138,8 @@ export default {
   'button.close': '关闭',
   'button.dismiss': '忽略',
   'button.copy': '复制',
+  'button.edit': '编辑',
+  'button.resend': '重发',
   'button.paste': '粘贴',
 
   // New session form
@@ -188,6 +190,10 @@ export default {
   'chat.settings': '设置',
   'chat.terminal': '终端',
   'chat.switchRemote': '切换到远程模式',
+  'chat.edited.badge': '已编辑',
+  'chat.edited.notice': '编辑后重发已生效 · 已折叠 {n} 条旧消息',
+  'chat.edited.show': '显示旧消息',
+  'chat.edited.hide': '隐藏旧消息',
 
   // Terminal
   'terminal.commandName': '命令',
@@ -226,6 +232,9 @@ export default {
   'tool.input': '输入',
   'tool.result': '结果',
   'tool.questionsAnswers': '问答',
+  'tool.skillContent': '查看技能内容',
+  'tool.skillContentFor': '技能内容：{name}',
+  'tool.skillContentUnavailable': '技能内容不可用',
   'tool.submit': '提交',
   'tool.submitting': '提交中…',
   'tool.prev': '← 上一个',
@@ -332,6 +341,7 @@ export default {
   'event.contextCompacted': '上下文已压缩（节省 {tokens} tokens）',
   'event.conversationCompacted': '对话已压缩',
   'event.taskDetails': '任务详情 ({count})',
+  'event.toolDetails': '工具详情 ({count})',
   'event.toolLabel': '工具：{name}',
   'event.toolError': 'Error',
   'event.toolRunning': 'Running…',

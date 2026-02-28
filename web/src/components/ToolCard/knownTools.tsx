@@ -4,6 +4,7 @@ import { isObject } from '@hapi/protocol'
 import { BulbIcon, ClipboardIcon, EyeIcon, FileDiffIcon, GlobeIcon, PencilIcon, PuzzleIcon, QuestionIcon, RocketIcon, SearchIcon, TerminalIcon, WrenchIcon } from '@/components/ToolCard/icons'
 import { basename, resolveDisplayPath } from '@/utils/path'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
+import { extractSkillReadData } from '@/lib/skillRead'
 
 const DEFAULT_ICON_CLASS = 'h-3.5 w-3.5'
 // Tool presentation registry for `hapi/web` (aligned with `hapi-app`).
@@ -366,6 +367,20 @@ export const knownTools: Record<string, {
             return question.length > 0 ? truncate(question, 120) : null
         },
         minimal: true
+    },
+    SkillRead: {
+        icon: () => <PuzzleIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => {
+            const data = extractSkillReadData(opts.input, opts.result)
+            const name = data?.skillName
+            return name ? `Skill: ${name}` : 'Skill'
+        },
+        subtitle: (opts) => {
+            const data = extractSkillReadData(opts.input, opts.result)
+            if (!data?.path) return null
+            return resolveDisplayPath(data.path, opts.metadata)
+        },
+        minimal: false
     }
 }
 

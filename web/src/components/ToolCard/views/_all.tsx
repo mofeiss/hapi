@@ -10,6 +10,7 @@ import { ExitPlanModeView } from '@/components/ToolCard/views/ExitPlanModeView'
 import { MultiEditFullView, MultiEditView } from '@/components/ToolCard/views/MultiEditView'
 import { TodoWriteView } from '@/components/ToolCard/views/TodoWriteView'
 import { WriteView } from '@/components/ToolCard/views/WriteView'
+import { SkillReadView } from '@/components/ToolCard/views/SkillReadView'
 
 export type ToolViewProps = {
     block: ToolCallBlock
@@ -25,6 +26,7 @@ export const toolViewRegistry: Record<string, ToolViewComponent> = {
     TodoWrite: TodoWriteView,
     CodexDiff: CodexDiffCompactView,
     AskUserQuestion: AskUserQuestionView,
+    SkillRead: SkillReadView,
     ExitPlanMode: ExitPlanModeView,
     ask_user_question: AskUserQuestionView,
     exit_plan_mode: ExitPlanModeView,
@@ -38,6 +40,7 @@ export const toolFullViewRegistry: Record<string, ToolViewComponent> = {
     CodexDiff: CodexDiffFullView,
     CodexPatch: CodexPatchView,
     AskUserQuestion: AskUserQuestionView,
+    SkillRead: SkillReadView,
     ExitPlanMode: ExitPlanModeView,
     ask_user_question: AskUserQuestionView,
     exit_plan_mode: ExitPlanModeView,
