@@ -348,8 +348,13 @@ export function HappyComposer(props: {
             return
         }
 
-        // In voice focus mode, Enter means "exit voice input mode" instead of send.
-        if (key === 'Enter' && !e.shiftKey && voiceStatus !== 'disconnected') {
+        // In voice focus mode:
+        // - Enter: exit voice input mode (instead of send)
+        // - Escape: exit voice input mode
+        if (voiceStatus !== 'disconnected' && (
+            (key === 'Enter' && !e.shiftKey)
+            || key === 'Escape'
+        )) {
             e.preventDefault()
             pendingSendAfterVoiceRef.current = false
             if (voiceStatus === 'connected' && onVoiceToggle) {
