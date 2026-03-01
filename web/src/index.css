@@ -44,6 +44,9 @@
     --app-badge-error-bg: rgba(239, 68, 68, 0.18);
     --app-badge-error-text: #b91c1c;
     --app-badge-error-border: rgba(239, 68, 68, 0.3);
+    --app-scrollbar-track: transparent;
+    --app-scrollbar-thumb: rgba(107, 114, 128, 0.45);
+    --app-scrollbar-thumb-hover: rgba(107, 114, 128, 0.62);
 
     --app-font-scale: 1;
 }
@@ -91,6 +94,9 @@
     --app-badge-error-bg: rgba(248, 113, 113, 0.2);
     --app-badge-error-text: #fca5a5;
     --app-badge-error-border: rgba(248, 113, 113, 0.35);
+    --app-scrollbar-track: transparent;
+    --app-scrollbar-thumb: rgba(156, 163, 175, 0.4);
+    --app-scrollbar-thumb-hover: rgba(156, 163, 175, 0.58);
 }
 
 html {
@@ -116,6 +122,31 @@ body {
 
 #root {
     height: 100%;
+}
+
+/* Chat viewport scrollbar: keep theme-aware colors in dark mode */
+[data-chat-viewport="true"] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+}
+
+[data-chat-viewport="true"]::-webkit-scrollbar {
+    width: 10px;
+}
+
+[data-chat-viewport="true"]::-webkit-scrollbar-track {
+    background: var(--app-scrollbar-track);
+}
+
+[data-chat-viewport="true"]::-webkit-scrollbar-thumb {
+    background-color: var(--app-scrollbar-thumb);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+[data-chat-viewport="true"]::-webkit-scrollbar-thumb:hover {
+    background-color: var(--app-scrollbar-thumb-hover);
 }
 
 @media (hover: hover) and (pointer: fine) {
