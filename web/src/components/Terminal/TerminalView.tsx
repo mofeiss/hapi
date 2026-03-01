@@ -54,7 +54,13 @@ export function TerminalView(props: {
         })
 
         const fitAddon = new FitAddon()
-        const webLinksAddon = new WebLinksAddon()
+        const webLinksAddon = new WebLinksAddon((event, uri) => {
+            event.preventDefault()
+            const openedWindow = window.open(uri, '_blank', 'noopener,noreferrer')
+            if (openedWindow) {
+                openedWindow.opener = null
+            }
+        })
         const canvasAddon = new CanvasAddon()
         terminal.loadAddon(fitAddon)
         terminal.loadAddon(webLinksAddon)
