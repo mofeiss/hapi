@@ -450,4 +450,18 @@ export class ApiClient {
 
         return await res.json() as { text: string; language_code?: string }
     }
+
+    async correctVoiceText(payload: {
+        text?: string
+        currentRawFull?: string
+        prevRawFull?: string
+        prevCorrectedFull?: string
+        deltaRaw?: string
+        latestSegment?: string
+    }): Promise<{ text: string; corrected?: boolean; reason?: string }> {
+        return await this.request('/api/voice/correct', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        })
+    }
 }

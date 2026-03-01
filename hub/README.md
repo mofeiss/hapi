@@ -28,6 +28,9 @@ See `src/configuration.ts` for all options.
 
 - `ELEVENLABS_API_KEY` - ElevenLabs API key for voice assistant.
 - `ELEVENLABS_AGENT_ID` - Custom ElevenLabs agent ID (auto-created if not set).
+- `ANTHROPIC_BASE_URL` - Anthropic-compatible API base URL for voice text correction.
+- `ANTHROPIC_AUTH_TOKEN` (or `ANTHROPIC_API_KEY`) - API key/token for voice text correction.
+- `VOICE_CORRECTION_MODEL` (or `ANTHROPIC_MODEL`) - Model name for voice text correction (default: `small`).
 
 ### Optional
 

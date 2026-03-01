@@ -43,6 +43,24 @@ If you want to use your own ElevenLabs agent instead of the auto-created one:
 export ELEVENLABS_AGENT_ID="your-agent-id"
 ```
 
+### 4. (Optional) Voice Text Correction (Anthropic-compatible)
+
+You can enable LLM post-correction for speech-to-text output:
+
+```bash
+export ANTHROPIC_BASE_URL="https://your-anthropic-compatible-api"
+export ANTHROPIC_AUTH_TOKEN="your-token"
+export VOICE_CORRECTION_MODEL="small"
+```
+
+Variable mapping used by `/api/voice/correct`:
+
+- `BASE_URL`: `ANTHROPIC_BASE_URL` or `VOICE_CORRECTION_API_BASE`
+- `AUTH_TOKEN`: `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_API_KEY` or `VOICE_CORRECTION_API_KEY`
+- `MODEL`: `VOICE_CORRECTION_MODEL` or `ANTHROPIC_MODEL` (default: `small`)
+
+Note: these are currently environment variables only, not `settings.json` fields.
+
 ## Usage
 
 ### Starting a Voice Session
@@ -114,6 +132,12 @@ Set `ELEVENLABS_API_KEY` in your environment and restart the hub.
 - Verify the session is connected (green dot in status bar)
 - Check that voice status shows "connecting" or connected state
 - Ensure you have a stable internet connection
+
+### Text correction not applied
+
+- If `ANTHROPIC_BASE_URL` or auth token is missing, voice input still works, but correction is skipped
+- Verify `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` (or supported aliases)
+- Check hub logs for `/api/voice/correct` errors
 
 ### "Failed to create ElevenLabs agent automatically"
 

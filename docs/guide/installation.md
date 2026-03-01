@@ -184,6 +184,9 @@ On first run, HAPI:
 | `DB_PATH` | `~/.hapi/hapi.db` | - | Database file path |
 | `ELEVENLABS_API_KEY` | - | - | ElevenLabs API key for voice |
 | `ELEVENLABS_AGENT_ID` | Auto-created | - | Custom ElevenLabs agent ID |
+| `ANTHROPIC_BASE_URL` | - | - | Anthropic-compatible base URL for voice text correction |
+| `ANTHROPIC_AUTH_TOKEN` | - | - | Auth token for voice text correction (`ANTHROPIC_API_KEY` also supported) |
+| `VOICE_CORRECTION_MODEL` | `small` | - | Model used by voice text correction (`ANTHROPIC_MODEL` also supported) |
 </details>
 
 <details>
@@ -574,6 +577,21 @@ Enable voice control:
 export ELEVENLABS_API_KEY="your-api-key"
 hapi hub --relay
 ```
+
+Optional: enable LLM post-correction for speech-to-text output:
+
+```bash
+export ANTHROPIC_BASE_URL="https://your-anthropic-compatible-api"
+export ANTHROPIC_AUTH_TOKEN="your-token"
+export VOICE_CORRECTION_MODEL="small"
+```
+
+Notes:
+- The correction endpoint accepts aliases for compatibility:
+  - `ANTHROPIC_BASE_URL` or `VOICE_CORRECTION_API_BASE`
+  - `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_API_KEY` or `VOICE_CORRECTION_API_KEY`
+  - `VOICE_CORRECTION_MODEL` or `ANTHROPIC_MODEL`
+- These are currently environment variables only (not persisted in `settings.json`).
 
 See [Voice Assistant](./voice-assistant.md) for usage details.
 
