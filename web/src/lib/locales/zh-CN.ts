@@ -357,6 +357,7 @@ export default {
   'command.claude.status': '显示 Claude Code 状态，包括版本、模型、账户和 API 连接',
 
   // Slash commands - Codex
+  'command.codex.clear': '清除对话历史并开始新聊天',
   'command.codex.review': '检查当前更改并查找问题',
   'command.codex.new': '在对话中开始新聊天',
   'command.codex.compat': '总结对话以防止达到上下文限制',

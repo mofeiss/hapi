@@ -38,6 +38,7 @@ const BUILTIN_COMMANDS: Record<string, { name: string; source: 'builtin' }[]> = 
         { name: 'status', source: 'builtin' },
     ],
     codex: [
+        { name: 'clear', source: 'builtin' },
         { name: 'review', source: 'builtin' },
         { name: 'new', source: 'builtin' },
         { name: 'compat', source: 'builtin' },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCompact, parseClear, parseSpecialCommand } from './specialCommands';
+import { parseCompact, parseClear, parseNew, parseSpecialCommand } from './specialCommands';
 
 describe('parseCompact', () => {
     it('should parse /compact command with argument', () => {
@@ -49,6 +49,32 @@ describe('parseClear', () => {
     });
 });
 
+describe('parseNew', () => {
+    it('should parse /new command exactly', () => {
+        const result = parseNew('/new');
+        expect(result.isNew).toBe(true);
+        expect(result.prompt).toBeUndefined();
+    });
+
+    it('should parse /new command with prompt', () => {
+        const result = parseNew('/new summarize this');
+        expect(result.isNew).toBe(true);
+        expect(result.prompt).toBe('summarize this');
+    });
+
+    it('should parse /new command with surrounding whitespace', () => {
+        const result = parseNew('  /new   check logs   ');
+        expect(result.isNew).toBe(true);
+        expect(result.prompt).toBe('check logs');
+    });
+
+    it('should not parse regular messages', () => {
+        const result = parseNew('hello world');
+        expect(result.isNew).toBe(false);
+        expect(result.prompt).toBeUndefined();
+    });
+});
+
 describe('parseSpecialCommand', () => {
     it('should detect compact command', () => {
         const result = parseSpecialCommand('/compact optimize');
@@ -60,6 +86,18 @@ describe('parseSpecialCommand', () => {
         const result = parseSpecialCommand('/clear');
         expect(result.type).toBe('clear');
         expect(result.originalMessage).toBeUndefined();
+    });
+
+    it('should detect new command without prompt', () => {
+        const result = parseSpecialCommand('/new');
+        expect(result.type).toBe('new');
+        expect(result.prompt).toBeUndefined();
+    });
+
+    it('should detect new command with prompt', () => {
+        const result = parseSpecialCommand('/new check node version');
+        expect(result.type).toBe('new');
+        expect(result.prompt).toBe('check node version');
     });
 
     it('should return null for regular messages', () => {
@@ -77,5 +115,6 @@ describe('parseSpecialCommand', () => {
         expect(parseSpecialCommand('some /compact text').type).toBeNull();
         expect(parseSpecialCommand('/compactor').type).toBeNull();
         expect(parseSpecialCommand('/clearing').type).toBeNull();
+        expect(parseSpecialCommand('/newton').type).toBeNull();
     });
 });

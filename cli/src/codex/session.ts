@@ -4,6 +4,7 @@ import { AgentSessionBase } from '@/agent/sessionBase';
 import type { EnhancedMode, PermissionMode } from './loop';
 import type { CodexCliOverrides } from './utils/codexCliOverrides';
 import type { LocalLaunchExitReason } from '@/agent/localLaunchPolicy';
+import { logger } from '@/ui/logger';
 
 type LocalLaunchFailure = {
     message: string;
@@ -63,6 +64,11 @@ export class CodexSession extends AgentSessionBase<EnhancedMode> {
 
     recordLocalLaunchFailure = (message: string, exitReason: LocalLaunchExitReason): void => {
         this.localLaunchFailure = { message, exitReason };
+    };
+
+    clearSessionId = (): void => {
+        this.sessionId = null;
+        logger.debug('[CodexSession] Session ID cleared');
     };
 
     sendCodexMessage = (message: unknown): void => {

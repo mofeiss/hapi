@@ -79,6 +79,13 @@ function extractEditedResendPayload(message: DecryptedMessage): string | null {
     return parseEditedResendWrappedText(text)
 }
 
+function isContextResetCommand(text: string, flavor: string | null): boolean {
+    const trimmed = text.trim()
+    if (trimmed === '/clear') return true
+    if (flavor !== 'codex') return false
+    return /^\/new(?:\s+[\s\S]+)?$/.test(trimmed)
+}
+
 export function SessionChat(props: {
     api: ApiClient
     session: Session
@@ -567,12 +574,12 @@ export function SessionChat(props: {
         props.onSend(text, attachments, options)
         setForceScrollToken((token) => token + 1)
 
-        // Detect /clear command: reset context size and title
-        if (text.trim() === '/clear') {
+        // Detect chat reset commands (/clear, and Codex /new): reset context size and title
+        if (isContextResetCommand(text, agentFlavor)) {
             setContextSizeOverride(0)
             setSessionTitleOverride(props.session.id, 'New Chat')
         }
-    }, [props.onSend, props.session.id])
+    }, [props.onSend, props.session.id, agentFlavor])
 
     const handleResendMessage = useCallback((text: string, attachments?: AttachmentMetadata[]) => {
         if (text.trim().length === 0 && (!attachments || attachments.length === 0)) {

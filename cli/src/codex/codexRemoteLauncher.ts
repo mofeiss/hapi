@@ -18,6 +18,7 @@ import { buildCodexStartConfig } from './utils/codexStartConfig';
 import { AppServerEventConverter } from './utils/appServerEventConverter';
 import { registerAppServerPermissionHandlers } from './utils/appServerPermissionAdapter';
 import { buildThreadStartParams, buildTurnStartParams } from './utils/appServerConfig';
+import { parseSpecialCommand } from '@/parsers/specialCommands';
 import {
     RemoteLauncherBase,
     type RemoteLauncherDisplayContext,
@@ -519,7 +520,10 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 break;
             }
 
-            if (!useAppServer && wasCreated && currentModeHash && message.hash !== currentModeHash) {
+            const specialCommand = parseSpecialCommand(message.message);
+            const isSessionResetCommand = specialCommand.type === 'clear' || specialCommand.type === 'new';
+
+            if (!isSessionResetCommand && !useAppServer && wasCreated && currentModeHash && message.hash !== currentModeHash) {
                 logger.debug('[Codex] Mode changed – restarting Codex session');
                 messageBuffer.addMessage('═'.repeat(40), 'status');
                 messageBuffer.addMessage('Starting new Codex session (mode changed)...', 'status');
@@ -535,10 +539,33 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             }
 
             messageBuffer.addMessage(message.message, 'user');
-            currentModeHash = message.hash;
 
             setThinking(true, 'turn_dispatch');
             try {
+                if (isSessionResetCommand) {
+                    logger.debug(`[Codex] Detected /${specialCommand.type} command - resetting conversation context`);
+                    mcpClient?.clearSession();
+                    this.currentThreadId = null;
+                    this.currentTurnId = null;
+                    session.clearSessionId();
+                    wasCreated = false;
+                    first = true;
+                    currentModeHash = null;
+
+                    session.sendSessionEvent({ type: 'message', message: 'Context was reset' });
+                    messageBuffer.addMessage('Context was reset', 'status');
+
+                    if (specialCommand.type === 'new' && specialCommand.prompt) {
+                        pending = {
+                            ...message,
+                            message: specialCommand.prompt
+                        };
+                    }
+
+                    continue;
+                }
+
+                currentModeHash = message.hash;
                 if (!wasCreated) {
                     if (useAppServer && appServerClient) {
                         const threadParams = buildThreadStartParams({

@@ -355,6 +355,7 @@ export default {
   'command.claude.status': 'Show Claude Code status including version, model, account, and API connectivity',
 
   // Slash commands - Codex
+  'command.codex.clear': 'Clear conversation history and start a new chat',
   'command.codex.review': 'Review current changes and find issues',
   'command.codex.new': 'Start a new chat during a conversation',
   'command.codex.compat': 'Summarize conversation to prevent hitting the context limit',

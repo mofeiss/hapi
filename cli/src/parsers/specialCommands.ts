@@ -11,9 +11,15 @@ export interface ClearCommandResult {
     isClear: boolean;
 }
 
+export interface NewCommandResult {
+    isNew: boolean;
+    prompt?: string;
+}
+
 export interface SpecialCommandResult {
-    type: 'compact' | 'clear' | null;
+    type: 'compact' | 'clear' | 'new' | null;
     originalMessage?: string;
+    prompt?: string;
 }
 
 /**
@@ -56,6 +62,28 @@ export function parseClear(message: string): ClearCommandResult {
 }
 
 /**
+ * Parse /new command
+ * Matches exactly "/new" or "/new <prompt>"
+ */
+export function parseNew(message: string): NewCommandResult {
+    const trimmed = message.trim();
+    const match = trimmed.match(/^\/new(?:\s+([\s\S]+))?$/);
+
+    if (!match) {
+        return {
+            isNew: false
+        };
+    }
+
+    const prompt = match[1]?.trim();
+
+    return {
+        isNew: true,
+        ...(prompt ? { prompt } : {})
+    };
+}
+
+/**
  * Unified parser for special commands
  * Returns the type of command and original message if applicable
  */
@@ -72,6 +100,14 @@ export function parseSpecialCommand(message: string): SpecialCommandResult {
     if (clearResult.isClear) {
         return {
             type: 'clear'
+        };
+    }
+
+    const newResult = parseNew(message);
+    if (newResult.isNew) {
+        return {
+            type: 'new',
+            ...(newResult.prompt ? { prompt: newResult.prompt } : {})
         };
     }
     
