@@ -30,6 +30,7 @@ import { join } from 'node:path';
 import { isBunCompiled, projectPath } from '@/projectPath';
 import { logger } from '@/ui/logger';
 import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Resolve the TypeScript entrypoint for development mode.
@@ -95,6 +96,37 @@ export function spawnHappyCLI(args: string[], options: SpawnOptions = {}): Child
   
   const { command: spawnCommand, args: spawnArgs } = getHappyCliCommand(args);
 
+  const isBunRuntime = Boolean((process.versions as Record<string, string | undefined>).bun);
+  const projectRoot = projectPath();
+  const requestedCwd = (() => {
+    if (!('cwd' in options) || !options.cwd) {
+      return null;
+    }
+    if (typeof options.cwd === 'string') {
+      return options.cwd;
+    }
+    if (options.cwd instanceof URL) {
+      return fileURLToPath(options.cwd);
+    }
+    return null;
+  })();
+
+  const spawnOptions: SpawnOptions = (!isBunCompiled() && isBunRuntime)
+    ? {
+      ...options,
+      cwd: projectRoot,
+      env: {
+        ...process.env,
+        ...options.env,
+        ...(requestedCwd ? { HAPI_TARGET_CWD: requestedCwd } : {})
+      }
+    }
+    : options;
+
+  const finalArgs = (!isBunCompiled() && isBunRuntime)
+    ? ['--cwd', projectRoot, ...spawnArgs]
+    : spawnArgs;
+
   // Sanity check that the entrypoint path exists
   if (!isBunCompiled()) {
     const entrypoint = spawnArgs.find((arg) => arg.endsWith('index.ts'));
@@ -105,5 +137,5 @@ export function spawnHappyCLI(args: string[], options: SpawnOptions = {}): Child
     }
   }
   
-  return spawn(spawnCommand, spawnArgs, options);
+  return spawn(spawnCommand, finalArgs, spawnOptions);
 }
