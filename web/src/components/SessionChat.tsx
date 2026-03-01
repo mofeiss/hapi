@@ -21,6 +21,61 @@ import { RealtimeVoiceSession, registerSessionStore, registerVoiceHooksStore, vo
 import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { useMessageQueue } from '@/hooks/useMessageQueue'
 import { setSessionTitleOverride, clearSessionTitleOverride, useSessionTitleOverride } from '@/lib/session-title-override-store'
+import { makeClientSideId } from '@/lib/messages'
+
+type SendOptions = {
+    localId?: string
+    createdAt?: number
+}
+
+type EditedResendState = {
+    anchorMessageId: string
+    hiddenSyntheticLocalId: string | null
+    hiddenSyntheticMessageId: string | null
+    maxSeqAtEdit: number
+    editCommittedAt: number
+}
+
+type PersistedEditedState = {
+    editedResend: EditedResendState | null
+    editedMessageTextById: Record<string, string>
+}
+
+function editedStateStorageKey(sessionId: string): string {
+    return `hapi:edited-resend:${sessionId}`
+}
+
+const EDITED_RESEND_NOTICE_HEADER = '[Edited resend notice]'
+const EDITED_RESEND_NOTICE_HINT = 'This message was edited and resent by the user. Treat the following content as the latest authoritative request.'
+const EDITED_RESEND_NOTICE_PREFIX = `${EDITED_RESEND_NOTICE_HEADER}\n${EDITED_RESEND_NOTICE_HINT}\n\n`
+
+function getUserTextContent(message: DecryptedMessage): string | null {
+    const raw = message.content
+    if (!raw || typeof raw !== 'object') return null
+    const record = raw as {
+        role?: unknown
+        content?: {
+            type?: unknown
+            text?: unknown
+        }
+    }
+    if (record.role !== 'user') return null
+    if (record.content?.type !== 'text') return null
+    return typeof record.content.text === 'string' ? record.content.text : null
+}
+
+function parseEditedResendWrappedText(text: string): string | null {
+    if (!text.startsWith(EDITED_RESEND_NOTICE_PREFIX)) {
+        return null
+    }
+    return text.slice(EDITED_RESEND_NOTICE_PREFIX.length)
+}
+
+function extractEditedResendPayload(message: DecryptedMessage): string | null {
+    const text = getUserTextContent(message)
+    if (!text) return null
+    return parseEditedResendWrappedText(text)
+}
 
 export function SessionChat(props: {
     api: ApiClient
@@ -36,7 +91,7 @@ export function SessionChat(props: {
     onBack: () => void
     onRefresh: () => void
     onLoadMore: () => Promise<unknown>
-    onSend: (text: string, attachments?: AttachmentMetadata[]) => void
+    onSend: (text: string, attachments?: AttachmentMetadata[], options?: SendOptions) => void
     onFlushPending: () => void
     onAtBottomChange: (atBottom: boolean) => void
     onRetryMessage?: (localId: string) => void
@@ -48,6 +103,8 @@ export function SessionChat(props: {
     const normalizedCacheRef = useRef<Map<string, { source: DecryptedMessage; normalized: NormalizedMessage | null }>>(new Map())
     const blocksByIdRef = useRef<Map<string, ChatBlock>>(new Map())
     const [forceScrollToken, setForceScrollToken] = useState(0)
+    const [editedResend, setEditedResend] = useState<EditedResendState | null>(null)
+    const [editedMessageTextById, setEditedMessageTextById] = useState<Record<string, string>>({})
     const agentFlavor = props.session.metadata?.flavor ?? null
     const { abortSession, switchSession, setPermissionMode, setModelMode } = useSessionActions(
         props.api,
@@ -144,8 +201,8 @@ export function SessionChat(props: {
         prevRequestIdsRef.current = currentIds
     }, [props.session.agentState?.requests, props.session.id])
 
-    const handleVoiceToggle = useCallback(async () => {
-        stt.toggle()
+    const handleVoiceToggle = useCallback((options?: { discard?: boolean }) => {
+        stt.toggle(options)
     }, [stt])
 
     const handleVoiceMicToggle = useCallback(() => {
@@ -159,7 +216,205 @@ export function SessionChat(props: {
     useEffect(() => {
         normalizedCacheRef.current.clear()
         blocksByIdRef.current.clear()
+
+        const key = editedStateStorageKey(props.session.id)
+        try {
+            const raw = localStorage.getItem(key)
+            if (!raw) {
+                setEditedResend(null)
+                setEditedMessageTextById({})
+                return
+            }
+            const parsed = JSON.parse(raw) as PersistedEditedState
+            const restored = parsed?.editedResend
+            if (restored && typeof restored === 'object') {
+                setEditedResend({
+                    anchorMessageId: typeof restored.anchorMessageId === 'string' ? restored.anchorMessageId : '',
+                    hiddenSyntheticLocalId: typeof restored.hiddenSyntheticLocalId === 'string' ? restored.hiddenSyntheticLocalId : null,
+                    hiddenSyntheticMessageId: typeof restored.hiddenSyntheticMessageId === 'string'
+                        ? restored.hiddenSyntheticMessageId
+                        : (typeof restored.hiddenSyntheticLocalId === 'string' ? restored.hiddenSyntheticLocalId : null),
+                    maxSeqAtEdit: typeof restored.maxSeqAtEdit === 'number' ? restored.maxSeqAtEdit : 0,
+                    editCommittedAt: typeof restored.editCommittedAt === 'number' ? restored.editCommittedAt : 0
+                })
+            } else {
+                setEditedResend(null)
+            }
+            setEditedMessageTextById(parsed?.editedMessageTextById ?? {})
+        } catch {
+            setEditedResend(null)
+            setEditedMessageTextById({})
+        }
     }, [props.session.id])
+
+    useEffect(() => {
+        const key = editedStateStorageKey(props.session.id)
+        if (!editedResend && Object.keys(editedMessageTextById).length === 0) {
+            localStorage.removeItem(key)
+            return
+        }
+        const payload: PersistedEditedState = {
+            editedResend,
+            editedMessageTextById
+        }
+        localStorage.setItem(key, JSON.stringify(payload))
+    }, [props.session.id, editedResend, editedMessageTextById])
+
+    const messageView = useMemo(() => {
+        if (!editedResend) {
+            return {
+                messages: props.messages
+            }
+        }
+
+        const isHiddenEditedResendPrompt = (message: DecryptedMessage): boolean => {
+            if (editedResend.hiddenSyntheticMessageId && message.id === editedResend.hiddenSyntheticMessageId) {
+                return true
+            }
+            if (editedResend.hiddenSyntheticLocalId && message.localId === editedResend.hiddenSyntheticLocalId) {
+                return true
+            }
+            const payload = extractEditedResendPayload(message)
+            if (!payload) {
+                return false
+            }
+            return message.createdAt === editedResend.editCommittedAt
+        }
+
+        const withoutEditedResendPrompt = props.messages.filter((message) => {
+            if (!isHiddenEditedResendPrompt(message)) return true
+            return message.status === 'failed'
+        })
+
+        const anchorIndex = withoutEditedResendPrompt.findIndex((message) => message.id === editedResend.anchorMessageId)
+        if (anchorIndex < 0) {
+            return {
+                messages: withoutEditedResendPrompt
+            }
+        }
+
+        const nextMessages = withoutEditedResendPrompt.filter((message, index) => {
+            if (index <= anchorIndex) {
+                return true
+            }
+
+            const seq = typeof message.seq === 'number' ? message.seq : null
+            if (seq !== null) {
+                return seq > editedResend.maxSeqAtEdit
+            }
+
+            return message.createdAt >= editedResend.editCommittedAt
+        })
+
+        return {
+            messages: nextMessages
+        }
+    }, [props.messages, editedResend])
+
+    useEffect(() => {
+        if (!editedResend) return
+        const failed = props.messages.find(
+            (message) => (
+                (editedResend.hiddenSyntheticLocalId && message.localId === editedResend.hiddenSyntheticLocalId)
+                || (editedResend.hiddenSyntheticMessageId && message.id === editedResend.hiddenSyntheticMessageId)
+            ) && message.status === 'failed'
+        )
+        if (!failed) return
+
+        setEditedResend(null)
+        setEditedMessageTextById((prev) => {
+            const next = { ...prev }
+            delete next[editedResend.anchorMessageId]
+            return next
+        })
+    }, [props.messages, editedResend])
+
+    useEffect(() => {
+        if (!editedResend) return
+
+        if (editedResend.hiddenSyntheticLocalId) {
+            const resolved = props.messages.find((message) => message.localId === editedResend.hiddenSyntheticLocalId)
+            if (resolved && resolved.id !== editedResend.hiddenSyntheticMessageId) {
+                setEditedResend((prev) => prev ? {
+                    ...prev,
+                    hiddenSyntheticMessageId: resolved.id
+                } : prev)
+                return
+            }
+        }
+
+        if (props.isLoadingMessages && props.messages.length === 0) {
+            return
+        }
+
+        const hasAnchor = props.messages.some((message) => message.id === editedResend.anchorMessageId)
+        if (hasAnchor) return
+
+        const hasEditedResendPrompt = props.messages.some((message) => {
+            if (editedResend.hiddenSyntheticLocalId && message.localId === editedResend.hiddenSyntheticLocalId) {
+                return true
+            }
+            if (editedResend.hiddenSyntheticMessageId && message.id === editedResend.hiddenSyntheticMessageId) {
+                return true
+            }
+            const payload = extractEditedResendPayload(message)
+            return payload !== null && message.createdAt === editedResend.editCommittedAt
+        })
+        if (hasEditedResendPrompt) return
+
+        if (props.isLoadingMessages || props.messages.length === 0) {
+            return
+        }
+
+        setEditedResend(null)
+        setEditedMessageTextById({})
+    }, [props.messages, editedResend, props.isLoadingMessages])
+
+    useEffect(() => {
+        if (editedResend) return
+        if (props.isLoadingMessages && props.messages.length === 0) return
+
+        let wrapperIndex = -1
+        let wrapperPayload: string | null = null
+        for (let index = props.messages.length - 1; index >= 0; index -= 1) {
+            const payload = extractEditedResendPayload(props.messages[index])
+            if (payload !== null) {
+                wrapperIndex = index
+                wrapperPayload = payload
+                break
+            }
+        }
+        if (wrapperIndex < 0 || wrapperPayload === null) return
+
+        const wrapper = props.messages[wrapperIndex]
+        let anchor: DecryptedMessage | null = null
+        for (let index = wrapperIndex - 1; index >= 0; index -= 1) {
+            const candidate = props.messages[index]
+            const userText = getUserTextContent(candidate)
+            if (!userText) continue
+            if (extractEditedResendPayload(candidate) !== null) continue
+            anchor = candidate
+            break
+        }
+
+        if (!anchor) return
+
+        const maxSeqAtEdit = typeof wrapper.seq === 'number'
+            ? Math.max(wrapper.seq - 1, 0)
+            : 0
+
+        setEditedMessageTextById((prev) => ({
+            ...prev,
+            [anchor.id]: wrapperPayload
+        }))
+        setEditedResend({
+            anchorMessageId: anchor.id,
+            hiddenSyntheticLocalId: wrapper.localId ?? null,
+            hiddenSyntheticMessageId: wrapper.id,
+            maxSeqAtEdit,
+            editCommittedAt: wrapper.createdAt
+        })
+    }, [props.messages, editedResend, props.isLoadingMessages])
 
     const normalizedMessages: NormalizedMessage[] = useMemo(() => {
         // Clear caches immediately when session changes (before useEffect runs)
@@ -172,7 +427,7 @@ export function SessionChat(props: {
         const cache = normalizedCacheRef.current
         const normalized: NormalizedMessage[] = []
         const seen = new Set<string>()
-        for (const message of props.messages) {
+        for (const message of messageView.messages) {
             seen.add(message.id)
             const cached = cache.get(message.id)
             if (cached && cached.source === message) {
@@ -189,7 +444,7 @@ export function SessionChat(props: {
             }
         }
         return normalized
-    }, [props.messages])
+    }, [props.session.id, messageView.messages])
 
     const reduced = useMemo(
         () => reduceChatBlocks(normalizedMessages, props.session.agentState),
@@ -298,8 +553,8 @@ export function SessionChat(props: {
         })
     }, [])
 
-    const handleSend = useCallback((text: string, attachments?: AttachmentMetadata[]) => {
-        props.onSend(text, attachments)
+    const handleSend = useCallback((text: string, attachments?: AttachmentMetadata[], options?: SendOptions) => {
+        props.onSend(text, attachments, options)
         setForceScrollToken((token) => token + 1)
 
         // Detect /clear command: reset context size and title
@@ -308,6 +563,57 @@ export function SessionChat(props: {
             setSessionTitleOverride(props.session.id, 'New Chat')
         }
     }, [props.onSend, props.session.id])
+
+    const handleResendMessage = useCallback((text: string, attachments?: AttachmentMetadata[]) => {
+        if (text.trim().length === 0 && (!attachments || attachments.length === 0)) {
+            return
+        }
+        handleSend(text, attachments)
+    }, [handleSend])
+
+    const handleStartEditMessage = useCallback(async (_messageId: string) => {
+        if (!props.session.thinking) {
+            return
+        }
+        await handleAbort()
+    }, [props.session.thinking, handleAbort])
+
+    const handleCommitEditMessage = useCallback((payload: {
+        messageId: string
+        text: string
+        attachments?: AttachmentMetadata[]
+    }) => {
+        const trimmed = payload.text.trim()
+        if (!trimmed && (!payload.attachments || payload.attachments.length === 0)) {
+            return
+        }
+
+        const maxSeqAtEdit = props.messages.reduce((max, message) => {
+            if (typeof message.seq !== 'number') return max
+            return message.seq > max ? message.seq : max
+        }, 0)
+
+        const localId = makeClientSideId('edit')
+        const editCommittedAt = Date.now()
+        const isSlashCommand = trimmed.startsWith('/')
+        const outboundText = isSlashCommand
+            ? payload.text
+            : `${EDITED_RESEND_NOTICE_PREFIX}${payload.text}`
+
+        setEditedMessageTextById((prev) => ({
+            ...prev,
+            [payload.messageId]: payload.text
+        }))
+        setEditedResend({
+            anchorMessageId: payload.messageId,
+            hiddenSyntheticLocalId: localId,
+            hiddenSyntheticMessageId: localId,
+            maxSeqAtEdit,
+            editCommittedAt
+        })
+
+        handleSend(outboundText, payload.attachments, { localId, createdAt: editCommittedAt })
+    }, [props.messages, handleSend])
 
     // Message queue for sending while agent is running
     const messageQueue = useMessageQueue(!!props.session.thinking, handleSend)
@@ -366,6 +672,10 @@ export function SessionChat(props: {
                         disabled={sessionInactive}
                         onRefresh={props.onRefresh}
                         onRetryMessage={props.onRetryMessage}
+                        onResendMessage={handleResendMessage}
+                        onStartEditMessage={handleStartEditMessage}
+                        onCommitEditMessage={handleCommitEditMessage}
+                        editedMessageTextById={editedMessageTextById}
                         onFlushPending={props.onFlushPending}
                         onAtBottomChange={props.onAtBottomChange}
                         isLoadingMessages={props.isLoadingMessages}
@@ -374,7 +684,7 @@ export function SessionChat(props: {
                         isLoadingMoreMessages={props.isLoadingMoreMessages}
                         onLoadMore={props.onLoadMore}
                         pendingCount={props.pendingCount}
-                        rawMessagesCount={props.messages.length}
+                        rawMessagesCount={messageView.messages.length}
                         normalizedMessagesCount={normalizedMessages.length}
                         messagesVersion={props.messagesVersion}
                         forceScrollToken={forceScrollToken}
@@ -399,6 +709,8 @@ export function SessionChat(props: {
                         onSwitchToRemote={handleSwitchToRemote}
                         autocompleteSuggestions={props.autocompleteSuggestions}
                         voiceStatus={sttVoiceStatus}
+                        voiceRawText={stt.rawText}
+                        voiceError={stt.error}
                         onVoiceToggle={handleVoiceToggle}
                         onTranscript={stt.setOnTranscript}
                         onInterim={stt.setOnInterim}

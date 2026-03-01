@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { createContext, useContext } from 'react'
 import type { ApiClient } from '@/api/client'
+import type { AttachmentMetadata } from '@/types/api'
 import type { SessionMetadataSummary } from '@/types/api'
 
 export type HappyChatContextValue = {
@@ -8,8 +9,16 @@ export type HappyChatContextValue = {
     sessionId: string
     metadata: SessionMetadataSummary | null
     disabled: boolean
+    editedMessageTextById?: Record<string, string>
     onRefresh: () => void
     onRetryMessage?: (localId: string) => void
+    onResendMessage?: (text: string, attachments?: AttachmentMetadata[]) => void
+    onStartEditMessage?: (messageId: string) => Promise<void>
+    onCommitEditMessage?: (payload: {
+        messageId: string
+        text: string
+        attachments?: AttachmentMetadata[]
+    }) => void
 }
 
 const HappyChatContext = createContext<HappyChatContextValue | null>(null)

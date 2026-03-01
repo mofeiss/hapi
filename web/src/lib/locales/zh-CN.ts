@@ -190,7 +190,7 @@ export default {
   'chat.settings': '设置',
   'chat.terminal': '终端',
   'chat.switchRemote': '切换到远程模式',
-  'chat.edited.badge': '已编辑',
+  'chat.edited.badge': '这条消息被编辑过',
   'chat.edited.notice': '编辑后重发已生效 · 已折叠 {n} 条旧消息',
   'chat.edited.show': '显示旧消息',
   'chat.edited.hide': '隐藏旧消息',

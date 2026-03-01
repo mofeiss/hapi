@@ -188,7 +188,7 @@ export default {
   'chat.settings': 'Settings',
   'chat.terminal': 'Terminal',
   'chat.switchRemote': 'Switch to remote mode',
-  'chat.edited.badge': 'Edited',
+  'chat.edited.badge': 'This prompt was edited and resent',
   'chat.edited.notice': 'Edited resend active · {n} previous messages collapsed',
   'chat.edited.show': 'Show previous',
   'chat.edited.hide': 'Hide previous',

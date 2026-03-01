@@ -45,7 +45,11 @@ export function useSendMessage(
     sessionId: string | null,
     options?: UseSendMessageOptions
 ): {
-    sendMessage: (text: string, attachments?: AttachmentMetadata[]) => void
+    sendMessage: (
+        text: string,
+        attachments?: AttachmentMetadata[],
+        options?: { localId?: string; createdAt?: number }
+    ) => void
     retryMessage: (localId: string) => void
     isSending: boolean
 } {
@@ -90,7 +94,11 @@ export function useSendMessage(
         },
     })
 
-    const sendMessage = (text: string, attachments?: AttachmentMetadata[]) => {
+    const sendMessage = (
+        text: string,
+        attachments?: AttachmentMetadata[],
+        sendOptions?: { localId?: string; createdAt?: number }
+    ) => {
         if (!api) {
             options?.onBlocked?.('no-api')
             haptic.notification('error')
@@ -105,8 +113,8 @@ export function useSendMessage(
             options?.onBlocked?.('pending')
             return
         }
-        const localId = makeClientSideId('local')
-        const createdAt = Date.now()
+        const localId = sendOptions?.localId ?? makeClientSideId('local')
+        const createdAt = sendOptions?.createdAt ?? Date.now()
         void (async () => {
             let targetSessionId = sessionId
             if (options?.resolveSessionId) {

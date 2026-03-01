@@ -60,3 +60,25 @@ export function CheckIcon(props: IconProps) {
         2
     )
 }
+
+export function ResendIcon(props: IconProps) {
+    return createIcon(
+        <>
+            <path d="M3 4v6h6" />
+            <path d="M3 10a9 9 0 1 0 2.64-6.36L3 6" />
+        </>,
+        props,
+        2
+    )
+}
+
+export function EditIcon(props: IconProps) {
+    return createIcon(
+        <>
+            <path d="M12 20h9" />
+            <path d="m16.5 3.5 4 4L7 21l-4 1 1-4Z" />
+        </>,
+        props,
+        2
+    )
+}
