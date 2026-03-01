@@ -628,11 +628,31 @@ export function SessionChat(props: {
     // Message queue for sending while agent is running
     const messageQueue = useMessageQueue(!!props.session.thinking, handleSend)
 
-    const handleFlushNow = useCallback(() => {
-        messageQueue.flushNow()
-        abortSession()
-        props.onRefresh()
-    }, [messageQueue.flushNow, abortSession, props.onRefresh])
+    const handleFlushNow = useCallback(async () => {
+        // Codex compatibility:
+        // If we flush queued text before aborting, Codex can render the user message
+        // but fail to start a new run after the abort lands.
+        // Fix: abort first, keep queue intact, then let useMessageQueue auto-flush
+        // when thinking transitions to false.
+        try {
+            if (props.session.thinking) {
+                await abortSession()
+                props.onRefresh()
+                return
+            }
+
+            messageQueue.flushNow()
+            props.onRefresh()
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Network error'
+            addToast({
+                title: t('composer.abort'),
+                body: message,
+                sessionId: props.session.id,
+                url: ''
+            })
+        }
+    }, [props.session.thinking, messageQueue.flushNow, abortSession, props.onRefresh, addToast, props.session.id, t])
 
     const attachmentAdapter = useMemo(() => {
         if (!props.session.active) {
