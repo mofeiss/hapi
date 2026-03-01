@@ -381,6 +381,15 @@ export const knownTools: Record<string, {
             return resolveDisplayPath(data.path, opts.metadata)
         },
         minimal: false
+    },
+    Steps: {
+        icon: () => <ClipboardIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => {
+            const count = opts.childrenCount
+            return count > 0 ? `${count} Steps` : 'Steps'
+        },
+        subtitle: () => null,
+        minimal: false
     }
 }
 

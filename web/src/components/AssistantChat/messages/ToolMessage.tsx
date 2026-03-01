@@ -31,7 +31,7 @@ function isPendingPermissionBlock(block: ChatBlock): boolean {
     return block.kind === 'tool-call' && block.tool.permission?.status === 'pending'
 }
 
-function splitTaskChildren(block: ToolCallBlock): { pending: ChatBlock[]; rest: ChatBlock[] } {
+function splitToolChildren(block: ToolCallBlock): { pending: ChatBlock[]; rest: ChatBlock[] } {
     const pending: ChatBlock[] = []
     const rest: ChatBlock[] = []
 
@@ -44,6 +44,45 @@ function splitTaskChildren(block: ToolCallBlock): { pending: ChatBlock[]; rest: 
     }
 
     return { pending, rest }
+}
+
+function getToolDetailsLabel(
+    toolName: string,
+    count: number,
+    t: (key: string, params?: Record<string, string | number>) => string
+): string {
+    if (toolName === 'Task') return t('event.taskDetails', { count })
+    return t('event.toolDetails', { count })
+}
+
+function ToolChildren(props: {
+    block: ToolCallBlock
+    t: (key: string, params?: Record<string, string | number>) => string
+}) {
+    if (props.block.tool.name === 'Steps') return null
+    if (props.block.children.length === 0) return null
+
+    const children = splitToolChildren(props.block)
+
+    return (
+        <>
+            {children.pending.length > 0 ? (
+                <div className="mt-2 pl-3">
+                    <HappyNestedBlockList blocks={children.pending} />
+                </div>
+            ) : null}
+            {children.rest.length > 0 ? (
+                <details className="mt-2">
+                    <summary className="cursor-pointer text-xs text-[var(--app-hint)]">
+                        {getToolDetailsLabel(props.block.tool.name, children.rest.length, props.t)}
+                    </summary>
+                    <div className="mt-2 pl-3">
+                        <HappyNestedBlockList blocks={children.rest} />
+                    </div>
+                </details>
+            ) : null}
+        </>
+    )
 }
 
 function HappyNestedBlockList(props: {
@@ -113,9 +152,6 @@ function HappyNestedBlockList(props: {
                 }
 
                 if (block.kind === 'tool-call') {
-                    const isTask = block.tool.name === 'Task'
-                    const taskChildren = isTask ? splitTaskChildren(block) : null
-
                     return (
                         <div key={`tool:${block.id}`} className="py-1">
                             <ToolCard
@@ -126,31 +162,7 @@ function HappyNestedBlockList(props: {
                                 onDone={ctx.onRefresh}
                                 block={block}
                             />
-                            {block.children.length > 0 ? (
-                                isTask ? (
-                                    <>
-                                        {taskChildren && taskChildren.pending.length > 0 ? (
-                                            <div className="mt-2 pl-3">
-                                                <HappyNestedBlockList blocks={taskChildren.pending} />
-                                            </div>
-                                        ) : null}
-                                        {taskChildren && taskChildren.rest.length > 0 ? (
-                                            <details className="mt-2">
-                                                <summary className="cursor-pointer text-xs text-[var(--app-hint)]">
-                                                    {t('event.taskDetails', { count: taskChildren.rest.length })}
-                                                </summary>
-                                                <div className="mt-2 pl-3">
-                                                    <HappyNestedBlockList blocks={taskChildren.rest} />
-                                                </div>
-                                            </details>
-                                        ) : null}
-                                    </>
-                                ) : (
-                                    <div className="mt-2 pl-3">
-                                        <HappyNestedBlockList blocks={block.children} />
-                                    </div>
-                                )
-                            ) : null}
+                            <ToolChildren block={block} t={t} />
                         </div>
                     )
                 }
@@ -204,8 +216,6 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
     }
 
     const block = artifact
-    const isTask = block.tool.name === 'Task'
-    const taskChildren = isTask ? splitTaskChildren(block) : null
 
     return (
         <div className="py-1 min-w-0 max-w-full overflow-x-hidden">
@@ -217,31 +227,7 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
                 onDone={ctx.onRefresh}
                 block={block}
             />
-            {block.children.length > 0 ? (
-                isTask ? (
-                    <>
-                        {taskChildren && taskChildren.pending.length > 0 ? (
-                            <div className="mt-2 pl-3">
-                                <HappyNestedBlockList blocks={taskChildren.pending} />
-                            </div>
-                        ) : null}
-                        {taskChildren && taskChildren.rest.length > 0 ? (
-                            <details className="mt-2">
-                                <summary className="cursor-pointer text-xs text-[var(--app-hint)]">
-                                    Task details ({taskChildren.rest.length})
-                                </summary>
-                                <div className="mt-2 pl-3">
-                                    <HappyNestedBlockList blocks={taskChildren.rest} />
-                                </div>
-                            </details>
-                        ) : null}
-                    </>
-                ) : (
-                    <div className="mt-2 pl-3">
-                        <HappyNestedBlockList blocks={block.children} />
-                    </div>
-                )
-            ) : null}
+            <ToolChildren block={block} t={t} />
         </div>
     )
 }

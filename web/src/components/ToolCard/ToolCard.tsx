@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CodeBlock } from '@/components/CodeBlock'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { DiffView } from '@/components/DiffView'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
@@ -266,14 +265,6 @@ function statusColorClass(state: ToolCallBlock['tool']['state']): string {
     return 'text-[var(--app-hint)]'
 }
 
-function DetailsIcon() {
-    return (
-        <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
-            <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    )
-}
-
 function ExpandIcon(props: { expanded: boolean }) {
     return (
         <svg
@@ -326,37 +317,50 @@ function ToolCardInner(props: ToolCardProps) {
     const isAskUserQuestion = isAskUserQuestionToolName(toolName)
     const isRequestUserInput = isRequestUserInputToolName(toolName)
     const isQuestionTool = isAskUserQuestion || isRequestUserInput
-    const disableDialog = toolName === 'SkillRead'
-    const isSkillRead = toolName === 'SkillRead'
-    const [skillExpanded, setSkillExpanded] = useState(false)
+    const defaultExpanded = Boolean(
+        (isQuestionTool && permission?.status === 'pending')
+        || toolName === 'Steps'
+    )
+    const [expanded, setExpanded] = useState(defaultExpanded)
     const cardRef = useRef<HTMLDivElement | null>(null)
-    const expanded = isSkillRead ? skillExpanded : true
+    const hasInlineDetails = showInline || taskSummary !== null || toolName !== 'Task'
     const showsPermissionFooter = Boolean(permission && (
         permission.status === 'pending'
         || ((permission.status === 'denied' || permission.status === 'canceled') && Boolean(permission.reason))
     ))
-    const hasBody = expanded && (showInline || taskSummary !== null || showsPermissionFooter)
+    const hasBody = expanded && (hasInlineDetails || showsPermissionFooter)
+    const canExpand = hasInlineDetails || showsPermissionFooter
     const stateColor = statusColorClass(props.block.tool.state)
     const { suppressFocusRing, onTriggerPointerDown, onTriggerKeyDown, onTriggerBlur } = usePointerFocusRing()
 
-    const toggleSkillExpanded = () => {
-        if (!isSkillRead) return
+    useEffect(() => {
+        setExpanded(defaultExpanded)
+    }, [props.block.id, defaultExpanded])
 
-        const next = !skillExpanded
+    const toggleExpanded = () => {
+        if (!canExpand) return
+        const next = !expanded
         const cardEl = cardRef.current
         const viewport = cardEl?.closest('[data-chat-viewport="true"]') as HTMLElement | null
         const wasAtBottom = viewport
             ? (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) <= 2
             : false
+        const anchorTopBefore = cardEl?.getBoundingClientRect().top ?? null
 
-        setSkillExpanded(next)
+        setExpanded(next)
 
-        // 当滚动条已在最底部时，展开后需要把卡片头部重新锚定到可视区顶部，
-        // 避免“看起来向上展开”导致用户焦点落在内容底部。
-        if (next && wasAtBottom && cardEl) {
+        if (wasAtBottom && cardEl && viewport) {
+            viewport?.dispatchEvent(new CustomEvent('hapi:disable-auto-scroll'))
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    cardEl.scrollIntoView({ block: 'start', inline: 'nearest' })
+                    if (!cardRef.current) return
+                    if (!viewport.isConnected) return
+                    if (anchorTopBefore === null) return
+                    const anchorTopAfter = cardRef.current.getBoundingClientRect().top
+                    const delta = anchorTopAfter - anchorTopBefore
+                    if (Math.abs(delta) > 0.5) {
+                        viewport.scrollTop += delta
+                    }
                 })
             })
         }
@@ -376,7 +380,7 @@ function ToolCardInner(props: ToolCardProps) {
 
                 <div className="flex items-center gap-2 shrink-0">
                     <ElapsedView from={runningFrom} active={props.block.tool.state === 'running'} />
-                    {isSkillRead ? (
+                    {canExpand ? (
                         <span className="text-[var(--app-hint)]">
                             <ExpandIcon expanded={expanded} />
                         </span>
@@ -384,11 +388,6 @@ function ToolCardInner(props: ToolCardProps) {
                     <span className={stateColor}>
                         <StatusIcon state={props.block.tool.state} />
                     </span>
-                    {!disableDialog && !isSkillRead ? (
-                        <span className="text-[var(--app-hint)]">
-                            <DetailsIcon />
-                        </span>
-                    ) : null}
                 </div>
             </div>
 
@@ -400,75 +399,31 @@ function ToolCardInner(props: ToolCardProps) {
         </div>
     )
 
+    const isQuestionToolWithAnswers = Boolean(
+        isQuestionTool
+        && permission?.answers
+        && Object.keys(permission.answers).length > 0
+    )
+
     return (
         <Card ref={cardRef} className="overflow-hidden shadow-sm">
             <CardHeader className="p-3 space-y-0">
-                {disableDialog ? (
-                    isSkillRead ? (
-                        <button
-                            type="button"
-                            className={cn(
-                                'w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]',
-                                suppressFocusRing && 'focus-visible:ring-0'
-                            )}
-                            onClick={toggleSkillExpanded}
-                            onPointerDown={onTriggerPointerDown}
-                            onKeyDown={onTriggerKeyDown}
-                            onBlur={onTriggerBlur}
-                        >
-                            {header}
-                        </button>
-                    ) : (
-                        <div>{header}</div>
-                    )
+                {canExpand ? (
+                    <button
+                        type="button"
+                        className={cn(
+                            'w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]',
+                            suppressFocusRing && 'focus-visible:ring-0'
+                        )}
+                        onClick={toggleExpanded}
+                        onPointerDown={onTriggerPointerDown}
+                        onKeyDown={onTriggerKeyDown}
+                        onBlur={onTriggerBlur}
+                    >
+                        {header}
+                    </button>
                 ) : (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <button
-                                type="button"
-                                className={cn(
-                                    'w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]',
-                                    suppressFocusRing && 'focus-visible:ring-0'
-                                )}
-                                onPointerDown={onTriggerPointerDown}
-                                onKeyDown={onTriggerKeyDown}
-                                onBlur={onTriggerBlur}
-                            >
-                                {header}
-                            </button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                            <DialogHeader className="text-left">
-                                <DialogTitle>{toolTitle}</DialogTitle>
-                            </DialogHeader>
-                            {(() => {
-                                const isQuestionToolWithAnswers = isQuestionTool
-                                    && permission?.answers
-                                    && Object.keys(permission.answers).length > 0
-
-                                return (
-                                    <div className="mt-3 flex max-h-[75vh] flex-col gap-4 overflow-auto">
-                                        <div>
-                                            <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">
-                                                {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
-                                            </div>
-                                            {FullToolView ? (
-                                                <FullToolView block={props.block} metadata={props.metadata} />
-                                            ) : (
-                                                renderToolInput(props.block)
-                                            )}
-                                        </div>
-                                        {!isQuestionToolWithAnswers && (
-                                            <div>
-                                                <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                                                <ResultToolView block={props.block} metadata={props.metadata} />
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })()}
-                        </DialogContent>
-                    </Dialog>
+                    <div>{header}</div>
                 )}
             </CardHeader>
 
@@ -489,14 +444,39 @@ function ToolCardInner(props: ToolCardProps) {
                             <div className="mt-3 flex flex-col gap-3">
                                 <div>
                                     <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                                    {renderToolInput(props.block)}
+                                    {FullToolView ? (
+                                        <FullToolView block={props.block} metadata={props.metadata} />
+                                    ) : (
+                                        renderToolInput(props.block)
+                                    )}
                                 </div>
+                                {!isQuestionToolWithAnswers ? (
+                                    <div>
+                                        <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                                        <ResultToolView block={props.block} metadata={props.metadata} />
+                                    </div>
+                                ) : null}
+                            </div>
+                        )
+                    ) : toolName !== 'Task' ? (
+                        <div className="mt-3 flex flex-col gap-3">
+                            <div>
+                                <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">
+                                    {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                                </div>
+                                {FullToolView ? (
+                                    <FullToolView block={props.block} metadata={props.metadata} />
+                                ) : (
+                                    renderToolInput(props.block)
+                                )}
+                            </div>
+                            {!isQuestionToolWithAnswers ? (
                                 <div>
                                     <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                                     <ResultToolView block={props.block} metadata={props.metadata} />
                                 </div>
-                            </div>
-                        )
+                            ) : null}
+                        </div>
                     ) : null}
 
                     {isAskUserQuestion && permission?.status === 'pending' ? (

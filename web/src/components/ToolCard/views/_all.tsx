@@ -11,6 +11,7 @@ import { MultiEditFullView, MultiEditView } from '@/components/ToolCard/views/Mu
 import { TodoWriteView } from '@/components/ToolCard/views/TodoWriteView'
 import { WriteView } from '@/components/ToolCard/views/WriteView'
 import { SkillReadView } from '@/components/ToolCard/views/SkillReadView'
+import { StepsView } from '@/components/ToolCard/views/StepsView'
 
 export type ToolViewProps = {
     block: ToolCallBlock
@@ -27,6 +28,7 @@ export const toolViewRegistry: Record<string, ToolViewComponent> = {
     CodexDiff: CodexDiffCompactView,
     AskUserQuestion: AskUserQuestionView,
     SkillRead: SkillReadView,
+    Steps: StepsView,
     ExitPlanMode: ExitPlanModeView,
     ask_user_question: AskUserQuestionView,
     exit_plan_mode: ExitPlanModeView,
@@ -41,6 +43,7 @@ export const toolFullViewRegistry: Record<string, ToolViewComponent> = {
     CodexPatch: CodexPatchView,
     AskUserQuestion: AskUserQuestionView,
     SkillRead: SkillReadView,
+    Steps: StepsView,
     ExitPlanMode: ExitPlanModeView,
     ask_user_question: AskUserQuestionView,
     exit_plan_mode: ExitPlanModeView,

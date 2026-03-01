@@ -2,6 +2,7 @@ import type { AgentState } from '@/types/api'
 import type { ChatBlock, NormalizedMessage, UsageData } from '@/chat/types'
 import { traceMessages, type TracedMessage } from '@/chat/tracer'
 import { dedupeAgentEvents, foldApiErrorEvents } from '@/chat/reducerEvents'
+import { groupToolBlocksIntoSteps } from '@/chat/reducerSteps'
 import { collectTitleChanges, collectToolIdsFromMessages, ensureToolBlock, getPermissions } from '@/chat/reducerTools'
 import { reduceTimeline } from '@/chat/reducerTimeline'
 import { normalizeToolNameAsSkillRead } from '@/lib/skillRead'
@@ -106,5 +107,7 @@ export function reduceChatBlocks(
         }
     }
 
-    return { blocks: dedupeAgentEvents(foldApiErrorEvents(rootResult.blocks)), hasReadyEvent, latestUsage }
+    const normalizedBlocks = dedupeAgentEvents(foldApiErrorEvents(rootResult.blocks))
+    const groupedBlocks = groupToolBlocksIntoSteps(normalizedBlocks)
+    return { blocks: groupedBlocks, hasReadyEvent, latestUsage }
 }

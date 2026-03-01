@@ -72,10 +72,6 @@ export function HappyThread(props: {
         attachments?: AttachmentMetadata[]
     }) => void
     editedMessageTextById?: Record<string, string>
-    hasEditedResend?: boolean
-    collapsedSupersededCount?: number
-    showSupersededMessages?: boolean
-    onToggleSupersededMessages?: () => void
     onFlushPending: () => void
     onAtBottomChange: (atBottom: boolean) => void
     isLoadingMessages: boolean
@@ -160,6 +156,26 @@ export function HappyThread(props: {
         viewport.addEventListener('scroll', handleScroll, { passive: true })
         return () => viewport.removeEventListener('scroll', handleScroll)
     }, []) // Stable: no dependencies, reads from refs
+
+    // Allow nested UI (e.g. Steps/tool expanders) to explicitly disable auto-scroll
+    // so expansion doesn't anchor to bottom and appear to "expand upward".
+    useEffect(() => {
+        const viewport = viewportRef.current
+        if (!viewport) return
+
+        const onDisableAutoScroll = () => {
+            if (autoScrollEnabledRef.current) {
+                setAutoScrollEnabled(false)
+            }
+            if (atBottomRef.current) {
+                atBottomRef.current = false
+                onAtBottomChangeRef.current(false)
+            }
+        }
+
+        viewport.addEventListener('hapi:disable-auto-scroll', onDisableAutoScroll as EventListener)
+        return () => viewport.removeEventListener('hapi:disable-auto-scroll', onDisableAutoScroll as EventListener)
+    }, [])
 
     // Scroll to bottom handler for the indicator button
     const scrollToBottom = useCallback(() => {
@@ -312,23 +328,6 @@ export function HappyThread(props: {
                                     {props.messagesWarning ? (
                                         <div className="mb-3 rounded-md bg-amber-500/10 p-2 text-xs">
                                             {props.messagesWarning}
-                                        </div>
-                                    ) : null}
-
-                                    {props.hasEditedResend ? (
-                                        <div className="mb-3 rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2.5 py-2 text-xs text-[var(--app-hint)]">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span>{t('chat.edited.notice', { n: props.collapsedSupersededCount ?? 0 })}</span>
-                                                {(props.collapsedSupersededCount ?? 0) > 0 && props.onToggleSupersededMessages ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={props.onToggleSupersededMessages}
-                                                        className="underline underline-offset-2 hover:opacity-80"
-                                                    >
-                                                        {props.showSupersededMessages ? t('chat.edited.hide') : t('chat.edited.show')}
-                                                    </button>
-                                                ) : null}
-                                            </div>
                                         </div>
                                     ) : null}
 
