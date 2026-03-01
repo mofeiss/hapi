@@ -61,12 +61,8 @@ function PermissionRowButton(props: {
     disabled: boolean
     onClick: () => void
 }) {
-    const base = 'flex w-full items-center justify-between rounded-md px-2 py-2 text-sm text-left transition-colors disabled:pointer-events-none disabled:opacity-50 hover:bg-[var(--app-subtle-bg)]'
-    const tone = props.tone === 'allow'
-        ? 'text-emerald-600'
-        : props.tone === 'deny'
-            ? 'text-red-600'
-            : 'text-[var(--app-link)]'
+    const base = 'flex w-full items-center justify-between rounded-md border px-2 py-2 text-sm text-left transition-colors disabled:pointer-events-none disabled:opacity-50'
+    const tone = 'border-[var(--app-border)] text-[var(--app-fg)] bg-[var(--app-bg)] hover:bg-[var(--app-subtle-bg)]'
 
     return (
         <button
@@ -202,7 +198,7 @@ export function PermissionFooter(props: {
 
     return (
         <div className="mt-2">
-            <div className="text-xs text-[var(--app-hint)]">{summary}</div>
+            <div className={`text-xs ${isPending ? 'text-[var(--app-orange-base)]' : 'text-[var(--app-hint)]'}`}>{summary}</div>
 
             {error ? (
                 <div className="mt-2 text-xs text-red-600">

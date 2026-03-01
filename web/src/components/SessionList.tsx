@@ -227,7 +227,7 @@ function SessionItem(props: {
                             />
                         ) : null}
                         <span
-                            className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-amber-500' : ''}`}
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-[var(--app-orange-base)]' : ''}`}
                             aria-hidden="true"
                         >
                             {s.active && s.thinking ? (
@@ -279,7 +279,7 @@ function SessionItem(props: {
                             )
                         })()}
                         {s.pendingRequestsCount > 0 ? (
-                            <span className="text-[var(--app-badge-warning-text)]">
+                            <span className="text-[var(--app-orange-base)]">
                                 {t('session.item.pending')} {s.pendingRequestsCount}
                             </span>
                         ) : null}

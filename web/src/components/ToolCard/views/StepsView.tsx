@@ -1,13 +1,24 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { isObject, safeStringify } from '@hapi/protocol'
+import type { ApiClient } from '@/api/client'
 import type { ToolCallBlock } from '@/chat/types'
 import type { SessionMetadataSummary } from '@/types/api'
 import type { ToolViewComponent } from '@/components/ToolCard/views/_all'
 import { CodeBlock } from '@/components/CodeBlock'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
+import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
+import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
+import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
+import { isAskUserQuestionToolName } from '@/components/ToolCard/askUserQuestion'
+import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
 import { extractSkillReadData } from '@/lib/skillRead'
 import { useTranslation } from '@/lib/use-translation'
+
+function hasPendingPermissionInSubtree(block: ToolCallBlock): boolean {
+    if (block.tool.permission?.status === 'pending') return true
+    return block.children.some((child) => child.kind === 'tool-call' && hasPendingPermissionInSubtree(child))
+}
 
 function StepStatusIcon(props: { state: ToolCallBlock['tool']['state'] }) {
     if (props.state === 'completed') {
@@ -87,9 +98,15 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
 function StepNode(props: {
     block: ToolCallBlock
     metadata: SessionMetadataSummary | null
+    api?: ApiClient
+    sessionId?: string
+    disabled?: boolean
+    onDone?: () => void
 }) {
-    const [open, setOpen] = useState(false)
+    const shouldAutoOpen = hasPendingPermissionInSubtree(props.block)
+    const [open, setOpen] = useState(shouldAutoOpen)
     const nodeRef = useRef<HTMLDivElement | null>(null)
+    const prevShouldAutoOpenRef = useRef(shouldAutoOpen)
     const presentation = useMemo(() => getToolPresentation({
         toolName: props.block.tool.name,
         input: props.block.tool.input,
@@ -101,6 +118,14 @@ function StepNode(props: {
 
     const childTools = props.block.children.filter((child): child is ToolCallBlock => child.kind === 'tool-call')
     const otherChildren = props.block.children.filter((child) => child.kind !== 'tool-call')
+
+    useEffect(() => {
+        if (shouldAutoOpen && !prevShouldAutoOpenRef.current) {
+            setOpen(true)
+        }
+        prevShouldAutoOpenRef.current = shouldAutoOpen
+    }, [shouldAutoOpen])
+
     const toggleOpen = () => {
         const next = !open
         const nodeEl = nodeRef.current
@@ -156,6 +181,53 @@ function StepNode(props: {
                 <div className="ml-5 border-l border-[var(--app-border)] pl-2.5 space-y-1">
                     <StepNodeDetails block={props.block} />
 
+                    {(() => {
+                        if (!props.api || !props.sessionId || !props.onDone) return null
+
+                        const permission = props.block.tool.permission
+                        const toolName = props.block.tool.name
+                        const isAskUserQuestion = isAskUserQuestionToolName(toolName)
+                        const isRequestUserInput = isRequestUserInputToolName(toolName)
+                        let content: ReactNode = null
+
+                        if (isAskUserQuestion && permission?.status === 'pending') {
+                            content = (
+                                <AskUserQuestionFooter
+                                    api={props.api}
+                                    sessionId={props.sessionId}
+                                    tool={props.block.tool}
+                                    disabled={props.disabled ?? false}
+                                    onDone={props.onDone}
+                                />
+                            )
+                        } else if (isRequestUserInput && permission?.status === 'pending') {
+                            content = (
+                                <RequestUserInputFooter
+                                    api={props.api}
+                                    sessionId={props.sessionId}
+                                    tool={props.block.tool}
+                                    disabled={props.disabled ?? false}
+                                    onDone={props.onDone}
+                                />
+                            )
+                        } else {
+                            content = (
+                                <PermissionFooter
+                                    api={props.api}
+                                    sessionId={props.sessionId}
+                                    metadata={props.metadata}
+                                    tool={props.block.tool}
+                                    disabled={props.disabled ?? false}
+                                    onDone={props.onDone}
+                                />
+                            )
+                        }
+
+                        if (!content) return null
+
+                        return <div className="mt-1 rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2 py-1.5">{content}</div>
+                    })()}
+
                     {otherChildren.map((child) => {
                         if (child.kind === 'agent-text') {
                             return (
@@ -179,7 +251,15 @@ function StepNode(props: {
                     {childTools.length > 0 ? (
                         <div className="space-y-0.5">
                             {childTools.map((child) => (
-                                <StepNode key={child.id} block={child} metadata={props.metadata} />
+                                <StepNode
+                                    key={child.id}
+                                    block={child}
+                                    metadata={props.metadata}
+                                    api={props.api}
+                                    sessionId={props.sessionId}
+                                    disabled={props.disabled}
+                                    onDone={props.onDone}
+                                />
                             ))}
                         </div>
                     ) : null}
@@ -199,7 +279,15 @@ export const StepsView: ToolViewComponent = (props) => {
     return (
         <div className="space-y-0.5">
             {children.map((child) => (
-                <StepNode key={child.id} block={child} metadata={props.metadata} />
+                <StepNode
+                    key={child.id}
+                    block={child}
+                    metadata={props.metadata}
+                    api={props.api}
+                    sessionId={props.sessionId}
+                    disabled={props.disabled}
+                    onDone={props.onDone}
+                />
             ))}
         </div>
     )

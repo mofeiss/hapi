@@ -22,6 +22,8 @@ import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { useMessageQueue } from '@/hooks/useMessageQueue'
 import { setSessionTitleOverride, clearSessionTitleOverride, useSessionTitleOverride } from '@/lib/session-title-override-store'
 import { makeClientSideId } from '@/lib/messages'
+import { useToast } from '@/lib/toast-context'
+import { useTranslation } from '@/lib/use-translation'
 
 type SendOptions = {
     localId?: string
@@ -98,6 +100,8 @@ export function SessionChat(props: {
     onSessionDeleted?: () => void
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
 }) {
+    const { t } = useTranslation()
+    const { addToast } = useToast()
     const { haptic } = usePlatform()
     const sessionInactive = !props.session.active
     const normalizedCacheRef = useRef<Map<string, { source: DecryptedMessage; normalized: NormalizedMessage | null }>>(new Map())
@@ -189,6 +193,12 @@ export function SessionChat(props: {
 
         for (const [requestId, request] of Object.entries(requests)) {
             if (!prevRequestIdsRef.current.has(requestId)) {
+                addToast({
+                    title: t('misc.permissionRequired'),
+                    body: t('tool.waitingForApproval'),
+                    sessionId: props.session.id,
+                    url: ''
+                })
                 voiceHooks.onPermissionRequested(
                     props.session.id,
                     requestId,
@@ -199,7 +209,7 @@ export function SessionChat(props: {
         }
 
         prevRequestIdsRef.current = currentIds
-    }, [props.session.agentState?.requests, props.session.id])
+    }, [addToast, props.session.agentState?.requests, props.session.id, t])
 
     const handleVoiceToggle = useCallback((options?: { discard?: boolean }) => {
         stt.toggle(options)

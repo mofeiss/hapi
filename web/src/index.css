@@ -19,6 +19,7 @@
     --app-subtle-bg: rgba(0, 0, 0, 0.05);
     --app-code-bg: #f6f8fa;
     --app-inline-code-bg: rgba(0, 0, 0, 0.08);
+    --app-orange-base: #f59e0b;
 
     /* Diff colors (light) - from hapi-app */
     --app-diff-added-bg: #e6ffed;
@@ -65,6 +66,7 @@
     --app-subtle-bg: rgba(255, 255, 255, 0.05);
     --app-code-bg: #282c34;
     --app-inline-code-bg: rgba(255, 255, 255, 0.1);
+    --app-orange-base: #f59e0b;
 
     /* Diff colors (dark) - from hapi-app */
     --app-diff-added-bg: #0d2e1f;

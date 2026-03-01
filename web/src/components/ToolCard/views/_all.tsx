@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import type { ApiClient } from '@/api/client'
 import type { ToolCallBlock } from '@/chat/types'
 import type { SessionMetadataSummary } from '@/types/api'
 import { CodexDiffCompactView, CodexDiffFullView } from '@/components/ToolCard/views/CodexDiffView'
@@ -16,6 +17,10 @@ import { StepsView } from '@/components/ToolCard/views/StepsView'
 export type ToolViewProps = {
     block: ToolCallBlock
     metadata: SessionMetadataSummary | null
+    api?: ApiClient
+    sessionId?: string
+    disabled?: boolean
+    onDone?: () => void
 }
 
 export type ToolViewComponent = ComponentType<ToolViewProps>

@@ -86,6 +86,11 @@ function getTaskSummaryChildren(block: ToolCallBlock): { visible: ToolCallBlock[
     return { visible, remaining: children.length - visible.length }
 }
 
+function hasPendingPermissionInTree(block: ToolCallBlock): boolean {
+    if (block.tool.permission?.status === 'pending') return true
+    return block.children.some((child) => child.kind === 'tool-call' && hasPendingPermissionInTree(child))
+}
+
 function renderTaskSummary(block: ToolCallBlock, metadata: SessionMetadataSummary | null): ReactNode | null {
     const summary = getTaskSummaryChildren(block)
     if (!summary) return null
@@ -314,15 +319,21 @@ function ToolCardInner(props: ToolCardProps) {
     const FullToolView = getToolFullViewComponent(toolName)
     const ResultToolView = getToolResultViewComponent(toolName)
     const permission = props.block.tool.permission
+    const hasPendingPermission = useMemo(
+        () => hasPendingPermissionInTree(props.block),
+        [props.block]
+    )
     const isAskUserQuestion = isAskUserQuestionToolName(toolName)
     const isRequestUserInput = isRequestUserInputToolName(toolName)
     const isQuestionTool = isAskUserQuestion || isRequestUserInput
     const defaultExpanded = Boolean(
         (isQuestionTool && permission?.status === 'pending')
+        || hasPendingPermission
         || toolName === 'Steps'
     )
     const [expanded, setExpanded] = useState(defaultExpanded)
     const cardRef = useRef<HTMLDivElement | null>(null)
+    const prevHasPendingPermissionRef = useRef(hasPendingPermission)
     const hasInlineDetails = showInline || taskSummary !== null || toolName !== 'Task'
     const showsPermissionFooter = Boolean(permission && (
         permission.status === 'pending'
@@ -336,6 +347,13 @@ function ToolCardInner(props: ToolCardProps) {
     useEffect(() => {
         setExpanded(defaultExpanded)
     }, [props.block.id, defaultExpanded])
+
+    useEffect(() => {
+        if (hasPendingPermission && !prevHasPendingPermissionRef.current) {
+            setExpanded(true)
+        }
+        prevHasPendingPermissionRef.current = hasPendingPermission
+    }, [hasPendingPermission])
 
     const toggleExpanded = () => {
         if (!canExpand) return
@@ -438,14 +456,28 @@ function ToolCardInner(props: ToolCardProps) {
                     {showInline ? (
                         CompactToolView ? (
                             <div className="mt-3">
-                                <CompactToolView block={props.block} metadata={props.metadata} />
+                                <CompactToolView
+                                    block={props.block}
+                                    metadata={props.metadata}
+                                    api={props.api}
+                                    sessionId={props.sessionId}
+                                    disabled={props.disabled}
+                                    onDone={props.onDone}
+                                />
                             </div>
                         ) : (
                             <div className="mt-3 flex flex-col gap-3">
                                 <div>
                                     <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
                                     {FullToolView ? (
-                                        <FullToolView block={props.block} metadata={props.metadata} />
+                                        <FullToolView
+                                            block={props.block}
+                                            metadata={props.metadata}
+                                            api={props.api}
+                                            sessionId={props.sessionId}
+                                            disabled={props.disabled}
+                                            onDone={props.onDone}
+                                        />
                                     ) : (
                                         renderToolInput(props.block)
                                     )}
@@ -465,7 +497,14 @@ function ToolCardInner(props: ToolCardProps) {
                                     {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
                                 </div>
                                 {FullToolView ? (
-                                    <FullToolView block={props.block} metadata={props.metadata} />
+                                    <FullToolView
+                                        block={props.block}
+                                        metadata={props.metadata}
+                                        api={props.api}
+                                        sessionId={props.sessionId}
+                                        disabled={props.disabled}
+                                        onDone={props.onDone}
+                                    />
                                 ) : (
                                     renderToolInput(props.block)
                                 )}

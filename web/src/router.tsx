@@ -767,7 +767,7 @@ function SessionsPage() {
                     title={getSessionTitle(s)}
                   >
                     <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-amber-500' : ''}`}
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-[var(--app-orange-base)]' : ''}`}
                     >
                       {s.active && s.thinking ? (
                         <span className="inline-block text-[15px] leading-none text-white" style={{ animation: 'spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite' }}>✻</span>

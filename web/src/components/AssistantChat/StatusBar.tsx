@@ -35,8 +35,8 @@ function getConnectionStatus(
     if (hasPermissions) {
         return {
             text: t('misc.permissionRequired'),
-            color: 'text-amber-500',
-            dotColor: 'bg-amber-500',
+            color: 'text-[var(--app-orange-base)]',
+            dotColor: 'bg-[var(--app-orange-base)]',
             isPulsing: true
         }
     }
