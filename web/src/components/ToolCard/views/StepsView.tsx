@@ -167,10 +167,10 @@ function StepNode(props: {
                 <span className="shrink-0">
                     <StepStatusIcon state={props.block.tool.state} />
                 </span>
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-1 truncate whitespace-nowrap">
                     <span className="text-sm text-[var(--app-fg)]">{presentation.title}</span>
                     {presentation.subtitle ? (
-                        <span className="ml-2 font-mono text-xs text-[var(--app-hint)] break-all">
+                        <span className="ml-2 font-mono text-xs text-[var(--app-hint)]">
                             {presentation.subtitle}
                         </span>
                     ) : null}
