@@ -323,13 +323,9 @@ export function reduceTimeline(
                 }
 
                 if (c.type === 'sidechain') {
-                    blocks.push({
-                        kind: 'user-text',
-                        id: `${msg.id}:${idx}`,
-                        localId: null,
-                        createdAt: msg.createdAt,
-                        text: c.prompt
-                    })
+                    // Sidechain prompt is already represented by Task tool input.
+                    // Rendering it as a nested user bubble duplicates content in Task details.
+                    continue
                 }
             }
         }
