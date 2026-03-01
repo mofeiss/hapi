@@ -64,8 +64,8 @@ export function CheckIcon(props: IconProps) {
 export function ResendIcon(props: IconProps) {
     return createIcon(
         <>
-            <path d="M3 4v6h6" />
-            <path d="M3 10a9 9 0 1 0 2.64-6.36L3 6" />
+            <path d="M20 5v5h-5" />
+            <path d="M20 10a8 8 0 1 0 2.34 5.66" />
         </>,
         props,
         2
