@@ -219,6 +219,17 @@ Notes:
 
 Package: `cli/package.json` -> `@ofeiss/hapi` (fork of `@twsxtd/hapi`)
 
+### 触发工作流约定（重要）
+
+- 当用户提到“构建 npm / 打 npm 包 / 准备 npm 发布”，默认进入本节完整流程
+- 默认交付物：
+  - 已完成构建与 `npm pack` 产物
+  - 给出可直接执行的 `npm publish ...tgz --access public --otp=` 命令
+- 默认不执行 `npm publish`，除非用户明确要求“现在就发布”
+- 流程开始前必须先检查并更新版本号（至少 patch +1）：
+  - npm 不允许重复发布同一版本
+  - 不升版本会导致发布失败
+
 ### 架构说明
 
 项目采用多包分发架构：
@@ -235,8 +246,13 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
 ### 完整发布流程
 
 1. 下载 tunwg 工具（构建前置依赖）：
+   先检查本地是否已存在，只有缺失时才下载，避免重复下载。
    ```bash
-   bun run download:tunwg
+   if ls hub/tools/tunwg/tunwg-* >/dev/null 2>&1 && [ -f hub/tools/tunwg/LICENSE ]; then
+     echo "tunwg 已存在，跳过下载"
+   else
+     bun run download:tunwg
+   fi
    ```
 
 2. 构建 web 前端并嵌入：
