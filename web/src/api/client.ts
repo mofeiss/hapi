@@ -441,6 +441,16 @@ export class ApiClient {
         })
     }
 
+    async logVoiceDebugEvent(event: string, payload?: Record<string, unknown>): Promise<void> {
+        await this.request('/api/voice/debug-event', {
+            method: 'POST',
+            body: JSON.stringify({
+                event,
+                payload
+            })
+        })
+    }
+
     async transcribeAudio(audioBlob: Blob, language?: string): Promise<{ text: string; language_code?: string }> {
         const formData = new FormData()
         formData.append('file', audioBlob, 'recording.webm')

@@ -8,6 +8,7 @@ import {
 } from '@hapi/protocol/voice'
 import { configuration } from '../../configuration'
 import { readSettings } from '../../config/settings'
+import { writeVoiceDebugLog } from '../../utils/voiceDebugLog'
 
 const tokenRequestSchema = z.object({
     customAgentId: z.string().optional(),
@@ -24,6 +25,12 @@ const correctionRequestSchema = z.object({
     deltaRaw: z.string().max(4000).optional(),
     latestSegment: z.string().max(4000).optional()
 })
+
+const debugEventRequestSchema = z.object({
+    event: z.string().min(1).max(120),
+    payload: z.record(z.string(), z.unknown()).optional()
+})
+const ENABLE_VOICE_DEBUG_EVENT_ROUTE = false
 
 const VOICE_CORRECTION_SYSTEM_PROMPT = `你是“语音识别文本修正器”，不是聊天助手，不是问答助手。
 
@@ -282,6 +289,28 @@ async function getOrCreateAgentId(apiKey: string): Promise<string | null> {
 
 export function createVoiceRoutes(): Hono<WebAppEnv> {
     const app = new Hono<WebAppEnv>()
+
+    app.post('/voice/debug-event', async (c) => {
+        if (!ENABLE_VOICE_DEBUG_EVENT_ROUTE) {
+            return c.json({ ok: true, disabled: true })
+        }
+
+        const json = await c.req.json().catch(() => null)
+        const parsed = debugEventRequestSchema.safeParse(json ?? {})
+        if (!parsed.success) {
+            return c.json({ ok: false, error: 'invalid-body' }, 400)
+        }
+
+        const namespace = c.get('namespace')
+        await writeVoiceDebugLog(parsed.data.event, {
+            namespace,
+            path: c.req.path,
+            method: c.req.method,
+            ...(parsed.data.payload ?? {})
+        })
+
+        return c.json({ ok: true })
+    })
 
     // Get ElevenLabs ConvAI conversation token
     app.post('/voice/token', async (c) => {
