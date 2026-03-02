@@ -199,6 +199,7 @@ function MiniSelect(props: {
     disabled?: boolean
     icon?: React.ReactNode
     compactOnMobile?: boolean
+    labelAlign?: 'center' | 'left'
 }) {
     const [open, setOpen] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
@@ -233,6 +234,7 @@ function MiniSelect(props: {
 
     const selectedLabel = props.options.find((o) => o.value === props.value)?.label ?? props.value
     const shortLabel = selectedLabel.charAt(0).toUpperCase()
+    const labelAlignClass = props.labelAlign === 'left' ? 'text-left justify-items-start' : ''
 
     return (
         <>
@@ -253,13 +255,13 @@ function MiniSelect(props: {
                         <span className="inline-grid sm:hidden">
                             <span className="col-start-1 row-start-1">{shortLabel}</span>
                         </span>
-                        <span className="hidden sm:inline-grid">
+                        <span className={`hidden sm:inline-grid ${labelAlignClass}`}>
                             {props.options.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label}</span>)}
                             <span className="col-start-1 row-start-1">{selectedLabel}</span>
                         </span>
                     </>
                 ) : (
-                    <span className="inline-grid">
+                    <span className={`inline-grid ${labelAlignClass}`}>
                         {props.options.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label}</span>)}
                         <span className="col-start-1 row-start-1">{selectedLabel}</span>
                     </span>
@@ -734,6 +736,7 @@ export function ComposerButtons(props: {
                         disabled={props.controlsDisabled}
                         icon={<ModelIcon />}
                         compactOnMobile
+                        labelAlign="left"
                     />
                 ) : null}
 
