@@ -6,6 +6,7 @@ const AGENT_STORAGE_KEY = 'hapi:newSession:agent'
 const PERMISSION_MODE_STORAGE_KEY = 'hapi:newSession:permissionMode:v2'
 const LEGACY_PERMISSION_MODE_STORAGE_KEY = 'hapi:newSession:permissionMode'
 const PLAN_ACTIVE_STORAGE_KEY = 'hapi:newSession:planActive'
+const DIRECTORY_STORAGE_KEY = 'hapi:newSession:directory'
 
 const VALID_AGENTS: AgentType[] = ['claude', 'codex', 'gemini', 'opencode']
 
@@ -75,6 +76,31 @@ export function loadPreferredPlanActive(): boolean {
 export function savePreferredPlanActive(enabled: boolean): void {
     try {
         localStorage.setItem(PLAN_ACTIVE_STORAGE_KEY, enabled ? 'true' : 'false')
+    } catch {
+        // Ignore storage errors
+    }
+}
+
+export function loadPreferredDirectory(): string {
+    try {
+        const stored = localStorage.getItem(DIRECTORY_STORAGE_KEY)
+        if (stored && stored.trim()) {
+            return stored
+        }
+    } catch {
+        // Ignore storage errors
+    }
+    return '~'
+}
+
+export function savePreferredDirectory(directory: string): void {
+    const trimmed = directory.trim()
+    if (!trimmed) {
+        return
+    }
+
+    try {
+        localStorage.setItem(DIRECTORY_STORAGE_KEY, trimmed)
     } catch {
         // Ignore storage errors
     }

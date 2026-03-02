@@ -128,6 +128,15 @@ export class RpcGateway {
                 if (obj.type === 'error' && typeof obj.errorMessage === 'string') {
                     return { type: 'error', message: obj.errorMessage }
                 }
+                if (typeof obj.error === 'string') {
+                    return { type: 'error', message: obj.error }
+                }
+                if (typeof obj.message === 'string') {
+                    return { type: 'error', message: obj.message }
+                }
+                if (obj.type === 'requestToApproveDirectoryCreation' && typeof obj.directory === 'string') {
+                    return { type: 'error', message: `Directory creation requires approval: ${obj.directory}` }
+                }
             }
             return { type: 'error', message: 'Unexpected spawn result' }
         } catch (error) {

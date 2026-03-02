@@ -16,9 +16,11 @@ import { MachineSelector } from './MachineSelector'
 import { ModelSelector } from './ModelSelector'
 import {
     loadPreferredAgent,
+    loadPreferredDirectory,
     loadPreferredPermissionMode,
     loadPreferredPlanActive,
     savePreferredAgent,
+    savePreferredDirectory,
     savePreferredPermissionMode,
     savePreferredPlanActive,
 } from './preferences'
@@ -40,7 +42,7 @@ export function NewSession(props: {
     const { getRecentPaths, addRecentPath, getLastUsedMachineId, setLastUsedMachineId } = useRecentPaths()
 
     const [machineId, setMachineId] = useState<string | null>(null)
-    const [directory, setDirectory] = useState('')
+    const [directory, setDirectory] = useState(loadPreferredDirectory)
     const [suppressSuggestions, setSuppressSuggestions] = useState(false)
     const [isDirectoryFocused, setIsDirectoryFocused] = useState(false)
     const [pathExistence, setPathExistence] = useState<Record<string, boolean>>({})
@@ -88,6 +90,10 @@ export function NewSession(props: {
     }, [isPlanActive])
 
     useEffect(() => {
+        savePreferredDirectory(directory)
+    }, [directory])
+
+    useEffect(() => {
         if (props.machines.length === 0) return
         if (machineId && props.machines.find((m) => m.id === machineId)) return
 
@@ -96,12 +102,10 @@ export function NewSession(props: {
 
         if (foundLast) {
             setMachineId(foundLast.id)
-            const paths = getRecentPaths(foundLast.id)
-            if (paths[0]) setDirectory(paths[0])
         } else if (props.machines[0]) {
             setMachineId(props.machines[0].id)
         }
-    }, [props.machines, machineId, getLastUsedMachineId, getRecentPaths])
+    }, [props.machines, machineId, getLastUsedMachineId])
 
     const recentPaths = useMemo(
         () => getRecentPaths(machineId),
@@ -165,13 +169,7 @@ export function NewSession(props: {
 
     const handleMachineChange = useCallback((newMachineId: string) => {
         setMachineId(newMachineId)
-        const paths = getRecentPaths(newMachineId)
-        if (paths[0]) {
-            setDirectory(paths[0])
-        } else {
-            setDirectory('')
-        }
-    }, [getRecentPaths])
+    }, [])
 
     const handlePathClick = useCallback((path: string) => {
         setDirectory(path)

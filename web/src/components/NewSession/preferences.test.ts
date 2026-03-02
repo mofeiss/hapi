@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
     loadPreferredAgent,
+    loadPreferredDirectory,
     loadPreferredPermissionMode,
     loadPreferredPlanActive,
     savePreferredAgent,
+    savePreferredDirectory,
     savePreferredPermissionMode,
     savePreferredPlanActive,
 } from './preferences'
@@ -18,16 +20,19 @@ describe('NewSession preferences', () => {
         expect(loadPreferredPermissionMode()).toBe('bypassPermissions')
         expect(loadPreferredPermissionMode('codex')).toBe('yolo')
         expect(loadPreferredPlanActive()).toBe(false)
+        expect(loadPreferredDirectory()).toBe('~')
     })
 
     it('loads saved values from storage', () => {
         localStorage.setItem('hapi:newSession:agent', 'codex')
         localStorage.setItem('hapi:newSession:permissionMode:v2', 'safe-yolo')
         localStorage.setItem('hapi:newSession:planActive', 'true')
+        localStorage.setItem('hapi:newSession:directory', '/Users/ofeiss/project/hapi')
 
         expect(loadPreferredAgent()).toBe('codex')
         expect(loadPreferredPermissionMode()).toBe('safe-yolo')
         expect(loadPreferredPlanActive()).toBe(true)
+        expect(loadPreferredDirectory()).toBe('/Users/ofeiss/project/hapi')
     })
 
     it('falls back to highest mode for target agent when saved mode is not allowed', () => {
@@ -50,9 +55,11 @@ describe('NewSession preferences', () => {
         savePreferredAgent('gemini')
         savePreferredPermissionMode('bypassPermissions')
         savePreferredPlanActive(true)
+        savePreferredDirectory('/tmp')
 
         expect(localStorage.getItem('hapi:newSession:agent')).toBe('gemini')
         expect(localStorage.getItem('hapi:newSession:permissionMode:v2')).toBe('bypassPermissions')
         expect(localStorage.getItem('hapi:newSession:planActive')).toBe('true')
+        expect(localStorage.getItem('hapi:newSession:directory')).toBe('/tmp')
     })
 })
