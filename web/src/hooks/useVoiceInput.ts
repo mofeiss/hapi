@@ -26,6 +26,10 @@ interface SpeechRecognition extends EventTarget {
     onresult: ((ev: SpeechRecognitionEvent) => void) | null
     onerror: ((ev: SpeechRecognitionErrorEvent) => void) | null
     onend: (() => void) | null
+    onspeechstart?: (() => void) | null
+    onspeechend?: (() => void) | null
+    onsoundstart?: (() => void) | null
+    onsoundend?: (() => void) | null
 }
 
 declare global {
@@ -80,6 +84,9 @@ function computeDeltaRaw(prevRaw: string, currentRaw: string): string {
 const PREFIX_COMPARE_SEPARATOR_RE = /[\s，。,！!？?；;：:"“”'‘’、]/u
 const MIN_PREV_RAW_LENGTH_FOR_STABILITY = 6
 const MIN_PREV_CORRECTED_LENGTH_FOR_STABILITY = 4
+const CORRECTION_DEBOUNCE_MS = 450
+const CORRECTION_AFTER_SPEECH_END_MS = 180
+const CORRECTION_AFTER_FINAL_RESULT_MS = 80
 
 function buildComparableText(text: string): { normalized: string; indexMap: number[] } {
     let normalized = ''
@@ -174,7 +181,7 @@ export function useVoiceInput(api: ApiClient) {
     const activeRecordingIdRef = useRef(0)
     const recordingIdCounterRef = useRef(0)
     const stopOptionsRef = useRef<VoiceToggleOptions>({ discard: false })
-    const realtimeCorrectionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const correctionDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const rawTextRef = useRef('')
     const correctedTextRef = useRef('')
     const lastRequestedRawRef = useRef('')
@@ -208,6 +215,10 @@ export function useVoiceInput(api: ApiClient) {
         lastRequestedRawRef.current = ''
         rawTextRef.current = ''
         correctedTextRef.current = ''
+        if (correctionDebounceTimerRef.current) {
+            clearTimeout(correctionDebounceTimerRef.current)
+            correctionDebounceTimerRef.current = null
+        }
         correctionAvailabilityRef.current = 'unknown'
         setRawText('')
         setCorrectedText('')
@@ -220,10 +231,10 @@ export function useVoiceInput(api: ApiClient) {
         return activeRecordingIdRef.current === recordingId
     }, [])
 
-    const stopRealtimeCorrectionLoop = useCallback(() => {
-        if (realtimeCorrectionTimerRef.current) {
-            clearInterval(realtimeCorrectionTimerRef.current)
-            realtimeCorrectionTimerRef.current = null
+    const clearScheduledRealtimeCorrection = useCallback(() => {
+        if (correctionDebounceTimerRef.current) {
+            clearTimeout(correctionDebounceTimerRef.current)
+            correctionDebounceTimerRef.current = null
         }
     }, [])
 
@@ -320,22 +331,27 @@ export function useVoiceInput(api: ApiClient) {
         }
     }, [isActiveRecording, runSingleCorrection, updateCorrectedText])
 
-    const startRealtimeCorrectionLoop = useCallback((recordingId: number) => {
-        stopRealtimeCorrectionLoop()
-        realtimeCorrectionTimerRef.current = setInterval(() => {
+    const scheduleRealtimeCorrection = useCallback((recordingId: number, delayMs: number) => {
+        if (!isActiveRecording(recordingId)) return
+        if (!allowRealtimeCorrectionRef.current) return
+        if (stopOptionsRef.current.discard) return
+
+        clearScheduledRealtimeCorrection()
+        correctionDebounceTimerRef.current = setTimeout(() => {
+            correctionDebounceTimerRef.current = null
             void maybeRequestRealtimeCorrection(recordingId)
-        }, 200)
-    }, [maybeRequestRealtimeCorrection, stopRealtimeCorrectionLoop])
+        }, delayMs)
+    }, [clearScheduledRealtimeCorrection, isActiveRecording, maybeRequestRealtimeCorrection])
 
     const finishRecordingSession = useCallback((recordingId: number) => {
         if (!isActiveRecording(recordingId)) return
-        stopRealtimeCorrectionLoop()
+        clearScheduledRealtimeCorrection()
         allowRealtimeCorrectionRef.current = false
         activeRecordingIdRef.current = 0
         stopOptionsRef.current = { discard: false }
         onInterimRef.current?.('')
         setStatus('idle')
-    }, [isActiveRecording, stopRealtimeCorrectionLoop])
+    }, [clearScheduledRealtimeCorrection, isActiveRecording])
 
     const processFinalTranscript = useCallback(async (rawText: string, recordingId: number) => {
         if (!isActiveRecording(recordingId)) return
@@ -348,7 +364,7 @@ export function useVoiceInput(api: ApiClient) {
             return
         }
 
-        stopRealtimeCorrectionLoop()
+        clearScheduledRealtimeCorrection()
         allowRealtimeCorrectionRef.current = false
         updateRawText(text)
         setStatus('transcribing')
@@ -371,7 +387,7 @@ export function useVoiceInput(api: ApiClient) {
         }
 
         finishRecordingSession(recordingId)
-    }, [finishRecordingSession, isActiveRecording, runSingleCorrection, stopRealtimeCorrectionLoop, updateCorrectedText, updateRawText])
+    }, [clearScheduledRealtimeCorrection, finishRecordingSession, isActiveRecording, runSingleCorrection, updateCorrectedText, updateRawText])
 
     // --- Web Speech API path ---
     const startWebSpeech = useCallback(() => {
@@ -395,10 +411,12 @@ export function useVoiceInput(api: ApiClient) {
 
             let interim = ''
             let final = ''
+            let hasFinalSegment = false
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const transcript = event.results[i][0].transcript
                 if (event.results[i].isFinal) {
                     final += transcript
+                    hasFinalSegment = true
                 } else {
                     interim += transcript
                 }
@@ -412,9 +430,20 @@ export function useVoiceInput(api: ApiClient) {
             const draft = mergeFinalAndInterim(finalTranscript, interim)
             if (draft) {
                 updateRawText(draft)
-                void maybeRequestRealtimeCorrection(recordingId)
+                scheduleRealtimeCorrection(
+                    recordingId,
+                    hasFinalSegment ? CORRECTION_AFTER_FINAL_RESULT_MS : CORRECTION_DEBOUNCE_MS
+                )
             }
         }
+
+        const handleSpeechBoundary = () => {
+            if (!isActiveRecording(recordingId)) return
+            if (stopOptionsRef.current.discard) return
+            scheduleRealtimeCorrection(recordingId, CORRECTION_AFTER_SPEECH_END_MS)
+        }
+        recognition.onspeechend = handleSpeechBoundary
+        recognition.onsoundend = handleSpeechBoundary
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             if (!isActiveRecording(recordingId)) return
@@ -433,19 +462,19 @@ export function useVoiceInput(api: ApiClient) {
         try {
             recognition.start()
             setStatus('recording')
-            startRealtimeCorrectionLoop(recordingId)
         } catch (err) {
             activeRecordingIdRef.current = 0
             stopOptionsRef.current = { discard: false }
             setStatus('idle')
             setError(err instanceof Error ? err.message : 'Failed to start speech recognition')
         }
-    }, [beginRecordingSession, isActiveRecording, maybeRequestRealtimeCorrection, processFinalTranscript, startRealtimeCorrectionLoop, updateRawText])
+    }, [beginRecordingSession, isActiveRecording, processFinalTranscript, scheduleRealtimeCorrection, updateRawText])
 
     const stopWebSpeech = useCallback((options?: VoiceToggleOptions) => {
         stopOptionsRef.current = { discard: options?.discard === true }
+        clearScheduledRealtimeCorrection()
         recognitionRef.current?.stop()
-    }, [])
+    }, [clearScheduledRealtimeCorrection])
 
     // --- MediaRecorder + ElevenLabs fallback path ---
     const startFallback = useCallback(async () => {

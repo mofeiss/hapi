@@ -6,6 +6,8 @@ import {
     VOICE_AGENT_NAME,
     buildVoiceAgentConfig
 } from '@hapi/protocol/voice'
+import { configuration } from '../../configuration'
+import { readSettings } from '../../config/settings'
 
 const tokenRequestSchema = z.object({
     customAgentId: z.string().optional(),
@@ -143,6 +145,48 @@ interface ElevenLabsAgent {
     name: string
 }
 
+interface VoiceCorrectionConfig {
+    baseUrl: string
+    apiKey: string
+    model: string
+}
+
+interface VoiceRuntimeConfig {
+    elevenLabsApiKey: string
+    elevenLabsAgentId: string
+    correction: VoiceCorrectionConfig
+}
+
+function normalizeString(value: string | undefined): string {
+    return (value ?? '').trim()
+}
+
+async function loadVoiceRuntimeConfig(): Promise<VoiceRuntimeConfig> {
+    const settings = await readSettings(configuration.settingsFile)
+
+    const envElevenLabsApiKey = normalizeString(process.env.ELEVENLABS_API_KEY)
+    const envElevenLabsAgentId = normalizeString(process.env.ELEVENLABS_AGENT_ID)
+    const fileElevenLabsApiKey = normalizeString(settings?.ELEVENLABS_API_KEY)
+    const fileElevenLabsAgentId = normalizeString(settings?.ELEVENLABS_AGENT_ID)
+
+    const envBaseUrl = normalizeString(process.env.HAPI_VOICE_CORRECTION_BASE_URL)
+    const envApiKey = normalizeString(process.env.HAPI_VOICE_CORRECTION_API_KEY)
+    const envModel = normalizeString(process.env.HAPI_VOICE_CORRECTION_MODEL)
+    const fileBaseUrl = normalizeString(settings?.HAPI_VOICE_CORRECTION_BASE_URL ?? settings?.voiceCorrectionBaseUrl)
+    const fileApiKey = normalizeString(settings?.HAPI_VOICE_CORRECTION_API_KEY ?? settings?.voiceCorrectionApiKey)
+    const fileModel = normalizeString(settings?.HAPI_VOICE_CORRECTION_MODEL ?? settings?.voiceCorrectionModel)
+
+    return {
+        elevenLabsApiKey: envElevenLabsApiKey || fileElevenLabsApiKey,
+        elevenLabsAgentId: envElevenLabsAgentId || fileElevenLabsAgentId,
+        correction: {
+            baseUrl: envBaseUrl || fileBaseUrl,
+            apiKey: envApiKey || fileApiKey,
+            model: envModel || fileModel || 'small'
+        }
+    }
+}
+
 /**
  * Find an existing "Hapi Voice Assistant" agent
  */
@@ -249,9 +293,10 @@ export function createVoiceRoutes(): Hono<WebAppEnv> {
 
         const { customAgentId, customApiKey } = parsed.data
 
-        // Use custom credentials if provided, otherwise fall back to env vars
-        const apiKey = customApiKey || process.env.ELEVENLABS_API_KEY
-        let agentId = customAgentId || process.env.ELEVENLABS_AGENT_ID
+        // Use custom credentials if provided, otherwise fall back to env -> settings.
+        const voiceConfig = await loadVoiceRuntimeConfig()
+        const apiKey = normalizeString(customApiKey) || voiceConfig.elevenLabsApiKey
+        let agentId: string | undefined = normalizeString(customAgentId) || voiceConfig.elevenLabsAgentId || undefined
 
         if (!apiKey) {
             return c.json({
@@ -318,7 +363,8 @@ export function createVoiceRoutes(): Hono<WebAppEnv> {
 
     // Speech-to-text transcription via ElevenLabs Scribe v2
     app.post('/voice/transcribe', async (c) => {
-        const apiKey = process.env.ELEVENLABS_API_KEY
+        const voiceConfig = await loadVoiceRuntimeConfig()
+        const apiKey = voiceConfig.elevenLabsApiKey
         if (!apiKey) {
             return c.json({ error: 'ElevenLabs API key not configured' }, 400)
         }
@@ -378,22 +424,11 @@ export function createVoiceRoutes(): Hono<WebAppEnv> {
         const deltaRaw = parsed.data.deltaRaw?.trim() || ''
         const latestSegment = parsed.data.latestSegment?.trim() || deltaRaw
 
-        const baseUrl = (
-            process.env.ANTHROPIC_BASE_URL
-            || process.env.VOICE_CORRECTION_API_BASE
-            || ''
-        ).trim()
-        const apiKey = (
-            process.env.ANTHROPIC_AUTH_TOKEN
-            || process.env.ANTHROPIC_API_KEY
-            || process.env.VOICE_CORRECTION_API_KEY
-            || ''
-        ).trim()
-        const model = (
-            process.env.VOICE_CORRECTION_MODEL
-            || process.env.ANTHROPIC_MODEL
-            || 'small'
-        ).trim()
+        const {
+            baseUrl,
+            apiKey,
+            model
+        } = (await loadVoiceRuntimeConfig()).correction
 
         if (!baseUrl || !apiKey) {
             return c.json({ text: currentRawFull, corrected: false, reason: 'voice-correction-not-configured' })

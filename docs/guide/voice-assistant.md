@@ -48,18 +48,24 @@ export ELEVENLABS_AGENT_ID="your-agent-id"
 You can enable LLM post-correction for speech-to-text output:
 
 ```bash
-export ANTHROPIC_BASE_URL="https://your-anthropic-compatible-api"
-export ANTHROPIC_AUTH_TOKEN="your-token"
-export VOICE_CORRECTION_MODEL="small"
+export HAPI_VOICE_CORRECTION_BASE_URL="https://your-anthropic-compatible-api"
+export HAPI_VOICE_CORRECTION_API_KEY="your-token"
+export HAPI_VOICE_CORRECTION_MODEL="small"
 ```
 
 Variable mapping used by `/api/voice/correct`:
 
-- `BASE_URL`: `ANTHROPIC_BASE_URL` or `VOICE_CORRECTION_API_BASE`
-- `AUTH_TOKEN`: `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_API_KEY` or `VOICE_CORRECTION_API_KEY`
-- `MODEL`: `VOICE_CORRECTION_MODEL` or `ANTHROPIC_MODEL` (default: `small`)
+- `BASE_URL`: `HAPI_VOICE_CORRECTION_BASE_URL`
+- `AUTH_TOKEN`: `HAPI_VOICE_CORRECTION_API_KEY`
+- `MODEL`: `HAPI_VOICE_CORRECTION_MODEL` (default: `small`)
 
-Note: these are currently environment variables only, not `settings.json` fields.
+Configuration priority: `ENV > settings.json > default`.
+
+You can also set the same keys in `~/.hapi/settings.json`:
+
+- `HAPI_VOICE_CORRECTION_BASE_URL`
+- `HAPI_VOICE_CORRECTION_API_KEY`
+- `HAPI_VOICE_CORRECTION_MODEL`
 
 ## Usage
 
@@ -135,8 +141,8 @@ Set `ELEVENLABS_API_KEY` in your environment and restart the hub.
 
 ### Text correction not applied
 
-- If `ANTHROPIC_BASE_URL` or auth token is missing, voice input still works, but correction is skipped
-- Verify `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` (or supported aliases)
+- If `HAPI_VOICE_CORRECTION_BASE_URL` or auth token is missing, voice input still works, but correction is skipped
+- Verify `HAPI_VOICE_CORRECTION_BASE_URL` / `HAPI_VOICE_CORRECTION_API_KEY`
 - Check hub logs for `/api/voice/correct` errors
 
 ### "Failed to create ElevenLabs agent automatically"

@@ -132,7 +132,7 @@ Only if they have your access token. For additional security:
 
 - Re-run `hapi auth login`
 - Check token matches in CLI and hub
-- Verify `~/.hapi/settings.json` has correct `cliApiToken`
+- Verify `~/.hapi/settings.json` has correct `CLI_API_TOKEN`
 
 ### Runner won't start
 

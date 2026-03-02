@@ -170,23 +170,23 @@ On first run, HAPI:
 
 | Variable | Default | settings.json | Description |
 |----------|---------|---------------|-------------|
-| `CLI_API_TOKEN` | Auto-generated | `cliApiToken` | Shared secret for authentication |
-| `HAPI_API_URL` | `http://localhost:3006` | `apiUrl` | Hub URL for CLI connections |
-| `HAPI_LISTEN_HOST` | `127.0.0.1` | `listenHost` | Hub HTTP bind address |
-| `HAPI_LISTEN_PORT` | `3006` | `listenPort` | Hub HTTP port |
-| `HAPI_PUBLIC_URL` | - | `publicUrl` | Public URL for external access |
-| `CORS_ORIGINS` | - | `corsOrigins` | Allowed CORS origins (comma-separated) |
-| `TELEGRAM_BOT_TOKEN` | - | `telegramBotToken` | Telegram Bot API token |
-| `TELEGRAM_NOTIFICATION` | `true` | `telegramNotification` | Enable Telegram notifications |
+| `CLI_API_TOKEN` | Auto-generated | `CLI_API_TOKEN` | Shared secret for authentication |
+| `HAPI_API_URL` | `http://localhost:3006` | `HAPI_API_URL` | Hub URL for CLI connections |
+| `HAPI_LISTEN_HOST` | `127.0.0.1` | `HAPI_LISTEN_HOST` | Hub HTTP bind address |
+| `HAPI_LISTEN_PORT` | `3006` | `HAPI_LISTEN_PORT` | Hub HTTP port |
+| `HAPI_PUBLIC_URL` | - | `HAPI_PUBLIC_URL` | Public URL for external access |
+| `CORS_ORIGINS` | - | `CORS_ORIGINS` | Allowed CORS origins |
+| `TELEGRAM_BOT_TOKEN` | - | `TELEGRAM_BOT_TOKEN` | Telegram Bot API token |
+| `TELEGRAM_NOTIFICATION` | `true` | `TELEGRAM_NOTIFICATION` | Enable Telegram notifications |
 | `HAPI_RELAY_FORCE_TCP` | `false` | - | Force TCP mode for relay |
 | `VAPID_SUBJECT` | `mailto:admin@hapi.run` | - | Web Push contact info |
 | `HAPI_HOME` | `~/.hapi` | - | Config directory path |
 | `DB_PATH` | `~/.hapi/hapi.db` | - | Database file path |
-| `ELEVENLABS_API_KEY` | - | - | ElevenLabs API key for voice |
-| `ELEVENLABS_AGENT_ID` | Auto-created | - | Custom ElevenLabs agent ID |
-| `ANTHROPIC_BASE_URL` | - | - | Anthropic-compatible base URL for voice text correction |
-| `ANTHROPIC_AUTH_TOKEN` | - | - | Auth token for voice text correction (`ANTHROPIC_API_KEY` also supported) |
-| `VOICE_CORRECTION_MODEL` | `small` | - | Model used by voice text correction (`ANTHROPIC_MODEL` also supported) |
+| `ELEVENLABS_API_KEY` | - | `ELEVENLABS_API_KEY` | ElevenLabs API key for voice |
+| `ELEVENLABS_AGENT_ID` | Auto-created | `ELEVENLABS_AGENT_ID` | Custom ElevenLabs agent ID |
+| `HAPI_VOICE_CORRECTION_BASE_URL` | - | `HAPI_VOICE_CORRECTION_BASE_URL` | Anthropic-compatible base URL for voice text correction |
+| `HAPI_VOICE_CORRECTION_API_KEY` | - | `HAPI_VOICE_CORRECTION_API_KEY` | API key for voice text correction |
+| `HAPI_VOICE_CORRECTION_MODEL` | `small` | `HAPI_VOICE_CORRECTION_MODEL` | Model used by voice text correction |
 </details>
 
 <details>
@@ -194,14 +194,14 @@ On first run, HAPI:
 
 Configuration priority: **ENV > settings.json > default**
 
-When ENV values are set and not present in settings.json, they are automatically saved.
+Core hub settings may be auto-saved from ENV to settings.json; voice-related keys can be set directly in settings.json using the same names.
 
 ```json
 {
   "$schema": "https://hapi.run/docs/schemas/settings.schema.json",
-  "listenHost": "0.0.0.0",
-  "listenPort": 3006,
-  "publicUrl": "https://your-domain.com"
+  "HAPI_LISTEN_HOST": "0.0.0.0",
+  "HAPI_LISTEN_PORT": 3006,
+  "HAPI_PUBLIC_URL": "https://your-domain.com"
 }
 ```
 
@@ -581,17 +581,17 @@ hapi hub --relay
 Optional: enable LLM post-correction for speech-to-text output:
 
 ```bash
-export ANTHROPIC_BASE_URL="https://your-anthropic-compatible-api"
-export ANTHROPIC_AUTH_TOKEN="your-token"
-export VOICE_CORRECTION_MODEL="small"
+export HAPI_VOICE_CORRECTION_BASE_URL="https://your-anthropic-compatible-api"
+export HAPI_VOICE_CORRECTION_API_KEY="your-token"
+export HAPI_VOICE_CORRECTION_MODEL="small"
 ```
 
 Notes:
-- The correction endpoint accepts aliases for compatibility:
-  - `ANTHROPIC_BASE_URL` or `VOICE_CORRECTION_API_BASE`
-  - `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_API_KEY` or `VOICE_CORRECTION_API_KEY`
-  - `VOICE_CORRECTION_MODEL` or `ANTHROPIC_MODEL`
-- These are currently environment variables only (not persisted in `settings.json`).
+- Configuration priority: `ENV > settings.json > default`.
+- You can set the same keys in `~/.hapi/settings.json`:
+  - `HAPI_VOICE_CORRECTION_BASE_URL`
+  - `HAPI_VOICE_CORRECTION_API_KEY`
+  - `HAPI_VOICE_CORRECTION_MODEL`
 
 See [Voice Assistant](./voice-assistant.md) for usage details.
 

@@ -20,8 +20,12 @@ export async function initializeApiUrl(): Promise<void> {
         return
     }
 
-    // 2. Read from settings file (new name first, then legacy)
+    // 2. Read from settings file (unified key first, then legacy)
     const settings = await readSettings()
+    if (settings.HAPI_API_URL) {
+        configuration._setApiUrl(settings.HAPI_API_URL)
+        return
+    }
     if (settings.apiUrl) {
         configuration._setApiUrl(settings.apiUrl)
         return

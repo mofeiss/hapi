@@ -4,7 +4,7 @@
  * Automatically starts the HAPI hub when CLI is launched
  * if specific conditions are met:
  * 1. HAPI_API_URL is not set (using default localhost:3006)
- * 2. cliApiToken exists in settings.json (hub was previously started)
+ * 2. CLI_API_TOKEN exists in settings.json (hub was previously started)
  * 3. Port 3006 is not currently listening
  */
 
@@ -99,15 +99,15 @@ async function shouldAutoStartServer(): Promise<boolean> {
     // Condition 2: Check settings.json
     const settings = await readSettings()
 
-    // 2a: apiUrl is set in settings.json (user configured a specific hub)
-    if (settings.apiUrl || settings.serverUrl) {
-        logger.debug('[AUTO-START] apiUrl is set in settings.json, skipping auto-start')
+    // 2a: HAPI_API_URL is set in settings.json (user configured a specific hub)
+    if (settings.HAPI_API_URL || settings.apiUrl || settings.serverUrl) {
+        logger.debug('[AUTO-START] HAPI_API_URL is set in settings.json, skipping auto-start')
         return false
     }
 
-    // 2b: cliApiToken exists in settings.json (hub was previously started)
-    if (!settings.cliApiToken) {
-        logger.debug('[AUTO-START] No cliApiToken in settings, skipping auto-start')
+    // 2b: CLI_API_TOKEN exists in settings.json (hub was previously started)
+    if (!settings.CLI_API_TOKEN && !settings.cliApiToken) {
+        logger.debug('[AUTO-START] No CLI_API_TOKEN in settings, skipping auto-start')
         return false
     }
 

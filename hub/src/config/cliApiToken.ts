@@ -68,7 +68,7 @@ function normalizeCliApiToken(rawToken: string, source: CliApiTokenSource): { to
  *
  * Priority:
  * 1. CLI_API_TOKEN environment variable (highest - backward compatible)
- * 2. settings.json cliApiToken field
+ * 2. settings.json CLI_API_TOKEN field
  * 3. Auto-generate and save to settings.json
  */
 export async function getOrCreateCliApiToken(dataDir: string): Promise<CliApiTokenResult> {
@@ -84,8 +84,8 @@ export async function getOrCreateCliApiToken(dataDir: string): Promise<CliApiTok
 
         // Persist env token to file if not already saved (prevents token loss on env var issues)
         const settings = await readSettings(settingsFile)
-        if (settings !== null && !settings.cliApiToken) {
-            settings.cliApiToken = normalized.token
+        if (settings !== null && !settings.CLI_API_TOKEN && !settings.cliApiToken) {
+            settings.CLI_API_TOKEN = normalized.token
             await writeSettings(settingsFile, settings)
         }
 
@@ -95,18 +95,22 @@ export async function getOrCreateCliApiToken(dataDir: string): Promise<CliApiTok
     const result = await getOrCreateSettingsValue({
         settingsFile,
         readValue: (settings) => {
-            if (!settings.cliApiToken) {
+            const persistedToken = settings.CLI_API_TOKEN ?? settings.cliApiToken
+            if (!persistedToken) {
                 return null
             }
-            const normalized = normalizeCliApiToken(settings.cliApiToken, 'file')
-            if (normalized.didStrip) {
-                settings.cliApiToken = normalized.token
+            const normalized = normalizeCliApiToken(persistedToken, 'file')
+            const needsMigration = settings.CLI_API_TOKEN !== normalized.token || Boolean(settings.cliApiToken)
+            if (normalized.didStrip || needsMigration) {
+                settings.CLI_API_TOKEN = normalized.token
+                delete settings.cliApiToken
                 return { value: normalized.token, writeBack: true }
             }
             return { value: normalized.token }
         },
         writeValue: (settings, value) => {
-            settings.cliApiToken = value
+            settings.CLI_API_TOKEN = value
+            delete settings.cliApiToken
         },
         generate: generateSecureToken
     })

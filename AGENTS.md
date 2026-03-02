@@ -89,8 +89,9 @@ Steps:
 
 1) Start local hub+web dev with temporary env (same shell only):
 ```bash
-env ANTHROPIC_BASE_URL="<your-base-url>" \
-    ANTHROPIC_AUTH_TOKEN="<your-token>" \
+env HAPI_VOICE_CORRECTION_BASE_URL="<your-llm-base-url>" \
+    HAPI_VOICE_CORRECTION_API_KEY="<your-token>" \
+    HAPI_VOICE_CORRECTION_MODEL="<your-model>" \
     bun run dev
 ```
 
@@ -115,6 +116,13 @@ HAPI_API_URL="http://127.0.0.1:3006" bun run dev claude --yolo
 
 Notes:
 - this voice-text-correction flow does **not** depend on runner; hub is enough
+- voice correction config priority: env > `~/.hapi/settings.json` > default
+- settings.json fields for voice correction:
+  - `HAPI_VOICE_CORRECTION_BASE_URL`
+  - `HAPI_VOICE_CORRECTION_API_KEY`
+  - `HAPI_VOICE_CORRECTION_MODEL`
+  - `ELEVENLABS_API_KEY`
+- if base URL or API key missing, correction auto-fallback to raw transcript (`voice-correction-not-configured`)
 - user often tests remotely via ngrok to local Vite (`:5173`)
 - never store real tokens in repo docs/logs; placeholders only
 - avoid impacting stable services/processes during debug; if conflict risk, ask user first

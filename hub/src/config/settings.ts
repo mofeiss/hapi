@@ -6,19 +6,40 @@ export interface Settings {
     machineId?: string
     machineIdConfirmedByServer?: boolean
     runnerAutoStartWhenRunningHappy?: boolean
+    // Unified keys (same naming as environment variables)
+    CLI_API_TOKEN?: string
+    HAPI_API_URL?: string
+    HAPI_LISTEN_HOST?: string
+    HAPI_LISTEN_PORT?: number | string
+    HAPI_PUBLIC_URL?: string
+    CORS_ORIGINS?: string[] | string
+    TELEGRAM_BOT_TOKEN?: string
+    TELEGRAM_NOTIFICATION?: boolean | string
+    ELEVENLABS_API_KEY?: string
+    ELEVENLABS_AGENT_ID?: string
+    HAPI_VOICE_CORRECTION_BASE_URL?: string
+    HAPI_VOICE_CORRECTION_API_KEY?: string
+    HAPI_VOICE_CORRECTION_MODEL?: string
+    // Legacy keys (read-only compatibility)
     cliApiToken?: string
     vapidKeys?: {
         publicKey: string
         privateKey: string
     }
-    // Server configuration (persisted from environment variables)
+    // Server configuration (legacy names)
     telegramBotToken?: string
     telegramNotification?: boolean
     listenHost?: string
-    listenPort?: number
+    listenPort?: number | string
     publicUrl?: string
-    corsOrigins?: string[]
+    corsOrigins?: string[] | string
+    apiUrl?: string
+    // Legacy voice correction keys (read-only compatibility)
+    voiceCorrectionBaseUrl?: string
+    voiceCorrectionApiKey?: string
+    voiceCorrectionModel?: string
     // Legacy field names (for migration, read-only)
+    serverUrl?: string
     webappHost?: string
     webappPort?: number
     webappUrl?: string

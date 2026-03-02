@@ -16,8 +16,12 @@ interface Settings {
   machineId?: string
   machineIdConfirmedByServer?: boolean
   runnerAutoStartWhenRunningHappy?: boolean
-  cliApiToken?: string
+  // Unified keys (same naming as environment variables)
+  CLI_API_TOKEN?: string
   // API URL for server connections (priority: env HAPI_API_URL > this > default)
+  HAPI_API_URL?: string
+  // Legacy keys (read-only compatibility)
+  cliApiToken?: string
   apiUrl?: string
   // Legacy field name (for migration, read-only)
   serverUrl?: string

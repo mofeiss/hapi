@@ -125,8 +125,12 @@ export async function runDoctorCommand(filter?: 'all' | 'runner'): Promise<void>
         try {
             settings = await readSettings();
             console.log(chalk.bold('\n📄 Settings (settings.json):'));
-            // Hide cliApiToken in output for security
-            const displaySettings = { ...settings, cliApiToken: settings.cliApiToken ? '***' : undefined };
+            // Hide tokens in output for security
+            const displaySettings = {
+                ...settings,
+                CLI_API_TOKEN: settings.CLI_API_TOKEN ? '***' : undefined,
+                cliApiToken: settings.cliApiToken ? '***' : undefined
+            };
             console.log(chalk.gray(JSON.stringify(displaySettings, null, 2)));
         } catch (error) {
             console.log(chalk.bold('\n📄 Settings:'));
@@ -137,7 +141,7 @@ export async function runDoctorCommand(filter?: 'all' | 'runner'): Promise<void>
         // Authentication status (direct-connect)
         console.log(chalk.bold('\n🔐 Direct Connect Auth'));
         const envToken = process.env.CLI_API_TOKEN;
-        const settingsToken = settings.cliApiToken;
+        const settingsToken = settings.CLI_API_TOKEN || settings.cliApiToken;
         const hasToken = Boolean(envToken || settingsToken);
         const tokenSource = envToken ? 'environment variable' : (settingsToken ? 'settings file' : 'none');
         if (hasToken) {

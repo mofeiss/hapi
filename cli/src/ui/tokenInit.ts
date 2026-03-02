@@ -27,10 +27,11 @@ export async function initializeToken(): Promise<void> {
         return
     }
 
-    // 2. Read from settings file
+    // 2. Read from settings file (unified key first, then legacy)
     const settings = await readSettings()
-    if (settings.cliApiToken) {
-        configuration._setCliApiToken(settings.cliApiToken)
+    const settingsToken = settings.CLI_API_TOKEN || settings.cliApiToken
+    if (settingsToken) {
+        configuration._setCliApiToken(settingsToken)
         return
     }
 
@@ -45,7 +46,8 @@ export async function initializeToken(): Promise<void> {
     // 5. Save and update configuration
     await updateSettings(current => ({
         ...current,
-        cliApiToken: token
+        CLI_API_TOKEN: token,
+        cliApiToken: undefined
     }))
     configuration._setCliApiToken(token)
 }

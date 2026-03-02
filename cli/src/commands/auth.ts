@@ -17,7 +17,7 @@ export async function handleAuthCommand(args: string[]): Promise<void> {
     if (subcommand === 'status') {
         const settings = await readSettings()
         const envToken = process.env.CLI_API_TOKEN
-        const settingsToken = settings.cliApiToken
+        const settingsToken = settings.CLI_API_TOKEN || settings.cliApiToken
         const hasToken = Boolean(envToken || settingsToken)
         const tokenSource = envToken ? 'environment' : (settingsToken ? 'settings file' : 'none')
         console.log(chalk.bold('\nDirect Connect Status\n'))
@@ -58,7 +58,8 @@ export async function handleAuthCommand(args: string[]): Promise<void> {
 
             await updateSettings(current => ({
                 ...current,
-                cliApiToken: token.trim()
+                CLI_API_TOKEN: token.trim(),
+                cliApiToken: undefined
             }))
             configuration._setCliApiToken(token.trim())
             console.log(chalk.green(`\nToken saved to ${configuration.settingsFile}`))
@@ -71,6 +72,7 @@ export async function handleAuthCommand(args: string[]): Promise<void> {
     if (subcommand === 'logout') {
         await updateSettings(current => ({
             ...current,
+            CLI_API_TOKEN: undefined,
             cliApiToken: undefined
         }))
         await clearMachineId()
