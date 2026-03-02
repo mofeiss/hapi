@@ -54,7 +54,6 @@ export function HappyComposer(props: {
     onPermissionModeChange?: (mode: PermissionMode) => void
     onModelModeChange?: (mode: ModelMode) => void
     onPlanToggle?: () => void
-    onSwitchToRemote?: () => void
     autocompletePrefixes?: string[]
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
     // Voice assistant props
@@ -686,7 +685,8 @@ export function HappyComposer(props: {
                                     abortDisabled={abortDisabled}
                                     isAborting={isAborting}
                                     onAbort={handleAbort}
-                                    showQrButton={!isTouch}
+                                    showCopyButton={!isTouch}
+                                    inputText={composerText}
                                     voiceEnabled={voiceEnabled}
                                     voiceStatus={voiceStatus}
                                     voiceMicMuted={voiceMicMuted}
@@ -744,7 +744,8 @@ export function HappyComposer(props: {
                                     abortDisabled={abortDisabled}
                                     isAborting={isAborting}
                                     onAbort={handleAbort}
-                                    showQrButton={!isTouch}
+                                    showCopyButton={!isTouch}
+                                    inputText={composerText}
                                     voiceEnabled={voiceEnabled}
                                     voiceStatus={voiceStatus}
                                     voiceMicMuted={voiceMicMuted}

@@ -120,7 +120,7 @@ export function SessionChat(props: {
     const [editedResend, setEditedResend] = useState<EditedResendState | null>(null)
     const [editedMessageTextById, setEditedMessageTextById] = useState<Record<string, string>>({})
     const agentFlavor = props.session.metadata?.flavor ?? null
-    const { abortSession, switchSession, setPermissionMode, setModelMode } = useSessionActions(
+    const { abortSession, setPermissionMode, setModelMode } = useSessionActions(
         props.api,
         props.session.id,
         agentFlavor
@@ -550,12 +550,6 @@ export function SessionChat(props: {
         props.onRefresh()
     }, [abortSession, props.onRefresh])
 
-    // Switch to remote handler
-    const handleSwitchToRemote = useCallback(async () => {
-        await switchSession()
-        props.onRefresh()
-    }, [switchSession, props.onRefresh])
-
     const [filesOpen, setFilesOpen] = useState(false)
     const [terminalOpen, setTerminalOpen] = useState(false)
 
@@ -755,7 +749,6 @@ export function SessionChat(props: {
                         onPermissionModeChange={handlePermissionModeChange}
                         onModelModeChange={handleModelModeChange}
                         onPlanToggle={handlePlanToggle}
-                        onSwitchToRemote={handleSwitchToRemote}
                         autocompleteSuggestions={props.autocompleteSuggestions}
                         voiceStatus={sttVoiceStatus}
                         voiceRawText={stt.rawText}

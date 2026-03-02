@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { QRCodeSVG } from 'qrcode.react'
 import { ComposerPrimitive } from '@assistant-ui/react'
 import type { ConversationStatus } from '@/realtime/types'
 import { useTranslation } from '@/lib/use-translation'
@@ -109,7 +108,7 @@ function SpeakerIcon(props: { muted?: boolean }) {
     )
 }
 
-function SwitchToRemoteIcon() {
+function CopyIcon() {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -122,8 +121,26 @@ function SwitchToRemoteIcon() {
             strokeLinecap="round"
             strokeLinejoin="round"
         >
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-            <line x1="12" y1="18" x2="12.01" y2="18" />
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+    )
+}
+
+function CheckIcon() {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <path d="M20 6 9 17l-5-5" />
         </svg>
     )
 }
@@ -484,40 +501,40 @@ function UnifiedButton(props: {
     )
 }
 
-function QrCodeButton() {
+function CopyInputButton(props: { inputText: string }) {
     const { t } = useTranslation()
-    const [open, setOpen] = useState(false)
+    const [copied, setCopied] = useState(false)
+    const canCopy = props.inputText.length > 0
+
+    useEffect(() => {
+        if (!copied) return
+        const timer = window.setTimeout(() => setCopied(false), 1200)
+        return () => window.clearTimeout(timer)
+    }, [copied])
+
+    const handleCopy = useCallback(async () => {
+        if (!canCopy || !navigator.clipboard?.writeText) return
+        try {
+            await navigator.clipboard.writeText(props.inputText)
+            setCopied(true)
+        } catch (error) {
+            console.error('Failed to copy composer text:', error)
+        }
+    }, [canCopy, props.inputText])
+
+    const label = copied ? t('composer.copied') : t('composer.copy')
 
     return (
-        <>
-            <button
-                type="button"
-                aria-label={t('composer.mobileAccess')}
-                title={t('composer.mobileAccess')}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]"
-                onClick={() => setOpen(true)}
-            >
-                <SwitchToRemoteIcon />
-            </button>
-            {open ? createPortal(
-                <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center"
-                    onClick={() => setOpen(false)}
-                >
-                    <div className="fixed inset-0 bg-black/30" />
-                    <div
-                        className="relative rounded-2xl bg-white p-6 shadow-xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <QRCodeSVG value={window.location.href} size={200} />
-                        <p className="mt-3 max-w-[200px] text-center text-xs text-gray-500">
-                            {t('composer.scanToOpen')}
-                        </p>
-                    </div>
-                </div>,
-                document.body
-            ) : null}
-        </>
+        <button
+            type="button"
+            aria-label={label}
+            title={label}
+            disabled={!canCopy}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => { void handleCopy() }}
+        >
+            {copied ? <CheckIcon /> : <CopyIcon />}
+        </button>
     )
 }
 
@@ -662,7 +679,8 @@ export function ComposerButtons(props: {
     abortDisabled: boolean
     isAborting: boolean
     onAbort: () => void
-    showQrButton: boolean
+    showCopyButton: boolean
+    inputText: string
     voiceEnabled: boolean
     voiceStatus: ConversationStatus
     voiceMicMuted?: boolean
@@ -748,9 +766,20 @@ export function ComposerButtons(props: {
                     )
                 })() : null}
 
-                {props.showQrButton ? (
-                    <QrCodeButton />
+                {props.showCopyButton ? (
+                    <CopyInputButton inputText={props.inputText} />
                 ) : null}
+
+                <button
+                    type="button"
+                    aria-label={t('composer.clear')}
+                    title={t('composer.clear')}
+                    disabled={props.controlsDisabled || !props.canClear}
+                    onClick={props.onClear}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <ClearInputIcon />
+                </button>
 
                 {isVoiceConnected && props.onVoiceMicToggle ? (
                     <button
@@ -770,17 +799,6 @@ export function ComposerButtons(props: {
             </div>
 
             <div className="flex items-center gap-1">
-                <button
-                    type="button"
-                    aria-label={t('composer.clear')}
-                    title={t('composer.clear')}
-                    disabled={props.controlsDisabled || !props.canClear}
-                    onClick={props.onClear}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <ClearInputIcon />
-                </button>
-
                 <UnifiedButton
                     canSend={props.canSend}
                     controlsDisabled={props.controlsDisabled}
