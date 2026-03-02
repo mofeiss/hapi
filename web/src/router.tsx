@@ -301,6 +301,8 @@ function SessionsPage() {
   const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(
     new Set(),
   );
+  const [batchArchivingIds, setBatchArchivingIds] = useState<Set<string>>(new Set());
+  const [batchDeletingIds, setBatchDeletingIds] = useState<Set<string>>(new Set());
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
   const [batchPending, setBatchPending] = useState(false);
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
@@ -342,6 +344,46 @@ function SessionsPage() {
         .map((s) => s.id),
     );
   }, [sessions, batchMode]);
+
+  useEffect(() => {
+    setBatchArchivingIds((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+      const activeIds = new Set(
+        sessions.filter((session) => session.active).map((session) => session.id),
+      );
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (activeIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [sessions]);
+
+  useEffect(() => {
+    setBatchDeletingIds((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+      const existingIds = new Set(sessions.map((session) => session.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (existingIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [sessions]);
 
   const handleBatchSelectAll = useCallback(() => {
     setBatchSelectedIds(new Set(batchFilteredIds));
@@ -426,7 +468,23 @@ function SessionsPage() {
     const ids = [...batchSelectedIds];
 
     // Optimistic: immediately update UI and close dialog
+    if (mode === "archive") {
+      setBatchArchivingIds((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) {
+          next.add(id);
+        }
+        return next;
+      });
+    }
     if (mode === "delete") {
+      setBatchDeletingIds((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) {
+          next.add(id);
+        }
+        return next;
+      });
       const idSet = new Set(ids);
       setMountedSessions((prev) => prev.filter((sid) => !idSet.has(sid)));
       if (activeSessionId && idSet.has(activeSessionId)) {
@@ -445,8 +503,36 @@ function SessionsPage() {
           } else {
             await api.deleteSession(id);
             clearMessageWindow(id);
+            setBatchDeletingIds((prev) => {
+              if (!prev.has(id)) {
+                return prev;
+              }
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
           }
         } catch {
+          if (mode === "archive") {
+            setBatchArchivingIds((prev) => {
+              if (!prev.has(id)) {
+                return prev;
+              }
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          }
+          if (mode === "delete") {
+            setBatchDeletingIds((prev) => {
+              if (!prev.has(id)) {
+                return prev;
+              }
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          }
           // continue with remaining sessions
         }
       }
@@ -690,6 +776,8 @@ function SessionsPage() {
             api={api}
             batchMode={batchMode}
             batchSelectedIds={batchSelectedIds}
+            archivingSessionIds={batchArchivingIds}
+            deletingSessionIds={batchDeletingIds}
             onBatchToggleSelect={handleBatchToggleSelect}
           />
         </div>

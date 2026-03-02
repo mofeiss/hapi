@@ -160,13 +160,15 @@ function SessionItem(props: {
     onSelect: (sessionId: string) => void
     api: ApiClient | null
     selected?: boolean
+    forceArchiving?: boolean
+    forceDeleting?: boolean
     batchMode?: 'archive' | 'delete' | null
     batchSelected?: boolean
     onBatchToggleSelect?: () => void
 }) {
     const { t } = useTranslation()
     const { addToast } = useToast()
-    const { session: s, onSelect, api, selected = false, batchMode, batchSelected, onBatchToggleSelect } = props
+    const { session: s, onSelect, api, selected = false, forceArchiving = false, forceDeleting = false, batchMode, batchSelected, onBatchToggleSelect } = props
     const { haptic } = usePlatform()
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -174,6 +176,7 @@ function SessionItem(props: {
     const [archiveOpen, setArchiveOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [isArchiving, setIsArchiving] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     const { archiveSession, renameSession, deleteSession, isPending } = useSessionActions(
         api,
@@ -212,8 +215,26 @@ function SessionItem(props: {
     const handleQuickArchive = () => {
         runArchive()
     }
+
+    const runDelete = async () => {
+        if (isDeleting) {
+            return
+        }
+        setIsDeleting(true)
+        try {
+            await deleteSession()
+        } catch (error) {
+            setIsDeleting(false)
+            throw error
+        }
+    }
+
     const handleQuickDelete = async () => {
-        try { await deleteSession() } catch { /* toast handles errors */ }
+        try {
+            await runDelete()
+        } catch {
+            // SessionActionMenu currently has no inline error area; keep default silent behavior.
+        }
     }
 
     const longPressHandlers = useLongPress({
@@ -231,6 +252,8 @@ function SessionItem(props: {
     })
 
     const sessionName = useSessionTitleOverride(s.id) ?? getSessionTitle(s)
+    const showArchiving = isArchiving || forceArchiving
+    const showDeleting = isDeleting || forceDeleting
     return (
         <>
             <button
@@ -302,7 +325,11 @@ function SessionItem(props: {
                                 </span>
                             )
                         })()}
-                        {isArchiving ? (
+                        {showDeleting ? (
+                            <span className="text-[var(--app-orange-base)]">
+                                {t('session.item.deleting')}
+                            </span>
+                        ) : showArchiving ? (
                             <span className="text-[var(--app-orange-base)]">
                                 {t('session.item.archiving')}
                             </span>
@@ -368,7 +395,7 @@ function SessionItem(props: {
                         description={t('dialog.delete.description', { name: sessionName })}
                         confirmLabel={t('dialog.delete.confirm')}
                         confirmingLabel={t('dialog.delete.confirming')}
-                        onConfirm={deleteSession}
+                        onConfirm={runDelete}
                         isPending={isPending}
                         destructive
                         dontAskAgainKey="hapi:skip-confirm:delete"
@@ -390,10 +417,12 @@ export function SessionList(props: {
     selectedSessionId?: string | null
     batchMode?: 'archive' | 'delete' | null
     batchSelectedIds?: Set<string>
+    archivingSessionIds?: Set<string>
+    deletingSessionIds?: Set<string>
     onBatchToggleSelect?: (sessionId: string) => void
 }) {
     const { t } = useTranslation()
-    const { renderHeader = true, api, selectedSessionId, batchMode, batchSelectedIds, onBatchToggleSelect } = props
+    const { renderHeader = true, api, selectedSessionId, batchMode, batchSelectedIds, archivingSessionIds, deletingSessionIds, onBatchToggleSelect } = props
 
     const filteredSessions = useMemo(() => {
         if (!batchMode) return props.sessions
@@ -501,6 +530,8 @@ export function SessionList(props: {
                                             onSelect={props.onSelect}
                                             api={api}
                                             selected={s.id === selectedSessionId}
+                                            forceArchiving={archivingSessionIds?.has(s.id) === true}
+                                            forceDeleting={deletingSessionIds?.has(s.id) === true}
                                             batchMode={batchMode}
                                             batchSelected={batchSelectedIds?.has(s.id)}
                                             onBatchToggleSelect={onBatchToggleSelect ? () => onBatchToggleSelect(s.id) : undefined}

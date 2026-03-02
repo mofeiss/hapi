@@ -51,6 +51,7 @@ export default {
   'session.item.worktree': 'worktree',
   'session.item.pending': 'pending',
   'session.item.archiving': 'archiving…',
+  'session.item.deleting': 'deleting…',
   'session.item.thinking': 'thinking',
   'session.permissionSync.pending': 'Syncing permission mode. Sending is temporarily disabled.',
   'session.permissionSync.failed': 'Failed to sync permission mode. Please switch mode manually and retry.',
