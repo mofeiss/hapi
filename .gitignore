@@ -43,3 +43,4 @@ execplan/
 
 # Generated npm bundle output (local)
 cli/npm/main/
+cli/npm/**/*.tgz
