@@ -139,6 +139,13 @@ export class AppServerEventConverter {
             return events;
         }
 
+        if (method === 'codex/event/token_count') {
+            const source = wrappedMsg ?? paramsRecord;
+            const info = asRecord(source.info ?? source.tokenUsage ?? source.token_usage ?? source) ?? {};
+            events.push({ type: 'token_count', info });
+            return events;
+        }
+
         if (method === 'error') {
             const willRetry = asBoolean(paramsRecord.will_retry ?? paramsRecord.willRetry) ?? false;
             if (willRetry) return events;
@@ -146,6 +153,79 @@ export class AppServerEventConverter {
             if (message) {
                 events.push({ type: 'task_failed', error: message });
             }
+            return events;
+        }
+
+        if (method === 'thread/status/changed') {
+            const statusRecord = asRecord(paramsRecord.status) ?? paramsRecord;
+            const statusType = asString(statusRecord.type ?? statusRecord.status)?.toLowerCase();
+
+            if (statusType === 'systemerror' || statusType === 'error' || statusType === 'failed') {
+                const message = asString(statusRecord.message ?? statusRecord.reason ?? statusRecord.error)
+                    ?? asString(paramsRecord.message ?? paramsRecord.reason ?? paramsRecord.error)
+                    ?? `thread status changed: ${statusType}`;
+                events.push({ type: 'task_failed', error: message });
+            }
+            return events;
+        }
+
+        if (method === 'codex/event/stream_error') {
+            const source = wrappedMsg ?? paramsRecord;
+            const warning = asString(source.additional_details ?? source.additionalDetails)
+                ?? asString(source.message)
+                ?? asString(asRecord(source.error)?.message);
+            if (warning) {
+                events.push({ type: 'task_warning', warning });
+            }
+            return events;
+        }
+
+        if (method === 'codex/event/error') {
+            const source = wrappedMsg ?? paramsRecord;
+            const message = asString(source.message)
+                ?? asString(source.additional_details ?? source.additionalDetails)
+                ?? asString(asRecord(source.error)?.message);
+
+            events.push({
+                type: 'task_failed',
+                ...(message ? { error: message } : {})
+            });
+            return events;
+        }
+
+        if (method === 'codex/event/task_complete') {
+            const source = wrappedMsg ?? paramsRecord;
+            const turnId = asString(source.turn_id ?? source.turnId ?? paramsRecord.id);
+            events.push({ type: 'task_complete', ...(turnId ? { turn_id: turnId } : {}) });
+            return events;
+        }
+
+        if (method === 'codex/event/task_started') {
+            const source = wrappedMsg ?? paramsRecord;
+            const turnId = asString(source.turn_id ?? source.turnId ?? paramsRecord.id);
+            events.push({ type: 'task_started', ...(turnId ? { turn_id: turnId } : {}) });
+            return events;
+        }
+
+        if (method === 'codex/event/warning') {
+            const source = wrappedMsg ?? paramsRecord;
+            const warning = asString(source.message)
+                ?? asString(source.additional_details ?? source.additionalDetails)
+                ?? asString(asRecord(source.error)?.message);
+            if (warning) {
+                events.push({ type: 'task_warning', warning });
+            }
+            return events;
+        }
+
+        if (
+            method === 'codex/event/mcp_startup_update'
+            || method === 'codex/event/mcp_startup_complete'
+            || method === 'codex/event/item_started'
+            || method === 'codex/event/item_completed'
+            || method === 'codex/event/user_message'
+        ) {
+            // These wrapper notifications are informative duplicates for flows we already track.
             return events;
         }
 
@@ -253,6 +333,10 @@ export class AppServerEventConverter {
             const itemId = extractItemId(paramsRecord) ?? asString(item.id ?? item.itemId ?? item.item_id);
 
             if (!itemType || !itemId) {
+                return events;
+            }
+
+            if (itemType === 'usermessage') {
                 return events;
             }
 

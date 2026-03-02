@@ -167,6 +167,13 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             }
         };
 
+        const normalizeFailureFingerprint = (message: string): string => {
+            return message
+                .replace(/,\s*cf-ray:[^,]+/gi, '')
+                .replace(/,\s*request id:[^,]+/gi, '')
+                .trim();
+        };
+
         const permissionHandler = new CodexPermissionHandler(session.client, {
             onRequest: ({ id, toolName, input }) => {
                 const inputRecord = input && typeof input === 'object' ? input as Record<string, unknown> : {};
@@ -215,6 +222,10 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         this.permissionHandler = permissionHandler;
         this.reasoningProcessor = reasoningProcessor;
         this.diffProcessor = diffProcessor;
+        let turnInFlight = false;
+        let readySentForCurrentTurn = false;
+        const currentTurnFailureMessages = new Set<string>();
+        const currentTurnWarningMessages = new Set<string>();
 
         const handleCodexEvent = (msg: Record<string, unknown>) => {
             const msgType = asString(msg.type);
@@ -234,6 +245,9 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 if (turnId) {
                     this.currentTurnId = turnId;
                 }
+                readySentForCurrentTurn = false;
+                currentTurnFailureMessages.clear();
+                currentTurnWarningMessages.clear();
             }
 
             if (msgType === 'task_complete' || msgType === 'turn_aborted' || msgType === 'task_failed') {
@@ -275,14 +289,45 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 messageBuffer.addMessage('Starting task...', 'status');
             } else if (msgType === 'task_complete') {
                 messageBuffer.addMessage('Task completed', 'status');
-                sendReady();
+                if (!readySentForCurrentTurn) {
+                    readySentForCurrentTurn = true;
+                    sendReady();
+                }
             } else if (msgType === 'turn_aborted') {
                 messageBuffer.addMessage('Turn aborted', 'status');
-                sendReady();
+                if (!readySentForCurrentTurn) {
+                    readySentForCurrentTurn = true;
+                    sendReady();
+                }
+            } else if (msgType === 'task_warning') {
+                const warning = asString(msg.warning ?? msg.error ?? msg.message);
+                if (warning) {
+                    const warningFingerprint = normalizeFailureFingerprint(warning);
+                    if (currentTurnWarningMessages.has(warningFingerprint)) {
+                        return;
+                    }
+                    currentTurnWarningMessages.add(warningFingerprint);
+                    const warningMessage = `Task warning: ${warning}`;
+                    messageBuffer.addMessage(warningMessage, 'status');
+                    session.sendSessionEvent({ type: 'message', message: warningMessage });
+                }
             } else if (msgType === 'task_failed') {
                 const error = asString(msg.error);
-                messageBuffer.addMessage(error ? `Task failed: ${error}` : 'Task failed', 'status');
-                sendReady();
+                const failedMessage = error ? `Task failed: ${error}` : 'Task failed';
+                const failedFingerprint = normalizeFailureFingerprint(failedMessage);
+                const isDuplicateFailure = currentTurnFailureMessages.has(failedFingerprint);
+                const isGenericAfterDetailed = failedMessage === 'Task failed' && currentTurnFailureMessages.size > 0;
+                const isThreadStatusFallback = failedMessage === 'Task failed: thread status changed: systemerror';
+                const shouldSkipFallback = isThreadStatusFallback && currentTurnFailureMessages.size > 0;
+                if (!isDuplicateFailure && !isGenericAfterDetailed && !shouldSkipFallback) {
+                    currentTurnFailureMessages.add(failedFingerprint);
+                    messageBuffer.addMessage(failedMessage, 'status');
+                    session.sendSessionEvent({ type: 'message', message: failedMessage });
+                    if (!readySentForCurrentTurn) {
+                        readySentForCurrentTurn = true;
+                        sendReady();
+                    }
+                }
             }
 
             if (msgType === 'task_started') {
@@ -496,7 +541,6 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         let currentModeHash: string | null = null;
         let pending: { message: string; mode: EnhancedMode; isolate: boolean; hash: string } | null = null;
         let first = true;
-        let turnInFlight = false;
 
         while (!this.shouldExit) {
             logActiveHandles('loop-top');
