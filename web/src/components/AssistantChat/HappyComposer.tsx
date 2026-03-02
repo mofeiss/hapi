@@ -12,7 +12,7 @@ import {
     useRef,
     useState
 } from 'react'
-import type { AgentState, ModelMode, PermissionMode } from '@/types/api'
+import type { AgentState, CodexReasoningEffort, ModelMode, PermissionMode, UserMessageMeta } from '@/types/api'
 import type { Suggestion } from '@/hooks/useActiveSuggestions'
 import type { ConversationStatus } from '@/realtime/types'
 import { useActiveWord } from '@/hooks/useActiveWord'
@@ -38,6 +38,14 @@ export interface TextInputState {
 
 const defaultSuggestionHandler = async (): Promise<Suggestion[]> => []
 
+function joinVoiceDraft(prefix: string, transcript: string): string {
+    const left = prefix.trim()
+    const right = transcript.trim()
+    if (!left) return right
+    if (!right) return left
+    return `${left} ${right}`
+}
+
 export function HappyComposer(props: {
     disabled?: boolean
     sendDisabled?: boolean
@@ -54,19 +62,26 @@ export function HappyComposer(props: {
     onPermissionModeChange?: (mode: PermissionMode) => void
     onModelModeChange?: (mode: ModelMode) => void
     onPlanToggle?: () => void
+    codexModel?: string | null
+    codexModelOptions?: { value: string; label: string }[]
+    codexReasoningEffort?: CodexReasoningEffort | null
+    codexReasoningOptions?: { value: CodexReasoningEffort; label: string }[]
+    onCodexModelChange?: (model: string) => void
+    onCodexReasoningEffortChange?: (effort: CodexReasoningEffort) => void
     autocompletePrefixes?: string[]
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
     // Voice assistant props
     voiceStatus?: ConversationStatus
     voiceRawText?: string
+    voiceCorrectedText?: string
     voiceError?: string | null
+    voiceCorrectionUnavailable?: boolean
     voiceMicMuted?: boolean
     onVoiceToggle?: (options?: { discard?: boolean }) => void
     onVoiceMicToggle?: () => void
     onTranscript?: (cb: (text: string) => void) => void
-    onInterim?: (cb: (text: string) => void) => void
     // Queue send props
-    onQueueSend?: (text: string) => void
+    onQueueSend?: (text: string, meta?: UserMessageMeta) => void
     hasQueue?: boolean
     onFlushQueue?: () => void
 }) {
@@ -87,16 +102,23 @@ export function HappyComposer(props: {
         onPermissionModeChange,
         onModelModeChange,
         onPlanToggle,
+        codexModel = null,
+        codexModelOptions = [],
+        codexReasoningEffort = null,
+        codexReasoningOptions = [],
+        onCodexModelChange,
+        onCodexReasoningEffortChange,
         autocompletePrefixes = ['@', '/', '$'],
         autocompleteSuggestions = defaultSuggestionHandler,
         voiceStatus = 'disconnected',
         voiceRawText = '',
+        voiceCorrectedText = '',
         voiceError = null,
+        voiceCorrectionUnavailable = false,
         voiceMicMuted = false,
         onVoiceToggle,
         onVoiceMicToggle,
         onTranscript,
-        onInterim,
         onQueueSend,
         hasQueue = false,
         onFlushQueue
@@ -183,52 +205,33 @@ export function HappyComposer(props: {
     const composerTextRef = useRef(composerText)
     composerTextRef.current = composerText
     const preVoiceTextRef = useRef('')
-    const interimAppliedRef = useRef(false)
+    const voiceSessionPreparedRef = useRef(false)
 
     // Reset pre-voice text when composer is cleared (e.g. after sending)
     useEffect(() => {
-        if (!composerText) {
+        if (!composerText && voiceStatus === 'disconnected') {
             preVoiceTextRef.current = ''
-            interimAppliedRef.current = false
         }
-    }, [composerText])
+    }, [composerText, voiceStatus])
+
+    useEffect(() => {
+        if (voiceStatus === 'connected') {
+            if (!voiceSessionPreparedRef.current) {
+                preVoiceTextRef.current = composerTextRef.current
+                voiceSessionPreparedRef.current = true
+            }
+            return
+        }
+        voiceSessionPreparedRef.current = false
+    }, [voiceStatus])
+
     useEffect(() => {
         if (!onTranscript) return
         onTranscript((text: string) => {
-            api.composer().setText(preVoiceTextRef.current ? `${preVoiceTextRef.current} ${text}` : text)
-            textareaRef.current?.focus()
+            api.composer().setText(joinVoiceDraft(preVoiceTextRef.current, text))
+            preVoiceTextRef.current = ''
         })
     }, [onTranscript, api])
-
-    // Register STT interim callback — shows real-time partial text while speaking
-    useEffect(() => {
-        if (!onInterim) return
-        onInterim((text: string) => {
-            if (text) {
-                // Save pre-voice text only when current composer text is user-owned text.
-                // If current text was already written by previous interim update,
-                // capturing it as prefix would cause duplicated head like:
-                // "你好 你好，今天..."
-                if (!preVoiceTextRef.current && composerTextRef.current && !interimAppliedRef.current) {
-                    preVoiceTextRef.current = composerTextRef.current
-                }
-                interimAppliedRef.current = true
-                api.composer().setText(preVoiceTextRef.current ? `${preVoiceTextRef.current} ${text}` : text)
-                textareaRef.current?.focus()
-            } else {
-                // Interim cleared (recording stopped) — reset pre-voice text
-                preVoiceTextRef.current = ''
-                interimAppliedRef.current = false
-            }
-        })
-    }, [onInterim, api])
-
-    // Auto-focus textarea when voice recording starts
-    useEffect(() => {
-        if (voiceStatus === 'connected') {
-            textareaRef.current?.focus()
-        }
-    }, [voiceStatus])
 
     // Track one-time "continue" hint after switching from local to remote.
     useEffect(() => {
@@ -245,9 +248,9 @@ export function HappyComposer(props: {
     const { isStandalone, isIOS } = usePWAInstall()
     const isIOSPWA = isIOS && isStandalone
     const isVoiceFocusMode = voiceStatus !== 'disconnected'
-    const voicePanelHeightClass = isVoiceFocusMode
-        ? (isTouch ? 'h-[72dvh]' : 'h-[min(62vh,560px)]')
-        : ''
+    const voicePanelSizeClass = isVoiceFocusMode
+        ? (isTouch ? 'min-h-[320px]' : 'min-h-[280px]')
+        : (isTouch ? 'min-h-[160px]' : 'min-h-[140px]')
     const bottomPaddingClass = isIOSPWA ? 'pb-0' : 'pb-3'
     const activeWord = useActiveWord(inputState.text, inputState.selection, autocompletePrefixes)
     const [suggestions, selectedIndex, moveUp, moveDown, clearSuggestions] = useActiveSuggestions(
@@ -340,6 +343,16 @@ export function HappyComposer(props: {
         () => permissionModeOptions.map((option) => ({ value: option.mode, label: option.label })),
         [permissionModeOptions]
     )
+    const codexMessageMeta = useMemo<UserMessageMeta | undefined>(() => {
+        if (!isCodexFamilyFlavor(agentFlavor) || !codexModel) {
+            return undefined
+        }
+
+        return {
+            model: codexModel,
+            reasoningEffort: codexReasoningEffort
+        }
+    }, [agentFlavor, codexModel, codexReasoningEffort])
 
     const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
         const key = e.key
@@ -399,12 +412,12 @@ export function HappyComposer(props: {
             e.preventDefault()
             if (e.metaKey || e.ctrlKey) {
                 // Cmd/Ctrl+Enter = interrupt: queue current text, then abort (flush will send all)
-                onQueueSend(trimmed)
+                onQueueSend(trimmed, codexMessageMeta)
                 api.composer().setText('')
                 handleAbort()
             } else {
                 // Plain Enter = auto-queue
-                onQueueSend(trimmed)
+                onQueueSend(trimmed, codexMessageMeta)
                 api.composer().setText('')
             }
             setTimeout(() => textareaRef.current?.focus(), 0)
@@ -440,6 +453,7 @@ export function HappyComposer(props: {
         hasQueue,
         onFlushQueue,
         trimmed,
+        codexMessageMeta,
         api,
         voiceStatus,
         onVoiceToggle,
@@ -536,8 +550,22 @@ export function HappyComposer(props: {
         haptic('light')
     }, [onModelModeChange, controlsDisabled, haptic])
 
+    const handleCodexModelChange = useCallback((model: string) => {
+        if (!onCodexModelChange || controlsDisabled) return
+        onCodexModelChange(model)
+        haptic('light')
+    }, [onCodexModelChange, controlsDisabled, haptic])
+
+    const handleCodexReasoningEffortChange = useCallback((effort: string) => {
+        if (!onCodexReasoningEffortChange || controlsDisabled) return
+        onCodexReasoningEffortChange(effort as CodexReasoningEffort)
+        haptic('light')
+    }, [onCodexReasoningEffortChange, controlsDisabled, haptic])
+
     const showPermissionSettings = Boolean(onPermissionModeChange && permissionModeOptions.length > 0)
     const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor))
+    const showCodexModelSettings = Boolean(isCodexFamilyFlavor(agentFlavor) && codexModel && codexModelOptions.length > 0)
+    const showCodexReasoningSettings = Boolean(showCodexModelSettings && codexReasoningEffort && codexReasoningOptions.length > 0)
     const showAbortButton = threadIsRunning && !hasText && !hasQueue
     const voiceEnabled = Boolean(onVoiceToggle)
 
@@ -555,14 +583,14 @@ export function HappyComposer(props: {
         }
         if (threadIsRunning && onQueueSend) {
             // Auto-queue: enqueue the text and clear composer
-            onQueueSend(trimmed)
+            onQueueSend(trimmed, codexMessageMeta)
             api.composer().setText('')
             setTimeout(() => textareaRef.current?.focus(), 0)
             return
         }
         api.composer().send()
         setTimeout(() => textareaRef.current?.focus(), 0)
-    }, [api, threadIsRunning, onQueueSend, trimmed, hasText, hasAttachments, hasQueue, onFlushQueue, sendDisabled])
+    }, [api, threadIsRunning, onQueueSend, trimmed, codexMessageMeta, hasText, hasAttachments, hasQueue, onFlushQueue, sendDisabled])
 
     const handleClear = useCallback(() => {
         if (voiceStatus === 'connected' && onVoiceToggle) {
@@ -570,7 +598,6 @@ export function HappyComposer(props: {
         }
         pendingSendAfterVoiceRef.current = false
         preVoiceTextRef.current = ''
-        interimAppliedRef.current = false
         api.composer().setText('')
         setTimeout(() => textareaRef.current?.focus(), 0)
     }, [api, onVoiceToggle, voiceStatus])
@@ -612,6 +639,10 @@ export function HappyComposer(props: {
         return null
     }, [suggestions, selectedIndex, handleSuggestionSelect])
 
+    const correctionPreviewText = voiceCorrectionUnavailable
+        ? voiceRawText
+        : (voiceCorrectedText || voiceRawText)
+
     return (
         <div className={`px-3 ${bottomPaddingClass} pt-2 bg-[var(--app-bg)]`}>
             <div className="mx-auto w-full max-w-content">
@@ -627,45 +658,47 @@ export function HappyComposer(props: {
                         voiceStatus={voiceStatus}
                     />
 
-                    <div className={`overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)] ${voicePanelHeightClass}`}>
+                    <div className={`overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)] transition-[min-height,box-shadow] duration-200 ease-out ${voicePanelSizeClass} ${isVoiceFocusMode ? 'shadow-[0_14px_36px_rgba(15,23,42,0.12)]' : ''}`}>
                         {isVoiceFocusMode ? (
                             <div className="flex h-full min-h-0 flex-col">
-                                <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
-                                    <div className="flex min-h-0 flex-[3] flex-col overflow-hidden rounded-xl bg-[var(--app-bg)] p-3">
-                                        <div className="mb-2 flex items-center justify-between text-xs text-[var(--app-hint)]">
-                                            <span>语音原文（待修正）</span>
-                                            <span>{voiceStatus === 'connected' ? '识别中' : '收尾修正中'}</span>
-                                        </div>
-                                        <div className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--app-fg)]">
-                                            {voiceRawText || '...'}
-                                        </div>
-                                        {voiceError ? (
-                                            <div className="mt-2 text-xs text-red-500">
-                                                {voiceError}
+                                <div className="min-h-0 flex-1 px-3 pt-3 pb-2">
+                                    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)]">
+                                        <div className="min-h-0 flex-1 p-3">
+                                            <div className="mb-2 flex items-center justify-between text-xs text-[var(--app-hint)]">
+                                                <span>原始实时录入</span>
+                                                <span>{voiceStatus === 'connected' ? '识别中' : '收尾中'}</span>
                                             </div>
-                                        ) : null}
-                                    </div>
-
-                                    <div className="flex min-h-0 flex-[7] flex-col overflow-hidden rounded-xl bg-[var(--app-bg)] p-3">
-                                        <div className="mb-2 text-xs text-[var(--app-hint)]">
-                                            实时修正结果（可编辑）
+                                            <div className="h-full max-h-full overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--app-fg)]">
+                                                {voiceRawText || '...'}
+                                            </div>
                                         </div>
-                                        <ComposerPrimitive.Input
-                                            ref={textareaRef}
-                                            autoFocus={!controlsDisabled && !isTouch}
-                                            placeholder={controlledByUser ? t('composer.controlledByTerminal') : showContinueHint ? t('misc.typeMessage') : t('misc.typeAMessage')}
-                                            disabled={controlsDisabled}
-                                            maxRows={18}
-                                            submitOnEnter={!isTouch}
-                                            cancelOnEscape={false}
-                                            onChange={handleChange}
-                                            onSelect={handleSelect}
-                                            onKeyDown={handleKeyDown}
-                                            onPaste={handlePaste}
-                                            className="min-h-0 flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                        />
+
+                                        <div className="h-px bg-[var(--app-border)]" />
+
+                                        <div className="min-h-0 flex-1 p-3">
+                                            <div className="mb-2 flex items-center justify-between text-xs text-[var(--app-hint)]">
+                                                <span>{voiceCorrectionUnavailable ? '修正区（已降级为原文）' : '实时修正'}</span>
+                                                {voiceCorrectionUnavailable ? (
+                                                    <span className="text-[var(--app-orange-base)]">不可用</span>
+                                                ) : null}
+                                            </div>
+                                            {voiceCorrectionUnavailable ? (
+                                                <div className="mb-2 rounded-md border border-[var(--app-orange-base)]/40 bg-[var(--app-orange-base)]/10 px-2 py-1 text-xs text-[var(--app-orange-base)]">
+                                                    未检测到语音修正 API 配置，实时修正功能不可用。
+                                                </div>
+                                            ) : null}
+                                            <div className="h-full max-h-full overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--app-fg)]">
+                                                {correctionPreviewText || '...'}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+
+                                {voiceError ? (
+                                    <div className="px-3 pb-2 text-xs text-red-500">
+                                        {voiceError}
+                                    </div>
+                                ) : null}
 
                                 <ComposerButtons
                                     canSend={canSend}
@@ -674,6 +707,14 @@ export function HappyComposer(props: {
                                     modelMode={modelMode}
                                     modelModeOptions={modelModeSelectOptions}
                                     onModelModeChange={handleModelChange}
+                                    showCodexModelSelect={showCodexModelSettings}
+                                    codexModel={codexModel ?? ''}
+                                    codexModelOptions={codexModelOptions}
+                                    onCodexModelChange={handleCodexModelChange}
+                                    showCodexReasoningSelect={showCodexReasoningSettings}
+                                    codexReasoningEffort={codexReasoningEffort ?? 'medium'}
+                                    codexReasoningOptions={codexReasoningOptions}
+                                    onCodexReasoningEffortChange={handleCodexReasoningEffortChange}
                                     showPermissionSelect={showPermissionSettings}
                                     permissionMode={basePermissionMode}
                                     permissionModeOptions={permissionSelectOptions}
@@ -686,7 +727,7 @@ export function HappyComposer(props: {
                                     isAborting={isAborting}
                                     onAbort={handleAbort}
                                     showCopyButton={!isTouch}
-                                    inputText={composerText}
+                                    inputText={correctionPreviewText || composerText}
                                     voiceEnabled={voiceEnabled}
                                     voiceStatus={voiceStatus}
                                     voiceMicMuted={voiceMicMuted}
@@ -733,6 +774,14 @@ export function HappyComposer(props: {
                                     modelMode={modelMode}
                                     modelModeOptions={modelModeSelectOptions}
                                     onModelModeChange={handleModelChange}
+                                    showCodexModelSelect={showCodexModelSettings}
+                                    codexModel={codexModel ?? ''}
+                                    codexModelOptions={codexModelOptions}
+                                    onCodexModelChange={handleCodexModelChange}
+                                    showCodexReasoningSelect={showCodexReasoningSettings}
+                                    codexReasoningEffort={codexReasoningEffort ?? 'medium'}
+                                    codexReasoningOptions={codexReasoningOptions}
+                                    onCodexReasoningEffortChange={handleCodexReasoningEffortChange}
                                     showPermissionSelect={showPermissionSettings}
                                     permissionMode={basePermissionMode}
                                     permissionModeOptions={permissionSelectOptions}

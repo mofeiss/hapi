@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import type { ApiClient } from '@/api/client'
-import type { AttachmentMetadata, DecryptedMessage } from '@/types/api'
+import type { AttachmentMetadata, DecryptedMessage, UserMessageMeta } from '@/types/api'
 import { makeClientSideId } from '@/lib/messages'
 import {
     appendOptimisticMessage,
@@ -16,6 +16,7 @@ type SendMessageInput = {
     localId: string
     createdAt: number
     attachments?: AttachmentMetadata[]
+    meta?: UserMessageMeta
 }
 
 type BlockedReason = 'no-api' | 'no-session' | 'pending'
@@ -40,6 +41,19 @@ function findMessageByLocalId(
     return null
 }
 
+function extractMessageMeta(message: DecryptedMessage | null): UserMessageMeta | undefined {
+    if (!message || !message.content || typeof message.content !== 'object') {
+        return undefined
+    }
+
+    const rawMeta = (message.content as { meta?: unknown }).meta
+    if (!rawMeta || typeof rawMeta !== 'object') {
+        return undefined
+    }
+
+    return rawMeta as UserMessageMeta
+}
+
 export function useSendMessage(
     api: ApiClient | null,
     sessionId: string | null,
@@ -48,7 +62,7 @@ export function useSendMessage(
     sendMessage: (
         text: string,
         attachments?: AttachmentMetadata[],
-        options?: { localId?: string; createdAt?: number }
+        options?: { localId?: string; createdAt?: number; meta?: UserMessageMeta }
     ) => void
     retryMessage: (localId: string) => void
     isSending: boolean
@@ -62,7 +76,7 @@ export function useSendMessage(
             if (!api) {
                 throw new Error('API unavailable')
             }
-            await api.sendMessage(input.sessionId, input.text, input.localId, input.attachments)
+            await api.sendMessage(input.sessionId, input.text, input.localId, input.attachments, input.meta)
         },
         onMutate: async (input) => {
             const optimisticMessage: DecryptedMessage = {
@@ -75,7 +89,8 @@ export function useSendMessage(
                         type: 'text',
                         text: input.text,
                         attachments: input.attachments
-                    }
+                    },
+                    meta: input.meta
                 },
                 createdAt: input.createdAt,
                 status: 'sending',
@@ -97,7 +112,7 @@ export function useSendMessage(
     const sendMessage = (
         text: string,
         attachments?: AttachmentMetadata[],
-        sendOptions?: { localId?: string; createdAt?: number }
+        sendOptions?: { localId?: string; createdAt?: number; meta?: UserMessageMeta }
     ) => {
         if (!api) {
             options?.onBlocked?.('no-api')
@@ -141,6 +156,7 @@ export function useSendMessage(
                 localId,
                 createdAt,
                 attachments,
+                meta: sendOptions?.meta
             })
         })()
     }
@@ -171,6 +187,7 @@ export function useSendMessage(
             text: message.originalText,
             localId,
             createdAt: message.createdAt,
+            meta: extractMessageMeta(message)
         })
     }
 

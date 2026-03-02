@@ -5,7 +5,7 @@ import { safeStringify } from '@hapi/protocol'
 import { renderEventLabel } from '@/chat/presentation'
 import type { ChatBlock, CliOutputBlock } from '@/chat/types'
 import type { AgentEvent, ToolCallBlock } from '@/chat/types'
-import type { AttachmentMetadata, MessageStatus as HappyMessageStatus, Session } from '@/types/api'
+import type { AttachmentMetadata, MessageStatus as HappyMessageStatus, Session, UserMessageMeta } from '@/types/api'
 
 export type HappyChatMessageMetadata = {
     kind: 'user' | 'assistant' | 'tool' | 'event' | 'cli-output'
@@ -172,10 +172,11 @@ export function useHappyRuntime(props: {
     session: Session
     blocks: readonly ChatBlock[]
     isSending: boolean
-    onSendMessage: (text: string, attachments?: AttachmentMetadata[]) => void
+    onSendMessage: (text: string, attachments?: AttachmentMetadata[], meta?: UserMessageMeta) => void
     onAbort: () => Promise<void>
     attachmentAdapter?: AttachmentAdapter
     allowSendWhenInactive?: boolean
+    getMessageMeta?: () => UserMessageMeta | undefined
 }) {
     // Use cached message converter for performance optimization
     // This prevents re-converting all messages on every render
@@ -188,8 +189,12 @@ export function useHappyRuntime(props: {
     const onNew = useCallback(async (message: AppendMessage) => {
         const { text, attachments } = extractMessageContent(message)
         if (!text && attachments.length === 0) return
-        props.onSendMessage(text, attachments.length > 0 ? attachments : undefined)
-    }, [props.onSendMessage])
+        props.onSendMessage(
+            text,
+            attachments.length > 0 ? attachments : undefined,
+            props.getMessageMeta?.()
+        )
+    }, [props.onSendMessage, props.getMessageMeta])
 
     const onCancel = useCallback(async () => {
         await props.onAbort()

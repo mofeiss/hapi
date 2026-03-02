@@ -21,6 +21,7 @@ export async function runCodex(opts: {
     permissionMode?: PermissionMode;
     resumeSessionId?: string;
     model?: string;
+    reasoningEffort?: EnhancedMode['effort'];
 }): Promise<void> {
     const workingDirectory = resolveTargetWorkingDirectory();
     const startedBy = opts.startedBy ?? 'terminal';
@@ -37,6 +38,34 @@ export async function runCodex(opts: {
         agentState: state
     });
 
+    type CodexReasoningEffort = Exclude<EnhancedMode['effort'], undefined>;
+    const reasoningEfforts = new Set<CodexReasoningEffort>([
+        'none',
+        'minimal',
+        'low',
+        'medium',
+        'high',
+        'xhigh'
+    ]);
+
+    const normalizeModel = (value: unknown): string | undefined => {
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+    };
+
+    const normalizeReasoningEffort = (value: unknown): EnhancedMode['effort'] => {
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+        if (reasoningEfforts.has(value as CodexReasoningEffort)) {
+            return value as CodexReasoningEffort;
+        }
+        return undefined;
+    };
+
     const startingMode: 'local' | 'remote' = startedBy === 'runner' ? 'remote' : 'local';
 
     setControlledByUser(session, startingMode);
@@ -44,6 +73,7 @@ export async function runCodex(opts: {
     const messageQueue = new MessageQueue2<EnhancedMode>((mode) => hashObject({
         permissionMode: mode.permissionMode,
         model: mode.model,
+        effort: mode.effort,
         collaborationMode: mode.collaborationMode
     }));
 
@@ -51,7 +81,10 @@ export async function runCodex(opts: {
     const sessionWrapperRef: { current: CodexSession | null } = { current: null };
 
     let currentPermissionMode: PermissionMode = opts.permissionMode ?? 'default';
-    const currentModel = opts.model;
+    let currentModel = normalizeModel(opts.model);
+    let currentReasoningEffort = normalizeReasoningEffort(opts.reasoningEffort);
+    let lastPublishedModel: string | undefined = undefined;
+    let lastPublishedReasoningEffort: EnhancedMode['effort'] = undefined;
     let currentCollaborationMode: EnhancedMode['collaborationMode'];
 
     const lifecycle = createRunnerLifecycle({
@@ -72,13 +105,41 @@ export async function runCodex(opts: {
         logger.debug(`[Codex] Synced session permission mode for keepalive: ${currentPermissionMode}`);
     };
 
+    const publishRuntimeMetadata = () => {
+        if (lastPublishedModel === currentModel && lastPublishedReasoningEffort === currentReasoningEffort) {
+            return;
+        }
+
+        lastPublishedModel = currentModel;
+        lastPublishedReasoningEffort = currentReasoningEffort;
+
+        session.updateMetadata((currentMetadata) => ({
+            ...currentMetadata,
+            model: currentModel,
+            reasoningEffort: currentReasoningEffort
+        }));
+    };
+
+    publishRuntimeMetadata();
+
     session.onUserMessage((message) => {
         const messagePermissionMode = currentPermissionMode;
+
+        if (message.meta && Object.prototype.hasOwnProperty.call(message.meta, 'model')) {
+            currentModel = normalizeModel(message.meta.model);
+        }
+
+        if (message.meta && Object.prototype.hasOwnProperty.call(message.meta, 'reasoningEffort')) {
+            currentReasoningEffort = normalizeReasoningEffort(message.meta.reasoningEffort);
+        }
+
+        publishRuntimeMetadata();
         logger.debug(`[Codex] User message received with permission mode: ${currentPermissionMode}`);
 
         const enhancedMode: EnhancedMode = {
             permissionMode: messagePermissionMode ?? 'default',
             model: currentModel,
+            effort: currentReasoningEffort,
             collaborationMode: currentCollaborationMode
         };
         const formattedText = formatMessageWithAttachments(message.content.text, message.content.attachments);
@@ -119,7 +180,12 @@ export async function runCodex(opts: {
         if (!payload || typeof payload !== 'object') {
             throw new Error('Invalid session config payload');
         }
-        const config = payload as { permissionMode?: unknown; collaborationMode?: unknown };
+        const config = payload as {
+            permissionMode?: unknown;
+            collaborationMode?: unknown;
+            model?: unknown;
+            reasoningEffort?: unknown;
+        };
 
         if (config.permissionMode !== undefined) {
             currentPermissionMode = resolvePermissionMode(config.permissionMode);
@@ -129,8 +195,25 @@ export async function runCodex(opts: {
             currentCollaborationMode = resolveCollaborationMode(config.collaborationMode);
         }
 
+        if (config.model !== undefined) {
+            currentModel = normalizeModel(config.model);
+        }
+
+        if (config.reasoningEffort !== undefined) {
+            currentReasoningEffort = normalizeReasoningEffort(config.reasoningEffort);
+        }
+
+        publishRuntimeMetadata();
+
         syncSessionMode();
-        return { applied: { permissionMode: currentPermissionMode, collaborationMode: currentCollaborationMode } };
+        return {
+            applied: {
+                permissionMode: currentPermissionMode,
+                collaborationMode: currentCollaborationMode,
+                model: currentModel,
+                reasoningEffort: currentReasoningEffort
+            }
+        };
     });
 
     try {

@@ -38,7 +38,7 @@ describe('appServerConfig', () => {
         const params = buildTurnStartParams({
             threadId: 'thread-1',
             message: 'hello',
-            mode: { permissionMode: 'read-only', model: 'o3' }
+            mode: { permissionMode: 'read-only', model: 'o3', effort: 'high' }
         });
 
         expect(params.threadId).toBe('thread-1');
@@ -46,17 +46,19 @@ describe('appServerConfig', () => {
         expect(params.approvalPolicy).toBe('never');
         expect(params.sandboxPolicy).toEqual({ type: 'readOnly' });
         expect(params.model).toBe('o3');
+        expect(params.effort).toBe('high');
     });
 
     it('puts collaboration mode in turn params with model settings', () => {
         const params = buildTurnStartParams({
             threadId: 'thread-1',
             message: 'hello',
-            mode: { permissionMode: 'default', model: 'o3', collaborationMode: 'plan' }
+            mode: { permissionMode: 'default', model: 'o3', effort: 'medium', collaborationMode: 'plan' }
         });
 
         expect(params.collaborationMode).toEqual({ mode: 'plan', settings: { model: 'o3' } });
         expect(params.model).toBeUndefined();
+        expect(params.effort).toBe('medium');
     });
 
     it('applies CLI overrides for turns when permission mode is default', () => {
@@ -88,10 +90,11 @@ describe('appServerConfig', () => {
             threadId: 'thread-1',
             message: 'hello',
             mode: { permissionMode: 'default' },
-            overrides: { approvalPolicy: 'on-request', model: 'gpt-5' }
+            overrides: { approvalPolicy: 'on-request', model: 'gpt-5', effort: 'xhigh' }
         });
 
         expect(params.approvalPolicy).toBe('on-request');
         expect(params.model).toBe('gpt-5');
+        expect(params.effort).toBe('xhigh');
     });
 });

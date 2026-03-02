@@ -5,10 +5,13 @@ import type { Machine } from '@/types/api'
 import { usePlatform } from '@/hooks/usePlatform'
 import { useSpawnSession } from '@/hooks/mutations/useSpawnSession'
 import { useSessions } from '@/hooks/queries/useSessions'
+import { useAgentModels } from '@/hooks/queries/useAgentModels'
 import { useActiveSuggestions, type Suggestion } from '@/hooks/useActiveSuggestions'
 import { useDirectorySuggestions } from '@/hooks/useDirectorySuggestions'
 import { useRecentPaths } from '@/hooks/useRecentPaths'
+import type { CodexReasoningEffort } from '@/types/api'
 import type { AgentType, SessionType } from './types'
+import { buildCodexModelOptions, MODEL_OPTIONS } from './types'
 import { ActionButtons } from './ActionButtons'
 import { AgentSelector } from './AgentSelector'
 import { DirectorySection } from './DirectorySection'
@@ -17,12 +20,20 @@ import { ModelSelector } from './ModelSelector'
 import {
     loadPreferredAgent,
     loadPreferredDirectory,
+    loadPreferredModel,
     loadPreferredPermissionMode,
     loadPreferredPlanActive,
+    loadPreferredReasoningEffort,
+    loadPreferredSessionType,
+    loadPreferredWorktreeName,
     savePreferredAgent,
     savePreferredDirectory,
+    savePreferredModel,
     savePreferredPermissionMode,
     savePreferredPlanActive,
+    savePreferredReasoningEffort,
+    savePreferredSessionType,
+    savePreferredWorktreeName,
 } from './preferences'
 import { setPendingSessionMode } from '@/lib/pending-session-mode-store'
 import { SessionTypeSelector } from './SessionTypeSelector'
@@ -48,11 +59,12 @@ export function NewSession(props: {
     const [isDirectoryFocused, setIsDirectoryFocused] = useState(false)
     const [pathExistence, setPathExistence] = useState<Record<string, boolean>>({})
     const [agent, setAgent] = useState<AgentType>(loadPreferredAgent)
-    const [model, setModel] = useState('auto')
+    const [model, setModel] = useState(loadPreferredModel)
+    const [reasoningEffort, setReasoningEffort] = useState<CodexReasoningEffort | 'auto'>(loadPreferredReasoningEffort)
     const [basePermissionMode, setBasePermissionMode] = useState<PermissionMode>(() => loadPreferredPermissionMode(loadPreferredAgent()))
     const [isPlanActive, setIsPlanActive] = useState<boolean>(loadPreferredPlanActive)
-    const [sessionType, setSessionType] = useState<SessionType>('simple')
-    const [worktreeName, setWorktreeName] = useState('')
+    const [sessionType, setSessionType] = useState<SessionType>(loadPreferredSessionType)
+    const [worktreeName, setWorktreeName] = useState(loadPreferredWorktreeName)
     const [error, setError] = useState<string | null>(null)
     const worktreeInputRef = useRef<HTMLInputElement>(null)
 
@@ -61,10 +73,6 @@ export function NewSession(props: {
             worktreeInputRef.current?.focus()
         }
     }, [sessionType])
-
-    useEffect(() => {
-        setModel('auto')
-    }, [agent])
 
     useEffect(() => {
         if (!getBasePermissionModesForFlavor(agent).includes(basePermissionMode)) {
@@ -95,6 +103,22 @@ export function NewSession(props: {
     }, [directory])
 
     useEffect(() => {
+        savePreferredModel(model)
+    }, [model])
+
+    useEffect(() => {
+        savePreferredReasoningEffort(reasoningEffort)
+    }, [reasoningEffort])
+
+    useEffect(() => {
+        savePreferredSessionType(sessionType)
+    }, [sessionType])
+
+    useEffect(() => {
+        savePreferredWorktreeName(worktreeName)
+    }, [worktreeName])
+
+    useEffect(() => {
         if (props.machines.length === 0) return
         if (machineId && props.machines.find((m) => m.id === machineId)) return
 
@@ -107,6 +131,75 @@ export function NewSession(props: {
             setMachineId(props.machines[0].id)
         }
     }, [props.machines, machineId, getLastUsedMachineId])
+
+    const { data: agentModelsData } = useAgentModels(props.api, machineId, agent)
+
+    const codexModelOptions = useMemo(
+        () => buildCodexModelOptions(agentModelsData?.models),
+        [agentModelsData?.models]
+    )
+
+    const modelOptions = useMemo(
+        () => {
+            if (agent === 'codex') {
+                return [
+                    { value: 'auto', label: 'Auto' },
+                    ...codexModelOptions.map((entry) => ({ value: entry.value, label: entry.label }))
+                ]
+            }
+            return MODEL_OPTIONS[agent]
+        },
+        [agent, codexModelOptions]
+    )
+
+    useEffect(() => {
+        if (modelOptions.length === 0) {
+            if (model !== 'auto') {
+                setModel('auto')
+            }
+            return
+        }
+
+        const exists = modelOptions.some((option) => option.value === model)
+        if (!exists) {
+            setModel('auto')
+        }
+    }, [model, modelOptions])
+
+    const selectedCodexModel = useMemo(
+        () => {
+            if (agent !== 'codex') {
+                return null
+            }
+            return codexModelOptions.find((entry) => entry.value === model) ?? null
+        },
+        [agent, codexModelOptions, model]
+    )
+
+    const reasoningOptions = useMemo(
+        () => selectedCodexModel?.supportedReasoningEfforts.map((value) => ({ value })) ?? [],
+        [selectedCodexModel]
+    )
+
+    useEffect(() => {
+        if (agent !== 'codex' || model === 'auto') {
+            if (reasoningEffort !== 'auto') {
+                setReasoningEffort('auto')
+            }
+            return
+        }
+
+        if (!selectedCodexModel) {
+            if (reasoningEffort !== 'auto') {
+                setReasoningEffort('auto')
+            }
+            return
+        }
+
+        if (reasoningEffort !== 'auto' && !selectedCodexModel.supportedReasoningEfforts.includes(reasoningEffort)) {
+            setReasoningEffort('auto')
+        }
+    }, [agent, model, reasoningEffort, selectedCodexModel])
 
     const recentPaths = useMemo(
         () => getRecentPaths(machineId),
@@ -170,7 +263,8 @@ export function NewSession(props: {
 
     const handleMachineChange = useCallback((newMachineId: string) => {
         setMachineId(newMachineId)
-    }, [])
+        setLastUsedMachineId(newMachineId)
+    }, [setLastUsedMachineId])
 
     const handlePathClick = useCallback((path: string) => {
         setDirectory(path)
@@ -230,6 +324,15 @@ export function NewSession(props: {
         setError(null)
         try {
             const resolvedModel = model !== 'auto' && agent !== 'opencode' ? model : undefined
+            const resolvedReasoningEffort = (() => {
+                if (agent !== 'codex' || !resolvedModel) {
+                    return undefined
+                }
+                if (reasoningEffort !== 'auto') {
+                    return reasoningEffort
+                }
+                return selectedCodexModel?.defaultReasoningEffort
+            })()
             const shouldUsePlanMode = supportsPlanToggle(agent) && isPlanActive
             const requestedPermissionMode = shouldUsePlanMode ? 'plan' : basePermissionMode
             const result = await spawnSession({
@@ -237,6 +340,7 @@ export function NewSession(props: {
                 directory: directory.trim(),
                 agent,
                 model: resolvedModel,
+                reasoningEffort: resolvedReasoningEffort,
                 permissionMode: requestedPermissionMode,
                 basePermissionMode: basePermissionMode,
                 sessionType,
@@ -305,8 +409,12 @@ export function NewSession(props: {
             <ModelSelector
                 agent={agent}
                 model={model}
+                modelOptions={modelOptions}
+                reasoningEffort={reasoningEffort}
+                reasoningOptions={reasoningOptions}
                 isDisabled={isFormDisabled}
                 onModelChange={setModel}
+                onReasoningEffortChange={setReasoningEffort}
             />
             <PermissionSelector
                 agentFlavor={agent}

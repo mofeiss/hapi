@@ -1,5 +1,5 @@
 import type { ModelMode } from './modes'
-import type { Session, WorktreeMetadata } from './schemas'
+import type { ReasoningEffort, Session, WorktreeMetadata } from './schemas'
 
 export type SessionSummaryMetadata = {
     name?: string
@@ -8,6 +8,8 @@ export type SessionSummaryMetadata = {
     machineId?: string
     summary?: { text: string }
     flavor?: string | null
+    model?: string
+    reasoningEffort?: ReasoningEffort
     worktree?: WorktreeMetadata
 }
 
@@ -33,6 +35,8 @@ export function toSessionSummary(session: Session): SessionSummary {
         machineId: session.metadata.machineId ?? undefined,
         summary: session.metadata.summary ? { text: session.metadata.summary.text } : undefined,
         flavor: session.metadata.flavor ?? null,
+        model: session.metadata.model,
+        reasoningEffort: session.metadata.reasoningEffort,
         worktree: session.metadata.worktree
     } : null
 

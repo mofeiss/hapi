@@ -149,11 +149,24 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
         ? 'default'
         : (options.permissionMode ?? 'default');
     let currentModelMode: SessionModelMode = options.model === 'sonnet' || options.model === 'opus' ? options.model : 'default';
+    let lastPublishedModel: string | undefined = undefined;
     let currentFallbackModel: string | undefined = undefined; // Track current fallback model
     let currentCustomSystemPrompt: string | undefined = undefined; // Track current custom system prompt
     let currentAppendSystemPrompt: string | undefined = undefined; // Track current append system prompt
     let currentAllowedTools: string[] | undefined = undefined; // Track current allowed tools
     let currentDisallowedTools: string[] | undefined = undefined; // Track current disallowed tools
+
+    const publishModelMetadata = () => {
+        const modelForMetadata = currentModelMode === 'default' ? 'auto' : currentModelMode;
+        if (lastPublishedModel === modelForMetadata) {
+            return;
+        }
+        lastPublishedModel = modelForMetadata;
+        session.updateMetadata((currentMetadata) => ({
+            ...currentMetadata,
+            model: modelForMetadata
+        }));
+    };
 
     const syncSessionModes = () => {
         const sessionInstance = currentSessionRef.current;
@@ -165,6 +178,7 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
         sessionInstance.setBasePermissionMode(currentBasePermissionMode);
         logger.debug(`[loop] Synced session modes for keepalive: permissionMode=${currentPermissionMode}, basePermissionMode=${currentBasePermissionMode}, modelMode=${currentModelMode}`);
     };
+    publishModelMetadata();
     session.onUserMessage((message) => {
         const sessionPermissionMode = currentSessionRef.current?.getPermissionMode();
         if (sessionPermissionMode && isPermissionModeAllowedForFlavor(sessionPermissionMode, 'claude')) {
@@ -318,6 +332,7 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
             currentModelMode = resolvedModelMode;
         }
 
+        publishModelMetadata();
         syncSessionModes();
         return { applied: { permissionMode: currentPermissionMode, modelMode: currentModelMode, basePermissionMode: currentBasePermissionMode } };
     });

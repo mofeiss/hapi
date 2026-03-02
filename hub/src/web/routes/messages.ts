@@ -10,10 +10,22 @@ const querySchema = z.object({
     beforeSeq: z.coerce.number().int().min(1).optional()
 })
 
+const messageMetaSchema = z.object({
+    sentFrom: z.string().optional(),
+    fallbackModel: z.string().nullable().optional(),
+    customSystemPrompt: z.string().nullable().optional(),
+    appendSystemPrompt: z.string().nullable().optional(),
+    allowedTools: z.array(z.string()).nullable().optional(),
+    disallowedTools: z.array(z.string()).nullable().optional(),
+    model: z.string().nullable().optional(),
+    reasoningEffort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']).nullable().optional()
+})
+
 const sendMessageBodySchema = z.object({
     text: z.string(),
     localId: z.string().min(1).optional(),
-    attachments: z.array(AttachmentMetadataSchema).optional()
+    attachments: z.array(AttachmentMetadataSchema).optional(),
+    meta: messageMetaSchema.optional()
 })
 
 export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Hono<WebAppEnv> {
@@ -64,6 +76,7 @@ export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Ho
             text: parsed.data.text,
             localId: parsed.data.localId,
             attachments: parsed.data.attachments,
+            meta: parsed.data.meta,
             sentFrom: 'webapp'
         })
         return c.json({ ok: true })

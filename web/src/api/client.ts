@@ -1,6 +1,8 @@
 import type {
+    AgentModelsResponse,
     AttachmentMetadata,
     AuthResponse,
+    CodexReasoningEffort,
     DeleteUploadResponse,
     ListDirectoryResponse,
     FileReadResponse,
@@ -20,7 +22,8 @@ import type {
     UploadFileResponse,
     VisibilityPayload,
     SessionResponse,
-    SessionsResponse
+    SessionsResponse,
+    UserMessageMeta,
 } from '@/types/api'
 
 type ApiClientOptions = {
@@ -274,13 +277,20 @@ export class ApiClient {
         return response.sessionId
     }
 
-    async sendMessage(sessionId: string, text: string, localId?: string | null, attachments?: AttachmentMetadata[]): Promise<void> {
+    async sendMessage(
+        sessionId: string,
+        text: string,
+        localId?: string | null,
+        attachments?: AttachmentMetadata[],
+        meta?: UserMessageMeta
+    ): Promise<void> {
         await this.request(`/api/sessions/${encodeURIComponent(sessionId)}/messages`, {
             method: 'POST',
             body: JSON.stringify({
                 text,
                 localId: localId ?? undefined,
-                attachments: attachments ?? undefined
+                attachments: attachments ?? undefined,
+                meta: meta ?? undefined
             })
         })
     }
@@ -374,6 +384,7 @@ export class ApiClient {
         directory: string,
         agent?: 'claude' | 'codex' | 'gemini' | 'opencode',
         model?: string,
+        reasoningEffort?: CodexReasoningEffort,
         permissionMode?: string,
         basePermissionMode?: string,
         sessionType?: 'simple' | 'worktree',
@@ -381,8 +392,16 @@ export class ApiClient {
     ): Promise<SpawnResponse> {
         return await this.request<SpawnResponse>(`/api/machines/${encodeURIComponent(machineId)}/spawn`, {
             method: 'POST',
-            body: JSON.stringify({ directory, agent, model, permissionMode, basePermissionMode, sessionType, worktreeName })
+            body: JSON.stringify({ directory, agent, model, reasoningEffort, permissionMode, basePermissionMode, sessionType, worktreeName })
         })
+    }
+
+    async getAgentModels(
+        machineId: string,
+        agent: 'claude' | 'codex' | 'gemini' | 'opencode' = 'codex'
+    ): Promise<AgentModelsResponse> {
+        const query = new URLSearchParams({ agent })
+        return await this.request<AgentModelsResponse>(`/api/machines/${encodeURIComponent(machineId)}/agent-models?${query.toString()}`)
     }
 
     async getSlashCommands(sessionId: string): Promise<SlashCommandsResponse> {

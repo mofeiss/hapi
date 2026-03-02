@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AssistantRuntimeProvider } from '@assistant-ui/react'
 import type { ApiClient } from '@/api/client'
-import type { AttachmentMetadata, DecryptedMessage, ModelMode, PermissionMode, Session } from '@/types/api'
+import type {
+    AttachmentMetadata,
+    CodexReasoningEffort,
+    DecryptedMessage,
+    ModelMode,
+    PermissionMode,
+    Session,
+    UserMessageMeta
+} from '@/types/api'
 import type { ChatBlock, NormalizedMessage } from '@/chat/types'
 import type { Suggestion } from '@/hooks/useActiveSuggestions'
 import { normalizeDecryptedMessage } from '@/chat/normalize'
@@ -24,10 +32,13 @@ import { setSessionTitleOverride, clearSessionTitleOverride, useSessionTitleOver
 import { makeClientSideId } from '@/lib/messages'
 import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/use-translation'
+import { useAgentModels } from '@/hooks/queries/useAgentModels'
+import { buildCodexModelOptions, type CodexModelOption } from '@/components/NewSession/types'
 
 type SendOptions = {
     localId?: string
     createdAt?: number
+    meta?: UserMessageMeta
 }
 
 type EditedResendState = {
@@ -86,6 +97,28 @@ function isContextResetCommand(text: string, flavor: string | null): boolean {
     return /^\/new(?:\s+[\s\S]+)?$/.test(trimmed)
 }
 
+function getReasoningLabel(
+    value: CodexReasoningEffort,
+    t: (key: string) => string
+): string {
+    switch (value) {
+        case 'none':
+            return t('newSession.reasoning.none')
+        case 'minimal':
+            return t('newSession.reasoning.minimal')
+        case 'low':
+            return t('newSession.reasoning.low')
+        case 'medium':
+            return t('newSession.reasoning.medium')
+        case 'high':
+            return t('newSession.reasoning.high')
+        case 'xhigh':
+            return t('newSession.reasoning.xhigh')
+        default:
+            return value
+    }
+}
+
 export function SessionChat(props: {
     api: ApiClient
     session: Session
@@ -125,6 +158,19 @@ export function SessionChat(props: {
         props.session.id,
         agentFlavor
     )
+    const isCodexSession = agentFlavor === 'codex'
+
+    const { data: codexAgentModelsData } = useAgentModels(
+        props.api,
+        isCodexSession ? (props.session.metadata?.machineId ?? null) : null,
+        'codex'
+    )
+    const codexModelOptions = useMemo<CodexModelOption[]>(
+        () => isCodexSession ? buildCodexModelOptions(codexAgentModelsData?.models) : [],
+        [isCodexSession, codexAgentModelsData?.models]
+    )
+    const [composerCodexModel, setComposerCodexModel] = useState<string | null>(null)
+    const [composerCodexReasoningEffort, setComposerCodexReasoningEffort] = useState<CodexReasoningEffort | null>(null)
 
     // Override context size after /clear (reset to 0 = 100% remaining)
     const [contextSizeOverride, setContextSizeOverride] = useState<number | null>(null)
@@ -141,6 +187,96 @@ export function SessionChat(props: {
     const sttVoiceStatus = stt.status === 'recording' ? 'connected' as const
         : stt.status === 'transcribing' ? 'connecting' as const
         : 'disconnected' as const
+
+    useEffect(() => {
+        if (!isCodexSession || codexModelOptions.length === 0) {
+            if (composerCodexModel !== null) {
+                setComposerCodexModel(null)
+            }
+            if (composerCodexReasoningEffort !== null) {
+                setComposerCodexReasoningEffort(null)
+            }
+            return
+        }
+
+        const modelValues = new Set(codexModelOptions.map((entry) => entry.value))
+        const sessionModel = props.session.metadata?.model?.trim()
+        const preferredModel = (
+            (composerCodexModel && modelValues.has(composerCodexModel) ? composerCodexModel : null)
+            ?? (sessionModel && modelValues.has(sessionModel) ? sessionModel : null)
+            ?? codexModelOptions.find((entry) => entry.isDefault)?.value
+            ?? codexModelOptions[0]?.value
+            ?? null
+        )
+
+        if (preferredModel !== composerCodexModel) {
+            setComposerCodexModel(preferredModel)
+        }
+
+        const selectedModel = codexModelOptions.find((entry) => entry.value === preferredModel) ?? null
+        if (!selectedModel) {
+            if (composerCodexReasoningEffort !== null) {
+                setComposerCodexReasoningEffort(null)
+            }
+            return
+        }
+
+        const supportedEfforts = new Set(selectedModel.supportedReasoningEfforts)
+        const sessionReasoning = props.session.metadata?.reasoningEffort
+        const preferredReasoning = (
+            (composerCodexReasoningEffort && supportedEfforts.has(composerCodexReasoningEffort)
+                ? composerCodexReasoningEffort
+                : null)
+            ?? (sessionReasoning && supportedEfforts.has(sessionReasoning)
+                ? sessionReasoning
+                : null)
+            ?? selectedModel.defaultReasoningEffort
+        )
+
+        if (preferredReasoning !== composerCodexReasoningEffort) {
+            setComposerCodexReasoningEffort(preferredReasoning)
+        }
+    }, [
+        isCodexSession,
+        codexModelOptions,
+        props.session.metadata?.model,
+        props.session.metadata?.reasoningEffort,
+        composerCodexModel,
+        composerCodexReasoningEffort
+    ])
+
+    const codexComposerModelOptions = useMemo(
+        () => codexModelOptions.map((option) => ({
+            value: option.value,
+            label: option.label
+        })),
+        [codexModelOptions]
+    )
+
+    const codexComposerReasoningOptions = useMemo(() => {
+        if (!composerCodexModel) {
+            return []
+        }
+        const selectedModel = codexModelOptions.find((option) => option.value === composerCodexModel)
+        if (!selectedModel) {
+            return []
+        }
+        return selectedModel.supportedReasoningEfforts.map((value) => ({
+            value,
+            label: getReasoningLabel(value, t)
+        }))
+    }, [composerCodexModel, codexModelOptions, t])
+
+    const getCodexMessageMeta = useCallback((): UserMessageMeta | undefined => {
+        if (!isCodexSession || !composerCodexModel) {
+            return undefined
+        }
+
+        return {
+            model: composerCodexModel,
+            reasoningEffort: composerCodexReasoningEffort
+        }
+    }, [isCodexSession, composerCodexModel, composerCodexReasoningEffort])
 
     // Register session store for voice client tools
     useEffect(() => {
@@ -568,7 +704,18 @@ export function SessionChat(props: {
     }, [])
 
     const handleSend = useCallback((text: string, attachments?: AttachmentMetadata[], options?: SendOptions) => {
-        props.onSend(text, attachments, options)
+        const resolvedOptions: SendOptions | undefined = (() => {
+            const messageMeta = options?.meta ?? getCodexMessageMeta()
+            if (!options && !messageMeta) {
+                return undefined
+            }
+            return {
+                ...options,
+                meta: messageMeta
+            }
+        })()
+
+        props.onSend(text, attachments, resolvedOptions)
         setForceScrollToken((token) => token + 1)
 
         // Detect chat reset commands (/clear, and Codex /new): reset context size and title
@@ -576,7 +723,7 @@ export function SessionChat(props: {
             setContextSizeOverride(0)
             setSessionTitleOverride(props.session.id, 'New Chat')
         }
-    }, [props.onSend, props.session.id, agentFlavor])
+    }, [props.onSend, props.session.id, agentFlavor, getCodexMessageMeta])
 
     const handleResendMessage = useCallback((text: string, attachments?: AttachmentMetadata[]) => {
         if (text.trim().length === 0 && (!attachments || attachments.length === 0)) {
@@ -630,7 +777,10 @@ export function SessionChat(props: {
     }, [props.messages, handleSend])
 
     // Message queue for sending while agent is running
-    const messageQueue = useMessageQueue(!!props.session.thinking, handleSend)
+    const messageQueue = useMessageQueue(
+        !!props.session.thinking,
+        (text, meta) => handleSend(text, undefined, meta ? { meta } : undefined)
+    )
 
     const handleFlushNow = useCallback(async () => {
         // Codex compatibility:
@@ -669,10 +819,15 @@ export function SessionChat(props: {
         session: props.session,
         blocks: reconciled.blocks,
         isSending: props.isSending,
-        onSendMessage: handleSend,
+        onSendMessage: (text, attachments, meta) => handleSend(
+            text,
+            attachments,
+            meta ? { meta } : undefined
+        ),
         onAbort: handleAbort,
         attachmentAdapter,
-        allowSendWhenInactive: true
+        allowSendWhenInactive: true,
+        getMessageMeta: getCodexMessageMeta
     })
 
     return (
@@ -749,13 +904,20 @@ export function SessionChat(props: {
                         onPermissionModeChange={handlePermissionModeChange}
                         onModelModeChange={handleModelModeChange}
                         onPlanToggle={handlePlanToggle}
+                        codexModel={composerCodexModel}
+                        codexModelOptions={codexComposerModelOptions}
+                        codexReasoningEffort={composerCodexReasoningEffort}
+                        codexReasoningOptions={codexComposerReasoningOptions}
+                        onCodexModelChange={setComposerCodexModel}
+                        onCodexReasoningEffortChange={setComposerCodexReasoningEffort}
                         autocompleteSuggestions={props.autocompleteSuggestions}
                         voiceStatus={sttVoiceStatus}
                         voiceRawText={stt.rawText}
+                        voiceCorrectedText={stt.correctedText}
                         voiceError={stt.error}
+                        voiceCorrectionUnavailable={stt.correctionAvailability === 'unavailable'}
                         onVoiceToggle={handleVoiceToggle}
                         onTranscript={stt.setOnTranscript}
-                        onInterim={stt.setOnInterim}
                         onQueueSend={messageQueue.enqueue}
                         hasQueue={messageQueue.queue.length > 0}
                         onFlushQueue={handleFlushNow}

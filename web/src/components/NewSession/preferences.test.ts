@@ -2,12 +2,20 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
     loadPreferredAgent,
     loadPreferredDirectory,
+    loadPreferredModel,
     loadPreferredPermissionMode,
     loadPreferredPlanActive,
+    loadPreferredReasoningEffort,
+    loadPreferredSessionType,
+    loadPreferredWorktreeName,
     savePreferredAgent,
     savePreferredDirectory,
+    savePreferredModel,
     savePreferredPermissionMode,
     savePreferredPlanActive,
+    savePreferredReasoningEffort,
+    savePreferredSessionType,
+    savePreferredWorktreeName,
 } from './preferences'
 
 describe('NewSession preferences', () => {
@@ -21,18 +29,30 @@ describe('NewSession preferences', () => {
         expect(loadPreferredPermissionMode('codex')).toBe('yolo')
         expect(loadPreferredPlanActive()).toBe(false)
         expect(loadPreferredDirectory()).toBe('~')
+        expect(loadPreferredModel()).toBe('auto')
+        expect(loadPreferredReasoningEffort()).toBe('auto')
+        expect(loadPreferredSessionType()).toBe('simple')
+        expect(loadPreferredWorktreeName()).toBe('')
     })
 
     it('loads saved values from storage', () => {
         localStorage.setItem('hapi:newSession:agent', 'codex')
+        localStorage.setItem('hapi:newSession:model', 'gpt-5.3-codex')
+        localStorage.setItem('hapi:newSession:reasoningEffort', 'high')
         localStorage.setItem('hapi:newSession:permissionMode:v2', 'safe-yolo')
         localStorage.setItem('hapi:newSession:planActive', 'true')
         localStorage.setItem('hapi:newSession:directory', '/Users/ofeiss/project/hapi')
+        localStorage.setItem('hapi:newSession:sessionType', 'worktree')
+        localStorage.setItem('hapi:newSession:worktreeName', 'feature/new-ui')
 
         expect(loadPreferredAgent()).toBe('codex')
+        expect(loadPreferredModel()).toBe('gpt-5.3-codex')
+        expect(loadPreferredReasoningEffort()).toBe('high')
         expect(loadPreferredPermissionMode()).toBe('safe-yolo')
         expect(loadPreferredPlanActive()).toBe(true)
         expect(loadPreferredDirectory()).toBe('/Users/ofeiss/project/hapi')
+        expect(loadPreferredSessionType()).toBe('worktree')
+        expect(loadPreferredWorktreeName()).toBe('feature/new-ui')
     })
 
     it('falls back to highest mode for target agent when saved mode is not allowed', () => {
@@ -56,10 +76,26 @@ describe('NewSession preferences', () => {
         savePreferredPermissionMode('bypassPermissions')
         savePreferredPlanActive(true)
         savePreferredDirectory('/tmp')
+        savePreferredModel('gpt-5.3-codex')
+        savePreferredReasoningEffort('xhigh')
+        savePreferredSessionType('worktree')
+        savePreferredWorktreeName('feature/remember-me')
 
         expect(localStorage.getItem('hapi:newSession:agent')).toBe('gemini')
         expect(localStorage.getItem('hapi:newSession:permissionMode:v2')).toBe('bypassPermissions')
         expect(localStorage.getItem('hapi:newSession:planActive')).toBe('true')
         expect(localStorage.getItem('hapi:newSession:directory')).toBe('/tmp')
+        expect(localStorage.getItem('hapi:newSession:model')).toBe('gpt-5.3-codex')
+        expect(localStorage.getItem('hapi:newSession:reasoningEffort')).toBe('xhigh')
+        expect(localStorage.getItem('hapi:newSession:sessionType')).toBe('worktree')
+        expect(localStorage.getItem('hapi:newSession:worktreeName')).toBe('feature/remember-me')
+    })
+
+    it('falls back when saved reasoning/session type values are invalid', () => {
+        localStorage.setItem('hapi:newSession:reasoningEffort', 'invalid')
+        localStorage.setItem('hapi:newSession:sessionType', 'invalid')
+
+        expect(loadPreferredReasoningEffort()).toBe('auto')
+        expect(loadPreferredSessionType()).toBe('simple')
     })
 })

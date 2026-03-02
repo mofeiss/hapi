@@ -6,6 +6,7 @@ export interface SpawnSessionOptions {
     approvedNewDirectoryCreation?: boolean
     agent?: 'claude' | 'codex' | 'gemini' | 'opencode'
     model?: string
+    reasoningEffort?: CodexReasoningEffort
     permissionMode?: string
     basePermissionMode?: string
     token?: string
@@ -17,3 +18,28 @@ export type SpawnSessionResult =
     | { type: 'success'; sessionId: string }
     | { type: 'requestToApproveDirectoryCreation'; directory: string }
     | { type: 'error'; errorMessage: string }
+
+export type CodexReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+
+export type AgentModelReasoningEffortOption = {
+    reasoningEffort: CodexReasoningEffort
+    description: string
+}
+
+export type AgentModel = {
+    id: string
+    model: string
+    displayName: string
+    description: string
+    hidden: boolean
+    isDefault: boolean
+    defaultReasoningEffort: CodexReasoningEffort
+    supportedReasoningEfforts: AgentModelReasoningEffortOption[]
+}
+
+export type AgentModelsResult = {
+    success: boolean
+    source?: 'codex-app-server' | 'fallback-static'
+    models?: AgentModel[]
+    error?: string
+}

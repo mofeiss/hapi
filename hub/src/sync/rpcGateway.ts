@@ -44,6 +44,31 @@ export type RpcPathExistsResponse = {
     exists: Record<string, boolean>
 }
 
+export type RpcReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+
+export type RpcAgentModelReasoningEffortOption = {
+    reasoningEffort: RpcReasoningEffort
+    description: string
+}
+
+export type RpcAgentModel = {
+    id: string
+    model: string
+    displayName: string
+    description: string
+    hidden: boolean
+    isDefault: boolean
+    defaultReasoningEffort: RpcReasoningEffort
+    supportedReasoningEfforts: RpcAgentModelReasoningEffortOption[]
+}
+
+export type RpcAgentModelsResponse = {
+    success: boolean
+    source?: 'codex-app-server' | 'fallback-static'
+    models?: RpcAgentModel[]
+    error?: string
+}
+
 export class RpcGateway {
     constructor(
         private readonly io: Server,
@@ -108,6 +133,7 @@ export class RpcGateway {
         directory: string,
         agent: 'claude' | 'codex' | 'gemini' | 'opencode' = 'claude',
         model?: string,
+        reasoningEffort?: RpcReasoningEffort,
         permissionMode?: string,
         basePermissionMode?: string,
         sessionType?: 'simple' | 'worktree',
@@ -118,7 +144,7 @@ export class RpcGateway {
             const result = await this.machineRpc(
                 machineId,
                 'spawn-happy-session',
-                { type: 'spawn-in-directory', directory, agent, model, permissionMode, basePermissionMode, sessionType, worktreeName, resumeSessionId }
+                { type: 'spawn-in-directory', directory, agent, model, reasoningEffort, permissionMode, basePermissionMode, sessionType, worktreeName, resumeSessionId }
             )
             if (result && typeof result === 'object') {
                 const obj = result as Record<string, unknown>
@@ -160,6 +186,13 @@ export class RpcGateway {
             exists[key] = value === true
         }
         return exists
+    }
+
+    async listAgentModels(
+        machineId: string,
+        agent: 'claude' | 'codex' | 'gemini' | 'opencode'
+    ): Promise<RpcAgentModelsResponse> {
+        return await this.machineRpc(machineId, 'agent-models', { agent }) as RpcAgentModelsResponse
     }
 
     async getGitStatus(sessionId: string, cwd?: string): Promise<RpcCommandResponse> {

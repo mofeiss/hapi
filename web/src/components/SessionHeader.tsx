@@ -11,6 +11,7 @@ import { useWidescreen } from '@/hooks/useWidescreen'
 import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 import { normalizeProjectPath } from '@/utils/path'
 import { useToast } from '@/lib/toast-context'
+import { formatSessionModelLabel, ReasoningIcon } from '@/components/SessionModelBadge'
 
 function getSessionTitle(session: Session): string {
     if (session.metadata?.name) {
@@ -131,6 +132,12 @@ export function SessionHeader(props: {
     const title = useMemo(() => titleFromStore ?? getSessionTitle(session), [session, titleFromStore])
     const worktreeBranch = session.metadata?.worktree?.branch
     const displayPath = session.metadata?.path ? normalizeProjectPath(session.metadata.path) : null
+    const modelLabel = useMemo(
+        () => formatSessionModelLabel(session.metadata, {
+            fallbackModel: session.metadata?.flavor === 'claude' ? session.modelMode : undefined
+        }),
+        [session.metadata, session.modelMode]
+    )
 
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -209,6 +216,12 @@ export function SessionHeader(props: {
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
                                 {session.metadata?.flavor?.trim() || 'unknown'}
                             </span>
+                            {modelLabel ? (
+                                <span className="inline-flex items-center gap-1 truncate" title={modelLabel}>
+                                    <ReasoningIcon className="shrink-0" />
+                                    <span className="truncate">{modelLabel}</span>
+                                </span>
+                            ) : null}
                             {worktreeBranch ? (
                                 <span>{t('session.item.worktree')}: {worktreeBranch}</span>
                             ) : null}

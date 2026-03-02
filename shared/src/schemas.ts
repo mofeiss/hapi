@@ -19,6 +19,9 @@ export const WorktreeMetadataSchema = z.object({
 
 export type WorktreeMetadata = z.infer<typeof WorktreeMetadataSchema>
 
+export const ReasoningEffortSchema = z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh'])
+export type ReasoningEffort = z.infer<typeof ReasoningEffortSchema>
+
 export const MetadataSchema = z.object({
     path: z.string(),
     host: z.string(),
@@ -45,6 +48,8 @@ export const MetadataSchema = z.object({
     archivedBy: z.string().optional(),
     archiveReason: z.string().optional(),
     flavor: z.string().nullish(),
+    model: z.string().optional(),
+    reasoningEffort: ReasoningEffortSchema.optional(),
     worktree: WorktreeMetadataSchema.optional()
 })
 

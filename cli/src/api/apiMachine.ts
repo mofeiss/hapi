@@ -12,7 +12,7 @@ import { RunnerStateSchema, MachineMetadataSchema } from './types'
 import { backoff } from '@/utils/time'
 import { RpcHandlerManager } from './rpc/RpcHandlerManager'
 import { registerCommonHandlers } from '../modules/common/registerCommonHandlers'
-import type { SpawnSessionOptions, SpawnSessionResult } from '../modules/common/rpcTypes'
+import type { AgentModelsResult, SpawnSessionOptions, SpawnSessionResult } from '../modules/common/rpcTypes'
 import { applyVersionedAck } from './versionedUpdate'
 import { resolveUserPath } from '@/utils/userPath'
 
@@ -53,7 +53,12 @@ interface RunnerToServerEvents {
 type MachineRpcHandlers = {
     spawnSession: (options: SpawnSessionOptions) => Promise<SpawnSessionResult>
     stopSession: (sessionId: string) => boolean
+    listAgentModels: (agent: SpawnSessionOptions['agent']) => Promise<AgentModelsResult>
     requestShutdown: () => void
+}
+
+function isSupportedAgent(value: unknown): value is NonNullable<SpawnSessionOptions['agent']> {
+    return value === 'claude' || value === 'codex' || value === 'gemini' || value === 'opencode'
 }
 
 interface PathExistsRequest {
@@ -100,9 +105,9 @@ export class ApiMachineClient {
         })
     }
 
-    setRPCHandlers({ spawnSession, stopSession, requestShutdown }: MachineRpcHandlers): void {
+    setRPCHandlers({ spawnSession, stopSession, listAgentModels, requestShutdown }: MachineRpcHandlers): void {
         this.rpcHandlerManager.registerHandler('spawn-happy-session', async (params: any) => {
-            const { directory, sessionId, resumeSessionId, machineId, approvedNewDirectoryCreation, agent, model, permissionMode, basePermissionMode, token, sessionType, worktreeName } = params || {}
+            const { directory, sessionId, resumeSessionId, machineId, approvedNewDirectoryCreation, agent, model, reasoningEffort, permissionMode, basePermissionMode, token, sessionType, worktreeName } = params || {}
 
             if (!directory) {
                 throw new Error('Directory is required')
@@ -116,6 +121,7 @@ export class ApiMachineClient {
                 approvedNewDirectoryCreation,
                 agent,
                 model,
+                reasoningEffort,
                 permissionMode,
                 basePermissionMode,
                 token,
@@ -131,6 +137,13 @@ export class ApiMachineClient {
                 case 'error':
                     throw new Error(result.errorMessage)
             }
+        })
+
+        this.rpcHandlerManager.registerHandler('agent-models', async (params: unknown) => {
+            const record = params && typeof params === 'object' ? params as { agent?: unknown } : {}
+            const rawAgent = record.agent
+            const agent = isSupportedAgent(rawAgent) ? rawAgent : 'codex'
+            return await listAgentModels(agent)
         })
 
         this.rpcHandlerManager.registerHandler('stop-session', (params: any) => {

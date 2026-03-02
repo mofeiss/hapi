@@ -4,6 +4,7 @@ import type { McpServersConfig } from './buildHapiMcpBridge';
 import { codexSystemPrompt } from './systemPrompt';
 import type {
     ApprovalPolicy,
+    ReasoningEffort,
     SandboxMode,
     SandboxPolicy,
     ThreadStartParams,
@@ -113,6 +114,7 @@ export function buildTurnStartParams(args: {
         approvalPolicy?: TurnStartParams['approvalPolicy'];
         sandboxPolicy?: TurnStartParams['sandboxPolicy'];
         model?: string;
+        effort?: ReasoningEffort;
     };
 }): TurnStartParams {
     const params: TurnStartParams = {
@@ -138,6 +140,7 @@ export function buildTurnStartParams(args: {
 
     const collaborationMode = args.mode?.collaborationMode;
     const model = args.overrides?.model ?? args.mode?.model;
+    const effort = args.overrides?.effort ?? args.mode?.effort;
     if (collaborationMode) {
         const settings = model ? { model } : undefined;
         params.collaborationMode = settings
@@ -145,6 +148,10 @@ export function buildTurnStartParams(args: {
             : { mode: collaborationMode };
     } else if (model) {
         params.model = model;
+    }
+
+    if (effort) {
+        params.effort = effort;
     }
 
     return params;

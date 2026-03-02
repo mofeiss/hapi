@@ -94,7 +94,7 @@ export type SandboxPolicy =
         excludeSlashTmp?: boolean;
     };
 
-export type ReasoningEffort = 'low' | 'medium' | 'high' | 'auto';
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 export type ReasoningSummary = 'auto' | 'none' | 'brief' | 'detailed';
 
 export type CollaborationMode = {
@@ -132,4 +132,31 @@ export interface TurnInterruptParams {
 export interface TurnInterruptResponse {
     ok: boolean;
     [key: string]: unknown;
+}
+
+export interface ModelListParams {
+    cursor?: string | null;
+    includeHidden?: boolean | null;
+    limit?: number | null;
+}
+
+export interface ModelListReasoningEffortOption {
+    reasoningEffort: ReasoningEffort;
+    description: string;
+}
+
+export interface ModelListItem {
+    id: string;
+    model: string;
+    displayName: string;
+    description: string;
+    hidden: boolean;
+    isDefault: boolean;
+    defaultReasoningEffort: ReasoningEffort;
+    supportedReasoningEfforts: ModelListReasoningEffortOption[];
+}
+
+export interface ModelListResponse {
+    data: ModelListItem[];
+    nextCursor?: string | null;
 }

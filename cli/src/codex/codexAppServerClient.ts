@@ -4,6 +4,8 @@ import { killProcessByChildProcess } from '@/utils/process';
 import type {
     InitializeParams,
     InitializeResponse,
+    ModelListParams,
+    ModelListResponse,
     ThreadStartParams,
     ThreadStartResponse,
     ThreadResumeParams,
@@ -162,6 +164,13 @@ export class CodexAppServerClient {
             timeoutMs: 30_000
         });
         return response as TurnInterruptResponse;
+    }
+
+    async listModels(params: ModelListParams): Promise<ModelListResponse> {
+        const response = await this.sendRequest('model/list', params, {
+            timeoutMs: 30_000
+        });
+        return response as ModelListResponse;
     }
 
     async disconnect(): Promise<void> {

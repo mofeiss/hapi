@@ -8,10 +8,15 @@ const spawnBodySchema = z.object({
     directory: z.string().min(1),
     agent: z.enum(['claude', 'codex', 'gemini', 'opencode']).optional(),
     model: z.string().optional(),
+    reasoningEffort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']).optional(),
     permissionMode: z.string().optional(),
     basePermissionMode: z.string().optional(),
     sessionType: z.enum(['simple', 'worktree']).optional(),
     worktreeName: z.string().optional()
+})
+
+const agentModelsQuerySchema = z.object({
+    agent: z.enum(['claude', 'codex', 'gemini', 'opencode']).default('codex')
 })
 
 const pathsExistsSchema = z.object({
@@ -55,12 +60,35 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
             parsed.data.directory,
             parsed.data.agent,
             parsed.data.model,
+            parsed.data.reasoningEffort,
             parsed.data.permissionMode,
             parsed.data.basePermissionMode,
             parsed.data.sessionType,
             parsed.data.worktreeName
         )
         return c.json(result)
+    })
+
+    app.get('/machines/:id/agent-models', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        const parsed = agentModelsQuerySchema.safeParse(c.req.query())
+        if (!parsed.success) {
+            return c.json({ error: 'Invalid query' }, 400)
+        }
+
+        const result = await engine.listAgentModels(machineId, parsed.data.agent)
+        const status = result.success ? 200 : 502
+        return c.json(result, status)
     })
 
     app.post('/machines/:id/paths/exists', async (c) => {

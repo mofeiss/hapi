@@ -3,12 +3,17 @@ import type { AgentType } from './types'
 import type { PermissionMode } from '@/types/api'
 
 const AGENT_STORAGE_KEY = 'hapi:newSession:agent'
+const MODEL_STORAGE_KEY = 'hapi:newSession:model'
+const REASONING_EFFORT_STORAGE_KEY = 'hapi:newSession:reasoningEffort'
 const PERMISSION_MODE_STORAGE_KEY = 'hapi:newSession:permissionMode:v2'
 const LEGACY_PERMISSION_MODE_STORAGE_KEY = 'hapi:newSession:permissionMode'
 const PLAN_ACTIVE_STORAGE_KEY = 'hapi:newSession:planActive'
 const DIRECTORY_STORAGE_KEY = 'hapi:newSession:directory'
+const SESSION_TYPE_STORAGE_KEY = 'hapi:newSession:sessionType'
+const WORKTREE_NAME_STORAGE_KEY = 'hapi:newSession:worktreeName'
 
 const VALID_AGENTS: AgentType[] = ['claude', 'codex', 'gemini', 'opencode']
+const VALID_REASONING_EFFORTS = ['auto', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const
 
 export function loadPreferredAgent(): AgentType {
     try {
@@ -25,6 +30,50 @@ export function loadPreferredAgent(): AgentType {
 export function savePreferredAgent(agent: AgentType): void {
     try {
         localStorage.setItem(AGENT_STORAGE_KEY, agent)
+    } catch {
+        // Ignore storage errors
+    }
+}
+
+export function loadPreferredModel(): string {
+    try {
+        const stored = localStorage.getItem(MODEL_STORAGE_KEY)
+        if (stored && stored.trim()) {
+            return stored
+        }
+    } catch {
+        // Ignore storage errors
+    }
+    return 'auto'
+}
+
+export function savePreferredModel(model: string): void {
+    const trimmed = model.trim()
+    if (!trimmed) {
+        return
+    }
+    try {
+        localStorage.setItem(MODEL_STORAGE_KEY, trimmed)
+    } catch {
+        // Ignore storage errors
+    }
+}
+
+export function loadPreferredReasoningEffort(): (typeof VALID_REASONING_EFFORTS)[number] {
+    try {
+        const stored = localStorage.getItem(REASONING_EFFORT_STORAGE_KEY)
+        if (stored && VALID_REASONING_EFFORTS.includes(stored as (typeof VALID_REASONING_EFFORTS)[number])) {
+            return stored as (typeof VALID_REASONING_EFFORTS)[number]
+        }
+    } catch {
+        // Ignore storage errors
+    }
+    return 'auto'
+}
+
+export function savePreferredReasoningEffort(value: (typeof VALID_REASONING_EFFORTS)[number]): void {
+    try {
+        localStorage.setItem(REASONING_EFFORT_STORAGE_KEY, value)
     } catch {
         // Ignore storage errors
     }
@@ -101,6 +150,46 @@ export function savePreferredDirectory(directory: string): void {
 
     try {
         localStorage.setItem(DIRECTORY_STORAGE_KEY, trimmed)
+    } catch {
+        // Ignore storage errors
+    }
+}
+
+export function loadPreferredSessionType(): 'simple' | 'worktree' {
+    try {
+        const stored = localStorage.getItem(SESSION_TYPE_STORAGE_KEY)
+        if (stored === 'simple' || stored === 'worktree') {
+            return stored
+        }
+    } catch {
+        // Ignore storage errors
+    }
+    return 'simple'
+}
+
+export function savePreferredSessionType(sessionType: 'simple' | 'worktree'): void {
+    try {
+        localStorage.setItem(SESSION_TYPE_STORAGE_KEY, sessionType)
+    } catch {
+        // Ignore storage errors
+    }
+}
+
+export function loadPreferredWorktreeName(): string {
+    try {
+        const stored = localStorage.getItem(WORKTREE_NAME_STORAGE_KEY)
+        if (typeof stored === 'string') {
+            return stored
+        }
+    } catch {
+        // Ignore storage errors
+    }
+    return ''
+}
+
+export function savePreferredWorktreeName(worktreeName: string): void {
+    try {
+        localStorage.setItem(WORKTREE_NAME_STORAGE_KEY, worktreeName)
     } catch {
         // Ignore storage errors
     }

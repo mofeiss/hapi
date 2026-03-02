@@ -18,6 +18,7 @@ import { MessageService } from './messageService'
 import {
     RpcGateway,
     type RpcCommandResponse,
+    type RpcAgentModelsResponse,
     type RpcDeleteUploadResponse,
     type RpcListDirectoryResponse,
     type RpcPathExistsResponse,
@@ -31,6 +32,7 @@ export type { Machine } from './machineCache'
 export type { SyncEventListener } from './eventPublisher'
 export type {
     RpcCommandResponse,
+    RpcAgentModelsResponse,
     RpcDeleteUploadResponse,
     RpcListDirectoryResponse,
     RpcPathExistsResponse,
@@ -232,6 +234,16 @@ export class SyncEngine {
                 path: string
                 previewUrl?: string
             }>
+            meta?: {
+                sentFrom?: string
+                fallbackModel?: string | null
+                customSystemPrompt?: string | null
+                appendSystemPrompt?: string | null
+                allowedTools?: string[] | null
+                disallowedTools?: string[] | null
+                model?: string | null
+                reasoningEffort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | null
+            }
             sentFrom?: 'telegram-bot' | 'webapp'
         }
     ): Promise<void> {
@@ -304,13 +316,25 @@ export class SyncEngine {
         directory: string,
         agent: 'claude' | 'codex' | 'gemini' | 'opencode' = 'claude',
         model?: string,
+        reasoningEffort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh',
         permissionMode?: string,
         basePermissionMode?: string,
         sessionType?: 'simple' | 'worktree',
         worktreeName?: string,
         resumeSessionId?: string
     ): Promise<{ type: 'success'; sessionId: string } | { type: 'error'; message: string }> {
-        return await this.rpcGateway.spawnSession(machineId, directory, agent, model, permissionMode, basePermissionMode, sessionType, worktreeName, resumeSessionId)
+        return await this.rpcGateway.spawnSession(
+            machineId,
+            directory,
+            agent,
+            model,
+            reasoningEffort,
+            permissionMode,
+            basePermissionMode,
+            sessionType,
+            worktreeName,
+            resumeSessionId
+        )
     }
 
     async resumeSession(sessionId: string, namespace: string): Promise<ResumeSessionResult> {
@@ -374,6 +398,7 @@ export class SyncEngine {
             metadata.path,
             flavor,
             undefined,
+            undefined, // reasoningEffort
             undefined, // permissionMode
             undefined, // basePermissionMode
             undefined,
@@ -416,6 +441,13 @@ export class SyncEngine {
 
     async checkPathsExist(machineId: string, paths: string[]): Promise<Record<string, boolean>> {
         return await this.rpcGateway.checkPathsExist(machineId, paths)
+    }
+
+    async listAgentModels(
+        machineId: string,
+        agent: 'claude' | 'codex' | 'gemini' | 'opencode'
+    ): Promise<RpcAgentModelsResponse> {
+        return await this.rpcGateway.listAgentModels(machineId, agent)
     }
 
     async getGitStatus(sessionId: string, cwd?: string): Promise<RpcCommandResponse> {

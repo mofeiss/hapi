@@ -69,10 +69,24 @@ export class MessageService {
             text: string
             localId?: string | null
             attachments?: AttachmentMetadata[]
+            meta?: {
+                sentFrom?: string
+                fallbackModel?: string | null
+                customSystemPrompt?: string | null
+                appendSystemPrompt?: string | null
+                allowedTools?: string[] | null
+                disallowedTools?: string[] | null
+                model?: string | null
+                reasoningEffort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | null
+            }
             sentFrom?: 'telegram-bot' | 'webapp'
         }
     ): Promise<void> {
-        const sentFrom = payload.sentFrom ?? 'webapp'
+        const sentFrom = payload.meta?.sentFrom ?? payload.sentFrom ?? 'webapp'
+        const meta = {
+            ...(payload.meta ?? {}),
+            sentFrom
+        }
 
         const content = {
             role: 'user',
@@ -81,9 +95,7 @@ export class MessageService {
                 text: payload.text,
                 attachments: payload.attachments
             },
-            meta: {
-                sentFrom
-            }
+            meta
         }
 
         const msg = this.store.messages.addMessage(sessionId, content, payload.localId ?? undefined)

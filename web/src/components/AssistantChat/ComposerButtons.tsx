@@ -668,6 +668,14 @@ export function ComposerButtons(props: {
     modelMode: string
     modelModeOptions: { value: string; label: string }[]
     onModelModeChange: (value: string) => void
+    showCodexModelSelect: boolean
+    codexModel: string
+    codexModelOptions: { value: string; label: string }[]
+    onCodexModelChange: (value: string) => void
+    showCodexReasoningSelect: boolean
+    codexReasoningEffort: string
+    codexReasoningOptions: { value: string; label: string }[]
+    onCodexReasoningEffortChange: (value: string) => void
     showPermissionSelect: boolean
     permissionMode: string
     permissionModeOptions: { value: string; label: string }[]
@@ -712,6 +720,28 @@ export function ComposerButtons(props: {
                         value={props.modelMode}
                         options={props.modelModeOptions}
                         onChange={props.onModelModeChange}
+                        disabled={props.controlsDisabled}
+                        icon={<ModelIcon />}
+                        compactOnMobile
+                    />
+                ) : null}
+
+                {props.showCodexModelSelect && props.codexModelOptions.length > 0 ? (
+                    <MiniSelect
+                        value={props.codexModel}
+                        options={props.codexModelOptions}
+                        onChange={props.onCodexModelChange}
+                        disabled={props.controlsDisabled}
+                        icon={<ModelIcon />}
+                        compactOnMobile
+                    />
+                ) : null}
+
+                {props.showCodexReasoningSelect && props.codexReasoningOptions.length > 0 ? (
+                    <MiniSelect
+                        value={props.codexReasoningEffort}
+                        options={props.codexReasoningOptions}
+                        onChange={props.onCodexReasoningEffortChange}
                         disabled={props.controlsDisabled}
                         icon={<ModelIcon />}
                         compactOnMobile

@@ -4,12 +4,22 @@ import { initializeToken } from '@/ui/tokenInit'
 import { maybeAutoStartServer } from '@/utils/autoStartServer'
 import type { CommandDefinition } from './types'
 import type { CodexPermissionMode } from '@hapi/protocol/types'
+import type { ReasoningEffort } from '@/codex/appServerTypes'
 
 function isCodexPermissionMode(value: string): value is CodexPermissionMode {
     return value === 'default'
         || value === 'read-only'
         || value === 'safe-yolo'
         || value === 'yolo'
+}
+
+function isReasoningEffort(value: string): value is ReasoningEffort {
+    return value === 'none'
+        || value === 'minimal'
+        || value === 'low'
+        || value === 'medium'
+        || value === 'high'
+        || value === 'xhigh'
 }
 
 export const codexCommand: CommandDefinition = {
@@ -25,6 +35,7 @@ export const codexCommand: CommandDefinition = {
                 permissionMode?: CodexPermissionMode
                 resumeSessionId?: string
                 model?: string
+                reasoningEffort?: ReasoningEffort
             } = {}
             const unknownArgs: string[] = []
 
@@ -66,6 +77,18 @@ export const codexCommand: CommandDefinition = {
                     }
                     options.model = model
                     unknownArgs.push('--model', model)
+                } else if (arg === '--reasoning-effort') {
+                    const reasoningEffort = commandArgs[++i]
+                    if (!reasoningEffort || !isReasoningEffort(reasoningEffort)) {
+                        throw new Error('Invalid --reasoning-effort for codex')
+                    }
+                    options.reasoningEffort = reasoningEffort
+                } else if (arg.startsWith('--reasoning-effort=')) {
+                    const reasoningEffort = arg.slice('--reasoning-effort='.length)
+                    if (!isReasoningEffort(reasoningEffort)) {
+                        throw new Error('Invalid --reasoning-effort for codex')
+                    }
+                    options.reasoningEffort = reasoningEffort
                 } else {
                     unknownArgs.push(arg)
                 }

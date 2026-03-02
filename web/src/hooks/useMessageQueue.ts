@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { UserMessageMeta } from '@/types/api'
 
 export type QueuedMessage = {
     text: string
+    meta?: UserMessageMeta
     timestamp: number
 }
 
 export function useMessageQueue(
     isAgentRunning: boolean,
-    onSend: (text: string) => void,
+    onSend: (text: string, meta?: UserMessageMeta) => void,
 ) {
     const [queue, setQueue] = useState<QueuedMessage[]>([])
 
-    const enqueue = useCallback((text: string) => {
-        setQueue((prev) => [...prev, { text, timestamp: Date.now() }])
+    const enqueue = useCallback((text: string, meta?: UserMessageMeta) => {
+        setQueue((prev) => [...prev, { text, meta, timestamp: Date.now() }])
     }, [])
 
     const clear = useCallback(() => {
@@ -23,7 +25,7 @@ export function useMessageQueue(
         setQueue((prev) => {
             if (prev.length > 0) {
                 const merged = prev.map((m) => m.text).join('\n')
-                onSend(merged)
+                onSend(merged, prev[prev.length - 1]?.meta)
             }
             return []
         })
@@ -38,7 +40,7 @@ export function useMessageQueue(
         if (!isAgentRunning && queue.length > 0) {
             const merged = queue.map((m) => m.text).join('\n')
             setQueue([])
-            onSend(merged)
+            onSend(merged, queue[queue.length - 1]?.meta)
         }
     }, [isAgentRunning, queue, onSend])
 

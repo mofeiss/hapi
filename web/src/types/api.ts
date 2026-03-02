@@ -28,6 +28,8 @@ export type SessionMetadataSummary = {
     machineId?: string
     tools?: string[]
     flavor?: string | null
+    model?: string
+    reasoningEffort?: CodexReasoningEffort
     worktree?: WorktreeMetadata
 }
 
@@ -77,6 +79,42 @@ export type MachinePathsExistsResponse = { exists: Record<string, boolean> }
 export type SpawnResponse =
     | { type: 'success'; sessionId: string }
     | { type: 'error'; message: string }
+
+export type CodexReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
+
+export type UserMessageMeta = {
+    sentFrom?: string
+    fallbackModel?: string | null
+    customSystemPrompt?: string | null
+    appendSystemPrompt?: string | null
+    allowedTools?: string[] | null
+    disallowedTools?: string[] | null
+    model?: string | null
+    reasoningEffort?: CodexReasoningEffort | null
+}
+
+export type AgentModelReasoningEffortOption = {
+    reasoningEffort: CodexReasoningEffort
+    description: string
+}
+
+export type AgentModel = {
+    id: string
+    model: string
+    displayName: string
+    description: string
+    hidden: boolean
+    isDefault: boolean
+    defaultReasoningEffort: CodexReasoningEffort
+    supportedReasoningEfforts: AgentModelReasoningEffortOption[]
+}
+
+export type AgentModelsResponse = {
+    success: boolean
+    source?: 'codex-app-server' | 'fallback-static'
+    models?: AgentModel[]
+    error?: string
+}
 
 export type GitCommandResponse = {
     success: boolean

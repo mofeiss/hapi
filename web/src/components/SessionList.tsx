@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 import { useToast } from '@/lib/toast-context'
+import { formatSessionModelLabel, ReasoningIcon } from '@/components/SessionModelBadge'
 
 export type SessionGroup = {
     host: string
@@ -252,6 +253,9 @@ function SessionItem(props: {
     })
 
     const sessionName = useSessionTitleOverride(s.id) ?? getSessionTitle(s)
+    const modelLabel = formatSessionModelLabel(s.metadata, {
+        fallbackModel: s.metadata?.flavor === 'claude' ? s.modelMode : undefined
+    })
     const showArchiving = isArchiving || forceArchiving
     const showDeleting = isDeleting || forceDeleting
     return (
@@ -348,6 +352,12 @@ function SessionItem(props: {
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 ml-1" aria-hidden="true"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
                         {getAgentLabel(s)}
                     </span>
+                    {modelLabel ? (
+                        <span className="inline-flex items-center gap-1 truncate" title={modelLabel}>
+                            <ReasoningIcon className="shrink-0" />
+                            <span className="truncate">{modelLabel}</span>
+                        </span>
+                    ) : null}
                     <span className="inline-flex items-center gap-1 truncate">
                         <span className="shrink-0 text-[10px]" aria-hidden="true">📂</span>
                         <span className="truncate" title={s.metadata?.path}>{s.metadata?.path ? getPathDisplayName(s.metadata.path) : s.id.slice(0, 8)}</span>
