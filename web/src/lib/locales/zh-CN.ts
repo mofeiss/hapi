@@ -301,6 +301,7 @@ export default {
   'voice.error.notAllowed': '语音功能不可用',
   'voice.error.connection': '连接错误',
   'voice.dismiss': '关闭',
+  'voice.input.recording': '正在语音录入中…',
 
   // Banners
   'offline.title': '离线',

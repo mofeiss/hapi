@@ -248,9 +248,6 @@ export function HappyComposer(props: {
     const { isStandalone, isIOS } = usePWAInstall()
     const isIOSPWA = isIOS && isStandalone
     const isVoiceFocusMode = voiceStatus !== 'disconnected'
-    const voicePanelSizeClass = isVoiceFocusMode
-        ? (isTouch ? 'min-h-[320px]' : 'min-h-[280px]')
-        : (isTouch ? 'min-h-[160px]' : 'min-h-[140px]')
     const bottomPaddingClass = isIOSPWA ? 'pb-0' : 'pb-3'
     const activeWord = useActiveWord(inputState.text, inputState.selection, autocompletePrefixes)
     const [suggestions, selectedIndex, moveUp, moveDown, clearSuggestions] = useActiveSuggestions(
@@ -480,6 +477,19 @@ export function HappyComposer(props: {
         return () => window.removeEventListener('keydown', handleGlobalKeyDown)
     }, [modelMode, onModelModeChange, haptic, agentFlavor])
 
+    useEffect(() => {
+        if (voiceStatus !== 'connected' || !onVoiceToggle) return
+
+        const handleVoiceEscape = (event: globalThis.KeyboardEvent) => {
+            if (event.defaultPrevented || event.key !== 'Escape') return
+            event.preventDefault()
+            onVoiceToggle({ discard: true })
+        }
+
+        window.addEventListener('keydown', handleVoiceEscape)
+        return () => window.removeEventListener('keydown', handleVoiceEscape)
+    }, [voiceStatus, onVoiceToggle])
+
     const handleChange = useCallback((e: ReactChangeEvent<HTMLTextAreaElement>) => {
         // If user manually edits while voice is recording, stop voice input
         // to prevent accumulated transcript from overwriting their edits
@@ -642,6 +652,8 @@ export function HappyComposer(props: {
     const correctionPreviewText = voiceCorrectionUnavailable
         ? voiceRawText
         : (voiceCorrectedText || voiceRawText)
+    const voicePreviewPlaceholder = t('voice.input.recording')
+    const voicePreviewInputClass = 'flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] placeholder:opacity-55 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
 
     return (
         <div className={`px-3 ${bottomPaddingClass} pt-2 bg-[var(--app-bg)]`}>
@@ -658,156 +670,88 @@ export function HappyComposer(props: {
                         voiceStatus={voiceStatus}
                     />
 
-                    <div className={`overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)] transition-[min-height,box-shadow] duration-200 ease-out ${voicePanelSizeClass} ${isVoiceFocusMode ? 'shadow-[0_14px_36px_rgba(15,23,42,0.12)]' : ''}`}>
-                        {isVoiceFocusMode ? (
-                            <div className="flex h-full min-h-0 flex-col">
-                                <div className="min-h-0 flex-1 px-3 pt-3 pb-2">
-                                    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-bg)]">
-                                        <div className="min-h-0 flex-1 p-3">
-                                            <div className="mb-2 flex items-center justify-between text-xs text-[var(--app-hint)]">
-                                                <span>原始实时录入</span>
-                                                <span>{voiceStatus === 'connected' ? '识别中' : '收尾中'}</span>
-                                            </div>
-                                            <div className="h-full max-h-full overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--app-fg)]">
-                                                {voiceRawText || '...'}
-                                            </div>
-                                        </div>
-
-                                        <div className="h-px bg-[var(--app-border)]" />
-
-                                        <div className="min-h-0 flex-1 p-3">
-                                            <div className="mb-2 flex items-center justify-between text-xs text-[var(--app-hint)]">
-                                                <span>{voiceCorrectionUnavailable ? '修正区（已降级为原文）' : '实时修正'}</span>
-                                                {voiceCorrectionUnavailable ? (
-                                                    <span className="text-[var(--app-orange-base)]">不可用</span>
-                                                ) : null}
-                                            </div>
-                                            {voiceCorrectionUnavailable ? (
-                                                <div className="mb-2 rounded-md border border-[var(--app-orange-base)]/40 bg-[var(--app-orange-base)]/10 px-2 py-1 text-xs text-[var(--app-orange-base)]">
-                                                    未检测到语音修正 API 配置，实时修正功能不可用。
-                                                </div>
-                                            ) : null}
-                                            <div className="h-full max-h-full overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--app-fg)]">
-                                                {correctionPreviewText || '...'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {voiceError ? (
-                                    <div className="px-3 pb-2 text-xs text-red-500">
-                                        {voiceError}
-                                    </div>
-                                ) : null}
-
-                                <ComposerButtons
-                                    canSend={canSend}
-                                    controlsDisabled={controlsDisabled}
-                                    showModelSelect={showModelSettings}
-                                    modelMode={modelMode}
-                                    modelModeOptions={modelModeSelectOptions}
-                                    onModelModeChange={handleModelChange}
-                                    showCodexModelSelect={showCodexModelSettings}
-                                    codexModel={codexModel ?? ''}
-                                    codexModelOptions={codexModelOptions}
-                                    onCodexModelChange={handleCodexModelChange}
-                                    showCodexReasoningSelect={showCodexReasoningSettings}
-                                    codexReasoningEffort={codexReasoningEffort ?? 'medium'}
-                                    codexReasoningOptions={codexReasoningOptions}
-                                    onCodexReasoningEffortChange={handleCodexReasoningEffortChange}
-                                    showPermissionSelect={showPermissionSettings}
-                                    permissionMode={basePermissionMode}
-                                    permissionModeOptions={permissionSelectOptions}
-                                    onPermissionModeChange={handlePermissionChange}
-                                    showPlanToggle={showPlanToggle}
-                                    isPlanActive={isPlan}
-                                    onPlanToggle={onPlanToggle ?? (() => {})}
-                                    showAbortButton={showAbortButton}
-                                    abortDisabled={abortDisabled}
-                                    isAborting={isAborting}
-                                    onAbort={handleAbort}
-                                    showCopyButton={!isTouch}
-                                    inputText={correctionPreviewText || composerText}
-                                    voiceEnabled={voiceEnabled}
-                                    voiceStatus={voiceStatus}
-                                    voiceMicMuted={voiceMicMuted}
-                                    onVoiceToggle={onVoiceToggle ?? (() => {})}
-                                    onVoiceMicToggle={onVoiceMicToggle}
-                                    canClear={hasText}
-                                    onClear={handleClear}
-                                    onSend={handleSend}
-                                    hasQueue={hasQueue}
-                                    onFlush={onFlushQueue}
-                                />
+                    <div className="overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)]">
+                        {!isVoiceFocusMode && attachments.length > 0 ? (
+                            <div className="flex flex-wrap gap-2 px-4 pt-3">
+                                <ComposerImagePreviewContext.Provider value={imagePreviewCtx}>
+                                    <ComposerPrimitive.Attachments components={{ Attachment: AttachmentItem }} />
+                                </ComposerImagePreviewContext.Provider>
                             </div>
-                        ) : (
-                            <>
-                                {attachments.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2 px-4 pt-3">
-                                        <ComposerImagePreviewContext.Provider value={imagePreviewCtx}>
-                                            <ComposerPrimitive.Attachments components={{ Attachment: AttachmentItem }} />
-                                        </ComposerImagePreviewContext.Provider>
-                                    </div>
-                                ) : null}
+                        ) : null}
 
-                                <div className="flex items-center px-4 py-3">
-                                    <ComposerPrimitive.Input
-                                        ref={textareaRef}
-                                        autoFocus={!controlsDisabled && !isTouch}
-                                        placeholder={controlledByUser ? t('composer.controlledByTerminal') : showContinueHint ? t('misc.typeMessage') : t('misc.typeAMessage')}
-                                        disabled={controlsDisabled}
-                                        maxRows={5}
-                                        submitOnEnter={!isTouch}
-                                        cancelOnEscape={false}
-                                        onChange={handleChange}
-                                        onSelect={handleSelect}
-                                        onKeyDown={handleKeyDown}
-                                        onPaste={handlePaste}
-                                        className="flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                    />
-                                </div>
-
-                                <ComposerButtons
-                                    canSend={canSend}
-                                    controlsDisabled={controlsDisabled}
-                                    showModelSelect={showModelSettings}
-                                    modelMode={modelMode}
-                                    modelModeOptions={modelModeSelectOptions}
-                                    onModelModeChange={handleModelChange}
-                                    showCodexModelSelect={showCodexModelSettings}
-                                    codexModel={codexModel ?? ''}
-                                    codexModelOptions={codexModelOptions}
-                                    onCodexModelChange={handleCodexModelChange}
-                                    showCodexReasoningSelect={showCodexReasoningSettings}
-                                    codexReasoningEffort={codexReasoningEffort ?? 'medium'}
-                                    codexReasoningOptions={codexReasoningOptions}
-                                    onCodexReasoningEffortChange={handleCodexReasoningEffortChange}
-                                    showPermissionSelect={showPermissionSettings}
-                                    permissionMode={basePermissionMode}
-                                    permissionModeOptions={permissionSelectOptions}
-                                    onPermissionModeChange={handlePermissionChange}
-                                    showPlanToggle={showPlanToggle}
-                                    isPlanActive={isPlan}
-                                    onPlanToggle={onPlanToggle ?? (() => {})}
-                                    showAbortButton={showAbortButton}
-                                    abortDisabled={abortDisabled}
-                                    isAborting={isAborting}
-                                    onAbort={handleAbort}
-                                    showCopyButton={!isTouch}
-                                    inputText={composerText}
-                                    voiceEnabled={voiceEnabled}
-                                    voiceStatus={voiceStatus}
-                                    voiceMicMuted={voiceMicMuted}
-                                    onVoiceToggle={onVoiceToggle ?? (() => {})}
-                                    onVoiceMicToggle={onVoiceMicToggle}
-                                    canClear={hasText}
-                                    onClear={handleClear}
-                                    onSend={handleSend}
-                                    hasQueue={hasQueue}
-                                    onFlush={onFlushQueue}
+                        <div className="flex items-center px-4 py-3">
+                            {isVoiceFocusMode ? (
+                                <textarea
+                                    readOnly
+                                    tabIndex={-1}
+                                    value={correctionPreviewText}
+                                    placeholder={voicePreviewPlaceholder}
+                                    rows={1}
+                                    className={voicePreviewInputClass}
                                 />
-                            </>
-                        )}
+                            ) : (
+                                <ComposerPrimitive.Input
+                                    ref={textareaRef}
+                                    autoFocus={!controlsDisabled && !isTouch}
+                                    placeholder={controlledByUser ? t('composer.controlledByTerminal') : showContinueHint ? t('misc.typeMessage') : t('misc.typeAMessage')}
+                                    disabled={controlsDisabled}
+                                    maxRows={5}
+                                    submitOnEnter={!isTouch}
+                                    cancelOnEscape={false}
+                                    onChange={handleChange}
+                                    onSelect={handleSelect}
+                                    onKeyDown={handleKeyDown}
+                                    onPaste={handlePaste}
+                                    className="flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            )}
+                        </div>
+
+                        {isVoiceFocusMode && voiceError ? (
+                            <div className="px-4 pb-2 text-xs text-red-500">
+                                {voiceError}
+                            </div>
+                        ) : null}
+
+                        <ComposerButtons
+                            canSend={canSend}
+                            controlsDisabled={controlsDisabled}
+                            showModelSelect={showModelSettings}
+                            modelMode={modelMode}
+                            modelModeOptions={modelModeSelectOptions}
+                            onModelModeChange={handleModelChange}
+                            showCodexModelSelect={showCodexModelSettings}
+                            codexModel={codexModel ?? ''}
+                            codexModelOptions={codexModelOptions}
+                            onCodexModelChange={handleCodexModelChange}
+                            showCodexReasoningSelect={showCodexReasoningSettings}
+                            codexReasoningEffort={codexReasoningEffort ?? 'medium'}
+                            codexReasoningOptions={codexReasoningOptions}
+                            onCodexReasoningEffortChange={handleCodexReasoningEffortChange}
+                            showPermissionSelect={showPermissionSettings}
+                            permissionMode={basePermissionMode}
+                            permissionModeOptions={permissionSelectOptions}
+                            onPermissionModeChange={handlePermissionChange}
+                            showPlanToggle={showPlanToggle}
+                            isPlanActive={isPlan}
+                            onPlanToggle={onPlanToggle ?? (() => {})}
+                            showAbortButton={showAbortButton}
+                            abortDisabled={abortDisabled}
+                            isAborting={isAborting}
+                            onAbort={handleAbort}
+                            showCopyButton={!isTouch}
+                            inputText={isVoiceFocusMode ? (correctionPreviewText || composerText) : composerText}
+                            voiceEnabled={voiceEnabled}
+                            voiceStatus={voiceStatus}
+                            voiceMicMuted={voiceMicMuted}
+                            onVoiceToggle={onVoiceToggle ?? (() => {})}
+                            onVoiceMicToggle={onVoiceMicToggle}
+                            canClear={hasText}
+                            onClear={handleClear}
+                            onSend={handleSend}
+                            hasQueue={hasQueue}
+                            onFlush={onFlushQueue}
+                        />
                     </div>
                 </ComposerPrimitive.Root>
 

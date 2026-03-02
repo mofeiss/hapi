@@ -299,6 +299,7 @@ export default {
   'voice.error.notAllowed': 'Voice not allowed',
   'voice.error.connection': 'Connection error',
   'voice.dismiss': 'Dismiss',
+  'voice.input.recording': 'Recording voice…',
 
   // Banners
   'offline.title': 'Offline',

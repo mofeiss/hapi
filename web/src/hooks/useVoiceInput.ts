@@ -3,6 +3,7 @@ import type { ApiClient } from '@/api/client'
 import { getElevenLabsCodeFromPreference } from '@/lib/languages'
 
 export type VoiceInputStatus = 'idle' | 'recording' | 'transcribing'
+export type VoiceCorrectionAvailability = 'unknown' | 'available' | 'unavailable'
 export type VoiceToggleOptions = {
     discard?: boolean
 }
@@ -162,6 +163,8 @@ export function useVoiceInput(api: ApiClient) {
     const [error, setError] = useState<string | null>(null)
     const [rawText, setRawText] = useState('')
     const [correctedText, setCorrectedText] = useState('')
+    const [correctionAvailability, setCorrectionAvailability] = useState<VoiceCorrectionAvailability>('unknown')
+    const [correctionUnavailableReason, setCorrectionUnavailableReason] = useState<string | null>(null)
     const onTranscriptRef = useRef<((text: string) => void) | null>(null)
     const onInterimRef = useRef<((text: string) => void) | null>(null)
     const onRawRef = useRef<((text: string) => void) | null>(null)
@@ -178,12 +181,21 @@ export function useVoiceInput(api: ApiClient) {
     const correctionInFlightRef = useRef(false)
     const correctionPendingRef = useRef(false)
     const allowRealtimeCorrectionRef = useRef(false)
+    const correctionAvailabilityRef = useRef<VoiceCorrectionAvailability>('unknown')
 
     // MediaRecorder fallback refs
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const chunksRef = useRef<Blob[]>([])
 
     const supportsWebSpeech = useRef(getSpeechRecognitionClass() !== null)
+
+    const updateCorrectionAvailability = useCallback((next: VoiceCorrectionAvailability) => {
+        if (correctionAvailabilityRef.current === next) {
+            return
+        }
+        correctionAvailabilityRef.current = next
+        setCorrectionAvailability(next)
+    }, [])
 
     const beginRecordingSession = useCallback((): number => {
         const nextId = recordingIdCounterRef.current + 1
@@ -196,8 +208,11 @@ export function useVoiceInput(api: ApiClient) {
         lastRequestedRawRef.current = ''
         rawTextRef.current = ''
         correctedTextRef.current = ''
+        correctionAvailabilityRef.current = 'unknown'
         setRawText('')
         setCorrectedText('')
+        setCorrectionAvailability('unknown')
+        setCorrectionUnavailableReason(null)
         return nextId
     }, [])
 
@@ -234,7 +249,7 @@ export function useVoiceInput(api: ApiClient) {
         prevCorrectedFull?: string
         deltaRaw?: string
         latestSegment?: string
-    }, recordingId: number): Promise<string> => {
+    }, recordingId: number): Promise<{ text: string; unavailable: boolean }> => {
         try {
             const result = await api.correctVoiceText({
                 currentRawFull: context.currentRawFull,
@@ -244,18 +259,28 @@ export function useVoiceInput(api: ApiClient) {
                 latestSegment: context.latestSegment
             })
             if (!isActiveRecording(recordingId)) {
-                return context.currentRawFull
+                return { text: context.currentRawFull, unavailable: false }
             }
+
+            if (result.reason === 'voice-correction-not-configured') {
+                allowRealtimeCorrectionRef.current = false
+                setCorrectionUnavailableReason(result.reason)
+                updateCorrectionAvailability('unavailable')
+                return { text: context.currentRawFull, unavailable: true }
+            }
+
+            setCorrectionUnavailableReason(null)
+            updateCorrectionAvailability('available')
             const corrected = typeof result.text === 'string' ? result.text.trim() : ''
             const deduped = stripLikelyDuplicatedPrefix(corrected, context.currentRawFull)
-            return deduped || context.currentRawFull
+            return { text: deduped || context.currentRawFull, unavailable: false }
         } catch (err) {
             if (isActiveRecording(recordingId)) {
                 setError(err instanceof Error ? err.message : 'Correction failed')
             }
-            return context.currentRawFull
+            return { text: context.currentRawFull, unavailable: false }
         }
-    }, [api, isActiveRecording])
+    }, [api, isActiveRecording, updateCorrectionAvailability])
 
     const maybeRequestRealtimeCorrection = useCallback(async (recordingId: number) => {
         if (!isActiveRecording(recordingId)) return
@@ -284,7 +309,8 @@ export function useVoiceInput(api: ApiClient) {
             )
             if (!isActiveRecording(recordingId)) return
             if (!allowRealtimeCorrectionRef.current) return
-            updateCorrectedText(corrected, true)
+            if (corrected.unavailable) return
+            updateCorrectedText(corrected.text, true)
         } finally {
             correctionInFlightRef.current = false
             if (correctionPendingRef.current) {
@@ -326,12 +352,16 @@ export function useVoiceInput(api: ApiClient) {
         allowRealtimeCorrectionRef.current = false
         updateRawText(text)
         setStatus('transcribing')
-        const prevRawForFinal = lastRequestedRawRef.current
-        const prevCorrectedForFinal = correctedTextRef.current.trim()
-        const finalCorrectedText = await runSingleCorrection(
-            buildCorrectionContext(text, prevRawForFinal, prevCorrectedForFinal),
-            recordingId
-        )
+        let finalCorrectedText = text
+        if (correctionAvailabilityRef.current !== 'unavailable') {
+            const prevRawForFinal = lastRequestedRawRef.current
+            const prevCorrectedForFinal = correctedTextRef.current.trim()
+            const correction = await runSingleCorrection(
+                buildCorrectionContext(text, prevRawForFinal, prevCorrectedForFinal),
+                recordingId
+            )
+            finalCorrectedText = correction.text
+        }
         if (!isActiveRecording(recordingId)) return
 
         updateCorrectedText(finalCorrectedText, false)
@@ -519,5 +549,16 @@ export function useVoiceInput(api: ApiClient) {
         onRawRef.current = cb
     }, [])
 
-    return { status, error, rawText, correctedText, toggle, setOnTranscript, setOnInterim, setOnRaw }
+    return {
+        status,
+        error,
+        rawText,
+        correctedText,
+        correctionAvailability,
+        correctionUnavailableReason,
+        toggle,
+        setOnTranscript,
+        setOnInterim,
+        setOnRaw
+    }
 }
