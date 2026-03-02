@@ -9,6 +9,7 @@ import { RenameSessionDialog } from '@/components/RenameSessionDialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { useSessionTitleOverride } from '@/lib/session-title-override-store'
+import { useToast } from '@/lib/toast-context'
 
 export type SessionGroup = {
     host: string
@@ -164,6 +165,7 @@ function SessionItem(props: {
     onBatchToggleSelect?: () => void
 }) {
     const { t } = useTranslation()
+    const { addToast } = useToast()
     const { session: s, onSelect, api, selected = false, batchMode, batchSelected, onBatchToggleSelect } = props
     const { haptic } = usePlatform()
     const [menuOpen, setMenuOpen] = useState(false)
@@ -171,6 +173,7 @@ function SessionItem(props: {
     const [renameOpen, setRenameOpen] = useState(false)
     const [archiveOpen, setArchiveOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
+    const [isArchiving, setIsArchiving] = useState(false)
 
     const { archiveSession, renameSession, deleteSession, isPending } = useSessionActions(
         api,
@@ -181,8 +184,33 @@ function SessionItem(props: {
     const skipArchiveConfirm = (() => { try { return localStorage.getItem('hapi:skip-confirm:archive') === '1' } catch { return false } })()
     const skipDeleteConfirm = (() => { try { return localStorage.getItem('hapi:skip-confirm:delete') === '1' } catch { return false } })()
 
-    const handleQuickArchive = async () => {
-        try { await archiveSession() } catch { /* toast handles errors */ }
+    useEffect(() => {
+        if (!s.active) {
+            setIsArchiving(false)
+        }
+    }, [s.active])
+
+    const runArchive = () => {
+        if (isArchiving) {
+            return
+        }
+        setIsArchiving(true)
+        void archiveSession().catch((error) => {
+            const message = error instanceof Error && error.message
+                ? error.message
+                : t('dialog.error.default')
+            setIsArchiving(false)
+            addToast({
+                title: t('dialog.archive.title'),
+                body: message,
+                sessionId: s.id,
+                url: `/sessions/${s.id}`
+            })
+        })
+    }
+
+    const handleQuickArchive = () => {
+        runArchive()
     }
     const handleQuickDelete = async () => {
         try { await deleteSession() } catch { /* toast handles errors */ }
@@ -274,7 +302,11 @@ function SessionItem(props: {
                                 </span>
                             )
                         })()}
-                        {s.pendingRequestsCount > 0 ? (
+                        {isArchiving ? (
+                            <span className="text-[var(--app-orange-base)]">
+                                {t('session.item.archiving')}
+                            </span>
+                        ) : s.pendingRequestsCount > 0 ? (
                             <span className="text-[var(--app-orange-base)]">
                                 {t('session.item.pending')} {s.pendingRequestsCount}
                             </span>
@@ -323,7 +355,7 @@ function SessionItem(props: {
                         description={t('dialog.archive.description', { name: sessionName })}
                         confirmLabel={t('dialog.archive.confirm')}
                         confirmingLabel={t('dialog.archive.confirming')}
-                        onConfirm={archiveSession}
+                        onConfirm={runArchive}
                         isPending={isPending}
                         destructive
                         dontAskAgainKey="hapi:skip-confirm:archive"

@@ -10,6 +10,7 @@ import { useTranslation } from '@/lib/use-translation'
 import { useWidescreen } from '@/hooks/useWidescreen'
 import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 import { normalizeProjectPath } from '@/utils/path'
+import { useToast } from '@/lib/toast-context'
 
 function getSessionTitle(session: Session): string {
     if (session.metadata?.name) {
@@ -123,6 +124,7 @@ export function SessionHeader(props: {
     onSessionDeleted?: () => void
 }) {
     const { t } = useTranslation()
+    const { addToast } = useToast()
     const { widescreen, toggleWidescreen } = useWidescreen()
     const { session, api, onSessionDeleted } = props
     const titleFromStore = useSessionTitleOverride(session.id)
@@ -147,6 +149,20 @@ export function SessionHeader(props: {
     const handleDelete = async () => {
         await deleteSession()
         onSessionDeleted?.()
+    }
+
+    const handleArchive = () => {
+        void archiveSession().catch((error) => {
+            const message = error instanceof Error && error.message
+                ? error.message
+                : t('dialog.error.default')
+            addToast({
+                title: t('dialog.archive.title'),
+                body: message,
+                sessionId: session.id,
+                url: `/sessions/${session.id}`
+            })
+        })
     }
 
     const handleMenuToggle = () => {
@@ -292,7 +308,7 @@ export function SessionHeader(props: {
                 description={t('dialog.archive.description', { name: title })}
                 confirmLabel={t('dialog.archive.confirm')}
                 confirmingLabel={t('dialog.archive.confirming')}
-                onConfirm={archiveSession}
+                onConfirm={handleArchive}
                 isPending={isPending}
                 destructive
             />

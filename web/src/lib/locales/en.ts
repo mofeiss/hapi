@@ -50,6 +50,7 @@ export default {
   'session.item.modelMode': 'mode',
   'session.item.worktree': 'worktree',
   'session.item.pending': 'pending',
+  'session.item.archiving': 'archiving…',
   'session.item.thinking': 'thinking',
   'session.time.justNow': 'just now',
   'session.time.minutesAgo': '{n}m ago',

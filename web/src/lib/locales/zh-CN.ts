@@ -50,6 +50,7 @@ export default {
   'session.item.modelMode': '模型',
   'session.item.worktree': '工作树',
   'session.item.pending': '待处理',
+  'session.item.archiving': '归档中…',
   'session.item.thinking': '思考中',
   'session.time.justNow': '刚刚',
   'session.time.minutesAgo': '{n} 分钟前',
