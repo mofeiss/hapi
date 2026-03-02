@@ -651,7 +651,7 @@ export function HappyComposer(props: {
 
     const correctionPreviewText = voiceCorrectionUnavailable
         ? voiceRawText
-        : (voiceCorrectedText || voiceRawText)
+        : voiceCorrectedText
     const voicePreviewPlaceholder = t('voice.input.recording')
     const voicePreviewInputClass = 'flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] placeholder:opacity-55 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
 

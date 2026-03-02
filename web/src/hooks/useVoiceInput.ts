@@ -84,9 +84,9 @@ function computeDeltaRaw(prevRaw: string, currentRaw: string): string {
 const PREFIX_COMPARE_SEPARATOR_RE = /[\s，。,！!？?；;：:"“”'‘’、]/u
 const MIN_PREV_RAW_LENGTH_FOR_STABILITY = 6
 const MIN_PREV_CORRECTED_LENGTH_FOR_STABILITY = 4
-const CORRECTION_DEBOUNCE_MS = 450
-const CORRECTION_AFTER_SPEECH_END_MS = 180
-const CORRECTION_AFTER_FINAL_RESULT_MS = 80
+const CORRECTION_DEBOUNCE_MS = 260
+const CORRECTION_AFTER_SPEECH_END_MS = 110
+const CORRECTION_AFTER_FINAL_RESULT_MS = 40
 
 function buildComparableText(text: string): { normalized: string; indexMap: number[] } {
     let normalized = ''
@@ -98,6 +98,10 @@ function buildComparableText(text: string): { normalized: string; indexMap: numb
         indexMap.push(i)
     }
     return { normalized, indexMap }
+}
+
+function getComparableLength(text: string): number {
+    return buildComparableText(text).normalized.length
 }
 
 function buildCorrectionContext(
@@ -246,7 +250,12 @@ export function useVoiceInput(api: ApiClient) {
     }, [])
 
     const updateCorrectedText = useCallback((text: string, emitInterim: boolean) => {
-        const next = text.trim()
+        const prev = correctedTextRef.current.trim()
+        const incoming = text.trim()
+        const next = emitInterim && prev && getComparableLength(incoming) < getComparableLength(prev)
+            ? prev
+            : incoming
+
         correctedTextRef.current = next
         setCorrectedText(next)
         if (emitInterim && next) {
@@ -301,7 +310,17 @@ export function useVoiceInput(api: ApiClient) {
         const currentRaw = rawTextRef.current.trim()
         if (!currentRaw) return
 
-        if (currentRaw === lastRequestedRawRef.current) return
+        const previousRequestedRaw = lastRequestedRawRef.current
+        if (currentRaw === previousRequestedRaw) return
+
+        // Web Speech interim results can temporarily retract text.
+        // For realtime preview, only request correction when progress is non-decreasing.
+        if (
+            previousRequestedRaw
+            && getComparableLength(currentRaw) < getComparableLength(previousRequestedRaw)
+        ) {
+            return
+        }
 
         if (correctionInFlightRef.current) {
             correctionPendingRef.current = true
@@ -309,7 +328,7 @@ export function useVoiceInput(api: ApiClient) {
         }
 
         correctionInFlightRef.current = true
-        const prevRawForRequest = lastRequestedRawRef.current
+        const prevRawForRequest = previousRequestedRaw
         const prevCorrectedForRequest = correctedTextRef.current.trim()
         lastRequestedRawRef.current = currentRaw
 
