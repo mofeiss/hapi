@@ -31,11 +31,16 @@ import { queryKeys } from "@/lib/query-keys";
 import { useToast } from "@/lib/toast-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useTheme } from "@/hooks/useTheme";
+import type { PermissionMode } from "@/types/api";
 import {
   fetchLatestMessages,
   seedMessageWindowFromSession,
   clearMessageWindow,
 } from "@/lib/message-window-store";
+import {
+  clearPendingSessionMode,
+  usePendingSessionMode,
+} from "@/lib/pending-session-mode-store";
 import FilesPage from "@/routes/sessions/files";
 import FilePage from "@/routes/sessions/file";
 import TerminalPage from "@/routes/sessions/terminal";
@@ -915,6 +920,38 @@ function SessionsIndexPage() {
   return null;
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetryPermissionSync(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const text = error.message.toLowerCase();
+  return text.includes("session is inactive")
+    || text.includes("rpc handler not registered")
+    || text.includes("rpc socket disconnected")
+    || text.includes("network error")
+    || text.includes("failed to fetch");
+}
+
+function isSessionPermissionSynced(
+  currentPermissionMode: PermissionMode | undefined,
+  currentBasePermissionMode: PermissionMode | undefined,
+  expectedPermissionMode: PermissionMode,
+  expectedBasePermissionMode?: PermissionMode
+): boolean {
+  if (currentPermissionMode !== expectedPermissionMode) {
+    return false;
+  }
+  if (expectedPermissionMode !== "plan") {
+    return true;
+  }
+  const expectedBase = expectedBasePermissionMode ?? "default";
+  return currentBasePermissionMode === expectedBase;
+}
+
 function SessionView({
   sessionId,
   onBack,
@@ -930,6 +967,113 @@ function SessionView({
   const queryClient = useQueryClient();
   const { addToast } = useToast();
   const { session, refetch: refetchSession } = useSession(api, sessionId);
+  const pendingSessionMode = usePendingSessionMode(sessionId);
+  const [modeSyncInFlight, setModeSyncInFlight] = useState(false);
+  const modeSyncKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!api || !session || !pendingSessionMode) {
+      return;
+    }
+
+    const alreadySynced = isSessionPermissionSynced(
+      session.permissionMode,
+      session.basePermissionMode,
+      pendingSessionMode.permissionMode,
+      pendingSessionMode.basePermissionMode
+    );
+
+    if (alreadySynced) {
+      clearPendingSessionMode(session.id);
+      setModeSyncInFlight(false);
+      modeSyncKeyRef.current = null;
+      return;
+    }
+
+    const syncKey = `${session.id}:${pendingSessionMode.permissionMode}:${pendingSessionMode.basePermissionMode ?? ""}`;
+    if (modeSyncKeyRef.current === syncKey) {
+      return;
+    }
+    modeSyncKeyRef.current = syncKey;
+
+    let cancelled = false;
+    setModeSyncInFlight(true);
+
+    void (async () => {
+      const maxAttempts = 8;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          await api.setPermissionMode(
+            session.id,
+            pendingSessionMode.permissionMode,
+            pendingSessionMode.basePermissionMode
+          );
+          if (cancelled) {
+            return;
+          }
+          await refetchSession();
+          if (cancelled) {
+            return;
+          }
+          clearPendingSessionMode(session.id);
+          setModeSyncInFlight(false);
+          modeSyncKeyRef.current = null;
+          return;
+        } catch (error) {
+          if (!shouldRetryPermissionSync(error) || attempt === maxAttempts) {
+            if (cancelled) {
+              return;
+            }
+            clearPendingSessionMode(session.id);
+            setModeSyncInFlight(false);
+            modeSyncKeyRef.current = null;
+            addToast({
+              title: t("misc.permissionMode"),
+              body: t("session.permissionSync.failed"),
+              sessionId: session.id,
+              url: "",
+            });
+            return;
+          }
+          await delay(Math.min(250 * attempt, 1000));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [api, addToast, pendingSessionMode, refetchSession, session, t]);
+
+  const permissionSyncPending = useMemo(() => {
+    if (!session || !pendingSessionMode) {
+      return false;
+    }
+    return !isSessionPermissionSynced(
+      session.permissionMode,
+      session.basePermissionMode,
+      pendingSessionMode.permissionMode,
+      pendingSessionMode.basePermissionMode
+    );
+  }, [pendingSessionMode, session]);
+
+  const optimisticPermissionMode = useMemo(() => {
+    if (!session || !pendingSessionMode) {
+      return undefined;
+    }
+    return session.permissionMode ?? pendingSessionMode.permissionMode;
+  }, [pendingSessionMode, session]);
+
+  const optimisticBasePermissionMode = useMemo(() => {
+    if (!session || !pendingSessionMode) {
+      return undefined;
+    }
+    return session.basePermissionMode
+      ?? (pendingSessionMode.permissionMode === "plan"
+        ? (pendingSessionMode.basePermissionMode ?? "default")
+        : (pendingSessionMode.basePermissionMode ?? pendingSessionMode.permissionMode));
+  }, [pendingSessionMode, session]);
+
   const {
     messages,
     warning: messagesWarning,
@@ -1056,6 +1200,9 @@ function SessionView({
       onRetryMessage={retryMessage}
       autocompleteSuggestions={getAutocompleteSuggestions}
       onSessionDeleted={onSessionDeleted}
+      permissionSyncPending={permissionSyncPending || modeSyncInFlight}
+      permissionModeOverride={optimisticPermissionMode}
+      basePermissionModeOverride={optimisticBasePermissionMode}
     />
   );
 }

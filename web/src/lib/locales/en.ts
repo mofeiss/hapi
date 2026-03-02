@@ -52,6 +52,8 @@ export default {
   'session.item.pending': 'pending',
   'session.item.archiving': 'archiving…',
   'session.item.thinking': 'thinking',
+  'session.permissionSync.pending': 'Syncing permission mode. Sending is temporarily disabled.',
+  'session.permissionSync.failed': 'Failed to sync permission mode. Please switch mode manually and retry.',
   'session.time.justNow': 'just now',
   'session.time.minutesAgo': '{n}m ago',
   'session.time.hoursAgo': '{n}h ago',

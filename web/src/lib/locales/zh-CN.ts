@@ -52,6 +52,8 @@ export default {
   'session.item.pending': '待处理',
   'session.item.archiving': '归档中…',
   'session.item.thinking': '思考中',
+  'session.permissionSync.pending': '正在同步权限模式，发送将暂时禁用。',
+  'session.permissionSync.failed': '权限模式同步失败，请稍后手动切换权限模式后重试。',
   'session.time.justNow': '刚刚',
   'session.time.minutesAgo': '{n} 分钟前',
   'session.time.hoursAgo': '{n} 小时前',

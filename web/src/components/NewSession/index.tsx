@@ -24,6 +24,7 @@ import {
     savePreferredPermissionMode,
     savePreferredPlanActive,
 } from './preferences'
+import { setPendingSessionMode } from '@/lib/pending-session-mode-store'
 import { SessionTypeSelector } from './SessionTypeSelector'
 import { PermissionSelector } from './PermissionSelector'
 import type { PermissionMode } from '@/types/api'
@@ -230,12 +231,13 @@ export function NewSession(props: {
         try {
             const resolvedModel = model !== 'auto' && agent !== 'opencode' ? model : undefined
             const shouldUsePlanMode = supportsPlanToggle(agent) && isPlanActive
+            const requestedPermissionMode = shouldUsePlanMode ? 'plan' : basePermissionMode
             const result = await spawnSession({
                 machineId,
                 directory: directory.trim(),
                 agent,
                 model: resolvedModel,
-                permissionMode: shouldUsePlanMode ? 'plan' : basePermissionMode,
+                permissionMode: requestedPermissionMode,
                 basePermissionMode: basePermissionMode,
                 sessionType,
                 worktreeName: sessionType === 'worktree' ? (worktreeName.trim() || undefined) : undefined
@@ -245,6 +247,12 @@ export function NewSession(props: {
                 haptic.notification('success')
                 setLastUsedMachineId(machineId)
                 addRecentPath(machineId, directory.trim())
+                if (requestedPermissionMode !== 'default') {
+                    setPendingSessionMode(result.sessionId, {
+                        permissionMode: requestedPermissionMode,
+                        basePermissionMode
+                    })
+                }
                 props.onSuccess(result.sessionId)
                 return
             }

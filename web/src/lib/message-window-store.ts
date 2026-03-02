@@ -283,8 +283,6 @@ export function subscribeMessageWindow(sessionId: string, listener: () => void):
         current.delete(listener)
         if (current.size === 0) {
             listeners.delete(sessionId)
-            states.delete(sessionId)
-            clearPendingVisibilityCache(sessionId)
         }
     }
 }

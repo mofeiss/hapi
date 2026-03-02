@@ -106,6 +106,9 @@ export function SessionChat(props: {
     onRetryMessage?: (localId: string) => void
     onSessionDeleted?: () => void
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
+    permissionSyncPending?: boolean
+    permissionModeOverride?: PermissionMode
+    basePermissionModeOverride?: PermissionMode
 }) {
     const { t } = useTranslation()
     const { addToast } = useToast()
@@ -699,6 +702,14 @@ export function SessionChat(props: {
                 </div>
             ) : null}
 
+            {props.permissionSyncPending ? (
+                <div className="px-3 pt-3">
+                    <div className="mx-auto w-full max-w-content rounded-md bg-[var(--app-subtle-bg)] p-3 text-sm text-[var(--app-hint)]">
+                        {t('session.permissionSync.pending')}
+                    </div>
+                </div>
+            ) : null}
+
             <AssistantRuntimeProvider runtime={runtime}>
                 <div className="relative flex min-h-0 flex-1 flex-col">
                     <HappyThread
@@ -730,8 +741,9 @@ export function SessionChat(props: {
 
                     <HappyComposer
                         disabled={props.isSending}
-                        permissionMode={props.session.permissionMode}
-                        basePermissionMode={props.session.basePermissionMode}
+                        sendDisabled={props.permissionSyncPending === true}
+                        permissionMode={props.permissionModeOverride ?? props.session.permissionMode}
+                        basePermissionMode={props.basePermissionModeOverride ?? props.session.basePermissionMode}
                         modelMode={props.session.modelMode}
                         agentFlavor={agentFlavor}
                         active={props.session.active}

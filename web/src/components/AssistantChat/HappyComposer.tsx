@@ -40,6 +40,7 @@ const defaultSuggestionHandler = async (): Promise<Suggestion[]> => []
 
 export function HappyComposer(props: {
     disabled?: boolean
+    sendDisabled?: boolean
     permissionMode?: PermissionMode
     basePermissionMode?: PermissionMode
     modelMode?: ModelMode
@@ -73,6 +74,7 @@ export function HappyComposer(props: {
     const { t } = useTranslation()
     const {
         disabled = false,
+        sendDisabled = false,
         permissionMode: rawPermissionMode,
         basePermissionMode: rawBasePermissionMode,
         modelMode: rawModelMode,
@@ -128,7 +130,7 @@ export function HappyComposer(props: {
         const path = (attachment as { path?: string }).path
         return typeof path === 'string' && path.length > 0
     })
-    const canSend = (hasText || hasAttachments) && attachmentsReady && !controlsDisabled
+    const canSend = (hasText || hasAttachments) && attachmentsReady && !controlsDisabled && !sendDisabled
 
     const [inputState, setInputState] = useState<TextInputState>({
         text: '',
@@ -394,7 +396,7 @@ export function HappyComposer(props: {
         }
 
         // When agent is running, intercept Enter to queue/interrupt
-        if (key === 'Enter' && !e.shiftKey && threadIsRunning && onQueueSend && hasText) {
+        if (key === 'Enter' && !e.shiftKey && threadIsRunning && onQueueSend && hasText && !sendDisabled) {
             e.preventDefault()
             if (e.metaKey || e.ctrlKey) {
                 // Cmd/Ctrl+Enter = interrupt: queue current text, then abort (flush will send all)
@@ -411,7 +413,7 @@ export function HappyComposer(props: {
         }
 
         // Empty input + has queued messages: Enter = flush queue now
-        if (key === 'Enter' && !e.shiftKey && !hasText && hasQueue && onFlushQueue) {
+        if (key === 'Enter' && !e.shiftKey && !hasText && hasQueue && onFlushQueue && !sendDisabled) {
             e.preventDefault()
             onFlushQueue()
             return
@@ -446,7 +448,8 @@ export function HappyComposer(props: {
         permissionMode,
         basePermissionMode,
         permissionModes,
-        haptic
+        haptic,
+        sendDisabled
     ])
 
     useEffect(() => {
@@ -511,12 +514,16 @@ export function HappyComposer(props: {
             }
             return
         }
+        if (event && sendDisabled) {
+            event.preventDefault()
+            return
+        }
         if (event && !attachmentsReady) {
             event.preventDefault()
             return
         }
         setShowContinueHint(false)
-    }, [attachmentsReady, onVoiceToggle, voiceStatus])
+    }, [attachmentsReady, onVoiceToggle, sendDisabled, voiceStatus])
 
     const handlePermissionChange = useCallback((mode: string) => {
         if (!onPermissionModeChange || controlsDisabled) return
@@ -536,6 +543,9 @@ export function HappyComposer(props: {
     const voiceEnabled = Boolean(onVoiceToggle)
 
     const sendNow = useCallback(() => {
+        if (sendDisabled) {
+            return
+        }
         if (!hasText && !hasAttachments && !hasQueue) {
             return
         }
@@ -553,7 +563,7 @@ export function HappyComposer(props: {
         }
         api.composer().send()
         setTimeout(() => textareaRef.current?.focus(), 0)
-    }, [api, threadIsRunning, onQueueSend, trimmed, hasText, hasAttachments, hasQueue, onFlushQueue])
+    }, [api, threadIsRunning, onQueueSend, trimmed, hasText, hasAttachments, hasQueue, onFlushQueue, sendDisabled])
 
     const handleClear = useCallback(() => {
         if (voiceStatus === 'connected' && onVoiceToggle) {
