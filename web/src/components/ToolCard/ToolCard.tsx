@@ -450,7 +450,7 @@ function ToolCardInner(props: ToolCardProps) {
             </CardHeader>
 
             {hasBody ? (
-                <CardContent className="px-3 pb-3 pt-0">
+                <CardContent className="tool-io-scope px-3 pb-3 pt-0">
                     {taskSummary ? (
                         <div className="mt-2">
                             {taskSummary}

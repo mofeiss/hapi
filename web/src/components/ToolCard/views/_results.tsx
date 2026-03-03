@@ -26,6 +26,16 @@ function extractTextFromContentBlock(block: unknown): string | null {
     return null
 }
 
+const SYSTEM_REMINDER_BLOCK_REGEX = /<system-reminder>[\s\S]*?<\/system-reminder>/gi
+
+export function sanitizeReadResultText(text: string): string {
+    const withoutReminder = text.replace(SYSTEM_REMINDER_BLOCK_REGEX, '')
+    return withoutReminder
+        .replace(/\n[ \t]*\n[ \t]*\n+/g, '\n\n')
+        .replace(/^[ \t]*\n/, '')
+        .replace(/\n[ \t]*$/, '')
+}
+
 function extractTextFromResult(result: unknown, depth: number = 0): string | null {
     if (depth > 2) return null
     if (result === null || result === undefined) return null
@@ -137,19 +147,8 @@ function placeholderForState(state: ToolViewProps['block']['tool']['state']): st
 }
 
 function RawJsonDevOnly(props: { value: unknown }) {
-    if (!import.meta.env.DEV) return null
-    if (props.value === null || props.value === undefined) return null
-
-    return (
-        <details className="mt-3">
-            <summary className="cursor-pointer text-xs font-medium text-[var(--app-hint)]">
-                Raw JSON
-            </summary>
-            <div className="mt-2">
-                <CodeBlock code={safeStringify(props.value)} language="json" />
-            </div>
-        </details>
-    )
+    void props
+    return null
 }
 
 function extractStdoutStderr(result: unknown): { stdout: string | null; stderr: string | null } | null {
@@ -348,6 +347,7 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     const file = extractReadFileContent(result)
     if (file) {
+        const sanitizedContent = sanitizeReadResultText(file.content)
         const path = file.filePath ? resolveDisplayPath(file.filePath, props.metadata) : null
         return (
             <>
@@ -356,7 +356,7 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
                         {basename(path)}
                     </div>
                 ) : null}
-                <CodeBlock code={file.content} language="text" />
+                <CodeBlock code={sanitizedContent} language="text" />
                 <RawJsonDevOnly value={result} />
             </>
         )
@@ -364,9 +364,18 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     const text = extractTextFromResult(result)
     if (text) {
+        const sanitizedText = sanitizeReadResultText(text)
+        if (sanitizedText.trim().length === 0) {
+            return (
+                <>
+                    <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                    <RawJsonDevOnly value={result} />
+                </>
+            )
+        }
         return (
             <>
-                {renderText(text, { mode: 'code', language: 'text' })}
+                {renderText(sanitizedText, { mode: 'code', language: 'text' })}
                 <RawJsonDevOnly value={result} />
             </>
         )

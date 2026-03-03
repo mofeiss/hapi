@@ -319,3 +319,32 @@ html[data-theme="dark"] .shiki span {
 .widescreen-mode .max-w-content {
   max-width: 100%;
 }
+
+/* Hide scrollbars inside tool input/result sections (ToolCard + Steps). */
+.tool-io-scope .overflow-auto,
+.tool-io-scope .overflow-x-auto,
+.tool-io-scope .overflow-y-auto,
+.tool-io-scope [data-codeblock-scroll="true"] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tool-io-scope .overflow-auto::-webkit-scrollbar,
+.tool-io-scope .overflow-x-auto::-webkit-scrollbar,
+.tool-io-scope .overflow-y-auto::-webkit-scrollbar,
+.tool-io-scope [data-codeblock-scroll="true"]::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevent horizontal scrollbars by wrapping long lines in tool input/result code blocks. */
+.tool-io-scope [data-codeblock-scroll="true"] {
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+
+.tool-io-scope [data-codeblock-scroll="true"] > pre {
+  width: 100% !important;
+  min-width: 0 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word;
+}

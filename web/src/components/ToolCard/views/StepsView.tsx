@@ -11,6 +11,7 @@ import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFoot
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
 import { isAskUserQuestionToolName } from '@/components/ToolCard/askUserQuestion'
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
+import { sanitizeReadResultText } from '@/components/ToolCard/views/_results'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
 import { extractSkillReadData } from '@/lib/skillRead'
 import { useTranslation } from '@/lib/use-translation'
@@ -64,6 +65,24 @@ function StepNodeChevron(props: { open: boolean }) {
     )
 }
 
+function extractReadResultContent(result: unknown): string | null {
+    if (typeof result === 'string') {
+        return sanitizeReadResultText(result)
+    }
+    if (!isObject(result)) return null
+
+    const file = isObject(result.file) ? result.file : null
+    if (file && typeof file.content === 'string') {
+        return sanitizeReadResultText(file.content)
+    }
+
+    if (typeof result.content === 'string') {
+        return sanitizeReadResultText(result.content)
+    }
+
+    return null
+}
+
 function StepNodeDetails(props: { block: ToolCallBlock }) {
     const { t } = useTranslation()
 
@@ -71,15 +90,38 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
         const data = extractSkillReadData(props.block.tool.input, props.block.tool.result)
         if (data?.content) {
             return (
-                <div className="rounded-md bg-[var(--app-bg)] p-2">
+                <div className="tool-io-scope rounded-md bg-[var(--app-bg)] p-2">
                     <MarkdownRenderer content={data.content} />
                 </div>
             )
         }
     }
 
+    const isReadLikeTool = props.block.tool.name === 'Read' || props.block.tool.name === 'NotebookRead'
+    if (isReadLikeTool) {
+        const readContent = extractReadResultContent(props.block.tool.result)
+        if (typeof readContent === 'string') {
+            return (
+                <div className="tool-io-scope space-y-2">
+                    <div>
+                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
+                        <CodeBlock code={safeStringify(props.block.tool.input)} language="json" />
+                    </div>
+                    <div>
+                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                        {readContent.trim().length > 0 ? (
+                            <CodeBlock code={readContent} language="text" />
+                        ) : (
+                            <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                        )}
+                    </div>
+                </div>
+            )
+        }
+    }
+
     return (
-        <div className="space-y-2">
+        <div className="tool-io-scope space-y-2">
             <div>
                 <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
                 <CodeBlock code={safeStringify(props.block.tool.input)} language="json" />
@@ -190,6 +232,14 @@ function StepNode(props: {
                         const toolName = props.block.tool.name
                         const isAskUserQuestion = isAskUserQuestionToolName(toolName)
                         const isRequestUserInput = isRequestUserInputToolName(toolName)
+                        const shouldRenderPermissionFooter = Boolean(
+                            permission && (
+                                permission.status === 'pending'
+                                || ((permission.status === 'denied' || permission.status === 'canceled') && Boolean(permission.reason))
+                            )
+                        )
+                        if (!shouldRenderPermissionFooter) return null
+
                         let content: ReactNode = null
 
                         if (isAskUserQuestion && permission?.status === 'pending') {
