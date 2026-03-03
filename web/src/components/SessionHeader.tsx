@@ -113,6 +113,93 @@ function WidescreenIcon(props: { className?: string; active?: boolean }) {
     )
 }
 
+function SunIcon(props: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={props.className}
+        >
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2" />
+            <path d="M12 20v2" />
+            <path d="m4.93 4.93 1.41 1.41" />
+            <path d="m17.66 17.66 1.41 1.41" />
+            <path d="M2 12h2" />
+            <path d="M20 12h2" />
+            <path d="m6.34 17.66-1.41 1.41" />
+            <path d="m19.07 4.93-1.41 1.41" />
+        </svg>
+    )
+}
+
+function MoonIcon(props: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={props.className}
+        >
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </svg>
+    )
+}
+
+function SettingsIcon(props: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={props.className}
+        >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+    )
+}
+
+function NewChatIcon(props: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={props.className}
+        >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <line x1="12" y1="7" x2="12" y2="13" />
+            <line x1="9" y1="10" x2="15" y2="10" />
+        </svg>
+    )
+}
+
 export function SessionHeader(props: {
     session: Session
     titleOverride?: string | null // deprecated, now reads from store
@@ -121,6 +208,10 @@ export function SessionHeader(props: {
     terminalOpen?: boolean
     onToggleFiles?: () => void
     filesOpen?: boolean
+    isDark?: boolean
+    onToggleTheme?: () => void
+    onOpenSettings?: () => void
+    onOpenNewSession?: () => void
     api: ApiClient | null
     onSessionDeleted?: () => void
 }) {
@@ -239,6 +330,38 @@ export function SessionHeader(props: {
                             ) : null}
                         </div>
                     </div>
+
+                    {props.onToggleTheme && props.onOpenSettings && props.onOpenNewSession ? (
+                        <div className="flex lg:hidden items-center">
+                            <button
+                                type="button"
+                                onClick={props.onToggleTheme}
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                                title={props.isDark ? t('theme.switchToLight') : t('theme.switchToDark')}
+                            >
+                                {props.isDark ? <SunIcon /> : <MoonIcon />}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={props.onOpenSettings}
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                                title={t('settings.title')}
+                            >
+                                <SettingsIcon />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={props.onOpenNewSession}
+                                className="session-list-new-button flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-link)] transition-colors hover:bg-[var(--app-secondary-bg)]"
+                                title={t('sessions.new')}
+                            >
+                                <NewChatIcon />
+                            </button>
+                            {(props.onToggleTerminal || props.onToggleFiles) ? (
+                                <div className="mx-1 h-5 w-0.5 bg-[var(--app-divider)]" />
+                            ) : null}
+                        </div>
+                    ) : null}
 
                     {props.onToggleTerminal ? (
                         <button

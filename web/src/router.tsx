@@ -1132,6 +1132,18 @@ function SessionsPage() {
               sessionId={sid}
               onBack={handleSessionBack}
               onSessionDeleted={() => handleSessionDeleted(sid)}
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
+              onOpenSettings={() => {
+                setSettingsOpen((prev) => !prev);
+                setNewSessionOpen(false);
+                setToolbarMenuOpen(false);
+              }}
+              onOpenNewSession={() => {
+                setNewSessionOpen((prev) => !prev);
+                setSettingsOpen(false);
+                setToolbarMenuOpen(false);
+              }}
             />
           </div>
         ))}
@@ -1194,10 +1206,18 @@ function SessionView({
   sessionId,
   onBack,
   onSessionDeleted,
+  isDark,
+  onToggleTheme,
+  onOpenSettings,
+  onOpenNewSession,
 }: {
   sessionId: string;
   onBack: () => void;
   onSessionDeleted?: () => void;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
+  onOpenSettings?: () => void;
+  onOpenNewSession?: () => void;
 }) {
   const { api } = useAppContext();
   const { t } = useTranslation();
@@ -1438,6 +1458,10 @@ function SessionView({
       onRetryMessage={retryMessage}
       autocompleteSuggestions={getAutocompleteSuggestions}
       onSessionDeleted={onSessionDeleted}
+      isDark={isDark}
+      onToggleTheme={onToggleTheme}
+      onOpenSettings={onOpenSettings}
+      onOpenNewSession={onOpenNewSession}
       permissionSyncPending={permissionSyncPending || modeSyncInFlight}
       permissionModeOverride={optimisticPermissionMode}
       basePermissionModeOverride={optimisticBasePermissionMode}

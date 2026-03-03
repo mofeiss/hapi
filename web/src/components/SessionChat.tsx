@@ -146,6 +146,10 @@ export function SessionChat(props: {
     onAtBottomChange: (atBottom: boolean) => void
     onRetryMessage?: (localId: string) => void
     onSessionDeleted?: () => void
+    isDark?: boolean
+    onToggleTheme?: () => void
+    onOpenSettings?: () => void
+    onOpenNewSession?: () => void
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
     permissionSyncPending?: boolean
     permissionModeOverride?: PermissionMode
@@ -943,6 +947,10 @@ export function SessionChat(props: {
                 terminalOpen={terminalOpen}
                 onToggleFiles={props.session.metadata?.path ? handleToggleFiles : undefined}
                 filesOpen={filesOpen}
+                isDark={props.isDark}
+                onToggleTheme={props.onToggleTheme}
+                onOpenSettings={props.onOpenSettings}
+                onOpenNewSession={props.onOpenNewSession}
                 api={props.api}
                 onSessionDeleted={props.onSessionDeleted ?? props.onBack}
             />
