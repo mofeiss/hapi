@@ -379,7 +379,7 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
                         {basename(path)}
                     </div>
                 ) : null}
-                <CodeBlock code={sanitizedContent} language="text" />
+                <CodeBlock code={sanitizedContent} language="text" showLineNumbers />
                 <RawJsonDevOnly value={result} />
             </>
         )
@@ -398,7 +398,7 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
         }
         return (
             <>
-                {renderText(sanitizedText, { mode: 'code', language: 'text' })}
+                <CodeBlock code={sanitizedText} language="text" showLineNumbers />
                 <RawJsonDevOnly value={result} />
             </>
         )

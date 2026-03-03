@@ -110,7 +110,7 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
                     <div>
                         <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                         {readContent.trim().length > 0 ? (
-                            <CodeBlock code={readContent} language="text" />
+                            <CodeBlock code={readContent} language="text" showLineNumbers />
                         ) : (
                             <div className="text-sm text-[var(--app-hint)]">(no output)</div>
                         )}
