@@ -148,6 +148,14 @@ function renderExitPlanModeInput(input: unknown): ReactNode | null {
     return <MarkdownRenderer content={plan} />
 }
 
+function renderReadInput(input: unknown): ReactNode | null {
+    if (!isObject(input)) return null
+    const filePath = getInputStringAny(input, ['file_path', 'path'])
+    if (!filePath) return null
+
+    return <CodeBlock code={`file_path: ${filePath}`} language="text" />
+}
+
 function renderToolInput(block: ToolCallBlock): ReactNode {
     const toolName = block.tool.name
     const input = block.tool.input
@@ -208,6 +216,11 @@ function renderToolInput(block: ToolCallBlock): ReactNode {
                 </div>
             )
         }
+    }
+
+    if (toolName === 'Read' || toolName === 'NotebookRead') {
+        const readInput = renderReadInput(input)
+        if (readInput) return readInput
     }
 
     if (toolName === 'CodexDiff' && isObject(input) && typeof input.unified_diff === 'string') {

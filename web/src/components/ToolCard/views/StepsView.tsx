@@ -113,6 +113,14 @@ function extractWriteDiffInput(input: unknown): { content: string } | null {
     return { content }
 }
 
+function extractReadInputPath(input: unknown): string | null {
+    if (!isObject(input)) return null
+
+    if (typeof input.file_path === 'string') return input.file_path
+    if (typeof input.path === 'string') return input.path
+    return null
+}
+
 function StepNodeDetails(props: { block: ToolCallBlock }) {
     const { t } = useTranslation()
 
@@ -170,13 +178,18 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
 
     const isReadLikeTool = props.block.tool.name === 'Read' || props.block.tool.name === 'NotebookRead'
     if (isReadLikeTool) {
+        const readInputPath = extractReadInputPath(props.block.tool.input)
         const readContent = extractReadResultContent(props.block.tool.result)
         if (typeof readContent === 'string') {
             return (
                 <div className="tool-io-scope space-y-2">
                     <div>
                         <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                        <CodeBlock code={safeStringify(props.block.tool.input)} language="json" />
+                        {readInputPath ? (
+                            <CodeBlock code={`file_path: ${readInputPath}`} language="text" />
+                        ) : (
+                            <CodeBlock code={safeStringify(props.block.tool.input)} language="json" />
+                        )}
                     </div>
                     <div>
                         <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
