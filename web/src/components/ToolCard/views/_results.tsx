@@ -27,10 +27,33 @@ function extractTextFromContentBlock(block: unknown): string | null {
 }
 
 const SYSTEM_REMINDER_BLOCK_REGEX = /<system-reminder>[\s\S]*?<\/system-reminder>/gi
+const READ_LINE_NUMBER_PREFIX_REGEX = /^\s*\d+\s*→\s?/
+
+function stripReadLineNumberPrefixes(text: string): string {
+    const lines = text.split('\n')
+    let nonEmptyLines = 0
+    let prefixedLines = 0
+
+    for (const line of lines) {
+        if (line.trim().length === 0) continue
+        nonEmptyLines += 1
+        if (READ_LINE_NUMBER_PREFIX_REGEX.test(line)) {
+            prefixedLines += 1
+        }
+    }
+
+    // Only strip when line-number prefixes dominate, avoiding accidental content loss.
+    if (nonEmptyLines === 0 || (prefixedLines / nonEmptyLines) < 0.6) {
+        return text
+    }
+
+    return lines.map((line) => line.replace(READ_LINE_NUMBER_PREFIX_REGEX, '')).join('\n')
+}
 
 export function sanitizeReadResultText(text: string): string {
     const withoutReminder = text.replace(SYSTEM_REMINDER_BLOCK_REGEX, '')
-    return withoutReminder
+    const withoutLinePrefixes = stripReadLineNumberPrefixes(withoutReminder)
+    return withoutLinePrefixes
         .replace(/\n[ \t]*\n[ \t]*\n+/g, '\n\n')
         .replace(/^[ \t]*\n/, '')
         .replace(/\n[ \t]*$/, '')
