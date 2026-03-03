@@ -103,6 +103,7 @@ function StepNode(props: {
     disabled?: boolean
     onDone?: () => void
 }) {
+    const { locale } = useTranslation()
     const shouldAutoOpen = hasPendingPermissionInSubtree(props.block)
     const [open, setOpen] = useState(shouldAutoOpen)
     const nodeRef = useRef<HTMLDivElement | null>(null)
@@ -113,8 +114,9 @@ function StepNode(props: {
         result: props.block.tool.result,
         childrenCount: props.block.children.length,
         description: props.block.tool.description,
-        metadata: props.metadata ?? null
-    }), [props.block, props.metadata])
+        metadata: props.metadata ?? null,
+        locale
+    }), [props.block, props.metadata, locale])
 
     const childTools = props.block.children.filter((child): child is ToolCallBlock => child.kind === 'tool-call')
     const otherChildren = props.block.children.filter((child) => child.kind !== 'tool-call')

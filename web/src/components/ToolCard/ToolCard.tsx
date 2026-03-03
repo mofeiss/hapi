@@ -19,6 +19,7 @@ import { usePointerFocusRing } from '@/hooks/usePointerFocusRing'
 import { getInputString, getInputStringAny, truncate } from '@/lib/toolInputUtils'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/lib/use-translation'
+import type { Locale } from '@/lib/i18n-context'
 
 const ELAPSED_INTERVAL_MS = 1000
 
@@ -43,14 +44,15 @@ function ElapsedView(props: { from: number; active: boolean }) {
     )
 }
 
-function formatTaskChildLabel(child: ToolCallBlock, metadata: SessionMetadataSummary | null): string {
+function formatTaskChildLabel(child: ToolCallBlock, metadata: SessionMetadataSummary | null, locale: Locale): string {
     const presentation = getToolPresentation({
         toolName: child.tool.name,
         input: child.tool.input,
         result: child.tool.result,
         childrenCount: child.children.length,
         description: child.tool.description,
-        metadata
+        metadata,
+        locale
     })
 
     if (presentation.subtitle) {
@@ -91,7 +93,7 @@ function hasPendingPermissionInTree(block: ToolCallBlock): boolean {
     return block.children.some((child) => child.kind === 'tool-call' && hasPendingPermissionInTree(child))
 }
 
-function renderTaskSummary(block: ToolCallBlock, metadata: SessionMetadataSummary | null): ReactNode | null {
+function renderTaskSummary(block: ToolCallBlock, metadata: SessionMetadataSummary | null, locale: Locale): ReactNode | null {
     const summary = getTaskSummaryChildren(block)
     if (!summary) return null
 
@@ -108,7 +110,7 @@ function renderTaskSummary(block: ToolCallBlock, metadata: SessionMetadataSummar
                                 <TaskStateIcon state={child.tool.state} />
                             </span>
                             <span className="align-middle break-all">
-                                {formatTaskChildLabel(child, metadata)}
+                                {formatTaskChildLabel(child, metadata, locale)}
                             </span>
                         </div>
                     </div>
@@ -292,27 +294,29 @@ type ToolCardProps = {
 }
 
 function ToolCardInner(props: ToolCardProps) {
-    const { t } = useTranslation()
+    const { t, locale } = useTranslation()
     const presentation = useMemo(() => getToolPresentation({
         toolName: props.block.tool.name,
         input: props.block.tool.input,
         result: props.block.tool.result,
         childrenCount: props.block.children.length,
         description: props.block.tool.description,
-        metadata: props.metadata
+        metadata: props.metadata,
+        locale
     }), [
         props.block.tool.name,
         props.block.tool.input,
         props.block.tool.result,
         props.block.children.length,
         props.block.tool.description,
-        props.metadata
+        props.metadata,
+        locale
     ])
 
     const toolName = props.block.tool.name
     const toolTitle = presentation.title
     const subtitle = presentation.subtitle ?? props.block.tool.description
-    const taskSummary = renderTaskSummary(props.block, props.metadata)
+    const taskSummary = renderTaskSummary(props.block, props.metadata, locale)
     const runningFrom = props.block.tool.startedAt ?? props.block.tool.createdAt
     const showInline = !presentation.minimal && toolName !== 'Task'
     const CompactToolView = showInline ? getToolViewComponent(toolName) : null

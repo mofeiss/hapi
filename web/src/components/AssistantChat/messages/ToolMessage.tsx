@@ -8,6 +8,7 @@ import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { LazyRainbowText } from '@/components/LazyRainbowText'
 import { MessageStatusIndicator } from '@/components/AssistantChat/messages/MessageStatusIndicator'
 import { ToolCard } from '@/components/ToolCard/ToolCard'
+import { getStandardToolTitle } from '@/components/ToolCard/knownTools'
 import { useHappyChatContext } from '@/components/AssistantChat/context'
 import { CliOutputBlock } from '@/components/CliOutputBlock'
 import { useTranslation } from '@/lib/use-translation'
@@ -177,6 +178,7 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
     const ctx = useHappyChatContext()
     const { t } = useTranslation()
     const artifact = props.artifact
+    const displayToolName = getStandardToolTitle(props.toolName) ?? props.toolName
 
     if (!isToolCallBlock(artifact)) {
         const argsText = typeof props.argsText === 'string' ? props.argsText.trim() : ''
@@ -189,7 +191,7 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
                 <div className="rounded-xl bg-[var(--app-secondary-bg)] p-3 shadow-sm">
                     <div className="flex items-center gap-2 text-xs">
                         <div className="font-mono text-[var(--app-hint)]">
-                            {t('event.toolLabel', { name: props.toolName })}
+                            {t('event.toolLabel', { name: displayToolName })}
                         </div>
                         {props.isError ? (
                             <span className="text-red-500">{t('event.toolError')}</span>
