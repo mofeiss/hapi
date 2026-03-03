@@ -128,7 +128,6 @@ function renderTaskSummary(block: ToolCallBlock, metadata: SessionMetadataSummar
 
 function renderEditInput(input: unknown): ReactNode | null {
     if (!isObject(input)) return null
-    const filePath = getInputStringAny(input, ['file_path', 'path']) ?? undefined
     const oldString = getInputString(input, 'old_string')
     const newString = getInputString(input, 'new_string')
     if (oldString === null || newString === null) return null
@@ -137,7 +136,6 @@ function renderEditInput(input: unknown): ReactNode | null {
         <DiffView
             oldString={oldString}
             newString={newString}
-            filePath={filePath}
         />
     )
 }

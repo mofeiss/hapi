@@ -423,11 +423,13 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
     }
 
     // Keep Edit result display aligned with Steps raw content:
-    // do not parse <tool_use_error> and do not apply red error styling.
+    // parse and strip <tool_use_error> wrapper, keep raw message body.
     if (props.block.tool.name === 'Edit' && typeof result === 'string') {
+        const toolUseError = parseToolUseError(result)
+        const display = toolUseError.isToolUseError ? (toolUseError.errorMessage ?? '') : result
         return (
             <>
-                <CodeBlock code={result} language="text" />
+                <CodeBlock code={display} language="text" />
                 <RawJsonDevOnly value={result} />
             </>
         )

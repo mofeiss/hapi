@@ -85,7 +85,12 @@ function extractReadResultContent(result: unknown): string | null {
     return null
 }
 
-function extractEditDiffInput(input: unknown): { oldString: string; newString: string; filePath?: string } | null {
+function extractEditDiffInput(input: unknown): {
+    oldString: string
+    newString: string
+    filePath: string | null
+    replaceAll: boolean | null
+} | null {
     if (!isObject(input)) return null
 
     const oldString = typeof input.old_string === 'string' ? input.old_string : null
@@ -96,9 +101,16 @@ function extractEditDiffInput(input: unknown): { oldString: string; newString: s
         ? input.file_path
         : typeof input.path === 'string'
             ? input.path
-            : undefined
+            : null
+    const replaceAll = typeof input.replace_all === 'boolean' ? input.replace_all : null
 
-    return { oldString, newString, filePath }
+    return { oldString, newString, filePath, replaceAll }
+}
+
+function unwrapToolUseErrorTag(text: string): string {
+    const match = text.match(/<tool_use_error>([\s\S]*?)<\/tool_use_error>/s)
+    if (!match) return text
+    return typeof match[1] === 'string' ? match[1].trim() : ''
 }
 
 function extractWriteDiffInput(input: unknown): { content: string; filePath: string | null } | null {
@@ -145,14 +157,38 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
     if (props.block.tool.name === 'Edit') {
         const editDiff = extractEditDiffInput(props.block.tool.input)
         if (editDiff) {
+            const rawResult = props.block.tool.result
+            const editResultCode = typeof rawResult === 'string'
+                ? unwrapToolUseErrorTag(rawResult)
+                : safeStringify(rawResult ?? 'No result')
+
             return (
-                <div className="tool-io-scope">
-                    <DiffView
-                        oldString={editDiff.oldString}
-                        newString={editDiff.newString}
-                        filePath={editDiff.filePath}
-                        variant="inline"
-                    />
+                <div className="tool-io-scope space-y-2">
+                    <div>
+                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
+                        {editDiff.filePath || editDiff.replaceAll !== null ? (
+                            <div className="mb-1 space-y-px">
+                                {editDiff.filePath ? (
+                                    <ToolParamField name="file_path" value={editDiff.filePath} />
+                                ) : null}
+                                {editDiff.replaceAll !== null ? (
+                                    <ToolParamField name="replace_all" value={String(editDiff.replaceAll)} />
+                                ) : null}
+                            </div>
+                        ) : null}
+                        <DiffView
+                            oldString={editDiff.oldString}
+                            newString={editDiff.newString}
+                            variant="inline"
+                        />
+                    </div>
+                    <div>
+                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                        <CodeBlock
+                            code={editResultCode}
+                            language={typeof rawResult === 'string' ? 'text' : 'json'}
+                        />
+                    </div>
                 </div>
             )
         }
@@ -166,7 +202,7 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
                     <div>
                         <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
                         {writeDiff.filePath ? (
-                            <div className="mb-2">
+                            <div className="mb-1">
                                 <ToolParamField name="file_path" value={writeDiff.filePath} />
                             </div>
                         ) : null}
