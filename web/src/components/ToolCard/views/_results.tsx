@@ -433,6 +433,19 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
         )
     }
 
+    // Keep Write card result aligned with Steps result style.
+    if (props.block.tool.name === 'Write') {
+        return (
+            <>
+                <CodeBlock
+                    code={safeStringify(result)}
+                    language={typeof result === 'string' ? 'text' : 'json'}
+                />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
     const text = extractTextFromResult(result)
     if (typeof text === 'string' && text.trim().length > 0) {
         const className = state === 'error' ? 'text-red-600' : 'text-[var(--app-fg)]'

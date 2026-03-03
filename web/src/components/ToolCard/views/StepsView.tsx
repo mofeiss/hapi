@@ -100,6 +100,19 @@ function extractEditDiffInput(input: unknown): { oldString: string; newString: s
     return { oldString, newString, filePath }
 }
 
+function extractWriteDiffInput(input: unknown): { content: string } | null {
+    if (!isObject(input)) return null
+
+    const content = typeof input.content === 'string'
+        ? input.content
+        : typeof input.text === 'string'
+            ? input.text
+            : null
+    if (content === null) return null
+
+    return { content }
+}
+
 function StepNodeDetails(props: { block: ToolCallBlock }) {
     const { t } = useTranslation()
 
@@ -125,6 +138,31 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
                         filePath={editDiff.filePath}
                         variant="inline"
                     />
+                </div>
+            )
+        }
+    }
+
+    if (props.block.tool.name === 'Write') {
+        const writeDiff = extractWriteDiffInput(props.block.tool.input)
+        if (writeDiff) {
+            return (
+                <div className="tool-io-scope space-y-2">
+                    <div>
+                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
+                        <DiffView
+                            oldString=""
+                            newString={writeDiff.content}
+                            variant="inline"
+                        />
+                    </div>
+                    <div>
+                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                        <CodeBlock
+                            code={safeStringify(props.block.tool.result ?? 'No result')}
+                            language={typeof props.block.tool.result === 'string' ? 'text' : 'json'}
+                        />
+                    </div>
                 </div>
             )
         }
