@@ -62,6 +62,9 @@ export function HappyComposer(props: {
     onPermissionModeChange?: (mode: PermissionMode) => void
     onModelModeChange?: (mode: ModelMode) => void
     onPlanToggle?: () => void
+    claudeModel?: string | null
+    claudeModelOptions?: { value: string; label: string }[]
+    onClaudeModelChange?: (model: string) => void
     codexModel?: string | null
     codexModelOptions?: { value: string; label: string }[]
     codexReasoningEffort?: CodexReasoningEffort | null
@@ -102,6 +105,9 @@ export function HappyComposer(props: {
         onPermissionModeChange,
         onModelModeChange,
         onPlanToggle,
+        claudeModel = null,
+        claudeModelOptions = [],
+        onClaudeModelChange,
         codexModel = null,
         codexModelOptions = [],
         codexReasoningEffort = null,
@@ -340,6 +346,15 @@ export function HappyComposer(props: {
         () => permissionModeOptions.map((option) => ({ value: option.mode, label: option.label })),
         [permissionModeOptions]
     )
+    const claudeMessageMeta = useMemo<UserMessageMeta | undefined>(() => {
+        if (agentFlavor !== 'claude' || !claudeModel) {
+            return undefined
+        }
+
+        return {
+            model: claudeModel === 'auto' ? null : claudeModel
+        }
+    }, [agentFlavor, claudeModel])
     const codexMessageMeta = useMemo<UserMessageMeta | undefined>(() => {
         if (!isCodexFamilyFlavor(agentFlavor) || !codexModel) {
             return undefined
@@ -350,6 +365,7 @@ export function HappyComposer(props: {
             reasoningEffort: codexReasoningEffort
         }
     }, [agentFlavor, codexModel, codexReasoningEffort])
+    const activeMessageMeta = codexMessageMeta ?? claudeMessageMeta
 
     const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
         const key = e.key
@@ -409,12 +425,12 @@ export function HappyComposer(props: {
             e.preventDefault()
             if (e.metaKey || e.ctrlKey) {
                 // Cmd/Ctrl+Enter = interrupt: queue current text, then abort (flush will send all)
-                onQueueSend(trimmed, codexMessageMeta)
+                onQueueSend(trimmed, activeMessageMeta)
                 api.composer().setText('')
                 handleAbort()
             } else {
                 // Plain Enter = auto-queue
-                onQueueSend(trimmed, codexMessageMeta)
+                onQueueSend(trimmed, activeMessageMeta)
                 api.composer().setText('')
             }
             setTimeout(() => textareaRef.current?.focus(), 0)
@@ -450,7 +466,7 @@ export function HappyComposer(props: {
         hasQueue,
         onFlushQueue,
         trimmed,
-        codexMessageMeta,
+        activeMessageMeta,
         api,
         voiceStatus,
         onVoiceToggle,
@@ -464,7 +480,13 @@ export function HappyComposer(props: {
 
     useEffect(() => {
         const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
-            if (e.key === 'm' && (e.metaKey || e.ctrlKey) && onModelModeChange && !isCodexFamilyFlavor(agentFlavor)) {
+            if (
+                e.key === 'm'
+                && (e.metaKey || e.ctrlKey)
+                && onModelModeChange
+                && !isCodexFamilyFlavor(agentFlavor)
+                && agentFlavor !== 'claude'
+            ) {
                 e.preventDefault()
                 const currentIndex = MODEL_MODES.indexOf(modelMode as typeof MODEL_MODES[number])
                 const nextIndex = (currentIndex + 1) % MODEL_MODES.length
@@ -566,6 +588,12 @@ export function HappyComposer(props: {
         haptic('light')
     }, [onCodexModelChange, controlsDisabled, haptic])
 
+    const handleClaudeModelChange = useCallback((model: string) => {
+        if (!onClaudeModelChange || controlsDisabled) return
+        onClaudeModelChange(model)
+        haptic('light')
+    }, [onClaudeModelChange, controlsDisabled, haptic])
+
     const handleCodexReasoningEffortChange = useCallback((effort: string) => {
         if (!onCodexReasoningEffortChange || controlsDisabled) return
         onCodexReasoningEffortChange(effort as CodexReasoningEffort)
@@ -573,7 +601,8 @@ export function HappyComposer(props: {
     }, [onCodexReasoningEffortChange, controlsDisabled, haptic])
 
     const showPermissionSettings = Boolean(onPermissionModeChange && permissionModeOptions.length > 0)
-    const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor))
+    const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor) && agentFlavor !== 'claude')
+    const showClaudeModelSettings = Boolean(agentFlavor === 'claude' && onClaudeModelChange && claudeModel && claudeModelOptions.length > 0)
     const showCodexModelSettings = Boolean(isCodexFamilyFlavor(agentFlavor) && codexModel && codexModelOptions.length > 0)
     const showCodexReasoningSettings = Boolean(showCodexModelSettings && codexReasoningEffort && codexReasoningOptions.length > 0)
     const showAbortButton = threadIsRunning && !hasText && !hasQueue
@@ -593,14 +622,14 @@ export function HappyComposer(props: {
         }
         if (threadIsRunning && onQueueSend) {
             // Auto-queue: enqueue the text and clear composer
-            onQueueSend(trimmed, codexMessageMeta)
+            onQueueSend(trimmed, activeMessageMeta)
             api.composer().setText('')
             setTimeout(() => textareaRef.current?.focus(), 0)
             return
         }
         api.composer().send()
         setTimeout(() => textareaRef.current?.focus(), 0)
-    }, [api, threadIsRunning, onQueueSend, trimmed, codexMessageMeta, hasText, hasAttachments, hasQueue, onFlushQueue, sendDisabled])
+    }, [api, threadIsRunning, onQueueSend, trimmed, activeMessageMeta, hasText, hasAttachments, hasQueue, onFlushQueue, sendDisabled])
 
     const handleClear = useCallback(() => {
         if (voiceStatus === 'connected' && onVoiceToggle) {
@@ -720,6 +749,10 @@ export function HappyComposer(props: {
                             modelMode={modelMode}
                             modelModeOptions={modelModeSelectOptions}
                             onModelModeChange={handleModelChange}
+                            showClaudeModelSelect={showClaudeModelSettings}
+                            claudeModel={claudeModel ?? ''}
+                            claudeModelOptions={claudeModelOptions}
+                            onClaudeModelChange={handleClaudeModelChange}
                             showCodexModelSelect={showCodexModelSettings}
                             codexModel={codexModel ?? ''}
                             codexModelOptions={codexModelOptions}

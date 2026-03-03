@@ -39,6 +39,14 @@ import { setPendingSessionMode } from '@/lib/pending-session-mode-store'
 import { SessionTypeSelector } from './SessionTypeSelector'
 import { PermissionSelector } from './PermissionSelector'
 import type { PermissionMode } from '@/types/api'
+import {
+    CLAUDE_CUSTOM_MODEL_OPTION_VALUE,
+    getClaudeNewSessionModelOptions,
+    isClaudePresetModel,
+    loadClaudeCustomModelValue,
+    normalizeClaudeModelValue,
+    saveClaudeCustomModelValue
+} from '@/lib/claudeModels'
 
 export function NewSession(props: {
     api: ApiClient
@@ -52,16 +60,39 @@ export function NewSession(props: {
     const { sessions } = useSessions(props.api)
     const isFormDisabled = Boolean(isPending || props.isLoading)
     const { getRecentPaths, addRecentPath, getLastUsedMachineId, setLastUsedMachineId } = useRecentPaths()
+    const preferredAgent = loadPreferredAgent()
+    const preferredModel = normalizeClaudeModelValue(loadPreferredModel())
 
     const [machineId, setMachineId] = useState<string | null>(null)
     const [directory, setDirectory] = useState(loadPreferredDirectory)
     const [suppressSuggestions, setSuppressSuggestions] = useState(false)
     const [isDirectoryFocused, setIsDirectoryFocused] = useState(false)
     const [pathExistence, setPathExistence] = useState<Record<string, boolean>>({})
-    const [agent, setAgent] = useState<AgentType>(loadPreferredAgent)
-    const [model, setModel] = useState(loadPreferredModel)
+    const [agent, setAgent] = useState<AgentType>(preferredAgent)
+    const [model, setModel] = useState(() => {
+        if (
+            preferredAgent === 'claude'
+            && preferredModel
+            && !isClaudePresetModel(preferredModel)
+            && preferredModel !== CLAUDE_CUSTOM_MODEL_OPTION_VALUE
+        ) {
+            return CLAUDE_CUSTOM_MODEL_OPTION_VALUE
+        }
+        return preferredModel ?? 'auto'
+    })
+    const [claudeCustomModelInput, setClaudeCustomModelInput] = useState(() => {
+        if (
+            preferredAgent === 'claude'
+            && preferredModel
+            && !isClaudePresetModel(preferredModel)
+            && preferredModel !== CLAUDE_CUSTOM_MODEL_OPTION_VALUE
+        ) {
+            return preferredModel
+        }
+        return loadClaudeCustomModelValue()
+    })
     const [reasoningEffort, setReasoningEffort] = useState<CodexReasoningEffort | 'auto'>(loadPreferredReasoningEffort)
-    const [basePermissionMode, setBasePermissionMode] = useState<PermissionMode>(() => loadPreferredPermissionMode(loadPreferredAgent()))
+    const [basePermissionMode, setBasePermissionMode] = useState<PermissionMode>(() => loadPreferredPermissionMode(preferredAgent))
     const [isPlanActive, setIsPlanActive] = useState<boolean>(loadPreferredPlanActive)
     const [sessionType, setSessionType] = useState<SessionType>(loadPreferredSessionType)
     const [worktreeName, setWorktreeName] = useState(loadPreferredWorktreeName)
@@ -103,8 +134,19 @@ export function NewSession(props: {
     }, [directory])
 
     useEffect(() => {
+        if (agent === 'claude' && model === CLAUDE_CUSTOM_MODEL_OPTION_VALUE) {
+            savePreferredModel(CLAUDE_CUSTOM_MODEL_OPTION_VALUE)
+            return
+        }
         savePreferredModel(model)
-    }, [model])
+    }, [agent, model])
+
+    useEffect(() => {
+        if (agent !== 'claude') {
+            return
+        }
+        saveClaudeCustomModelValue(claudeCustomModelInput)
+    }, [agent, claudeCustomModelInput])
 
     useEffect(() => {
         savePreferredReasoningEffort(reasoningEffort)
@@ -146,6 +188,9 @@ export function NewSession(props: {
                     { value: 'auto', label: 'Auto' },
                     ...codexModelOptions.map((entry) => ({ value: entry.value, label: entry.label }))
                 ]
+            }
+            if (agent === 'claude') {
+                return getClaudeNewSessionModelOptions()
             }
             return MODEL_OPTIONS[agent]
         },
@@ -323,7 +368,16 @@ export function NewSession(props: {
 
         setError(null)
         try {
-            const resolvedModel = model !== 'auto' && agent !== 'opencode' ? model : undefined
+            const resolvedClaudeModel = (() => {
+                if (agent !== 'claude') {
+                    return model
+                }
+                if (model !== CLAUDE_CUSTOM_MODEL_OPTION_VALUE) {
+                    return model
+                }
+                return normalizeClaudeModelValue(claudeCustomModelInput) ?? 'auto'
+            })()
+            const resolvedModel = resolvedClaudeModel !== 'auto' && agent !== 'opencode' ? resolvedClaudeModel : undefined
             const resolvedReasoningEffort = (() => {
                 if (agent !== 'codex' || !resolvedModel) {
                     return undefined
@@ -369,7 +423,12 @@ export function NewSession(props: {
         }
     }
 
-    const canCreate = Boolean(machineId && directory.trim() && !isFormDisabled)
+    const customModelReady = (
+        agent !== 'claude'
+        || model !== CLAUDE_CUSTOM_MODEL_OPTION_VALUE
+        || Boolean(normalizeClaudeModelValue(claudeCustomModelInput))
+    )
+    const canCreate = Boolean(machineId && directory.trim() && !isFormDisabled && customModelReady)
 
     return (
         <div className="flex flex-col divide-y divide-[var(--app-divider)]">
@@ -410,10 +469,12 @@ export function NewSession(props: {
                 agent={agent}
                 model={model}
                 modelOptions={modelOptions}
+                claudeCustomModelInput={claudeCustomModelInput}
                 reasoningEffort={reasoningEffort}
                 reasoningOptions={reasoningOptions}
                 isDisabled={isFormDisabled}
                 onModelChange={setModel}
+                onClaudeCustomModelInputChange={setClaudeCustomModelInput}
                 onReasoningEffortChange={setReasoningEffort}
             />
             <PermissionSelector

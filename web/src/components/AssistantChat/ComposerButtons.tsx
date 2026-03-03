@@ -670,6 +670,10 @@ export function ComposerButtons(props: {
     modelMode: string
     modelModeOptions: { value: string; label: string }[]
     onModelModeChange: (value: string) => void
+    showClaudeModelSelect: boolean
+    claudeModel: string
+    claudeModelOptions: { value: string; label: string }[]
+    onClaudeModelChange: (value: string) => void
     showCodexModelSelect: boolean
     codexModel: string
     codexModelOptions: { value: string; label: string }[]
@@ -725,6 +729,18 @@ export function ComposerButtons(props: {
                         disabled={props.controlsDisabled}
                         icon={<ModelIcon />}
                         compactOnMobile
+                    />
+                ) : null}
+
+                {props.showClaudeModelSelect && props.claudeModelOptions.length > 0 ? (
+                    <MiniSelect
+                        value={props.claudeModel}
+                        options={props.claudeModelOptions}
+                        onChange={props.onClaudeModelChange}
+                        disabled={props.controlsDisabled}
+                        icon={<ModelIcon />}
+                        compactOnMobile
+                        labelAlign="left"
                     />
                 ) : null}
 

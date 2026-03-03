@@ -34,6 +34,14 @@ import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/use-translation'
 import { useAgentModels } from '@/hooks/queries/useAgentModels'
 import { buildCodexModelOptions, type CodexModelOption } from '@/components/NewSession/types'
+import { loadPreferredModel, savePreferredModel } from '@/components/NewSession/preferences'
+import {
+    buildClaudeComposerModelOptions,
+    isClaudePresetModel,
+    loadClaudeCustomModelValue,
+    normalizeClaudeModelValue,
+    saveClaudeCustomModelValue
+} from '@/lib/claudeModels'
 
 type SendOptions = {
     localId?: string
@@ -159,6 +167,15 @@ export function SessionChat(props: {
         agentFlavor
     )
     const isCodexSession = agentFlavor === 'codex'
+    const isClaudeSession = agentFlavor === 'claude'
+    const preferredClaudeModel = useMemo(
+        () => normalizeClaudeModelValue(loadPreferredModel()),
+        []
+    )
+    const preferredClaudeCustomModel = useMemo(
+        () => normalizeClaudeModelValue(loadClaudeCustomModelValue()),
+        []
+    )
 
     const { data: codexAgentModelsData } = useAgentModels(
         props.api,
@@ -171,6 +188,7 @@ export function SessionChat(props: {
     )
     const [composerCodexModel, setComposerCodexModel] = useState<string | null>(null)
     const [composerCodexReasoningEffort, setComposerCodexReasoningEffort] = useState<CodexReasoningEffort | null>(null)
+    const [composerClaudeModel, setComposerClaudeModel] = useState<string | null>(null)
 
     // Override context size after /clear (reset to 0 = 100% remaining)
     const [contextSizeOverride, setContextSizeOverride] = useState<number | null>(null)
@@ -245,12 +263,43 @@ export function SessionChat(props: {
         composerCodexReasoningEffort
     ])
 
+    const sessionClaudeModel = useMemo(
+        () => normalizeClaudeModelValue(props.session.metadata?.model),
+        [props.session.metadata?.model]
+    )
+    useEffect(() => {
+        if (!isClaudeSession || !sessionClaudeModel || isClaudePresetModel(sessionClaudeModel) || sessionClaudeModel === 'auto') {
+            return
+        }
+        saveClaudeCustomModelValue(sessionClaudeModel)
+    }, [isClaudeSession, sessionClaudeModel])
+
+    const activeClaudeCustomModel = useMemo(() => {
+        if (sessionClaudeModel && !isClaudePresetModel(sessionClaudeModel) && sessionClaudeModel !== 'auto') {
+            return sessionClaudeModel
+        }
+        if (
+            preferredClaudeModel
+            && !isClaudePresetModel(preferredClaudeModel)
+            && preferredClaudeModel !== 'auto'
+            && preferredClaudeModel !== 'custom'
+        ) {
+            return preferredClaudeModel
+        }
+        return preferredClaudeCustomModel
+    }, [sessionClaudeModel, preferredClaudeModel, preferredClaudeCustomModel])
+
     const codexComposerModelOptions = useMemo(
         () => codexModelOptions.map((option) => ({
             value: option.value,
             label: option.label
         })),
         [codexModelOptions]
+    )
+
+    const claudeComposerModelOptions = useMemo(
+        () => buildClaudeComposerModelOptions(activeClaudeCustomModel),
+        [activeClaudeCustomModel]
     )
 
     const codexComposerReasoningOptions = useMemo(() => {
@@ -267,16 +316,71 @@ export function SessionChat(props: {
         }))
     }, [composerCodexModel, codexModelOptions, t])
 
-    const getCodexMessageMeta = useCallback((): UserMessageMeta | undefined => {
-        if (!isCodexSession || !composerCodexModel) {
-            return undefined
+    useEffect(() => {
+        if (!isClaudeSession || claudeComposerModelOptions.length === 0) {
+            if (composerClaudeModel !== null) {
+                setComposerClaudeModel(null)
+            }
+            return
         }
 
-        return {
-            model: composerCodexModel,
-            reasoningEffort: composerCodexReasoningEffort
+        const modelValues = new Set(claudeComposerModelOptions.map((entry) => entry.value))
+        const preferredModel = (
+            (composerClaudeModel && modelValues.has(composerClaudeModel) ? composerClaudeModel : null)
+            ?? (sessionClaudeModel && modelValues.has(sessionClaudeModel) ? sessionClaudeModel : null)
+            ?? (preferredClaudeModel && modelValues.has(preferredClaudeModel) ? preferredClaudeModel : null)
+            ?? (activeClaudeCustomModel && modelValues.has(activeClaudeCustomModel) ? activeClaudeCustomModel : null)
+            ?? 'auto'
+        )
+
+        if (preferredModel !== composerClaudeModel) {
+            setComposerClaudeModel(preferredModel)
         }
-    }, [isCodexSession, composerCodexModel, composerCodexReasoningEffort])
+    }, [
+        isClaudeSession,
+        claudeComposerModelOptions,
+        sessionClaudeModel,
+        preferredClaudeModel,
+        activeClaudeCustomModel,
+        composerClaudeModel
+    ])
+
+    const handleClaudeModelChange = useCallback((model: string) => {
+        const normalized = normalizeClaudeModelValue(model)
+        if (!normalized) {
+            return
+        }
+
+        setComposerClaudeModel(normalized)
+        savePreferredModel(normalized)
+
+        if (!isClaudePresetModel(normalized) && normalized !== 'auto') {
+            saveClaudeCustomModelValue(normalized)
+        }
+    }, [])
+
+    const getMessageMeta = useCallback((): UserMessageMeta | undefined => {
+        if (isCodexSession && composerCodexModel) {
+            return {
+                model: composerCodexModel,
+                reasoningEffort: composerCodexReasoningEffort
+            }
+        }
+
+        if (isClaudeSession && composerClaudeModel) {
+            return {
+                model: composerClaudeModel === 'auto' ? null : composerClaudeModel
+            }
+        }
+
+        return undefined
+    }, [
+        isCodexSession,
+        composerCodexModel,
+        composerCodexReasoningEffort,
+        isClaudeSession,
+        composerClaudeModel
+    ])
 
     // Register session store for voice client tools
     useEffect(() => {
@@ -705,7 +809,7 @@ export function SessionChat(props: {
 
     const handleSend = useCallback((text: string, attachments?: AttachmentMetadata[], options?: SendOptions) => {
         const resolvedOptions: SendOptions | undefined = (() => {
-            const messageMeta = options?.meta ?? getCodexMessageMeta()
+            const messageMeta = options?.meta ?? getMessageMeta()
             if (!options && !messageMeta) {
                 return undefined
             }
@@ -723,7 +827,7 @@ export function SessionChat(props: {
             setContextSizeOverride(0)
             setSessionTitleOverride(props.session.id, 'New Chat')
         }
-    }, [props.onSend, props.session.id, agentFlavor, getCodexMessageMeta])
+    }, [props.onSend, props.session.id, agentFlavor, getMessageMeta])
 
     const handleResendMessage = useCallback((text: string, attachments?: AttachmentMetadata[]) => {
         if (text.trim().length === 0 && (!attachments || attachments.length === 0)) {
@@ -827,7 +931,7 @@ export function SessionChat(props: {
         onAbort: handleAbort,
         attachmentAdapter,
         allowSendWhenInactive: true,
-        getMessageMeta: getCodexMessageMeta
+        getMessageMeta
     })
 
     return (
@@ -904,6 +1008,9 @@ export function SessionChat(props: {
                         onPermissionModeChange={handlePermissionModeChange}
                         onModelModeChange={handleModelModeChange}
                         onPlanToggle={handlePlanToggle}
+                        claudeModel={composerClaudeModel}
+                        claudeModelOptions={claudeComposerModelOptions}
+                        onClaudeModelChange={handleClaudeModelChange}
                         codexModel={composerCodexModel}
                         codexModelOptions={codexComposerModelOptions}
                         codexReasoningEffort={composerCodexReasoningEffort}

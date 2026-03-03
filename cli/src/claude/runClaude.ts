@@ -148,7 +148,27 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
     let currentBasePermissionMode: PermissionMode = options.permissionMode === 'plan'
         ? 'default'
         : (options.permissionMode ?? 'default');
-    let currentModelMode: SessionModelMode = options.model === 'sonnet' || options.model === 'opus' ? options.model : 'default';
+    const resolveExplicitModel = (value: unknown): string | undefined => {
+        if (value === null || value === undefined) {
+            return undefined;
+        }
+        if (typeof value !== 'string') {
+            throw new Error('Invalid model');
+        }
+        const trimmed = value.trim();
+        if (!trimmed || trimmed === 'auto') {
+            return undefined;
+        }
+        return trimmed;
+    };
+    const resolveModelModeFromExplicitModel = (model: string | undefined): SessionModelMode => {
+        if (model === 'sonnet' || model === 'opus') {
+            return model;
+        }
+        return 'default';
+    };
+    let currentModel: string | undefined = resolveExplicitModel(options.model);
+    let currentModelMode: SessionModelMode = resolveModelModeFromExplicitModel(currentModel);
     let lastPublishedModel: string | undefined = undefined;
     let currentFallbackModel: string | undefined = undefined; // Track current fallback model
     let currentCustomSystemPrompt: string | undefined = undefined; // Track current custom system prompt
@@ -157,7 +177,7 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
     let currentDisallowedTools: string[] | undefined = undefined; // Track current disallowed tools
 
     const publishModelMetadata = () => {
-        const modelForMetadata = currentModelMode === 'default' ? 'auto' : currentModelMode;
+        const modelForMetadata = currentModel ?? (currentModelMode === 'default' ? 'auto' : currentModelMode);
         if (lastPublishedModel === modelForMetadata) {
             return;
         }
@@ -184,9 +204,17 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
         if (sessionPermissionMode && isPermissionModeAllowedForFlavor(sessionPermissionMode, 'claude')) {
             currentPermissionMode = sessionPermissionMode as PermissionMode;
         }
+
+        if (message.meta?.hasOwnProperty('model')) {
+            currentModel = resolveExplicitModel(message.meta.model);
+            currentModelMode = resolveModelModeFromExplicitModel(currentModel);
+            publishModelMetadata();
+            logger.debug(`[loop] Model updated from user message: ${currentModel ?? 'auto'}`);
+        }
+
         const messagePermissionMode = currentPermissionMode;
-        const messageModel = currentModelMode === 'default' ? undefined : currentModelMode;
-        logger.debug(`[loop] User message received with permission mode: ${currentPermissionMode}, model: ${currentModelMode}`);
+        const messageModel = currentModel;
+        logger.debug(`[loop] User message received with permission mode: ${currentPermissionMode}, model: ${messageModel ?? 'auto'}`);
 
         // Resolve custom system prompt - use message.meta.customSystemPrompt if provided, otherwise use current
         let messageCustomSystemPrompt = currentCustomSystemPrompt;
@@ -314,7 +342,7 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
         if (!payload || typeof payload !== 'object') {
             throw new Error('Invalid session config payload');
         }
-        const config = payload as { permissionMode?: unknown; modelMode?: unknown; basePermissionMode?: unknown };
+        const config = payload as { permissionMode?: unknown; modelMode?: unknown; basePermissionMode?: unknown; model?: unknown };
 
         if (config.basePermissionMode !== undefined) {
             currentBasePermissionMode = resolvePermissionMode(config.basePermissionMode);
@@ -327,9 +355,17 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
             }
         }
 
+        if (config.model !== undefined) {
+            currentModel = resolveExplicitModel(config.model);
+            currentModelMode = resolveModelModeFromExplicitModel(currentModel);
+        }
+
         if (config.modelMode !== undefined) {
             const resolvedModelMode = resolveModelMode(config.modelMode);
             currentModelMode = resolvedModelMode;
+            if (config.model === undefined) {
+                currentModel = resolvedModelMode === 'default' ? undefined : resolvedModelMode;
+            }
         }
 
         publishModelMetadata();

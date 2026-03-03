@@ -1,6 +1,7 @@
 import type { CodexReasoningEffort } from '@/types/api'
 import type { AgentType, ModelOption } from './types'
 import { useTranslation } from '@/lib/use-translation'
+import { CLAUDE_CUSTOM_MODEL_OPTION_VALUE } from '@/lib/claudeModels'
 
 type ReasoningOption = {
     value: CodexReasoningEffort
@@ -29,10 +30,12 @@ export function ModelSelector(props: {
     agent: AgentType
     model: string
     modelOptions: ModelOption[]
+    claudeCustomModelInput: string
     reasoningEffort: CodexReasoningEffort | 'auto'
     reasoningOptions: ReasoningOption[]
     isDisabled: boolean
     onModelChange: (value: string) => void
+    onClaudeCustomModelInputChange: (value: string) => void
     onReasoningEffortChange: (value: CodexReasoningEffort | 'auto') => void
 }) {
     const { t } = useTranslation()
@@ -62,6 +65,22 @@ export function ModelSelector(props: {
                     ))}
                 </select>
             </div>
+
+            {props.agent === 'claude' && props.model === CLAUDE_CUSTOM_MODEL_OPTION_VALUE ? (
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--app-hint)]">
+                        {t('newSession.model.custom')}
+                    </label>
+                    <input
+                        type="text"
+                        value={props.claudeCustomModelInput}
+                        onChange={(e) => props.onClaudeCustomModelInputChange(e.target.value)}
+                        disabled={props.isDisabled}
+                        placeholder={t('newSession.model.custom.placeholder')}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--app-divider)] bg-[var(--app-bg)] text-[var(--app-text)] focus:outline-none focus:ring-2 focus:ring-[var(--app-link)] disabled:opacity-50"
+                    />
+                </div>
+            ) : null}
 
             {showReasoningSelector ? (
                 <div className="flex flex-col gap-1.5">
