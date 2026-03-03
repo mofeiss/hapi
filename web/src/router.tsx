@@ -16,10 +16,13 @@ import { SessionChat } from "@/components/SessionChat";
 import { SessionList, groupSessionsByHost, getSessionTitle } from "@/components/SessionList";
 import { NewSession } from "@/components/NewSession";
 import { LoadingState } from "@/components/LoadingState";
+import { SessionActionMenu } from "@/components/SessionActionMenu";
+import { RenameSessionDialog } from "@/components/RenameSessionDialog";
 import { useAppContext } from "@/lib/app-context";
 import { useAppGoBack } from "@/hooks/useAppGoBack";
 import { isTelegramApp } from "@/hooks/useTelegram";
 import { useWidescreen } from "@/hooks/useWidescreen";
+import { useLongPress } from "@/hooks/useLongPress";
 import { useMessages } from "@/hooks/queries/useMessages";
 import { useMachines } from "@/hooks/queries/useMachines";
 import { useSession } from "@/hooks/queries/useSession";
@@ -27,11 +30,13 @@ import { useSessions } from "@/hooks/queries/useSessions";
 import { useSlashCommands } from "@/hooks/queries/useSlashCommands";
 import { useSkills } from "@/hooks/queries/useSkills";
 import { useSendMessage } from "@/hooks/mutations/useSendMessage";
+import { useSessionActions } from "@/hooks/mutations/useSessionActions";
 import { queryKeys } from "@/lib/query-keys";
 import { useToast } from "@/lib/toast-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useTheme } from "@/hooks/useTheme";
-import type { PermissionMode } from "@/types/api";
+import { useSessionTitleOverride } from "@/lib/session-title-override-store";
+import type { PermissionMode, SessionSummary } from "@/types/api";
 import {
   fetchLatestMessages,
   seedMessageWindowFromSession,
@@ -235,6 +240,162 @@ function OnlineFilterIcon(props: { className?: string }) {
       <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
       <path d="M19.1 4.9C23 8.8 23 15.1 19.1 19" />
     </svg>
+  );
+}
+
+function CollapsedSessionItem({
+  session,
+  selected,
+  api,
+  onSelect,
+  menuEnabled,
+}: {
+  session: SessionSummary;
+  selected: boolean;
+  api: ReturnType<typeof useAppContext>["api"];
+  onSelect: (sessionId: string) => void;
+  menuEnabled: boolean;
+}) {
+  const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 });
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const sessionName = useSessionTitleOverride(session.id) ?? getSessionTitle(session);
+
+  const { archiveSession, renameSession, deleteSession, isPending } = useSessionActions(
+    api,
+    session.id,
+    session.metadata?.flavor ?? null,
+  );
+
+  const skipArchiveConfirm = (() => {
+    try {
+      return localStorage.getItem("hapi:skip-confirm:archive") === "1";
+    } catch {
+      return false;
+    }
+  })();
+  const skipDeleteConfirm = (() => {
+    try {
+      return localStorage.getItem("hapi:skip-confirm:delete") === "1";
+    } catch {
+      return false;
+    }
+  })();
+
+  useEffect(() => {
+    if (!session.active) {
+      setIsArchiving(false);
+    }
+  }, [session.active]);
+
+  const runArchive = useCallback(() => {
+    if (isArchiving) {
+      return;
+    }
+    setIsArchiving(true);
+    void archiveSession().catch(() => {
+      setIsArchiving(false);
+    });
+  }, [archiveSession, isArchiving]);
+
+  const runDelete = useCallback(async () => {
+    if (isDeleting) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await deleteSession();
+    } catch (error) {
+      setIsDeleting(false);
+      throw error;
+    }
+  }, [deleteSession, isDeleting]);
+
+  const longPressHandlers = useLongPress({
+    onLongPress: (point) => {
+      if (!menuEnabled) {
+        return;
+      }
+      setMenuAnchorPoint(point);
+      setMenuOpen(true);
+    },
+    onClick: () => {
+      onSelect(session.id);
+    },
+    threshold: 500,
+    disabled: !menuEnabled,
+  });
+
+  return (
+    <>
+      <button
+        type="button"
+        {...longPressHandlers}
+        className={`flex items-center justify-center w-full py-1 px-1 transition-colors hover:bg-[var(--app-subtle-bg)] ${selected ? "bg-[var(--app-secondary-bg)]" : ""}`}
+        title={sessionName}
+      >
+        <span
+          className={`flex h-4 w-4 shrink-0 items-center justify-center ${session.active && session.thinking ? "rounded-[4px] bg-[var(--app-orange-base)]" : ""}`}
+        >
+          {session.active && session.thinking ? (
+            <span className="inline-block text-[15px] leading-none text-white" style={{ animation: "spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite" }}>✻</span>
+          ) : session.active ? (
+            <span className="text-[15px] leading-none text-emerald-500">✻</span>
+          ) : (
+            <span className="text-[15px] leading-none text-[var(--app-hint)]">✻</span>
+          )}
+        </span>
+      </button>
+
+      <SessionActionMenu
+        isOpen={menuEnabled && menuOpen}
+        onClose={() => setMenuOpen(false)}
+        sessionActive={session.active}
+        onRename={() => setRenameOpen(true)}
+        onArchive={() => (skipArchiveConfirm ? runArchive() : setArchiveOpen(true))}
+        onDelete={() => (skipDeleteConfirm ? void runDelete().catch(() => {}) : setDeleteOpen(true))}
+        anchorPoint={menuAnchorPoint}
+      />
+
+      <RenameSessionDialog
+        isOpen={renameOpen}
+        onClose={() => setRenameOpen(false)}
+        currentName={sessionName}
+        onRename={renameSession}
+        isPending={isPending}
+      />
+
+      <ConfirmDialog
+        isOpen={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        title={t("dialog.archive.title")}
+        description={t("dialog.archive.description", { name: sessionName })}
+        confirmLabel={t("dialog.archive.confirm")}
+        confirmingLabel={t("dialog.archive.confirming")}
+        onConfirm={runArchive}
+        isPending={isPending}
+        destructive
+        dontAskAgainKey="hapi:skip-confirm:archive"
+      />
+
+      <ConfirmDialog
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={t("dialog.delete.title")}
+        description={t("dialog.delete.description", { name: sessionName })}
+        confirmLabel={t("dialog.delete.confirm")}
+        confirmingLabel={t("dialog.delete.confirming")}
+        onConfirm={runDelete}
+        isPending={isPending}
+        destructive
+        dontAskAgainKey="hapi:skip-confirm:delete"
+      />
+    </>
   );
 }
 
@@ -852,25 +1013,14 @@ function SessionsPage() {
                 </div>
                 {/* Session icons */}
                 {group.sessions.map((s) => (
-                  <button
+                  <CollapsedSessionItem
                     key={s.id}
-                    type="button"
-                    onClick={() => handleSelectSession(s.id)}
-                    className={`flex items-center justify-center w-full py-1 px-1 transition-colors hover:bg-[var(--app-subtle-bg)] ${s.id === activeSessionId ? 'bg-[var(--app-secondary-bg)]' : ''}`}
-                    title={getSessionTitle(s)}
-                  >
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? 'rounded-[4px] bg-[var(--app-orange-base)]' : ''}`}
-                    >
-                      {s.active && s.thinking ? (
-                        <span className="inline-block text-[15px] leading-none text-white" style={{ animation: 'spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite' }}>✻</span>
-                      ) : s.active ? (
-                        <span className="text-[15px] leading-none text-emerald-500">✻</span>
-                      ) : (
-                        <span className="text-[15px] leading-none text-[var(--app-hint)]">✻</span>
-                      )}
-                    </span>
-                  </button>
+                    session={s}
+                    selected={s.id === activeSessionId}
+                    api={api}
+                    onSelect={handleSelectSession}
+                    menuEnabled={!batchMode}
+                  />
                 ))}
               </div>
             ))}
