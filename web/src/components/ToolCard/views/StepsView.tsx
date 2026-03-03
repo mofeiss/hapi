@@ -5,6 +5,7 @@ import type { ToolCallBlock } from '@/chat/types'
 import type { SessionMetadataSummary } from '@/types/api'
 import type { ToolViewComponent } from '@/components/ToolCard/views/_all'
 import { CodeBlock } from '@/components/CodeBlock'
+import { DiffView } from '@/components/DiffView'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
@@ -83,6 +84,22 @@ function extractReadResultContent(result: unknown): string | null {
     return null
 }
 
+function extractEditDiffInput(input: unknown): { oldString: string; newString: string; filePath?: string } | null {
+    if (!isObject(input)) return null
+
+    const oldString = typeof input.old_string === 'string' ? input.old_string : null
+    const newString = typeof input.new_string === 'string' ? input.new_string : null
+    if (oldString === null || newString === null) return null
+
+    const filePath = typeof input.file_path === 'string'
+        ? input.file_path
+        : typeof input.path === 'string'
+            ? input.path
+            : undefined
+
+    return { oldString, newString, filePath }
+}
+
 function StepNodeDetails(props: { block: ToolCallBlock }) {
     const { t } = useTranslation()
 
@@ -92,6 +109,22 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
             return (
                 <div className="tool-io-scope rounded-md bg-[var(--app-bg)] p-2">
                     <MarkdownRenderer content={data.content} />
+                </div>
+            )
+        }
+    }
+
+    if (props.block.tool.name === 'Edit') {
+        const editDiff = extractEditDiffInput(props.block.tool.input)
+        if (editDiff) {
+            return (
+                <div className="tool-io-scope">
+                    <DiffView
+                        oldString={editDiff.oldString}
+                        newString={editDiff.newString}
+                        filePath={editDiff.filePath}
+                        variant="inline"
+                    />
                 </div>
             )
         }

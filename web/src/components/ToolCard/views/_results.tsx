@@ -422,6 +422,17 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
         return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(state)}</div>
     }
 
+    // Keep Edit result display aligned with Steps raw content:
+    // do not parse <tool_use_error> and do not apply red error styling.
+    if (props.block.tool.name === 'Edit' && typeof result === 'string') {
+        return (
+            <>
+                <CodeBlock code={result} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
     const text = extractTextFromResult(result)
     if (typeof text === 'string' && text.trim().length > 0) {
         const className = state === 'error' ? 'text-red-600' : 'text-[var(--app-fg)]'
