@@ -7,6 +7,7 @@ import type { ToolViewComponent } from '@/components/ToolCard/views/_all'
 import { CodeBlock } from '@/components/CodeBlock'
 import { DiffView } from '@/components/DiffView'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
+import { ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
@@ -100,7 +101,7 @@ function extractEditDiffInput(input: unknown): { oldString: string; newString: s
     return { oldString, newString, filePath }
 }
 
-function extractWriteDiffInput(input: unknown): { content: string } | null {
+function extractWriteDiffInput(input: unknown): { content: string; filePath: string | null } | null {
     if (!isObject(input)) return null
 
     const content = typeof input.content === 'string'
@@ -110,7 +111,13 @@ function extractWriteDiffInput(input: unknown): { content: string } | null {
             : null
     if (content === null) return null
 
-    return { content }
+    const filePath = typeof input.file_path === 'string'
+        ? input.file_path
+        : typeof input.path === 'string'
+            ? input.path
+            : null
+
+    return { content, filePath }
 }
 
 function extractReadInputPath(input: unknown): string | null {
@@ -158,6 +165,11 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
                 <div className="tool-io-scope space-y-2">
                     <div>
                         <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
+                        {writeDiff.filePath ? (
+                            <div className="mb-2">
+                                <ToolParamField name="file_path" value={writeDiff.filePath} />
+                            </div>
+                        ) : null}
                         <DiffView
                             oldString=""
                             newString={writeDiff.content}
@@ -186,7 +198,7 @@ function StepNodeDetails(props: { block: ToolCallBlock }) {
                     <div>
                         <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
                         {readInputPath ? (
-                            <CodeBlock code={`file_path: ${readInputPath}`} language="text" />
+                            <ToolParamField name="file_path" value={readInputPath} />
                         ) : (
                             <CodeBlock code={safeStringify(props.block.tool.input)} language="json" />
                         )}

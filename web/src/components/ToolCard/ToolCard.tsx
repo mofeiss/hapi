@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CodeBlock } from '@/components/CodeBlock'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { DiffView } from '@/components/DiffView'
+import { ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
@@ -153,7 +154,7 @@ function renderReadInput(input: unknown): ReactNode | null {
     const filePath = getInputStringAny(input, ['file_path', 'path'])
     if (!filePath) return null
 
-    return <CodeBlock code={`file_path: ${filePath}`} language="text" />
+    return <ToolParamField name="file_path" value={filePath} />
 }
 
 function renderToolInput(block: ToolCallBlock): ReactNode {
@@ -209,9 +210,7 @@ function renderToolInput(block: ToolCallBlock): ReactNode {
         if (filePath && content !== null) {
             return (
                 <div className="flex flex-col gap-2">
-                    <div className="text-xs text-[var(--app-hint)] font-mono break-all">
-                        {filePath}
-                    </div>
+                    <ToolParamField name="file_path" value={filePath} />
                     <CodeBlock code={content} language="text" />
                 </div>
             )
