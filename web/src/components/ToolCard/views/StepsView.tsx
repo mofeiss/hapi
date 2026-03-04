@@ -87,6 +87,54 @@ function buildOptionSnapshot(options: string[]): { preview: string; full: string
     }
 }
 
+function hasBlockIdInSubtree(block: ToolCallBlock, targetId: string | null | undefined): boolean {
+    if (!targetId) return false
+    if (block.id === targetId) return true
+    return block.children.some((child) => child.kind === 'tool-call' && hasBlockIdInSubtree(child, targetId))
+}
+
+function isAskUserQuestionPendingCandidate(block: ToolCallBlock): 'permission' | 'optimistic' | null {
+    if (!isAskUserQuestionToolName(block.tool.name)) return null
+
+    const questions = parseAskUserQuestionInput(block.tool.input).questions
+    if (questions.length === 0) return null
+
+    if (block.tool.permission?.status === 'pending') {
+        return 'permission'
+    }
+
+    const hasNoResult = block.tool.result === null || block.tool.result === undefined
+    if (!block.tool.permission && block.tool.state === 'running' && hasNoResult) {
+        return 'optimistic'
+    }
+
+    return null
+}
+
+function flattenToolBlocksPreorder(blocks: ToolCallBlock[]): ToolCallBlock[] {
+    const out: ToolCallBlock[] = []
+
+    const visit = (block: ToolCallBlock) => {
+        out.push(block)
+        for (const child of block.children) {
+            if (child.kind !== 'tool-call') continue
+            visit(child)
+        }
+    }
+
+    for (const block of blocks) {
+        visit(block)
+    }
+
+    return out
+}
+
+function collectAskUserQuestionPendingCandidateIds(blocks: ToolCallBlock[]): string[] {
+    return flattenToolBlocksPreorder(blocks)
+        .filter((block) => isAskUserQuestionPendingCandidate(block) !== null)
+        .map((block) => block.id)
+}
+
 function hasPendingPermissionInSubtree(block: ToolCallBlock): boolean {
     if (block.tool.permission?.status === 'pending') return true
     return block.children.some((child) => child.kind === 'tool-call' && hasPendingPermissionInSubtree(child))
@@ -143,6 +191,7 @@ function StepNodeDetails(props: {
     sessionId?: string
     disabled?: boolean
     onDone?: () => void
+    activeAskUserQuestionPendingId?: string | null
 }) {
     const { t, locale } = useTranslation()
     const toolName = props.block.tool.name
@@ -180,13 +229,40 @@ function StepNodeDetails(props: {
         isQuestionToolWithAnswers
         && !isAskUserQuestionMalformed
     )
-    const useAskUserQuestionPendingLayout = Boolean(
-        isAskUserQuestion
-        && props.block.tool.permission?.status === 'pending'
+    const isActiveAskUserQuestionPendingNode = Boolean(
+        isAskUserQuestion && props.block.id === props.activeAskUserQuestionPendingId
+    )
+    const hasActionContext = Boolean(props.api && props.sessionId && props.onDone)
+    const hasNoToolResult = props.block.tool.result === null || props.block.tool.result === undefined
+    const useAskUserQuestionOptimisticPendingLayout = Boolean(
+        isActiveAskUserQuestionPendingNode
+        && !props.block.tool.permission
+        && props.block.tool.state === 'running'
+        && hasNoToolResult
         && askQuestions.length > 0
-        && props.api
-        && props.sessionId
-        && props.onDone
+        && hasActionContext
+    )
+    const askUserQuestionFooterTool = useMemo(
+        () => (useAskUserQuestionOptimisticPendingLayout
+            ? {
+                ...props.block.tool,
+                permission: {
+                    id: props.block.tool.id,
+                    status: 'pending' as const,
+                    createdAt: null
+                }
+            }
+            : props.block.tool),
+        [props.block.tool, useAskUserQuestionOptimisticPendingLayout]
+    )
+    const useAskUserQuestionPendingLayout = Boolean(
+        isActiveAskUserQuestionPendingNode
+        && askQuestions.length > 0
+        && hasActionContext
+        && (
+            props.block.tool.permission?.status === 'pending'
+            || useAskUserQuestionOptimisticPendingLayout
+        )
     )
     const useAskUserQuestionViewLayout = Boolean(
         isAskUserQuestion
@@ -204,7 +280,7 @@ function StepNodeDetails(props: {
                 <AskUserQuestionFooter
                     api={props.api as ApiClient}
                     sessionId={props.sessionId as string}
-                    tool={props.block.tool}
+                    tool={askUserQuestionFooterTool}
                     disabled={props.disabled ?? false}
                     onDone={props.onDone as () => void}
                 />
@@ -356,9 +432,18 @@ function StepNode(props: {
     sessionId?: string
     disabled?: boolean
     onDone?: () => void
+    activeAskUserQuestionPendingId?: string | null
 }) {
     const { locale } = useTranslation()
+    const isAskUserQuestionPendingCandidateNode = isAskUserQuestionPendingCandidate(props.block) !== null
+    const isActiveAskUserQuestionPendingNode = Boolean(
+        props.activeAskUserQuestionPendingId && props.block.id === props.activeAskUserQuestionPendingId
+    )
+    const shouldHideQueuedAskUserQuestionPending = Boolean(
+        isAskUserQuestionPendingCandidateNode && !isActiveAskUserQuestionPendingNode
+    )
     const shouldAutoOpen = hasPendingPermissionInSubtree(props.block)
+        || hasBlockIdInSubtree(props.block, props.activeAskUserQuestionPendingId)
     const [open, setOpen] = useState(shouldAutoOpen)
     const nodeRef = useRef<HTMLDivElement | null>(null)
     const prevShouldAutoOpenRef = useRef(shouldAutoOpen)
@@ -381,6 +466,8 @@ function StepNode(props: {
         }
         prevShouldAutoOpenRef.current = shouldAutoOpen
     }, [shouldAutoOpen])
+
+    if (shouldHideQueuedAskUserQuestionPending) return null
 
     const toggleOpen = () => {
         const next = !open
@@ -442,6 +529,7 @@ function StepNode(props: {
                         sessionId={props.sessionId}
                         disabled={props.disabled}
                         onDone={props.onDone}
+                        activeAskUserQuestionPendingId={props.activeAskUserQuestionPendingId}
                     />
 
                     {(() => {
@@ -454,10 +542,19 @@ function StepNode(props: {
                         const askQuestions = isAskUserQuestion
                             ? parseAskUserQuestionInput(props.block.tool.input).questions
                             : []
+                        const isActiveAskUserQuestionPendingNode = Boolean(
+                            isAskUserQuestion && props.block.id === props.activeAskUserQuestionPendingId
+                        )
                         const askPendingHandledInDetails = Boolean(
-                            isAskUserQuestion
-                            && permission?.status === 'pending'
+                            isActiveAskUserQuestionPendingNode
                             && askQuestions.length > 0
+                            && (
+                                permission?.status === 'pending'
+                                || (!permission && props.block.tool.state === 'running' && (
+                                    props.block.tool.result === null
+                                    || props.block.tool.result === undefined
+                                ))
+                            )
                         )
                         const askNonPendingHandledInDetails = Boolean(
                             isAskUserQuestion
@@ -471,11 +568,17 @@ function StepNode(props: {
                                 || ((permission.status === 'denied' || permission.status === 'canceled') && Boolean(permission.reason))
                             )
                         )
+                        const suppressNonActiveAskPendingFooter = Boolean(
+                            isAskUserQuestion
+                            && permission?.status === 'pending'
+                            && !isActiveAskUserQuestionPendingNode
+                        )
                         if (!shouldRenderPermissionFooter || askPendingHandledInDetails || askNonPendingHandledInDetails) return null
+                        if (suppressNonActiveAskPendingFooter) return null
 
                         let content: ReactNode = null
 
-                        if (isAskUserQuestion && permission?.status === 'pending' && askQuestions.length > 0) {
+                        if (isActiveAskUserQuestionPendingNode && permission?.status === 'pending' && askQuestions.length > 0) {
                             content = (
                                 <AskUserQuestionFooter
                                     api={props.api}
@@ -544,6 +647,7 @@ function StepNode(props: {
                                     sessionId={props.sessionId}
                                     disabled={props.disabled}
                                     onDone={props.onDone}
+                                    activeAskUserQuestionPendingId={props.activeAskUserQuestionPendingId}
                                 />
                             ))}
                         </div>
@@ -556,6 +660,21 @@ function StepNode(props: {
 
 export const StepsView: ToolViewComponent = (props) => {
     const children = props.block.children.filter((child): child is ToolCallBlock => child.kind === 'tool-call')
+    const askUserQuestionPendingCandidateIds = useMemo(
+        () => collectAskUserQuestionPendingCandidateIds(children),
+        [children]
+    )
+    const [activeAskUserQuestionPendingId, setActiveAskUserQuestionPendingId] = useState<string | null>(
+        askUserQuestionPendingCandidateIds[0] ?? null
+    )
+
+    useEffect(() => {
+        if (activeAskUserQuestionPendingId && askUserQuestionPendingCandidateIds.includes(activeAskUserQuestionPendingId)) {
+            return
+        }
+        const next = askUserQuestionPendingCandidateIds[0] ?? null
+        setActiveAskUserQuestionPendingId(next)
+    }, [activeAskUserQuestionPendingId, askUserQuestionPendingCandidateIds])
 
     if (children.length === 0) {
         return null
@@ -572,6 +691,7 @@ export const StepsView: ToolViewComponent = (props) => {
                     sessionId={props.sessionId}
                     disabled={props.disabled}
                     onDone={props.onDone}
+                    activeAskUserQuestionPendingId={activeAskUserQuestionPendingId}
                 />
             ))}
         </div>

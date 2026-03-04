@@ -134,6 +134,7 @@ export function AskUserQuestionFooter(props: {
     const [fallbackText, setFallbackText] = useState('')
     const [stateByQuestion, setStateByQuestion] = useState<QuestionOptionState[]>(() => buildInitialState(questions))
     const otherInputRefs = useRef<Array<HTMLInputElement | null>>([])
+    const [focusOtherInputIndex, setFocusOtherInputIndex] = useState<number | null>(null)
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -142,9 +143,51 @@ export function AskUserQuestionFooter(props: {
         setFallbackText('')
         setStateByQuestion(buildInitialState(questions))
         otherInputRefs.current = []
+        setFocusOtherInputIndex(null)
         setLoading(false)
         setError(null)
     }, [props.tool.id, questions])
+
+    useEffect(() => {
+        if (focusOtherInputIndex === null) return
+
+        const focusInput = () => {
+            const input = otherInputRefs.current[focusOtherInputIndex]
+            if (!input) return false
+            input.focus()
+            try {
+                const end = input.value.length
+                input.setSelectionRange(end, end)
+            } catch {
+                // noop
+            }
+            return true
+        }
+
+        if (focusInput()) {
+            setFocusOtherInputIndex(null)
+            return
+        }
+
+        let raf1 = 0
+        let raf2 = 0
+        raf1 = requestAnimationFrame(() => {
+            if (focusInput()) {
+                setFocusOtherInputIndex(null)
+                return
+            }
+            raf2 = requestAnimationFrame(() => {
+                if (focusInput()) {
+                    setFocusOtherInputIndex(null)
+                }
+            })
+        })
+
+        return () => {
+            if (raf1) cancelAnimationFrame(raf1)
+            if (raf2) cancelAnimationFrame(raf2)
+        }
+    }, [focusOtherInputIndex, stateByQuestion])
 
     if (!permission || permission.status !== 'pending') return null
     if (!isAskUserQuestionToolName(props.tool.name)) return null
@@ -287,11 +330,7 @@ export function AskUserQuestionFooter(props: {
         })
 
         if (shouldFocusInput) {
-            requestAnimationFrame(() => {
-                const input = otherInputRefs.current[qIdx]
-                if (!input) return
-                input.focus()
-            })
+            setFocusOtherInputIndex(qIdx)
         }
     }
 
