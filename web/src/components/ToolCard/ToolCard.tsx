@@ -8,6 +8,7 @@ import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
 import {
+    extractAskUserQuestionResultText,
     formatAskUserQuestionAnswersForDisplay,
     isAskUserQuestionToolName,
     parseAskUserQuestionInput
@@ -400,6 +401,14 @@ function ToolCardInner(props: ToolCardProps) {
         () => normalizeQuestionAnswers(permission?.answers),
         [permission?.answers]
     )
+    const hasAnyAskAnswers = useMemo(
+        () => Object.keys(normalizedAskAnswers).length > 0,
+        [normalizedAskAnswers]
+    )
+    const askResultText = useMemo(
+        () => (isAskUserQuestion ? extractAskUserQuestionResultText(props.block.tool.result) : null),
+        [isAskUserQuestion, props.block.tool.result]
+    )
     const isAskUserQuestionMalformed = Boolean(
         isAskUserQuestion
         && askQuestions.length === 0
@@ -415,8 +424,18 @@ function ToolCardInner(props: ToolCardProps) {
     )
     const useAskUserQuestionViewLayout = Boolean(
         isAskUserQuestion
-        && isQuestionToolWithStructuredAnswers
         && askQuestions.length > 0
+        && (
+            permission?.status === 'approved'
+            || permission?.status === 'denied'
+            || permission?.status === 'canceled'
+        )
+    )
+    const hideAskUserQuestionReasonFooter = Boolean(
+        isAskUserQuestion
+        && askQuestions.length > 0
+        && permission
+        && permission.status !== 'pending'
     )
 
     return (
@@ -497,53 +516,115 @@ function ToolCardInner(props: ToolCardProps) {
                                     onDone={props.onDone}
                                 />
                             ) : useAskUserQuestionViewLayout ? (
-                                askQuestions.map((question, idx) => {
-                                    const optionLabels = question.options
-                                        .map((option) => option.label.trim())
-                                        .filter((label) => label.length > 0)
-                                    const optionSnapshot = optionLabels.length > 0
-                                        ? buildOptionSnapshot(optionLabels)
-                                        : null
-                                    const answerValues = normalizedAskAnswers[String(idx)] ?? []
-                                    const displayAnswerValues = formatAskUserQuestionAnswersForDisplay(
-                                        question,
-                                        answerValues,
-                                        locale === 'zh-CN' ? 'zh-CN' : 'en'
+                                (() => {
+                                    const showSharedInterruptedAnswer = Boolean(
+                                        askQuestions.length > 1
+                                        && !hasAnyAskAnswers
+                                        && askResultText
                                     )
+                                    const questionsLabel = locale === 'zh-CN' ? '问题' : 'Questions'
+                                    const answersLabel = locale === 'zh-CN' ? '回答' : 'Answers'
+                                    const optionsLabel = locale === 'zh-CN' ? '选项' : 'Options'
+
+                                    if (showSharedInterruptedAnswer) {
+                                        return (
+                                            <>
+                                                <div>
+                                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                        {questionsLabel}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {askQuestions.map((question, idx) => {
+                                                            const optionLabels = question.options
+                                                                .map((option) => option.label.trim())
+                                                                .filter((label) => label.length > 0)
+                                                            const optionSnapshot = optionLabels.length > 0
+                                                                ? buildOptionSnapshot(optionLabels)
+                                                                : null
+
+                                                            return (
+                                                                <div key={idx} className="space-y-1">
+                                                                    <QuestionRow
+                                                                        header={question.header}
+                                                                        question={question.question.trim()}
+                                                                    />
+                                                                    {optionSnapshot ? (
+                                                                        <OptionSnapshotRow
+                                                                            tag={optionsLabel}
+                                                                            text={optionSnapshot.preview}
+                                                                            fullText={optionSnapshot.full}
+                                                                        />
+                                                                    ) : null}
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                        {answersLabel}
+                                                    </div>
+                                                    <CodeBlock code={askResultText as string} language="text" />
+                                                </div>
+                                            </>
+                                        )
+                                    }
 
                                     return (
-                                        <div key={idx} className="space-y-2">
-                                            <div>
-                                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                                    {locale === 'zh-CN' ? '问题' : 'Questions'}
-                                                </div>
-                                                <QuestionRow
-                                                    header={question.header}
-                                                    question={question.question.trim()}
-                                                />
-                                                {optionSnapshot ? (
-                                                    <div className="mt-1">
-                                                        <OptionSnapshotRow
-                                                            tag={locale === 'zh-CN' ? '选项' : 'Options'}
-                                                            text={optionSnapshot.preview}
-                                                            fullText={optionSnapshot.full}
-                                                        />
+                                        <>
+                                            {askQuestions.map((question, idx) => {
+                                                const optionLabels = question.options
+                                                    .map((option) => option.label.trim())
+                                                    .filter((label) => label.length > 0)
+                                                const optionSnapshot = optionLabels.length > 0
+                                                    ? buildOptionSnapshot(optionLabels)
+                                                    : null
+                                                const answerValues = normalizedAskAnswers[String(idx)] ?? []
+                                                const displayAnswerValues = formatAskUserQuestionAnswersForDisplay(
+                                                    question,
+                                                    answerValues,
+                                                    locale === 'zh-CN' ? 'zh-CN' : 'en'
+                                                )
+                                                const answerDisplayText = displayAnswerValues.length > 0
+                                                    ? displayAnswerValues.join(' / ')
+                                                    : (!hasAnyAskAnswers ? askResultText : null)
+
+                                                return (
+                                                    <div key={idx} className="space-y-2">
+                                                        <div>
+                                                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                                {questionsLabel}
+                                                            </div>
+                                                            <QuestionRow
+                                                                header={question.header}
+                                                                question={question.question.trim()}
+                                                            />
+                                                            {optionSnapshot ? (
+                                                                <div className="mt-1">
+                                                                    <OptionSnapshotRow
+                                                                        tag={optionsLabel}
+                                                                        text={optionSnapshot.preview}
+                                                                        fullText={optionSnapshot.full}
+                                                                    />
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                        <div>
+                                                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                                {answersLabel}
+                                                            </div>
+                                                            {answerDisplayText ? (
+                                                                <CodeBlock code={answerDisplayText} language="text" />
+                                                            ) : (
+                                                                <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                ) : null}
-                                            </div>
-                                            <div>
-                                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                                    {locale === 'zh-CN' ? '回答' : 'Answers'}
-                                                </div>
-                                                {displayAnswerValues.length > 0 ? (
-                                                    <CodeBlock code={displayAnswerValues.join(' / ')} language="text" />
-                                                ) : (
-                                                    <div className="text-sm text-[var(--app-hint)]">(no output)</div>
-                                                )}
-                                            </div>
-                                        </div>
+                                                )
+                                            })}
+                                        </>
                                     )
-                                })
+                                })()
                             ) : (
                                 <>
                                     <div>
@@ -590,7 +671,7 @@ function ToolCardInner(props: ToolCardProps) {
                             disabled={props.disabled}
                             onDone={props.onDone}
                         />
-                    ) : (
+                    ) : hideAskUserQuestionReasonFooter ? null : (
                         <PermissionFooter
                             api={props.api}
                             sessionId={props.sessionId}

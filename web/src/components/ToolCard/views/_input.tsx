@@ -233,13 +233,27 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
                 pushRow(rows, 'questions', `${questions.length}`)
                 const first = questions[0]
                 pushRow(rows, 'header', getInputScalar(first, ['header']))
-                const questionText = getInputScalar(first, ['question'])
-                if (questionText) {
-                    pushRow(rows, 'first_question', truncate(questionText, 160))
+                const firstQuestionText = getInputScalar(first, ['question'])
+                if (firstQuestionText) {
+                    pushRow(rows, 'first_question', truncate(firstQuestionText, 160))
                 }
-                const options = Array.isArray(first.options) ? first.options : []
-                if (options.length > 0) {
-                    pushRow(rows, 'options', `${options.length}`)
+                const firstOptions = Array.isArray(first.options) ? first.options : []
+                if (firstOptions.length > 0) {
+                    pushRow(rows, 'options', `${firstOptions.length}`)
+                }
+
+                for (let idx = 1; idx < questions.length; idx += 1) {
+                    const question = questions[idx]
+                    const n = idx + 1
+                    pushRow(rows, `header_${n}`, getInputScalar(question, ['header']))
+                    const questionText = getInputScalar(question, ['question'])
+                    if (questionText) {
+                        pushRow(rows, `question_${n}`, truncate(questionText, 160))
+                    }
+                    const options = Array.isArray(question.options) ? question.options : []
+                    if (options.length > 0) {
+                        pushRow(rows, `options_${n}`, `${options.length}`)
+                    }
                 }
             }
             break

@@ -18,6 +18,8 @@ export type AskUserQuestionQuestionInfo = {
 }
 
 type AskUserQuestionDisplayLocale = 'zh-CN' | 'en'
+const TOOL_USE_ERROR_REGEX = /<tool_use_error>(.*?)<\/tool_use_error>/s
+const SYSTEM_REMINDER_BLOCK_REGEX = /<system-reminder>[\s\S]*?<\/system-reminder>/gi
 
 export function isAskUserQuestionToolName(toolName: string): boolean {
     return toolName === 'AskUserQuestion' || toolName === 'ask_user_question'
@@ -115,4 +117,63 @@ export function formatAskUserQuestionAnswersForDisplay(
     }
 
     return formatted
+}
+
+function sanitizeAskUserQuestionResultText(text: string): string {
+    const matched = text.match(TOOL_USE_ERROR_REGEX)
+    const unwrapped = matched && typeof matched[1] === 'string' ? matched[1].trim() : text
+
+    return unwrapped
+        .replace(SYSTEM_REMINDER_BLOCK_REGEX, '')
+        .replace(/\n[ \t]*\n[ \t]*\n+/g, '\n\n')
+        .replace(/^[ \t]*\n/, '')
+        .replace(/\n[ \t]*$/, '')
+}
+
+function extractTextFromContentBlock(block: unknown): string | null {
+    if (typeof block === 'string') return block
+    if (!isObject(block)) return null
+    if (block.type === 'text' && typeof block.text === 'string') return block.text
+    if (typeof block.text === 'string') return block.text
+    return null
+}
+
+export function extractAskUserQuestionResultText(result: unknown): string | null {
+    if (result === null || result === undefined) return null
+
+    if (typeof result === 'string') {
+        const text = sanitizeAskUserQuestionResultText(result)
+        return text.trim().length > 0 ? text : null
+    }
+
+    if (Array.isArray(result)) {
+        const parts = result
+            .map(extractTextFromContentBlock)
+            .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
+        if (parts.length === 0) return null
+        const text = sanitizeAskUserQuestionResultText(parts.join('\n'))
+        return text.trim().length > 0 ? text : null
+    }
+
+    if (!isObject(result)) return null
+
+    const directFields = [result.content, result.text, result.output, result.error, result.message]
+    for (const field of directFields) {
+        if (typeof field !== 'string') continue
+        const text = sanitizeAskUserQuestionResultText(field)
+        if (text.trim().length > 0) return text
+    }
+
+    const contentArray = Array.isArray(result.content) ? result.content : null
+    if (contentArray) {
+        const parts = contentArray
+            .map(extractTextFromContentBlock)
+            .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
+        if (parts.length > 0) {
+            const text = sanitizeAskUserQuestionResultText(parts.join('\n'))
+            if (text.trim().length > 0) return text
+        }
+    }
+
+    return null
 }
