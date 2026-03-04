@@ -3,16 +3,84 @@ import { isObject } from '@hapi/protocol'
 import type { ApiClient } from '@/api/client'
 import type { ToolCallBlock } from '@/chat/types'
 import type { SessionMetadataSummary } from '@/types/api'
+import { CodeBlock } from '@/components/CodeBlock'
 import { getToolFullViewComponent, type ToolViewComponent } from '@/components/ToolCard/views/_all'
 import { renderToolInputContent } from '@/components/ToolCard/views/_input'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
-import { isAskUserQuestionToolName } from '@/components/ToolCard/askUserQuestion'
+import { isAskUserQuestionToolName, parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
 import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
 import { useTranslation } from '@/lib/use-translation'
+import { cn } from '@/lib/utils'
+
+type FlatQuestionAnswers = Record<string, string[]>
+const OPTION_SNAPSHOT_LIMIT = 4
+
+function normalizeQuestionAnswers(answers: unknown): FlatQuestionAnswers {
+    if (!answers || typeof answers !== 'object') return {}
+    const out: FlatQuestionAnswers = {}
+    for (const [key, value] of Object.entries(answers)) {
+        if (Array.isArray(value)) {
+            out[key] = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+            continue
+        }
+        if (!value || typeof value !== 'object') continue
+        const nested = (value as { answers?: unknown }).answers
+        if (Array.isArray(nested)) {
+            out[key] = nested.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        }
+    }
+    return out
+}
+
+function TaggedTextRow(props: { tag: string | null; text: string }) {
+    return (
+        <div className="min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5">
+            <div className="font-mono text-xs leading-4 text-[var(--app-fg)] break-all">
+                {props.tag ? (
+                    <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
+                        {props.tag}
+                    </span>
+                ) : null}
+                <span className={props.tag ? 'ml-2' : ''}>
+                    {props.text}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+function OptionSnapshotRow(props: { tag: string; text: string; fullText: string }) {
+    return (
+        <div className="min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5" title={props.fullText}>
+            <div className="min-w-0 flex items-center gap-2 font-mono text-xs leading-4 text-[var(--app-fg)]">
+                <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
+                    {props.tag}
+                </span>
+                <span className="min-w-0 flex-1 whitespace-nowrap overflow-hidden text-ellipsis" title={props.fullText}>
+                    {props.text}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+function buildOptionSnapshot(options: string[]): { preview: string; full: string } {
+    const fullTokens = options.map((label) => label)
+    const previewTokens = options
+        .slice(0, OPTION_SNAPSHOT_LIMIT)
+        .map((label) => label)
+    if (options.length > OPTION_SNAPSHOT_LIMIT) {
+        previewTokens.push(`+${options.length - OPTION_SNAPSHOT_LIMIT}`)
+    }
+    return {
+        preview: previewTokens.join(' / '),
+        full: fullTokens.join(' / ')
+    }
+}
 
 function hasPendingPermissionInSubtree(block: ToolCallBlock): boolean {
     if (block.tool.permission?.status === 'pending') return true
@@ -71,7 +139,7 @@ function StepNodeDetails(props: {
     disabled?: boolean
     onDone?: () => void
 }) {
-    const { t } = useTranslation()
+    const { t, locale } = useTranslation()
     const toolName = props.block.tool.name
     const FullToolView = getToolFullViewComponent(toolName)
     const ResultToolView = getToolResultViewComponent(toolName)
@@ -83,32 +151,108 @@ function StepNodeDetails(props: {
         && props.block.tool.permission?.answers
         && Object.keys(props.block.tool.permission.answers).length > 0
     )
+    const askQuestions = useMemo(() => {
+        if (!isAskUserQuestion) return []
+        return parseAskUserQuestionInput(props.block.tool.input).questions
+    }, [isAskUserQuestion, props.block.tool.input])
+    const normalizedAskAnswers = useMemo(
+        () => normalizeQuestionAnswers(props.block.tool.permission?.answers),
+        [props.block.tool.permission?.answers]
+    )
+    const useAskUserQuestionPendingLayout = Boolean(
+        isAskUserQuestion
+        && props.block.tool.permission?.status === 'pending'
+        && askQuestions.length > 0
+        && props.api
+        && props.sessionId
+        && props.onDone
+    )
+    const useAskUserQuestionViewLayout = Boolean(
+        isAskUserQuestion
+        && isQuestionToolWithAnswers
+        && askQuestions.length > 0
+    )
 
     return (
         <div className="tool-io-scope space-y-2">
-            <div>
-                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                    {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
-                </div>
-                {FullToolView ? (
-                    <FullToolView
-                        block={props.block}
-                        metadata={props.metadata}
-                        api={props.api}
-                        sessionId={props.sessionId}
-                        disabled={props.disabled}
-                        onDone={props.onDone}
-                    />
-                ) : (
-                    renderToolInputContent(props.block, props.metadata)
-                )}
-            </div>
-            {!isQuestionToolWithAnswers ? (
-                <div>
-                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                    <ResultToolView block={props.block} metadata={props.metadata} />
-                </div>
-            ) : null}
+            {useAskUserQuestionPendingLayout ? (
+                <AskUserQuestionFooter
+                    api={props.api as ApiClient}
+                    sessionId={props.sessionId as string}
+                    tool={props.block.tool}
+                    disabled={props.disabled ?? false}
+                    onDone={props.onDone as () => void}
+                />
+            ) : useAskUserQuestionViewLayout ? (
+                askQuestions.map((question, idx) => {
+                    const optionLabels = question.options
+                        .map((option) => option.label.trim())
+                        .filter((label) => label.length > 0)
+                    const optionSnapshot = optionLabels.length > 0
+                        ? buildOptionSnapshot(optionLabels)
+                        : null
+                    const answerValues = normalizedAskAnswers[String(idx)] ?? []
+
+                    return (
+                        <div key={idx} className="space-y-2">
+                            <div>
+                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                    {locale === 'zh-CN' ? '问题' : 'Questions'}
+                                </div>
+                                <TaggedTextRow
+                                    tag={question.header}
+                                    text={question.question.trim()}
+                                />
+                                {optionSnapshot ? (
+                                    <div className="mt-1">
+                                        <OptionSnapshotRow
+                                            tag={locale === 'zh-CN' ? '选项' : 'Options'}
+                                            text={optionSnapshot.preview}
+                                            fullText={optionSnapshot.full}
+                                        />
+                                    </div>
+                                ) : null}
+                            </div>
+                            <div>
+                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                    {locale === 'zh-CN' ? '回答' : 'Answers'}
+                                </div>
+                                {answerValues.length > 0 ? (
+                                    <CodeBlock code={answerValues.join(' / ')} language="text" />
+                                ) : (
+                                    <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                                )}
+                            </div>
+                        </div>
+                    )
+                })
+            ) : (
+                <>
+                    <div>
+                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                            {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                        </div>
+                        {FullToolView ? (
+                            <FullToolView
+                                block={props.block}
+                                metadata={props.metadata}
+                                api={props.api}
+                                sessionId={props.sessionId}
+                                disabled={props.disabled}
+                                onDone={props.onDone}
+                            />
+                        ) : (
+                            renderToolInputContent(props.block, props.metadata)
+                        )}
+                    </div>
+                    {!isQuestionToolWithAnswers ? (
+                        <div>
+                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                            <ResultToolView block={props.block} metadata={props.metadata} />
+                        </div>
+                    ) : null}
+                </>
+            )}
         </div>
     )
 }
@@ -215,13 +359,21 @@ function StepNode(props: {
                         const toolName = props.block.tool.name
                         const isAskUserQuestion = isAskUserQuestionToolName(toolName)
                         const isRequestUserInput = isRequestUserInputToolName(toolName)
+                        const askQuestions = isAskUserQuestion
+                            ? parseAskUserQuestionInput(props.block.tool.input).questions
+                            : []
+                        const askPendingHandledInDetails = Boolean(
+                            isAskUserQuestion
+                            && permission?.status === 'pending'
+                            && askQuestions.length > 0
+                        )
                         const shouldRenderPermissionFooter = Boolean(
                             permission && (
                                 permission.status === 'pending'
                                 || ((permission.status === 'denied' || permission.status === 'canceled') && Boolean(permission.reason))
                             )
                         )
-                        if (!shouldRenderPermissionFooter) return null
+                        if (!shouldRenderPermissionFooter || askPendingHandledInDetails) return null
 
                         let content: ReactNode = null
 

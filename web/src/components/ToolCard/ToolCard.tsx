@@ -185,6 +185,7 @@ type ToolCardProps = {
 }
 
 type FlatQuestionAnswers = Record<string, string[]>
+const OPTION_SNAPSHOT_LIMIT = 4
 
 function normalizeQuestionAnswers(answers: unknown): FlatQuestionAnswers {
     if (!answers || typeof answers !== 'object') return {}
@@ -203,21 +204,54 @@ function normalizeQuestionAnswers(answers: unknown): FlatQuestionAnswers {
     return out
 }
 
-function QuestionRow(props: { header: string | null; question: string }) {
+function TaggedTextRow(props: { tag: string | null; text: string }) {
     return (
         <div className="min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5">
             <div className="font-mono text-xs leading-4 text-[var(--app-fg)] break-all">
-                {props.header ? (
+                {props.tag ? (
                     <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
-                        {props.header}
+                        {props.tag}
                     </span>
                 ) : null}
-                <span className={props.header ? 'ml-2' : ''}>
-                    {props.question}
+                <span className={props.tag ? 'ml-2' : ''}>
+                    {props.text}
                 </span>
             </div>
         </div>
     )
+}
+
+function QuestionRow(props: { header: string | null; question: string }) {
+    return <TaggedTextRow tag={props.header} text={props.question} />
+}
+
+function OptionSnapshotRow(props: { tag: string; text: string; fullText: string }) {
+    return (
+        <div className="min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5" title={props.fullText}>
+            <div className="min-w-0 flex items-center gap-2 font-mono text-xs leading-4 text-[var(--app-fg)]">
+                <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
+                    {props.tag}
+                </span>
+                <span className="min-w-0 flex-1 whitespace-nowrap overflow-hidden text-ellipsis" title={props.fullText}>
+                    {props.text}
+                </span>
+            </div>
+        </div>
+    )
+}
+
+function buildOptionSnapshot(options: string[]): { preview: string; full: string } {
+    const fullTokens = options.map((label) => label)
+    const previewTokens = options
+        .slice(0, OPTION_SNAPSHOT_LIMIT)
+        .map((label) => label)
+    if (options.length > OPTION_SNAPSHOT_LIMIT) {
+        previewTokens.push(`+${options.length - OPTION_SNAPSHOT_LIMIT}`)
+    }
+    return {
+        preview: previewTokens.join(' / '),
+        full: fullTokens.join(' / ')
+    }
 }
 
 function ToolCardInner(props: ToolCardProps) {
@@ -353,35 +387,23 @@ function ToolCardInner(props: ToolCardProps) {
         && permission?.answers
         && Object.keys(permission.answers).length > 0
     )
-    const askQuestionData = useMemo(() => {
-        if (!isAskUserQuestion) return null
-        const parsed = parseAskUserQuestionInput(props.block.tool.input)
-        if (parsed.questions.length !== 1) return null
-        const single = parsed.questions[0]
-        return {
-            header: single.header,
-            question: single.question.trim()
-        }
+    const askQuestions = useMemo(() => {
+        if (!isAskUserQuestion) return []
+        return parseAskUserQuestionInput(props.block.tool.input).questions
     }, [isAskUserQuestion, props.block.tool.input])
-    const singleQuestionAnswers = useMemo(() => {
-        const normalized = normalizeQuestionAnswers(permission?.answers)
-        return normalized['0'] ?? []
-    }, [permission?.answers])
-    const isSingleAskUserQuestionCardMode = Boolean(
-        askQuestionData
-        && askQuestionData.question.length > 0
+    const normalizedAskAnswers = useMemo(
+        () => normalizeQuestionAnswers(permission?.answers),
+        [permission?.answers]
     )
-    const isSingleAskUserQuestionPending = Boolean(
-        isSingleAskUserQuestionCardMode
-        && isAskUserQuestion
+    const useAskUserQuestionPendingLayout = Boolean(
+        isAskUserQuestion
         && permission?.status === 'pending'
+        && askQuestions.length > 0
     )
-    const useSingleAskUserQuestionCardLayout = Boolean(
-        isSingleAskUserQuestionCardMode
-        && (
-            isSingleAskUserQuestionPending
-            || isQuestionToolWithAnswers
-        )
+    const useAskUserQuestionViewLayout = Boolean(
+        isAskUserQuestion
+        && isQuestionToolWithAnswers
+        && askQuestions.length > 0
     )
 
     return (
@@ -453,64 +475,88 @@ function ToolCardInner(props: ToolCardProps) {
                         )
                     ) : toolName !== 'Task' ? (
                         <div className="mt-3 flex flex-col gap-3">
-                            <div>
-                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                    {useSingleAskUserQuestionCardLayout
-                                        ? (locale === 'zh-CN' ? '问题' : 'Questions')
-                                        : (isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input'))}
-                                </div>
-                                {useSingleAskUserQuestionCardLayout && askQuestionData ? (
-                                    <>
-                                        <QuestionRow
-                                            header={askQuestionData.header}
-                                            question={askQuestionData.question}
-                                        />
-                                        {isSingleAskUserQuestionPending ? (
-                                            <AskUserQuestionFooter
+                            {useAskUserQuestionPendingLayout ? (
+                                <AskUserQuestionFooter
+                                    api={props.api}
+                                    sessionId={props.sessionId}
+                                    tool={props.block.tool}
+                                    disabled={props.disabled}
+                                    onDone={props.onDone}
+                                />
+                            ) : useAskUserQuestionViewLayout ? (
+                                askQuestions.map((question, idx) => {
+                                    const optionLabels = question.options
+                                        .map((option) => option.label.trim())
+                                        .filter((label) => label.length > 0)
+                                    const optionSnapshot = optionLabels.length > 0
+                                        ? buildOptionSnapshot(optionLabels)
+                                        : null
+                                    const answerValues = normalizedAskAnswers[String(idx)] ?? []
+
+                                    return (
+                                        <div key={idx} className="space-y-2">
+                                            <div>
+                                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                    {locale === 'zh-CN' ? '问题' : 'Questions'}
+                                                </div>
+                                                <QuestionRow
+                                                    header={question.header}
+                                                    question={question.question.trim()}
+                                                />
+                                                {optionSnapshot ? (
+                                                    <div className="mt-1">
+                                                        <OptionSnapshotRow
+                                                            tag={locale === 'zh-CN' ? '选项' : 'Options'}
+                                                            text={optionSnapshot.preview}
+                                                            fullText={optionSnapshot.full}
+                                                        />
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                            <div>
+                                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                    {locale === 'zh-CN' ? '回答' : 'Answers'}
+                                                </div>
+                                                {answerValues.length > 0 ? (
+                                                    <CodeBlock code={answerValues.join(' / ')} language="text" />
+                                                ) : (
+                                                    <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })
+                            ) : (
+                                <>
+                                    <div>
+                                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                            {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                                        </div>
+                                        {FullToolView ? (
+                                            <FullToolView
+                                                block={props.block}
+                                                metadata={props.metadata}
                                                 api={props.api}
                                                 sessionId={props.sessionId}
-                                                tool={props.block.tool}
                                                 disabled={props.disabled}
                                                 onDone={props.onDone}
-                                                singleQuestionInline
                                             />
-                                        ) : null}
-                                    </>
-                                ) : FullToolView ? (
-                                    <FullToolView
-                                        block={props.block}
-                                        metadata={props.metadata}
-                                        api={props.api}
-                                        sessionId={props.sessionId}
-                                        disabled={props.disabled}
-                                        onDone={props.onDone}
-                                    />
-                                ) : (
-                                    renderToolInputContent(props.block, props.metadata)
-                                )}
-                            </div>
-                            {!isSingleAskUserQuestionPending && !isQuestionToolWithAnswers ? (
-                                <div>
-                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                                    <ResultToolView block={props.block} metadata={props.metadata} />
-                                </div>
-                            ) : null}
-                            {useSingleAskUserQuestionCardLayout && !isSingleAskUserQuestionPending && isQuestionToolWithAnswers ? (
-                                <div>
-                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                        {locale === 'zh-CN' ? '回答' : 'Answers'}
+                                        ) : (
+                                            renderToolInputContent(props.block, props.metadata)
+                                        )}
                                     </div>
-                                    {singleQuestionAnswers.length > 0 ? (
-                                        <CodeBlock code={singleQuestionAnswers.join('\n')} language="text" />
-                                    ) : (
-                                        <div className="text-sm text-[var(--app-hint)]">(no output)</div>
-                                    )}
-                                </div>
-                            ) : null}
+                                    {!isQuestionToolWithAnswers ? (
+                                        <div>
+                                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                                            <ResultToolView block={props.block} metadata={props.metadata} />
+                                        </div>
+                                    ) : null}
+                                </>
+                            )}
                         </div>
                     ) : null}
 
-                    {useSingleAskUserQuestionCardLayout && isSingleAskUserQuestionPending ? null : isAskUserQuestion && permission?.status === 'pending' ? (
+                    {useAskUserQuestionPendingLayout ? null : isAskUserQuestion && permission?.status === 'pending' ? (
                         <AskUserQuestionFooter
                             api={props.api}
                             sessionId={props.sessionId}
