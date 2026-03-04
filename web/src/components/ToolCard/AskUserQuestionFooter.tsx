@@ -85,6 +85,7 @@ export function AskUserQuestionFooter(props: {
     tool: ChatToolCall
     disabled: boolean
     onDone: () => void
+    singleQuestionInline?: boolean
 }) {
     const { t } = useTranslation()
     const { haptic } = usePlatform()
@@ -327,6 +328,80 @@ export function AskUserQuestionFooter(props: {
                 })}
 
                 <div className="mt-3 flex items-center justify-end">
+                    <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        disabled={props.disabled || loading}
+                        onClick={submit}
+                        aria-busy={loading}
+                        className="gap-2"
+                    >
+                        {loading ? (
+                            <>
+                                <Spinner size="sm" label={null} className="text-[var(--app-button-text)]" />
+                                {t('tool.submitting')}
+                            </>
+                        ) : (
+                            t('tool.submit')
+                        )}
+                    </Button>
+                </div>
+            </div>
+        )
+    }
+
+    // Single-question inline mode for ToolCard "Questions" section.
+    if (props.singleQuestionInline && questions.length === 1) {
+        return (
+            <div className="mt-2">
+                {error ? (
+                    <div className="mb-2 text-xs text-red-600">
+                        {error}
+                    </div>
+                ) : null}
+
+                <div className="flex flex-col gap-1">
+                    {questions[clampedStep].options.map((opt, optIdx) => {
+                        const selected = (selectedByQuestion[clampedStep] ?? []).includes(optIdx)
+                        return (
+                            <OptionRow
+                                key={optIdx}
+                                checked={selected}
+                                mode={mode}
+                                disabled={props.disabled || loading}
+                                title={opt.label}
+                                description={opt.description}
+                                onClick={() => toggleOption(clampedStep, optIdx)}
+                            />
+                        )
+                    })}
+
+                    <button
+                        type="button"
+                        className={cn(
+                            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-all',
+                            (otherSelectedByQuestion[clampedStep] ?? false)
+                                ? 'bg-[var(--app-subtle-bg)]'
+                                : ((selectedByQuestion[clampedStep] ?? []).length > 0 ? 'opacity-50' : 'hover:bg-[var(--app-subtle-bg)]')
+                        )}
+                        disabled={props.disabled || loading}
+                        onClick={() => toggleOther(clampedStep)}
+                    >
+                        <SelectionMark checked={otherSelectedByQuestion[clampedStep] ?? false} mode={mode} />
+                        <input
+                            type="text"
+                            value={otherTextByQuestion[clampedStep] ?? ''}
+                            onChange={(e) => { e.stopPropagation(); updateOtherText(clampedStep, e.target.value) }}
+                            onClick={(e) => { e.stopPropagation(); if (!(otherSelectedByQuestion[clampedStep] ?? false)) toggleOther(clampedStep) }}
+                            disabled={props.disabled || loading}
+                            placeholder={t('tool.askUserQuestion.otherPlaceholder')}
+                            className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none disabled:opacity-50"
+                        />
+                    </button>
+                </div>
+
+                <div className="mt-3 flex items-center justify-end gap-2">
                     <Button
                         type="button"
                         variant="default"

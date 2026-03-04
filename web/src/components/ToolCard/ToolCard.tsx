@@ -3,10 +3,11 @@ import type { ApiClient } from '@/api/client'
 import type { SessionMetadataSummary } from '@/types/api'
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CodeBlock } from '@/components/CodeBlock'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
-import { isAskUserQuestionToolName } from '@/components/ToolCard/askUserQuestion'
+import { isAskUserQuestionToolName, parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
 import { getToolFullViewComponent, getToolViewComponent } from '@/components/ToolCard/views/_all'
@@ -183,6 +184,42 @@ type ToolCardProps = {
     block: ToolCallBlock
 }
 
+type FlatQuestionAnswers = Record<string, string[]>
+
+function normalizeQuestionAnswers(answers: unknown): FlatQuestionAnswers {
+    if (!answers || typeof answers !== 'object') return {}
+    const out: FlatQuestionAnswers = {}
+    for (const [key, value] of Object.entries(answers)) {
+        if (Array.isArray(value)) {
+            out[key] = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+            continue
+        }
+        if (!value || typeof value !== 'object') continue
+        const nested = (value as { answers?: unknown }).answers
+        if (Array.isArray(nested)) {
+            out[key] = nested.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        }
+    }
+    return out
+}
+
+function QuestionRow(props: { header: string | null; question: string }) {
+    return (
+        <div className="min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5">
+            <div className="font-mono text-xs leading-4 text-[var(--app-fg)] break-all">
+                {props.header ? (
+                    <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
+                        {props.header}
+                    </span>
+                ) : null}
+                <span className={props.header ? 'ml-2' : ''}>
+                    {props.question}
+                </span>
+            </div>
+        </div>
+    )
+}
+
 function ToolCardInner(props: ToolCardProps) {
     const { t, locale } = useTranslation()
     const presentation = useMemo(() => getToolPresentation({
@@ -316,6 +353,36 @@ function ToolCardInner(props: ToolCardProps) {
         && permission?.answers
         && Object.keys(permission.answers).length > 0
     )
+    const askQuestionData = useMemo(() => {
+        if (!isAskUserQuestion) return null
+        const parsed = parseAskUserQuestionInput(props.block.tool.input)
+        if (parsed.questions.length !== 1) return null
+        const single = parsed.questions[0]
+        return {
+            header: single.header,
+            question: single.question.trim()
+        }
+    }, [isAskUserQuestion, props.block.tool.input])
+    const singleQuestionAnswers = useMemo(() => {
+        const normalized = normalizeQuestionAnswers(permission?.answers)
+        return normalized['0'] ?? []
+    }, [permission?.answers])
+    const isSingleAskUserQuestionCardMode = Boolean(
+        askQuestionData
+        && askQuestionData.question.length > 0
+    )
+    const isSingleAskUserQuestionPending = Boolean(
+        isSingleAskUserQuestionCardMode
+        && isAskUserQuestion
+        && permission?.status === 'pending'
+    )
+    const useSingleAskUserQuestionCardLayout = Boolean(
+        isSingleAskUserQuestionCardMode
+        && (
+            isSingleAskUserQuestionPending
+            || isQuestionToolWithAnswers
+        )
+    )
 
     return (
         <Card ref={cardRef} className="overflow-hidden shadow-sm">
@@ -388,9 +455,28 @@ function ToolCardInner(props: ToolCardProps) {
                         <div className="mt-3 flex flex-col gap-3">
                             <div>
                                 <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                    {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                                    {useSingleAskUserQuestionCardLayout
+                                        ? (locale === 'zh-CN' ? '问题' : 'Questions')
+                                        : (isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input'))}
                                 </div>
-                                {FullToolView ? (
+                                {useSingleAskUserQuestionCardLayout && askQuestionData ? (
+                                    <>
+                                        <QuestionRow
+                                            header={askQuestionData.header}
+                                            question={askQuestionData.question}
+                                        />
+                                        {isSingleAskUserQuestionPending ? (
+                                            <AskUserQuestionFooter
+                                                api={props.api}
+                                                sessionId={props.sessionId}
+                                                tool={props.block.tool}
+                                                disabled={props.disabled}
+                                                onDone={props.onDone}
+                                                singleQuestionInline
+                                            />
+                                        ) : null}
+                                    </>
+                                ) : FullToolView ? (
                                     <FullToolView
                                         block={props.block}
                                         metadata={props.metadata}
@@ -403,16 +489,28 @@ function ToolCardInner(props: ToolCardProps) {
                                     renderToolInputContent(props.block, props.metadata)
                                 )}
                             </div>
-                            {!isQuestionToolWithAnswers ? (
+                            {!isSingleAskUserQuestionPending && !isQuestionToolWithAnswers ? (
                                 <div>
                                     <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                                     <ResultToolView block={props.block} metadata={props.metadata} />
                                 </div>
                             ) : null}
+                            {useSingleAskUserQuestionCardLayout && !isSingleAskUserQuestionPending && isQuestionToolWithAnswers ? (
+                                <div>
+                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                        {locale === 'zh-CN' ? '回答' : 'Answers'}
+                                    </div>
+                                    {singleQuestionAnswers.length > 0 ? (
+                                        <CodeBlock code={singleQuestionAnswers.join('\n')} language="text" />
+                                    ) : (
+                                        <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                                    )}
+                                </div>
+                            ) : null}
                         </div>
                     ) : null}
 
-                    {isAskUserQuestion && permission?.status === 'pending' ? (
+                    {useSingleAskUserQuestionCardLayout && isSingleAskUserQuestionPending ? null : isAskUserQuestion && permission?.status === 'pending' ? (
                         <AskUserQuestionFooter
                             api={props.api}
                             sessionId={props.sessionId}

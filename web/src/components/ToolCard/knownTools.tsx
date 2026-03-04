@@ -310,6 +310,20 @@ function getCoreToolNarrative(opts: ToolOpts): string | null {
         }
         case 'AskUserQuestion': {
             const questions = isObject(opts.input) && Array.isArray(opts.input.questions) ? opts.input.questions : []
+            const firstQuestion = questions[0]
+            const firstHeader = isObject(firstQuestion) && typeof firstQuestion.header === 'string'
+                ? firstQuestion.header.trim()
+                : ''
+            if (firstHeader.length > 0) {
+                if (questions.length > 1) {
+                    return zh
+                        ? `请求用户回答关于 ${firstHeader} 等多个问题`
+                        : `request user answers about ${firstHeader} and more questions`
+                }
+                return zh
+                    ? `请求用户回答关于 ${firstHeader} 的问题`
+                    : `request user answer about ${firstHeader}`
+            }
             if (questions.length > 0) return zh ? `请求用户回答 ${questions.length} 个问题` : `request user answers for ${questions.length} questions`
             return zh ? '请求用户回答' : 'request user answer'
         }
