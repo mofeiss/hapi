@@ -55,6 +55,7 @@ function QuestionRow(props: { tag: string | null; text: string }) {
 function OptionChip(props: {
     selected: boolean
     disabled: boolean
+    selectionMode: 'single' | 'multi'
     label: string
     title?: string
     onClick: () => void
@@ -76,7 +77,28 @@ function OptionChip(props: {
                     : 'border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-hint)] hover:text-[var(--app-fg)]'
             )}
         >
-            {props.label}
+            <span className="inline-flex items-center gap-1">
+                {props.selectionMode === 'multi' ? (
+                    <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <rect x="1.5" y="1.5" width="9" height="9" rx="1.8" stroke="currentColor" strokeWidth="1.2" />
+                        {props.selected ? (
+                            <path
+                                d="M3.2 6.2L5.1 8.1L8.8 4.2"
+                                stroke="currentColor"
+                                strokeWidth="1.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        ) : null}
+                    </svg>
+                ) : (
+                    <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+                        {props.selected ? <circle cx="6" cy="6" r="2.1" fill="currentColor" /> : null}
+                    </svg>
+                )}
+                <span>{props.label}</span>
+            </span>
         </button>
     )
 }
@@ -437,6 +459,7 @@ export function AskUserQuestionFooter(props: {
                                                     key={optIdx}
                                                     selected={selected}
                                                     disabled={props.disabled || loading}
+                                                    selectionMode={question.multiSelect ? 'multi' : 'single'}
                                                     label={opt.label}
                                                     title={opt.description ? `${opt.label} - ${opt.description}` : opt.label}
                                                     onClick={() => toggleOption(qIdx, optIdx)}
@@ -448,6 +471,7 @@ export function AskUserQuestionFooter(props: {
                                         <OptionChip
                                             selected={questionState.otherSelected}
                                             disabled={props.disabled || loading}
+                                            selectionMode={question.multiSelect ? 'multi' : 'single'}
                                             label={labelOther}
                                             title={labelOther}
                                             onClick={() => toggleOther(qIdx)}

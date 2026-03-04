@@ -22,6 +22,11 @@ import { useTranslation } from '@/lib/use-translation'
 import { cn } from '@/lib/utils'
 
 type FlatQuestionAnswers = Record<string, string[]>
+type AskUserQuestionPendingCandidateType = 'permission' | 'optimistic'
+type AskUserQuestionPendingCandidate = {
+    id: string
+    kind: AskUserQuestionPendingCandidateType
+}
 const OPTION_SNAPSHOT_LIMIT = 4
 
 function normalizeQuestionAnswers(answers: unknown): FlatQuestionAnswers {
@@ -111,6 +116,15 @@ function isAskUserQuestionPendingCandidate(block: ToolCallBlock): 'permission' |
     return null
 }
 
+function shouldHideQueuedAskUserQuestionPendingNode(
+    block: ToolCallBlock,
+    activeAskUserQuestionPendingId: string | null | undefined
+): boolean {
+    const isPendingCandidate = isAskUserQuestionPendingCandidate(block) !== null
+    if (!isPendingCandidate) return false
+    return block.id !== activeAskUserQuestionPendingId
+}
+
 function flattenToolBlocksPreorder(blocks: ToolCallBlock[]): ToolCallBlock[] {
     const out: ToolCallBlock[] = []
 
@@ -129,10 +143,41 @@ function flattenToolBlocksPreorder(blocks: ToolCallBlock[]): ToolCallBlock[] {
     return out
 }
 
-function collectAskUserQuestionPendingCandidateIds(blocks: ToolCallBlock[]): string[] {
-    return flattenToolBlocksPreorder(blocks)
-        .filter((block) => isAskUserQuestionPendingCandidate(block) !== null)
-        .map((block) => block.id)
+function collectAskUserQuestionPendingCandidates(blocks: ToolCallBlock[]): AskUserQuestionPendingCandidate[] {
+    const out: AskUserQuestionPendingCandidate[] = []
+    for (const block of flattenToolBlocksPreorder(blocks)) {
+        const kind = isAskUserQuestionPendingCandidate(block)
+        if (!kind) continue
+        out.push({
+            id: block.id,
+            kind
+        })
+    }
+    return out
+}
+
+function pickActiveAskUserQuestionPendingId(
+    previousId: string | null,
+    candidates: AskUserQuestionPendingCandidate[]
+): string | null {
+    if (candidates.length === 0) return null
+
+    const permissionCandidates = candidates.filter((candidate) => candidate.kind === 'permission')
+    const previousCandidate = previousId
+        ? candidates.find((candidate) => candidate.id === previousId) ?? null
+        : null
+
+    if (previousCandidate) {
+        if (previousCandidate.kind === 'permission') return previousCandidate.id
+        if (permissionCandidates.length === 0) return previousCandidate.id
+        return permissionCandidates[0]?.id ?? previousCandidate.id
+    }
+
+    if (permissionCandidates.length > 0) {
+        return permissionCandidates[0]?.id ?? null
+    }
+
+    return candidates[0]?.id ?? null
 }
 
 function hasPendingPermissionInSubtree(block: ToolCallBlock): boolean {
@@ -435,12 +480,9 @@ function StepNode(props: {
     activeAskUserQuestionPendingId?: string | null
 }) {
     const { locale } = useTranslation()
-    const isAskUserQuestionPendingCandidateNode = isAskUserQuestionPendingCandidate(props.block) !== null
-    const isActiveAskUserQuestionPendingNode = Boolean(
-        props.activeAskUserQuestionPendingId && props.block.id === props.activeAskUserQuestionPendingId
-    )
-    const shouldHideQueuedAskUserQuestionPending = Boolean(
-        isAskUserQuestionPendingCandidateNode && !isActiveAskUserQuestionPendingNode
+    const shouldHideQueuedAskUserQuestionPending = shouldHideQueuedAskUserQuestionPendingNode(
+        props.block,
+        props.activeAskUserQuestionPendingId
     )
     const shouldAutoOpen = hasPendingPermissionInSubtree(props.block)
         || hasBlockIdInSubtree(props.block, props.activeAskUserQuestionPendingId)
@@ -660,21 +702,59 @@ function StepNode(props: {
 
 export const StepsView: ToolViewComponent = (props) => {
     const children = props.block.children.filter((child): child is ToolCallBlock => child.kind === 'tool-call')
-    const askUserQuestionPendingCandidateIds = useMemo(
-        () => collectAskUserQuestionPendingCandidateIds(children),
+    const askUserQuestionPendingCandidates = useMemo(
+        () => collectAskUserQuestionPendingCandidates(children),
         [children]
     )
     const [activeAskUserQuestionPendingId, setActiveAskUserQuestionPendingId] = useState<string | null>(
-        askUserQuestionPendingCandidateIds[0] ?? null
+        pickActiveAskUserQuestionPendingId(null, askUserQuestionPendingCandidates)
     )
 
     useEffect(() => {
-        if (activeAskUserQuestionPendingId && askUserQuestionPendingCandidateIds.includes(activeAskUserQuestionPendingId)) {
-            return
-        }
-        const next = askUserQuestionPendingCandidateIds[0] ?? null
-        setActiveAskUserQuestionPendingId(next)
-    }, [activeAskUserQuestionPendingId, askUserQuestionPendingCandidateIds])
+        setActiveAskUserQuestionPendingId((previousId) => (
+            pickActiveAskUserQuestionPendingId(previousId, askUserQuestionPendingCandidates)
+        ))
+    }, [askUserQuestionPendingCandidates])
+
+    const visibleChildren = useMemo(
+        () => children.filter((child) => !shouldHideQueuedAskUserQuestionPendingNode(child, activeAskUserQuestionPendingId)),
+        [children, activeAskUserQuestionPendingId]
+    )
+    const visibleChildIds = useMemo(
+        () => visibleChildren.map((child) => child.id),
+        [visibleChildren]
+    )
+    const [visibleOrderIds, setVisibleOrderIds] = useState<string[]>(visibleChildIds)
+
+    useEffect(() => {
+        setVisibleOrderIds((previous) => {
+            const visibleSet = new Set(visibleChildIds)
+            const next = previous.filter((id) => visibleSet.has(id))
+            for (const id of visibleChildIds) {
+                if (!next.includes(id)) {
+                    next.push(id)
+                }
+            }
+
+            if (next.length === previous.length && next.every((id, idx) => previous[idx] === id)) {
+                return previous
+            }
+            return next
+        })
+    }, [visibleChildIds])
+
+    const orderedVisibleChildren = useMemo(() => {
+        if (visibleChildren.length <= 1) return visibleChildren
+        const rankById = new Map<string, number>()
+        visibleOrderIds.forEach((id, idx) => {
+            rankById.set(id, idx)
+        })
+        return [...visibleChildren].sort((a, b) => {
+            const rankA = rankById.get(a.id) ?? Number.MAX_SAFE_INTEGER
+            const rankB = rankById.get(b.id) ?? Number.MAX_SAFE_INTEGER
+            return rankA - rankB
+        })
+    }, [visibleChildren, visibleOrderIds])
 
     if (children.length === 0) {
         return null
@@ -682,7 +762,7 @@ export const StepsView: ToolViewComponent = (props) => {
 
     return (
         <div className="space-y-0.5">
-            {children.map((child) => (
+            {orderedVisibleChildren.map((child) => (
                 <StepNode
                     key={child.id}
                     block={child}
