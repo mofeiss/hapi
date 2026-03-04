@@ -9,7 +9,6 @@ import { AskUserQuestionView } from '@/components/ToolCard/views/AskUserQuestion
 import { RequestUserInputView } from '@/components/ToolCard/views/RequestUserInputView'
 import { ExitPlanModeView } from '@/components/ToolCard/views/ExitPlanModeView'
 import { MultiEditFullView, MultiEditView } from '@/components/ToolCard/views/MultiEditView'
-import { TodoWriteView } from '@/components/ToolCard/views/TodoWriteView'
 import { WriteView } from '@/components/ToolCard/views/WriteView'
 import { SkillReadView } from '@/components/ToolCard/views/SkillReadView'
 import { StepsView } from '@/components/ToolCard/views/StepsView'
@@ -29,7 +28,6 @@ export const toolViewRegistry: Record<string, ToolViewComponent> = {
     Edit: EditView,
     MultiEdit: MultiEditView,
     Write: WriteView,
-    TodoWrite: TodoWriteView,
     CodexDiff: CodexDiffCompactView,
     AskUserQuestion: AskUserQuestionView,
     SkillRead: SkillReadView,

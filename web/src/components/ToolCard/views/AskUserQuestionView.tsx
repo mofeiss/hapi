@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
 import type { ToolViewProps } from '@/components/ToolCard/views/_all'
 import { parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
+import { ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { Badge } from '@/components/ui/badge'
+import { truncate } from '@/lib/toolInputUtils'
 import { cn } from '@/lib/utils'
 
 type AnswersFormat = Record<string, string[]> | Record<string, { answers: string[] }>
@@ -35,6 +36,16 @@ export function AskUserQuestionView(props: ToolViewProps) {
     const rawAnswers = props.block.tool.permission?.answers ?? undefined
     const answers = normalizeAnswers(rawAnswers)
     const hasAnswers = answers && Object.keys(answers).length > 0
+    const firstQuestion = questions[0]
+    const firstHeader = firstQuestion?.header?.trim() || ''
+    const firstPrompt = firstQuestion?.question?.trim() || ''
+    const inputParams = questions.length > 0 ? (
+        <div className="space-y-px">
+            <ToolParamField name="questions" value={String(questions.length)} />
+            {firstHeader ? <ToolParamField name="header" value={truncate(firstHeader, 160)} /> : null}
+            {firstPrompt ? <ToolParamField name="first_question" value={truncate(firstPrompt, 160)} /> : null}
+        </div>
+    ) : null
 
     // No questions and no answers — nothing to show
     if (questions.length === 0 && !hasAnswers) return null
@@ -44,8 +55,11 @@ export function AskUserQuestionView(props: ToolViewProps) {
         const selected = getSelectedLabels(answers, 0)
         if (selected.length === 0) return null
         return (
-            <div className="text-sm text-[var(--app-fg)]">
-                {selected.join(', ')}
+            <div className="space-y-2">
+                {inputParams}
+                <div className="text-sm text-[var(--app-fg)]">
+                    {selected.join(', ')}
+                </div>
             </div>
         )
     }
@@ -56,49 +70,56 @@ export function AskUserQuestionView(props: ToolViewProps) {
         const selected = getSelectedLabels(answers, 0)
 
         return (
-            <div className="rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] p-3">
-                {q.question ? (
-                    <div className="text-sm font-medium text-[var(--app-fg)] break-words">
-                        {q.question}
-                    </div>
-                ) : null}
-                {hasAnswers && selected.length > 0 ? (
-                    <div className="mt-1.5 text-sm text-[var(--app-fg)]">
-                        {selected.join(', ')}
-                    </div>
-                ) : null}
+            <div className="space-y-2">
+                {inputParams}
+                <div className="rounded-md border border-[var(--app-border)] bg-[var(--app-bg)] p-3">
+                    {q.question ? (
+                        <div className="text-sm font-medium text-[var(--app-fg)] break-words">
+                            {q.question}
+                        </div>
+                    ) : null}
+                    {hasAnswers && selected.length > 0 ? (
+                        <div className="mt-1.5 text-sm text-[var(--app-fg)]">
+                            {selected.join(', ')}
+                        </div>
+                    ) : null}
+                </div>
             </div>
         )
     }
 
     // --- Multi-question ---
     return (
-        <div className="mt-1.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] p-3">
-            {questions.map((q, qIdx) => {
-                const selected = getSelectedLabels(answers, qIdx)
+        <div className="space-y-2">
+            {inputParams}
+            <div className="mt-1.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] p-3">
+                {questions.map((q, qIdx) => {
+                    const selected = getSelectedLabels(answers, qIdx)
 
-                return (
-                    <div key={qIdx} className={cn(qIdx > 0 && 'mt-3')}>
-                        <div className="flex items-start gap-2 px-2 py-1">
-                            {q.header ? (
-                                <Badge variant="default" className="shrink-0">{q.header}</Badge>
-                            ) : null}
-                            <span className="text-sm font-medium text-[var(--app-fg)] break-words min-w-0">
-                                {q.question}
-                            </span>
+                    return (
+                        <div key={qIdx} className={cn(qIdx > 0 && 'mt-3')}>
+                            <div className="flex items-start gap-2 px-2 py-1">
+                                {q.header ? (
+                                    <Badge variant="default" className="shrink-0">{q.header}</Badge>
+                                ) : null}
+                                <span className="text-sm font-medium text-[var(--app-fg)] break-words min-w-0">
+                                    {q.question}
+                                </span>
+                            </div>
+                            {hasAnswers && selected.length > 0 ? (
+                                <div className="ml-3 px-2 text-sm text-[var(--app-fg)]">
+                                    {selected.join(', ')}
+                                </div>
+                            ) : !hasAnswers ? null : (
+                                <div className="ml-3 px-2 text-sm text-[var(--app-hint)] italic">
+                                    (no answer)
+                                </div>
+                            )}
                         </div>
-                        {hasAnswers && selected.length > 0 ? (
-                            <div className="ml-3 px-2 text-sm text-[var(--app-fg)]">
-                                {selected.join(', ')}
-                            </div>
-                        ) : !hasAnswers ? null : (
-                            <div className="ml-3 px-2 text-sm text-[var(--app-hint)] italic">
-                                (no answer)
-                            </div>
-                        )}
-                    </div>
-                )
-            })}
+                    )
+                })}
+            </div>
         </div>
     )
 }
+

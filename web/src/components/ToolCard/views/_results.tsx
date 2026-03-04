@@ -1,7 +1,6 @@
 import type { ToolViewComponent, ToolViewProps } from '@/components/ToolCard/views/_all'
 import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
-import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { basename, resolveDisplayPath } from '@/utils/path'
 
 function parseToolUseError(message: string): { isToolUseError: boolean; errorMessage: string | null } {
@@ -29,6 +28,16 @@ function extractTextFromContentBlock(block: unknown): string | null {
 const SYSTEM_REMINDER_BLOCK_REGEX = /<system-reminder>[\s\S]*?<\/system-reminder>/gi
 const READ_LINE_NUMBER_PREFIX_REGEX = /^\s*\d+\s*→\s?/
 
+export function sanitizeToolResultText(text: string): string {
+    const toolUseError = parseToolUseError(text)
+    const unwrapped = toolUseError.isToolUseError ? (toolUseError.errorMessage ?? '') : text
+    return unwrapped
+        .replace(SYSTEM_REMINDER_BLOCK_REGEX, '')
+        .replace(/\n[ \t]*\n[ \t]*\n+/g, '\n\n')
+        .replace(/^[ \t]*\n/, '')
+        .replace(/\n[ \t]*$/, '')
+}
+
 function stripReadLineNumberPrefixes(text: string): string {
     const lines = text.split('\n')
     let nonEmptyLines = 0
@@ -51,55 +60,50 @@ function stripReadLineNumberPrefixes(text: string): string {
 }
 
 export function sanitizeReadResultText(text: string): string {
-    const withoutReminder = text.replace(SYSTEM_REMINDER_BLOCK_REGEX, '')
-    const withoutLinePrefixes = stripReadLineNumberPrefixes(withoutReminder)
-    return withoutLinePrefixes
-        .replace(/\n[ \t]*\n[ \t]*\n+/g, '\n\n')
-        .replace(/^[ \t]*\n/, '')
-        .replace(/\n[ \t]*$/, '')
+    const sanitized = sanitizeToolResultText(text)
+    return stripReadLineNumberPrefixes(sanitized)
 }
 
 function extractTextFromResult(result: unknown, depth: number = 0): string | null {
     if (depth > 2) return null
     if (result === null || result === undefined) return null
     if (typeof result === 'string') {
-        const toolUseError = parseToolUseError(result)
-        return toolUseError.isToolUseError ? (toolUseError.errorMessage ?? '') : result
+        return sanitizeToolResultText(result)
     }
 
     if (Array.isArray(result)) {
         const parts = result
             .map(extractTextFromContentBlock)
             .filter((part): part is string => typeof part === 'string' && part.length > 0)
-        return parts.length > 0 ? parts.join('\n') : null
+        return parts.length > 0 ? sanitizeToolResultText(parts.join('\n')) : null
     }
 
     if (!isObject(result)) return null
 
-    if (typeof result.content === 'string') return result.content
-    if (typeof result.text === 'string') return result.text
-    if (typeof result.output === 'string') return result.output
-    if (typeof result.error === 'string') return result.error
-    if (typeof result.message === 'string') return result.message
+    if (typeof result.content === 'string') return sanitizeToolResultText(result.content)
+    if (typeof result.text === 'string') return sanitizeToolResultText(result.text)
+    if (typeof result.output === 'string') return sanitizeToolResultText(result.output)
+    if (typeof result.error === 'string') return sanitizeToolResultText(result.error)
+    if (typeof result.message === 'string') return sanitizeToolResultText(result.message)
 
     const contentArray = Array.isArray(result.content) ? result.content : null
     if (contentArray) {
         const parts = contentArray
             .map(extractTextFromContentBlock)
             .filter((part): part is string => typeof part === 'string' && part.length > 0)
-        return parts.length > 0 ? parts.join('\n') : null
+        return parts.length > 0 ? sanitizeToolResultText(parts.join('\n')) : null
     }
 
     const nestedOutput = isObject(result.output) ? result.output : null
     if (nestedOutput) {
-        if (typeof nestedOutput.content === 'string') return nestedOutput.content
-        if (typeof nestedOutput.text === 'string') return nestedOutput.text
+        if (typeof nestedOutput.content === 'string') return sanitizeToolResultText(nestedOutput.content)
+        if (typeof nestedOutput.text === 'string') return sanitizeToolResultText(nestedOutput.text)
     }
 
     const nestedError = isObject(result.error) ? result.error : null
     if (nestedError) {
-        if (typeof nestedError.message === 'string') return nestedError.message
-        if (typeof nestedError.error === 'string') return nestedError.error
+        if (typeof nestedError.message === 'string') return sanitizeToolResultText(nestedError.message)
+        if (typeof nestedError.error === 'string') return sanitizeToolResultText(nestedError.error)
     }
 
     const nestedResult = isObject(result.result) ? result.result : null
@@ -153,14 +157,18 @@ function renderText(text: string, opts: { mode: 'markdown' | 'code' | 'auto'; la
     }
 
     if (opts.mode === 'markdown') {
-        return <MarkdownRenderer content={text} />
+        return <CodeBlock code={text} language="markdown" />
     }
 
-    if (looksLikeHtml(text) || looksLikeJson(text)) {
-        return <CodeBlock code={text} language={looksLikeJson(text) ? 'json' : 'html'} />
+    if (looksLikeJson(text)) {
+        return <CodeBlock code={text} language="json" />
     }
 
-    return <MarkdownRenderer content={text} />
+    if (looksLikeHtml(text)) {
+        return <CodeBlock code={text} language="html" />
+    }
+
+    return <CodeBlock code={text} language="text" />
 }
 
 function placeholderForState(state: ToolViewProps['block']['tool']['state']): string {
@@ -219,11 +227,6 @@ function extractLineList(text: string): string[] {
         .filter((line) => line.length > 0)
 }
 
-function isProbablyMarkdownList(text: string): boolean {
-    const trimmed = text.trimStart()
-    return trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('1. ')
-}
-
 const AskUserQuestionResultView: ToolViewComponent = (props: ToolViewProps) => {
     const answers = props.block.tool.permission?.answers ?? null
 
@@ -245,8 +248,7 @@ const BashResultView: ToolViewComponent = (props: ToolViewProps) => {
     }
 
     if (typeof result === 'string') {
-        const toolUseError = parseToolUseError(result)
-        const display = toolUseError.isToolUseError ? (toolUseError.errorMessage ?? '') : result
+        const display = sanitizeToolResultText(result)
         return (
             <>
                 <CodeBlock code={display} language="text" />
@@ -311,6 +313,40 @@ const MarkdownResultView: ToolViewComponent = (props: ToolViewProps) => {
     )
 }
 
+const WebFetchResultView: ToolViewComponent = (props: ToolViewProps) => {
+    const result = props.block.tool.result
+
+    if (result === undefined || result === null) {
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
+    }
+
+    if (typeof result === 'string') {
+        return (
+            <>
+                <CodeBlock code={sanitizeToolResultText(result)} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    const text = extractTextFromResult(result)
+    if (text) {
+        return (
+            <>
+                <CodeBlock code={text} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    return (
+        <>
+            <CodeBlock code={safeStringify(result)} language="json" />
+            <RawJsonDevOnly value={result} />
+        </>
+    )
+}
+
 const LineListResultView: ToolViewComponent = (props: ToolViewProps) => {
     const result = props.block.tool.result
 
@@ -328,15 +364,6 @@ const LineListResultView: ToolViewComponent = (props: ToolViewProps) => {
         )
     }
 
-    if (isProbablyMarkdownList(text)) {
-        return (
-            <>
-                <MarkdownRenderer content={text} />
-                <RawJsonDevOnly value={result} />
-            </>
-        )
-    }
-
     const lines = extractLineList(text)
     if (lines.length === 0) {
         return (
@@ -349,13 +376,7 @@ const LineListResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     return (
         <>
-            <div className="flex flex-col gap-1">
-                {lines.map((line) => (
-                    <div key={line} className="text-sm font-mono text-[var(--app-fg)] break-all">
-                        {line}
-                    </div>
-                ))}
-            </div>
+            <CodeBlock code={lines.join('\n')} language="text" />
             <RawJsonDevOnly value={result} />
         </>
     )
@@ -416,17 +437,13 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
     const { state, result } = props.block.tool
 
     if (result === undefined || result === null) {
-        if (state === 'completed') {
-            return <div className="text-sm text-[var(--app-hint)]">Done</div>
-        }
         return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(state)}</div>
     }
 
     // Keep Edit result display aligned with Steps raw content:
     // parse and strip <tool_use_error> wrapper, keep raw message body.
     if (props.block.tool.name === 'Edit' && typeof result === 'string') {
-        const toolUseError = parseToolUseError(result)
-        const display = toolUseError.isToolUseError ? (toolUseError.errorMessage ?? '') : result
+        const display = sanitizeToolResultText(result)
         return (
             <>
                 <CodeBlock code={display} language="text" />
@@ -450,12 +467,9 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     const text = extractTextFromResult(result)
     if (typeof text === 'string' && text.trim().length > 0) {
-        const className = state === 'error' ? 'text-red-600' : 'text-[var(--app-fg)]'
         return (
             <>
-                <div className={`text-sm ${className}`}>
-                    {renderText(text, { mode: state === 'error' ? 'code' : 'auto' })}
-                </div>
+                {renderText(text, { mode: state === 'error' ? 'code' : 'auto' })}
                 <RawJsonDevOnly value={result} />
             </>
         )
@@ -463,9 +477,7 @@ const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     return (
         <>
-            <div className="text-sm text-[var(--app-hint)]">
-                {state === 'completed' ? 'Done' : '(no output)'}
-            </div>
+            <div className="text-sm text-[var(--app-hint)]">(no output)</div>
             <RawJsonDevOnly value={result} />
         </>
     )
@@ -484,9 +496,7 @@ const CodexPatchResultView: ToolViewComponent = (props: ToolViewProps) => {
     }
 
     if (result === undefined || result === null) {
-        return props.block.tool.state === 'completed'
-            ? <div className="text-sm text-[var(--app-hint)]">Done</div>
-            : <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
     }
 
     return (
@@ -524,9 +534,7 @@ const CodexReasoningResultView: ToolViewComponent = (props: ToolViewProps) => {
 const CodexDiffResultView: ToolViewComponent = (props: ToolViewProps) => {
     const result = props.block.tool.result
     if (result === undefined || result === null) {
-        return props.block.tool.state === 'completed'
-            ? <div className="text-sm text-[var(--app-hint)]">Done</div>
-            : <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
     }
 
     const text = extractTextFromResult(result)
@@ -541,7 +549,7 @@ const CodexDiffResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     return (
         <>
-            <div className="text-sm text-[var(--app-hint)]">Done</div>
+            <div className="text-sm text-[var(--app-hint)]">(no output)</div>
             <RawJsonDevOnly value={result} />
         </>
     )
@@ -578,12 +586,6 @@ function extractTodos(input: unknown, result: unknown): TodoItem[] {
     }))
 }
 
-function todoTone(todo: TodoItem): string {
-    if (todo.status === 'completed') return 'text-emerald-600 line-through'
-    if (todo.status === 'in_progress') return 'text-[var(--app-link)]'
-    return 'text-[var(--app-hint)]'
-}
-
 function todoIcon(todo: TodoItem): string {
     if (todo.status === 'completed') return '☑'
     return '☐'
@@ -595,17 +597,37 @@ const TodoWriteResultView: ToolViewComponent = (props: ToolViewProps) => {
         return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
     }
 
+    const lines = todos.map((todo) => {
+        const text = todo.content?.trim() ? todo.content.trim() : '(empty)'
+        return `${todoIcon(todo)} ${text}`
+    })
+
     return (
-        <div className="flex flex-col gap-1">
-            {todos.map((todo, idx) => {
-                const text = todo.content?.trim() ? todo.content.trim() : '(empty)'
-                return (
-                    <div key={todo.id ?? String(idx)} className={`text-sm ${todoTone(todo)}`}>
-                        {todoIcon(todo)} {text}
-                    </div>
-                )
-            })}
-        </div>
+        <CodeBlock code={lines.join('\n')} language="text" />
+    )
+}
+
+const RawResultView: ToolViewComponent = (props: ToolViewProps) => {
+    const result = props.block.tool.result
+
+    if (result === undefined || result === null) {
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
+    }
+
+    if (typeof result === 'string') {
+        return (
+            <>
+                <CodeBlock code={sanitizeToolResultText(result)} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    return (
+        <>
+            <CodeBlock code={safeStringify(result)} language="json" />
+            <RawJsonDevOnly value={result} />
+        </>
     )
 }
 
@@ -618,7 +640,7 @@ const GenericResultView: ToolViewComponent = (props: ToolViewProps) => {
 
     // Detect codex bash output format and render accordingly
     if (typeof result === 'string') {
-        const parsed = parseCodexBashOutput(result)
+        const parsed = parseCodexBashOutput(sanitizeToolResultText(result))
         if (parsed) {
             return (
                 <>
@@ -645,7 +667,7 @@ const GenericResultView: ToolViewComponent = (props: ToolViewProps) => {
     }
 
     if (typeof result === 'string') {
-        return renderText(result, { mode: 'auto' })
+        return renderText(sanitizeToolResultText(result), { mode: 'auto' })
     }
 
     return <CodeBlock code={safeStringify(result)} language="json" />
@@ -661,11 +683,22 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     Edit: MutationResultView,
     MultiEdit: MutationResultView,
     Write: MutationResultView,
-    WebFetch: MarkdownResultView,
+    Agent: RawResultView,
+    Skill: RawResultView,
+    WebFetch: WebFetchResultView,
     WebSearch: MarkdownResultView,
     NotebookRead: ReadResultView,
-    NotebookEdit: MutationResultView,
+    NotebookEdit: RawResultView,
     TodoWrite: TodoWriteResultView,
+    TaskOutput: RawResultView,
+    TaskStop: RawResultView,
+    EnterPlanMode: RawResultView,
+    EnterWorktree: RawResultView,
+    TeamCreate: RawResultView,
+    TeamDelete: RawResultView,
+    SendMessage: RawResultView,
+    ListMcpResourcesTool: RawResultView,
+    ReadMcpResourceTool: RawResultView,
     CodexReasoning: CodexReasoningResultView,
     CodexPatch: CodexPatchResultView,
     CodexDiff: CodexDiffResultView,

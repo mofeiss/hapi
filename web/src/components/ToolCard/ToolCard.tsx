@@ -2,12 +2,7 @@ import type { ToolCallBlock } from '@/chat/types'
 import type { ApiClient } from '@/api/client'
 import type { SessionMetadataSummary } from '@/types/api'
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { isObject, safeStringify } from '@hapi/protocol'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CodeBlock } from '@/components/CodeBlock'
-import { MarkdownRenderer } from '@/components/MarkdownRenderer'
-import { DiffView } from '@/components/DiffView'
-import { ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
@@ -15,9 +10,10 @@ import { isAskUserQuestionToolName } from '@/components/ToolCard/askUserQuestion
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
 import { getToolFullViewComponent, getToolViewComponent } from '@/components/ToolCard/views/_all'
+import { renderToolInputContent } from '@/components/ToolCard/views/_input'
 import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
 import { usePointerFocusRing } from '@/hooks/usePointerFocusRing'
-import { getInputString, getInputStringAny, truncate } from '@/lib/toolInputUtils'
+import { truncate } from '@/lib/toolInputUtils'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/lib/use-translation'
 import type { Locale } from '@/lib/i18n-context'
@@ -124,122 +120,6 @@ function renderTaskSummary(block: ToolCallBlock, metadata: SessionMetadataSummar
             </div>
         </div>
     )
-}
-
-function renderEditInput(input: unknown): ReactNode | null {
-    if (!isObject(input)) return null
-    const oldString = getInputString(input, 'old_string')
-    const newString = getInputString(input, 'new_string')
-    if (oldString === null || newString === null) return null
-
-    return (
-        <DiffView
-            oldString={oldString}
-            newString={newString}
-        />
-    )
-}
-
-function renderExitPlanModeInput(input: unknown): ReactNode | null {
-    if (!isObject(input)) return null
-    const plan = getInputString(input, 'plan')
-    if (!plan) return null
-    return <MarkdownRenderer content={plan} />
-}
-
-function renderReadInput(input: unknown): ReactNode | null {
-    if (!isObject(input)) return null
-    const filePath = getInputStringAny(input, ['file_path', 'path'])
-    if (!filePath) return null
-
-    return <ToolParamField name="file_path" value={filePath} />
-}
-
-function renderToolInput(block: ToolCallBlock): ReactNode {
-    const toolName = block.tool.name
-    const input = block.tool.input
-
-    if (toolName === 'Task' && isObject(input) && typeof input.prompt === 'string') {
-        return <MarkdownRenderer content={input.prompt} />
-    }
-
-    if (toolName === 'Edit') {
-        const diff = renderEditInput(input)
-        if (diff) return diff
-    }
-
-    if (toolName === 'MultiEdit' && isObject(input)) {
-        const filePath = getInputStringAny(input, ['file_path', 'path']) ?? undefined
-        const edits = Array.isArray(input.edits) ? input.edits : null
-        if (edits && edits.length > 0) {
-            const rendered = edits
-                .slice(0, 3)
-                .map((edit, idx) => {
-                    if (!isObject(edit)) return null
-                    const oldString = getInputString(edit, 'old_string')
-                    const newString = getInputString(edit, 'new_string')
-                    if (oldString === null || newString === null) return null
-                    return (
-                        <div key={idx}>
-                            <DiffView oldString={oldString} newString={newString} filePath={filePath} />
-                        </div>
-                    )
-                })
-                .filter(Boolean)
-
-            if (rendered.length > 0) {
-                return (
-                    <div className="flex flex-col gap-2">
-                        {rendered}
-                        {edits.length > 3 ? (
-                            <div className="text-xs text-[var(--app-hint)]">
-                                (+{edits.length - 3} more edits)
-                            </div>
-                        ) : null}
-                    </div>
-                )
-            }
-        }
-    }
-
-    if (toolName === 'Write' && isObject(input)) {
-        const filePath = getInputStringAny(input, ['file_path', 'path'])
-        const content = getInputStringAny(input, ['content', 'text'])
-        if (filePath && content !== null) {
-            return (
-                <div className="flex flex-col gap-2">
-                    <ToolParamField name="file_path" value={filePath} />
-                    <CodeBlock code={content} language="text" />
-                </div>
-            )
-        }
-    }
-
-    if (toolName === 'Read' || toolName === 'NotebookRead') {
-        const readInput = renderReadInput(input)
-        if (readInput) return readInput
-    }
-
-    if (toolName === 'CodexDiff' && isObject(input) && typeof input.unified_diff === 'string') {
-        return <CodeBlock code={input.unified_diff} language="diff" />
-    }
-
-    if (toolName === 'ExitPlanMode' || toolName === 'exit_plan_mode') {
-        const plan = renderExitPlanModeInput(input)
-        if (plan) return plan
-    }
-
-    const commandArray = isObject(input) && Array.isArray(input.command) ? input.command : null
-    if ((toolName === 'CodexBash' || toolName === 'Bash') && (typeof commandArray?.[0] === 'string' || typeof input === 'object')) {
-        const cmd = Array.isArray(commandArray)
-            ? commandArray.filter((part) => typeof part === 'string').join(' ')
-            : getInputStringAny(input, ['command', 'cmd'])
-        if (cmd) {
-            return <CodeBlock code={cmd} language="bash" />
-        }
-    }
-
-    return <CodeBlock code={safeStringify(input)} language="json" />
 }
 
 function StatusIcon(props: { state: ToolCallBlock['tool']['state'] }) {
@@ -482,7 +362,7 @@ function ToolCardInner(props: ToolCardProps) {
                         ) : (
                             <div className="mt-3 flex flex-col gap-3">
                                 <div>
-                                    <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
+                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
                                     {FullToolView ? (
                                         <FullToolView
                                             block={props.block}
@@ -493,12 +373,12 @@ function ToolCardInner(props: ToolCardProps) {
                                             onDone={props.onDone}
                                         />
                                     ) : (
-                                        renderToolInput(props.block)
+                                        renderToolInputContent(props.block, props.metadata)
                                     )}
                                 </div>
                                 {!isQuestionToolWithAnswers ? (
                                     <div>
-                                        <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                                         <ResultToolView block={props.block} metadata={props.metadata} />
                                     </div>
                                 ) : null}
@@ -507,7 +387,7 @@ function ToolCardInner(props: ToolCardProps) {
                     ) : toolName !== 'Task' ? (
                         <div className="mt-3 flex flex-col gap-3">
                             <div>
-                                <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">
+                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
                                     {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
                                 </div>
                                 {FullToolView ? (
@@ -520,12 +400,12 @@ function ToolCardInner(props: ToolCardProps) {
                                         onDone={props.onDone}
                                     />
                                 ) : (
-                                    renderToolInput(props.block)
+                                    renderToolInputContent(props.block, props.metadata)
                                 )}
                             </div>
                             {!isQuestionToolWithAnswers ? (
                                 <div>
-                                    <div className="mb-1 text-xs font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                                     <ResultToolView block={props.block} metadata={props.metadata} />
                                 </div>
                             ) : null}

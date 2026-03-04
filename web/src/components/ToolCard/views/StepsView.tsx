@@ -1,21 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { isObject, safeStringify } from '@hapi/protocol'
+import { isObject } from '@hapi/protocol'
 import type { ApiClient } from '@/api/client'
 import type { ToolCallBlock } from '@/chat/types'
 import type { SessionMetadataSummary } from '@/types/api'
-import type { ToolViewComponent } from '@/components/ToolCard/views/_all'
-import { CodeBlock } from '@/components/CodeBlock'
-import { DiffView } from '@/components/DiffView'
-import { MarkdownRenderer } from '@/components/MarkdownRenderer'
-import { ToolParamField } from '@/components/ToolCard/ToolParamField'
+import { getToolFullViewComponent, type ToolViewComponent } from '@/components/ToolCard/views/_all'
+import { renderToolInputContent } from '@/components/ToolCard/views/_input'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
 import { isAskUserQuestionToolName } from '@/components/ToolCard/askUserQuestion'
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
-import { sanitizeReadResultText } from '@/components/ToolCard/views/_results'
+import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
-import { extractSkillReadData } from '@/lib/skillRead'
 import { useTranslation } from '@/lib/use-translation'
 
 function hasPendingPermissionInSubtree(block: ToolCallBlock): boolean {
@@ -67,204 +63,52 @@ function StepNodeChevron(props: { open: boolean }) {
     )
 }
 
-function extractReadResultContent(result: unknown): string | null {
-    if (typeof result === 'string') {
-        return sanitizeReadResultText(result)
-    }
-    if (!isObject(result)) return null
-
-    const file = isObject(result.file) ? result.file : null
-    if (file && typeof file.content === 'string') {
-        return sanitizeReadResultText(file.content)
-    }
-
-    if (typeof result.content === 'string') {
-        return sanitizeReadResultText(result.content)
-    }
-
-    return null
-}
-
-function extractEditDiffInput(input: unknown): {
-    oldString: string
-    newString: string
-    filePath: string | null
-    replaceAll: boolean | null
-} | null {
-    if (!isObject(input)) return null
-
-    const oldString = typeof input.old_string === 'string' ? input.old_string : null
-    const newString = typeof input.new_string === 'string' ? input.new_string : null
-    if (oldString === null || newString === null) return null
-
-    const filePath = typeof input.file_path === 'string'
-        ? input.file_path
-        : typeof input.path === 'string'
-            ? input.path
-            : null
-    const replaceAll = typeof input.replace_all === 'boolean' ? input.replace_all : null
-
-    return { oldString, newString, filePath, replaceAll }
-}
-
-function unwrapToolUseErrorTag(text: string): string {
-    const match = text.match(/<tool_use_error>([\s\S]*?)<\/tool_use_error>/s)
-    if (!match) return text
-    return typeof match[1] === 'string' ? match[1].trim() : ''
-}
-
-function extractWriteDiffInput(input: unknown): { content: string; filePath: string | null } | null {
-    if (!isObject(input)) return null
-
-    const content = typeof input.content === 'string'
-        ? input.content
-        : typeof input.text === 'string'
-            ? input.text
-            : null
-    if (content === null) return null
-
-    const filePath = typeof input.file_path === 'string'
-        ? input.file_path
-        : typeof input.path === 'string'
-            ? input.path
-            : null
-
-    return { content, filePath }
-}
-
-function extractReadInputPath(input: unknown): string | null {
-    if (!isObject(input)) return null
-
-    if (typeof input.file_path === 'string') return input.file_path
-    if (typeof input.path === 'string') return input.path
-    return null
-}
-
-function StepNodeDetails(props: { block: ToolCallBlock }) {
+function StepNodeDetails(props: {
+    block: ToolCallBlock
+    metadata: SessionMetadataSummary | null
+    api?: ApiClient
+    sessionId?: string
+    disabled?: boolean
+    onDone?: () => void
+}) {
     const { t } = useTranslation()
-
-    if (props.block.tool.name === 'SkillRead') {
-        const data = extractSkillReadData(props.block.tool.input, props.block.tool.result)
-        if (data?.content) {
-            return (
-                <div className="tool-io-scope rounded-md bg-[var(--app-bg)] p-2">
-                    <MarkdownRenderer content={data.content} />
-                </div>
-            )
-        }
-    }
-
-    if (props.block.tool.name === 'Edit') {
-        const editDiff = extractEditDiffInput(props.block.tool.input)
-        if (editDiff) {
-            const rawResult = props.block.tool.result
-            const editResultCode = typeof rawResult === 'string'
-                ? unwrapToolUseErrorTag(rawResult)
-                : safeStringify(rawResult ?? 'No result')
-
-            return (
-                <div className="tool-io-scope space-y-2">
-                    <div>
-                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                        {editDiff.filePath || editDiff.replaceAll !== null ? (
-                            <div className="mb-1 space-y-px">
-                                {editDiff.filePath ? (
-                                    <ToolParamField name="file_path" value={editDiff.filePath} />
-                                ) : null}
-                                {editDiff.replaceAll !== null ? (
-                                    <ToolParamField name="replace_all" value={String(editDiff.replaceAll)} />
-                                ) : null}
-                            </div>
-                        ) : null}
-                        <DiffView
-                            oldString={editDiff.oldString}
-                            newString={editDiff.newString}
-                            variant="inline"
-                        />
-                    </div>
-                    <div>
-                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                        <CodeBlock
-                            code={editResultCode}
-                            language={typeof rawResult === 'string' ? 'text' : 'json'}
-                        />
-                    </div>
-                </div>
-            )
-        }
-    }
-
-    if (props.block.tool.name === 'Write') {
-        const writeDiff = extractWriteDiffInput(props.block.tool.input)
-        if (writeDiff) {
-            return (
-                <div className="tool-io-scope space-y-2">
-                    <div>
-                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                        {writeDiff.filePath ? (
-                            <div className="mb-1">
-                                <ToolParamField name="file_path" value={writeDiff.filePath} />
-                            </div>
-                        ) : null}
-                        <DiffView
-                            oldString=""
-                            newString={writeDiff.content}
-                            variant="inline"
-                        />
-                    </div>
-                    <div>
-                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                        <CodeBlock
-                            code={safeStringify(props.block.tool.result ?? 'No result')}
-                            language={typeof props.block.tool.result === 'string' ? 'text' : 'json'}
-                        />
-                    </div>
-                </div>
-            )
-        }
-    }
-
-    const isReadLikeTool = props.block.tool.name === 'Read' || props.block.tool.name === 'NotebookRead'
-    if (isReadLikeTool) {
-        const readInputPath = extractReadInputPath(props.block.tool.input)
-        const readContent = extractReadResultContent(props.block.tool.result)
-        if (typeof readContent === 'string') {
-            return (
-                <div className="tool-io-scope space-y-2">
-                    <div>
-                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                        {readInputPath ? (
-                            <ToolParamField name="file_path" value={readInputPath} />
-                        ) : (
-                            <CodeBlock code={safeStringify(props.block.tool.input)} language="json" />
-                        )}
-                    </div>
-                    <div>
-                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                        {readContent.trim().length > 0 ? (
-                            <CodeBlock code={readContent} language="text" showLineNumbers />
-                        ) : (
-                            <div className="text-sm text-[var(--app-hint)]">(no output)</div>
-                        )}
-                    </div>
-                </div>
-            )
-        }
-    }
+    const toolName = props.block.tool.name
+    const FullToolView = getToolFullViewComponent(toolName)
+    const ResultToolView = getToolResultViewComponent(toolName)
+    const isAskUserQuestion = isAskUserQuestionToolName(toolName)
+    const isRequestUserInput = isRequestUserInputToolName(toolName)
+    const isQuestionTool = isAskUserQuestion || isRequestUserInput
+    const isQuestionToolWithAnswers = Boolean(
+        isQuestionTool
+        && props.block.tool.permission?.answers
+        && Object.keys(props.block.tool.permission.answers).length > 0
+    )
 
     return (
         <div className="tool-io-scope space-y-2">
             <div>
-                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                <CodeBlock code={safeStringify(props.block.tool.input)} language="json" />
+                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                    {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                </div>
+                {FullToolView ? (
+                    <FullToolView
+                        block={props.block}
+                        metadata={props.metadata}
+                        api={props.api}
+                        sessionId={props.sessionId}
+                        disabled={props.disabled}
+                        onDone={props.onDone}
+                    />
+                ) : (
+                    renderToolInputContent(props.block, props.metadata)
+                )}
             </div>
-            <div>
-                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                <CodeBlock
-                    code={safeStringify(props.block.tool.result ?? 'No result')}
-                    language={typeof props.block.tool.result === 'string' ? 'text' : 'json'}
-                />
-            </div>
+            {!isQuestionToolWithAnswers ? (
+                <div>
+                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                    <ResultToolView block={props.block} metadata={props.metadata} />
+                </div>
+            ) : null}
         </div>
     )
 }
@@ -355,7 +199,14 @@ function StepNode(props: {
 
             {open ? (
                 <div className="ml-5 border-l border-[var(--app-border)] pl-2.5 space-y-1">
-                    <StepNodeDetails block={props.block} />
+                    <StepNodeDetails
+                        block={props.block}
+                        metadata={props.metadata}
+                        api={props.api}
+                        sessionId={props.sessionId}
+                        disabled={props.disabled}
+                        onDone={props.onDone}
+                    />
 
                     {(() => {
                         if (!props.api || !props.sessionId || !props.onDone) return null
