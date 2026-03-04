@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { ApiClient } from '@/api/client'
 import type { ChatToolCall } from '@/chat/types'
 import { Button } from '@/components/ui/button'
@@ -134,60 +135,60 @@ export function AskUserQuestionFooter(props: {
     const [fallbackText, setFallbackText] = useState('')
     const [stateByQuestion, setStateByQuestion] = useState<QuestionOptionState[]>(() => buildInitialState(questions))
     const otherInputRefs = useRef<Array<HTMLInputElement | null>>([])
-    const [focusOtherInputIndex, setFocusOtherInputIndex] = useState<number | null>(null)
+    const focusRetryTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    const clearFocusRetryTimeouts = () => {
+        for (const timeoutId of focusRetryTimeoutsRef.current) {
+            clearTimeout(timeoutId)
+        }
+        focusRetryTimeoutsRef.current = []
+    }
+
+    const focusOtherInputAt = (qIdx: number): boolean => {
+        const input = otherInputRefs.current[qIdx]
+        if (!input) return false
+
+        input.focus()
+        try {
+            const end = input.value.length
+            input.setSelectionRange(end, end)
+        } catch {
+            // noop
+        }
+
+        return document.activeElement === input
+    }
+
+    const requestOtherInputFocus = (qIdx: number) => {
+        clearFocusRetryTimeouts()
+        const retryDelaysMs = [0, 30, 80, 160, 280, 420]
+
+        for (const delay of retryDelaysMs) {
+            const timeoutId = setTimeout(() => {
+                if (!focusOtherInputAt(qIdx)) return
+                clearFocusRetryTimeouts()
+            }, delay)
+            focusRetryTimeoutsRef.current.push(timeoutId)
+        }
+    }
 
     useEffect(() => {
         setFallbackText('')
         setStateByQuestion(buildInitialState(questions))
         otherInputRefs.current = []
-        setFocusOtherInputIndex(null)
+        clearFocusRetryTimeouts()
         setLoading(false)
         setError(null)
     }, [props.tool.id, questions])
 
     useEffect(() => {
-        if (focusOtherInputIndex === null) return
-
-        const focusInput = () => {
-            const input = otherInputRefs.current[focusOtherInputIndex]
-            if (!input) return false
-            input.focus()
-            try {
-                const end = input.value.length
-                input.setSelectionRange(end, end)
-            } catch {
-                // noop
-            }
-            return true
-        }
-
-        if (focusInput()) {
-            setFocusOtherInputIndex(null)
-            return
-        }
-
-        let raf1 = 0
-        let raf2 = 0
-        raf1 = requestAnimationFrame(() => {
-            if (focusInput()) {
-                setFocusOtherInputIndex(null)
-                return
-            }
-            raf2 = requestAnimationFrame(() => {
-                if (focusInput()) {
-                    setFocusOtherInputIndex(null)
-                }
-            })
-        })
-
         return () => {
-            if (raf1) cancelAnimationFrame(raf1)
-            if (raf2) cancelAnimationFrame(raf2)
+            clearFocusRetryTimeouts()
         }
-    }, [focusOtherInputIndex, stateByQuestion])
+    }, [])
 
     if (!permission || permission.status !== 'pending') return null
     if (!isAskUserQuestionToolName(props.tool.name)) return null
@@ -305,32 +306,35 @@ export function AskUserQuestionFooter(props: {
         setError(null)
         let shouldFocusInput = false
 
-        updateQuestionState(qIdx, (prev) => {
-            if (q.options.length === 0) {
-                shouldFocusInput = true
-                return { ...prev, otherSelected: true }
-            }
+        flushSync(() => {
+            updateQuestionState(qIdx, (prev) => {
+                if (q.options.length === 0) {
+                    shouldFocusInput = true
+                    return { ...prev, otherSelected: true }
+                }
 
-            if (!q.multiSelect) {
+                if (!q.multiSelect) {
+                    const next = {
+                        ...prev,
+                        selectedOptionIndices: [],
+                        otherSelected: !prev.otherSelected
+                    }
+                    shouldFocusInput = next.otherSelected
+                    return ensureDefaultSelection(q, next)
+                }
+
                 const next = {
                     ...prev,
-                    selectedOptionIndices: [],
                     otherSelected: !prev.otherSelected
                 }
                 shouldFocusInput = next.otherSelected
                 return ensureDefaultSelection(q, next)
-            }
-
-            const next = {
-                ...prev,
-                otherSelected: !prev.otherSelected
-            }
-            shouldFocusInput = next.otherSelected
-            return ensureDefaultSelection(q, next)
+            })
         })
 
         if (shouldFocusInput) {
-            setFocusOtherInputIndex(qIdx)
+            if (focusOtherInputAt(qIdx)) return
+            requestOtherInputFocus(qIdx)
         }
     }
 
