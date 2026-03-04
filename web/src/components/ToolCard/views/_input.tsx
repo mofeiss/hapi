@@ -287,7 +287,7 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
 
 function renderParamRows(rows: ParamRow[]): ReactNode {
     return (
-        <div className="space-y-px">
+        <div className="space-y-0">
             {rows.map((row, idx) => (
                 <ToolParamField key={`${row.name}-${idx}`} name={row.name} value={row.value} />
             ))}

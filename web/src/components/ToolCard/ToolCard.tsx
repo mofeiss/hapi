@@ -533,7 +533,7 @@ function ToolCardInner(props: ToolCardProps) {
                                                     <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
                                                         {questionsLabel}
                                                     </div>
-                                                    <div className="space-y-2">
+                                                    <div className="space-y-0">
                                                         {askQuestions.map((question, idx) => {
                                                             const optionLabels = question.options
                                                                 .map((option) => option.label.trim())
@@ -543,7 +543,7 @@ function ToolCardInner(props: ToolCardProps) {
                                                                 : null
 
                                                             return (
-                                                                <div key={idx} className="space-y-1">
+                                                                <div key={idx} className="space-y-0">
                                                                     <QuestionRow
                                                                         header={question.header}
                                                                         question={question.question.trim()}
@@ -590,7 +590,7 @@ function ToolCardInner(props: ToolCardProps) {
                                                     : (!hasAnyAskAnswers ? askResultText : null)
 
                                                 return (
-                                                    <div key={idx} className="space-y-2">
+                                                    <div key={idx} className="space-y-0">
                                                         <div>
                                                             <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
                                                                 {questionsLabel}
@@ -600,7 +600,7 @@ function ToolCardInner(props: ToolCardProps) {
                                                                 question={question.question.trim()}
                                                             />
                                                             {optionSnapshot ? (
-                                                                <div className="mt-1">
+                                                                <div className="mt-0">
                                                                     <OptionSnapshotRow
                                                                         tag={optionsLabel}
                                                                         text={optionSnapshot.preview}

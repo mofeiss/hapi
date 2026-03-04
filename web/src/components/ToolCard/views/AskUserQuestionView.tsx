@@ -40,7 +40,7 @@ export function AskUserQuestionView(props: ToolViewProps) {
     const firstHeader = firstQuestion?.header?.trim() || ''
     const firstPrompt = firstQuestion?.question?.trim() || ''
     const inputParams = questions.length > 0 ? (
-        <div className="space-y-px">
+        <div className="space-y-0">
             <ToolParamField name="questions" value={String(questions.length)} />
             {firstHeader ? <ToolParamField name="header" value={truncate(firstHeader, 160)} /> : null}
             {firstPrompt ? <ToolParamField name="first_question" value={truncate(firstPrompt, 160)} /> : null}
@@ -122,4 +122,3 @@ export function AskUserQuestionView(props: ToolViewProps) {
         </div>
     )
 }
-

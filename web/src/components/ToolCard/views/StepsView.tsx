@@ -347,7 +347,7 @@ function StepNodeDetails(props: {
                                     <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
                                         {questionsLabel}
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-0">
                                         {askQuestions.map((question, idx) => {
                                             const optionLabels = question.options
                                                 .map((option) => option.label.trim())
@@ -357,7 +357,7 @@ function StepNodeDetails(props: {
                                                 : null
 
                                             return (
-                                                <div key={idx} className="space-y-1">
+                                                <div key={idx} className="space-y-0">
                                                     <TaggedTextRow
                                                         tag={question.header}
                                                         text={question.question.trim()}
@@ -404,7 +404,7 @@ function StepNodeDetails(props: {
                                     : (!hasAnyAskAnswers ? askResultText : null)
 
                                 return (
-                                    <div key={idx} className="space-y-2">
+                                    <div key={idx} className="space-y-0">
                                         <div>
                                             <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
                                                 {questionsLabel}
@@ -414,7 +414,7 @@ function StepNodeDetails(props: {
                                                 text={question.question.trim()}
                                             />
                                             {optionSnapshot ? (
-                                                <div className="mt-1">
+                                                <div className="mt-0">
                                                     <OptionSnapshotRow
                                                         tag={optionsLabel}
                                                         text={optionSnapshot.preview}

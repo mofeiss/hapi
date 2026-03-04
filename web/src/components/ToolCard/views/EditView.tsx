@@ -20,7 +20,7 @@ export function EditView(props: ToolViewProps) {
 
     return (
         <div className="space-y-2">
-            <div className="space-y-px">
+            <div className="space-y-0">
                 {filePath ? (
                     <ToolParamField name="file_path" value={filePath} />
                 ) : null}
