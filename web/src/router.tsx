@@ -44,6 +44,7 @@ import {
 } from "@/lib/message-window-store";
 import {
   clearPendingSessionMode,
+  setPendingSessionMode,
   usePendingSessionMode,
 } from "@/lib/pending-session-mode-store";
 import FilesPage from "@/routes/sessions/files";
@@ -1186,6 +1187,13 @@ function shouldRetryPermissionSync(error: unknown): boolean {
     || text.includes("failed to fetch");
 }
 
+function resolveSpawnAgent(flavor?: string | null): "claude" | "codex" | "gemini" | "opencode" | undefined {
+  if (flavor === "claude" || flavor === "codex" || flavor === "gemini" || flavor === "opencode") {
+    return flavor;
+  }
+  return undefined;
+}
+
 function isSessionPermissionSynced(
   currentPermissionMode: PermissionMode | undefined,
   currentBasePermissionMode: PermissionMode | undefined,
@@ -1227,6 +1235,7 @@ function SessionView({
   const { session, refetch: refetchSession } = useSession(api, sessionId);
   const pendingSessionMode = usePendingSessionMode(sessionId);
   const [modeSyncInFlight, setModeSyncInFlight] = useState(false);
+  const [quickNewSessionPending, setQuickNewSessionPending] = useState(false);
   const modeSyncKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -1429,6 +1438,77 @@ function SessionView({
     void refetchMessages();
   }, [refetchMessages, refetchSession]);
 
+  const handleQuickNewSession = useCallback(async () => {
+    if (!api || !session || quickNewSessionPending) {
+      return;
+    }
+
+    const machineId = session.metadata?.machineId?.trim();
+    const directory = session.metadata?.path?.trim();
+    if (!machineId || !directory) {
+      addToast({
+        title: t("sessions.quickNew.failedTitle"),
+        body: t("sessions.quickNew.unavailable"),
+        sessionId: session.id,
+        url: `/sessions/${session.id}`,
+      });
+      return;
+    }
+
+    const permissionMode = session.permissionMode ?? "default";
+    const basePermissionMode = session.basePermissionMode
+      ?? (permissionMode === "plan" ? "default" : permissionMode);
+    const spawnSessionType = session.metadata?.worktree ? "worktree" : "simple";
+    const worktreeName = spawnSessionType === "worktree"
+      ? (session.metadata?.worktree?.name?.trim() || undefined)
+      : undefined;
+    const model = session.metadata?.model?.trim() || undefined;
+
+    setQuickNewSessionPending(true);
+    try {
+      const result = await api.spawnSession(
+        machineId,
+        directory,
+        resolveSpawnAgent(session.metadata?.flavor),
+        model,
+        session.metadata?.reasoningEffort,
+        permissionMode,
+        basePermissionMode,
+        spawnSessionType,
+        worktreeName
+      );
+
+      if (result.type !== "success") {
+        throw new Error(result.message);
+      }
+
+      if (permissionMode !== "default") {
+        setPendingSessionMode(result.sessionId, {
+          permissionMode,
+          basePermissionMode,
+        });
+      }
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
+      navigate({
+        to: "/sessions/$sessionId",
+        params: { sessionId: result.sessionId },
+      });
+    } catch (error) {
+      const message = error instanceof Error && error.message
+        ? error.message
+        : t("dialog.error.default");
+      addToast({
+        title: t("sessions.quickNew.failedTitle"),
+        body: message,
+        sessionId: session.id,
+        url: `/sessions/${session.id}`,
+      });
+    } finally {
+      setQuickNewSessionPending(false);
+    }
+  }, [api, addToast, navigate, queryClient, quickNewSessionPending, session, t]);
+
   if (!session) {
     return (
       <div className="flex-1 flex items-center justify-center p-4">
@@ -1462,6 +1542,8 @@ function SessionView({
       onToggleTheme={onToggleTheme}
       onOpenSettings={onOpenSettings}
       onOpenNewSession={onOpenNewSession}
+      onQuickNewSession={handleQuickNewSession}
+      quickNewSessionPending={quickNewSessionPending}
       permissionSyncPending={permissionSyncPending || modeSyncInFlight}
       permissionModeOverride={optimisticPermissionMode}
       basePermissionModeOverride={optimisticBasePermissionMode}

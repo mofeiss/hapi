@@ -41,6 +41,10 @@ export default {
   // Sessions page
   'sessions.count': '{m} 台设备',
   'sessions.new': '新建会话',
+  'sessions.quickNew': '按当前配置快速新建',
+  'sessions.quickNew.creating': '快速新建中…',
+  'sessions.quickNew.unavailable': '当前会话缺少机器或目录配置，无法快速新建。',
+  'sessions.quickNew.failedTitle': '快速新建失败',
   'menu': '菜单',
 
   // Session list

@@ -41,6 +41,11 @@ export default {
   // Sessions page
   "sessions.count": "{m} devices",
   "sessions.new": "New Session",
+  "sessions.quickNew": "Quick New (Same Config)",
+  "sessions.quickNew.creating": "Creating from current config…",
+  "sessions.quickNew.unavailable":
+    "Current session is missing machine or directory config.",
+  "sessions.quickNew.failedTitle": "Quick create failed",
   menu: "Menu",
 
   // Session list

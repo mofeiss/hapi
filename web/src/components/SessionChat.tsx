@@ -150,6 +150,8 @@ export function SessionChat(props: {
     onToggleTheme?: () => void
     onOpenSettings?: () => void
     onOpenNewSession?: () => void
+    onQuickNewSession?: () => void
+    quickNewSessionPending?: boolean
     autocompleteSuggestions?: (query: string) => Promise<Suggestion[]>
     permissionSyncPending?: boolean
     permissionModeOverride?: PermissionMode
@@ -951,6 +953,8 @@ export function SessionChat(props: {
                 onToggleTheme={props.onToggleTheme}
                 onOpenSettings={props.onOpenSettings}
                 onOpenNewSession={props.onOpenNewSession}
+                onQuickNewSession={props.onQuickNewSession}
+                quickNewSessionPending={props.quickNewSessionPending}
                 api={props.api}
                 onSessionDeleted={props.onSessionDeleted ?? props.onBack}
             />
