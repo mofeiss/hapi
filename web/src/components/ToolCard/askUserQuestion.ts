@@ -17,6 +17,8 @@ export type AskUserQuestionQuestionInfo = {
     question: string | null
 }
 
+type AskUserQuestionDisplayLocale = 'zh-CN' | 'en'
+
 export function isAskUserQuestionToolName(toolName: string): boolean {
     return toolName === 'AskUserQuestion' || toolName === 'ask_user_question'
 }
@@ -74,4 +76,43 @@ export function extractAskUserQuestionQuestionsInfo(input: unknown): AskUserQues
         })
     }
     return questions
+}
+
+function customInputLabel(locale: AskUserQuestionDisplayLocale): string {
+    return locale === 'zh-CN' ? '自行输入' : 'custom input'
+}
+
+export function formatAskUserQuestionAnswersForDisplay(
+    question: AskUserQuestionQuestion,
+    answers: string[],
+    locale: AskUserQuestionDisplayLocale
+): string[] {
+    const optionDescriptionByLabel = new Map<string, string | null>()
+    for (const option of question.options) {
+        const key = option.label.trim()
+        if (!key) continue
+        const desc = option.description?.trim() ?? null
+        optionDescriptionByLabel.set(key, desc && desc.length > 0 ? desc : null)
+    }
+
+    const formatted: string[] = []
+    for (const rawAnswer of answers) {
+        const answer = rawAnswer.trim()
+        if (!answer) continue
+
+        if (!optionDescriptionByLabel.has(answer)) {
+            formatted.push(`${answer} (${customInputLabel(locale)})`)
+            continue
+        }
+
+        const desc = optionDescriptionByLabel.get(answer)
+        if (desc) {
+            formatted.push(`${answer} (${desc})`)
+            continue
+        }
+
+        formatted.push(answer)
+    }
+
+    return formatted
 }

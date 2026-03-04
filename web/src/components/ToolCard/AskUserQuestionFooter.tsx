@@ -335,7 +335,7 @@ export function AskUserQuestionFooter(props: {
                         disabled={props.disabled || loading}
                         onClick={submit}
                         aria-busy={loading}
-                        className="gap-2"
+                        className="h-7 gap-1.5 px-2 text-xs"
                     >
                         {loading ? (
                             <>
@@ -464,7 +464,7 @@ export function AskUserQuestionFooter(props: {
                     disabled={props.disabled || loading}
                     onClick={submit}
                     aria-busy={loading}
-                    className="gap-2"
+                    className="h-7 gap-1.5 px-2 text-xs"
                 >
                     {loading ? (
                         <>

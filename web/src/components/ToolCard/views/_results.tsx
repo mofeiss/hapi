@@ -1,6 +1,7 @@
 import type { ToolViewComponent, ToolViewProps } from '@/components/ToolCard/views/_all'
 import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
+import { parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
 import { basename, resolveDisplayPath } from '@/utils/path'
 
 function parseToolUseError(message: string): { isToolUseError: boolean; errorMessage: string | null } {
@@ -229,10 +230,11 @@ function extractLineList(text: string): string[] {
 
 const AskUserQuestionResultView: ToolViewComponent = (props: ToolViewProps) => {
     const answers = props.block.tool.permission?.answers ?? null
+    const hasStructuredQuestions = parseAskUserQuestionInput(props.block.tool.input).questions.length > 0
 
-    // If answers exist, AskUserQuestionView already shows them with highlighting
+    // If answers exist and payload is valid, AskUserQuestion view already renders them.
     // Return null to avoid duplicate display
-    if (answers && Object.keys(answers).length > 0) {
+    if (hasStructuredQuestions && answers && Object.keys(answers).length > 0) {
         return null
     }
 

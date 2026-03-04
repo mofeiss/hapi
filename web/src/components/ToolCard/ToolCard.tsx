@@ -7,7 +7,11 @@ import { CodeBlock } from '@/components/CodeBlock'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
-import { isAskUserQuestionToolName, parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
+import {
+    formatAskUserQuestionAnswersForDisplay,
+    isAskUserQuestionToolName,
+    parseAskUserQuestionInput
+} from '@/components/ToolCard/askUserQuestion'
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
 import { getToolFullViewComponent, getToolViewComponent } from '@/components/ToolCard/views/_all'
@@ -292,7 +296,8 @@ function ToolCardInner(props: ToolCardProps) {
     const isRequestUserInput = isRequestUserInputToolName(toolName)
     const isQuestionTool = isAskUserQuestion || isRequestUserInput
     const defaultExpanded = Boolean(
-        (isQuestionTool && permission?.status === 'pending')
+        isAskUserQuestion
+        || (isQuestionTool && permission?.status === 'pending')
         || hasPendingPermission
         || toolName === 'Steps'
     )
@@ -395,6 +400,14 @@ function ToolCardInner(props: ToolCardProps) {
         () => normalizeQuestionAnswers(permission?.answers),
         [permission?.answers]
     )
+    const isAskUserQuestionMalformed = Boolean(
+        isAskUserQuestion
+        && askQuestions.length === 0
+    )
+    const isQuestionToolWithStructuredAnswers = Boolean(
+        isQuestionToolWithAnswers
+        && !isAskUserQuestionMalformed
+    )
     const useAskUserQuestionPendingLayout = Boolean(
         isAskUserQuestion
         && permission?.status === 'pending'
@@ -402,7 +415,7 @@ function ToolCardInner(props: ToolCardProps) {
     )
     const useAskUserQuestionViewLayout = Boolean(
         isAskUserQuestion
-        && isQuestionToolWithAnswers
+        && isQuestionToolWithStructuredAnswers
         && askQuestions.length > 0
     )
 
@@ -452,7 +465,7 @@ function ToolCardInner(props: ToolCardProps) {
                             <div className="mt-3 flex flex-col gap-3">
                                 <div>
                                     <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                                    {FullToolView ? (
+                                    {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
                                         <FullToolView
                                             block={props.block}
                                             metadata={props.metadata}
@@ -465,7 +478,7 @@ function ToolCardInner(props: ToolCardProps) {
                                         renderToolInputContent(props.block, props.metadata)
                                     )}
                                 </div>
-                                {!isQuestionToolWithAnswers ? (
+                                {!isQuestionToolWithStructuredAnswers ? (
                                     <div>
                                         <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                                         <ResultToolView block={props.block} metadata={props.metadata} />
@@ -492,6 +505,11 @@ function ToolCardInner(props: ToolCardProps) {
                                         ? buildOptionSnapshot(optionLabels)
                                         : null
                                     const answerValues = normalizedAskAnswers[String(idx)] ?? []
+                                    const displayAnswerValues = formatAskUserQuestionAnswersForDisplay(
+                                        question,
+                                        answerValues,
+                                        locale === 'zh-CN' ? 'zh-CN' : 'en'
+                                    )
 
                                     return (
                                         <div key={idx} className="space-y-2">
@@ -517,8 +535,8 @@ function ToolCardInner(props: ToolCardProps) {
                                                 <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
                                                     {locale === 'zh-CN' ? '回答' : 'Answers'}
                                                 </div>
-                                                {answerValues.length > 0 ? (
-                                                    <CodeBlock code={answerValues.join(' / ')} language="text" />
+                                                {displayAnswerValues.length > 0 ? (
+                                                    <CodeBlock code={displayAnswerValues.join(' / ')} language="text" />
                                                 ) : (
                                                     <div className="text-sm text-[var(--app-hint)]">(no output)</div>
                                                 )}
@@ -530,9 +548,9 @@ function ToolCardInner(props: ToolCardProps) {
                                 <>
                                     <div>
                                         <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                            {isQuestionToolWithAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                                            {isQuestionToolWithStructuredAnswers ? t('tool.questionsAnswers') : t('tool.input')}
                                         </div>
-                                        {FullToolView ? (
+                                        {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
                                             <FullToolView
                                                 block={props.block}
                                                 metadata={props.metadata}
@@ -545,7 +563,7 @@ function ToolCardInner(props: ToolCardProps) {
                                             renderToolInputContent(props.block, props.metadata)
                                         )}
                                     </div>
-                                    {!isQuestionToolWithAnswers ? (
+                                    {!isQuestionToolWithStructuredAnswers ? (
                                         <div>
                                             <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                                             <ResultToolView block={props.block} metadata={props.metadata} />
@@ -556,7 +574,7 @@ function ToolCardInner(props: ToolCardProps) {
                         </div>
                     ) : null}
 
-                    {useAskUserQuestionPendingLayout ? null : isAskUserQuestion && permission?.status === 'pending' ? (
+                    {useAskUserQuestionPendingLayout ? null : isAskUserQuestion && permission?.status === 'pending' && !isAskUserQuestionMalformed ? (
                         <AskUserQuestionFooter
                             api={props.api}
                             sessionId={props.sessionId}
