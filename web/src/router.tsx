@@ -89,6 +89,28 @@ function NewChatIcon(props: { className?: string }) {
   );
 }
 
+function QuickCloneChatIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      <line x1="15.5" y1="14.5" x2="15.5" y2="18.5" />
+      <line x1="13.5" y1="16.5" x2="17.5" y2="16.5" />
+    </svg>
+  );
+}
+
 function SettingsIcon(props: { className?: string }) {
   return (
     <svg
@@ -406,6 +428,7 @@ function SessionsPage() {
   const pathname = useLocation({ select: (location) => location.pathname });
   const matchRoute = useMatchRoute();
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const { isDark, toggleTheme } = useTheme();
   const { sessions, isLoading, error, refetch } = useSessions(api);
 
@@ -558,6 +581,8 @@ function SessionsPage() {
   const [mountedSessions, setMountedSessions] = useState<string[]>(
     selectedSessionId ? [selectedSessionId] : [],
   );
+  const { session: activeSession } = useSession(api, activeSessionId);
+  const [quickNewSessionPending, setQuickNewSessionPending] = useState(false);
   const activeSessionRef = useRef(activeSessionId);
   activeSessionRef.current = activeSessionId;
 
@@ -623,6 +648,89 @@ function SessionsPage() {
     },
     [navigate],
   );
+
+  const handleQuickNewSession = useCallback(async () => {
+    if (!api || !activeSession || quickNewSessionPending) {
+      return;
+    }
+
+    const machineId = activeSession.metadata?.machineId?.trim();
+    const directory = activeSession.metadata?.path?.trim();
+    if (!machineId || !directory) {
+      addToast({
+        title: t("sessions.quickNew.failedTitle"),
+        body: t("sessions.quickNew.unavailable"),
+        sessionId: activeSession.id,
+        url: `/sessions/${activeSession.id}`,
+      });
+      return;
+    }
+
+    const permissionMode = activeSession.permissionMode ?? "default";
+    const basePermissionMode = activeSession.basePermissionMode
+      ?? (permissionMode === "plan" ? "default" : permissionMode);
+    const spawnSessionType = activeSession.metadata?.worktree ? "worktree" : "simple";
+    const worktreeName = spawnSessionType === "worktree"
+      ? (activeSession.metadata?.worktree?.name?.trim() || undefined)
+      : undefined;
+    const model = activeSession.metadata?.model?.trim() || undefined;
+
+    setQuickNewSessionPending(true);
+    try {
+      const result = await api.spawnSession(
+        machineId,
+        directory,
+        resolveSpawnAgent(activeSession.metadata?.flavor),
+        model,
+        activeSession.metadata?.reasoningEffort,
+        permissionMode,
+        basePermissionMode,
+        spawnSessionType,
+        worktreeName
+      );
+
+      if (result.type !== "success") {
+        throw new Error(result.message);
+      }
+
+      if (permissionMode !== "default") {
+        setPendingSessionMode(result.sessionId, {
+          permissionMode,
+          basePermissionMode,
+        });
+      }
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
+      handleSelectSession(result.sessionId);
+    } catch (error) {
+      const message = error instanceof Error && error.message
+        ? error.message
+        : t("dialog.error.default");
+      addToast({
+        title: t("sessions.quickNew.failedTitle"),
+        body: message,
+        sessionId: activeSession.id,
+        url: `/sessions/${activeSession.id}`,
+      });
+    } finally {
+      setQuickNewSessionPending(false);
+    }
+  }, [
+    activeSession,
+    addToast,
+    api,
+    handleSelectSession,
+    queryClient,
+    quickNewSessionPending,
+    t,
+  ]);
+
+  const quickNewDisabled = !activeSession || quickNewSessionPending;
+  const quickNewTitle = quickNewSessionPending
+    ? t("sessions.quickNew.creating")
+    : activeSession
+      ? t("sessions.quickNew")
+      : t("sessions.quickNew.unavailable");
 
   const executeBatchOperation = useCallback(() => {
     if (!api || batchSelectedIds.size === 0 || !batchMode) return;
@@ -914,6 +1022,20 @@ function SessionsPage() {
               >
                 <NewChatIcon className="h-5 w-5" />
               </button>
+              <button
+                type="button"
+                onClick={handleQuickNewSession}
+                disabled={quickNewDisabled}
+                className={`hidden lg:inline-flex p-1.5 rounded-full transition-colors ${
+                  quickNewDisabled
+                    ? "cursor-not-allowed text-[var(--app-hint)] opacity-50"
+                    : "text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)]"
+                }`}
+                title={quickNewTitle}
+                aria-label={quickNewTitle}
+              >
+                <QuickCloneChatIcon className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -985,7 +1107,7 @@ function SessionsPage() {
             </button>
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
-          <div className="px-2 py-1.5 shrink-0 flex items-center justify-center">
+          <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
             <button
               type="button"
               onClick={() => {
@@ -997,6 +1119,20 @@ function SessionsPage() {
               title={t("sessions.new")}
             >
               <NewChatIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleQuickNewSession}
+              disabled={quickNewDisabled}
+              className={`p-1.5 rounded-full transition-colors ${
+                quickNewDisabled
+                  ? "cursor-not-allowed text-[var(--app-hint)] opacity-50"
+                  : "text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)]"
+              }`}
+              title={quickNewTitle}
+              aria-label={quickNewTitle}
+            >
+              <QuickCloneChatIcon className="h-5 w-5" />
             </button>
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
