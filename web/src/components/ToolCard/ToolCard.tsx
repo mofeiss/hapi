@@ -18,6 +18,7 @@ import { getToolPresentation } from '@/components/ToolCard/knownTools'
 import { getToolFullViewComponent, getToolViewComponent } from '@/components/ToolCard/views/_all'
 import { renderToolInputContent } from '@/components/ToolCard/views/_input'
 import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
+import { isResultOnlyToolName } from '@/components/ToolCard/toolRenderModes'
 import { usePointerFocusRing } from '@/hooks/usePointerFocusRing'
 import { truncate } from '@/lib/toolInputUtils'
 import { cn } from '@/lib/utils'
@@ -285,8 +286,9 @@ function ToolCardInner(props: ToolCardProps) {
     const taskSummary = renderTaskSummary(props.block, props.metadata, locale)
     const runningFrom = props.block.tool.startedAt ?? props.block.tool.createdAt
     const showInline = !presentation.minimal && toolName !== 'Task'
-    const CompactToolView = showInline ? getToolViewComponent(toolName) : null
-    const FullToolView = getToolFullViewComponent(toolName)
+    const isResultOnlyTool = isResultOnlyToolName(toolName)
+    const CompactToolView = !isResultOnlyTool && showInline ? getToolViewComponent(toolName) : null
+    const FullToolView = !isResultOnlyTool ? getToolFullViewComponent(toolName) : null
     const ResultToolView = getToolResultViewComponent(toolName)
     const permission = props.block.tool.permission
     const hasPendingPermission = useMemo(
@@ -468,7 +470,11 @@ function ToolCardInner(props: ToolCardProps) {
                         </div>
                     ) : null}
 
-                    {showInline ? (
+                    {isResultOnlyTool ? (
+                        <div className="mt-3">
+                            <ResultToolView block={props.block} metadata={props.metadata} />
+                        </div>
+                    ) : showInline ? (
                         CompactToolView ? (
                             <div className="mt-3">
                                 <CompactToolView

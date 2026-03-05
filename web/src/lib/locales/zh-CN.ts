@@ -248,6 +248,8 @@ export default {
   'tool.rejected': '已拒绝',
   'tool.cancel': '取消',
   'tool.exitPlan': '退出计划模式',
+  'tool.exitPlanMode.success': '已成功退出计划模式。',
+  'tool.exitPlanMode.failed': '退出计划模式失败。',
   'tool.patch': '补丁',
   'tool.input': '输入',
   'tool.result': '结果',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizeReadResultText } from '@/components/ToolCard/views/_results'
+import { extractPlanModeMessage, sanitizeReadResultText } from '@/components/ToolCard/views/_results'
 
 describe('sanitizeReadResultText', () => {
     it('removes system reminder block from read output', () => {
@@ -50,5 +50,36 @@ describe('sanitizeReadResultText', () => {
         ].join('\n')
 
         expect(sanitizeReadResultText(input)).toBe(input)
+    })
+})
+
+describe('extractPlanModeMessage', () => {
+    it('extracts message from object result', () => {
+        const result = {
+            message: 'Entered plan mode. You should now focus on exploring the codebase.'
+        }
+
+        expect(extractPlanModeMessage(result)).toBe(result.message)
+    })
+
+    it('extracts message from InputValidationError string payload', () => {
+        const result = [
+            'InputValidationError: [',
+            '  {',
+            '    "code": "unrecognized_keys",',
+            '    "keys": [',
+            '      "bad_field"',
+            '    ],',
+            '    "path": [],',
+            '    "message": "Unrecognized key: \\"bad_field\\""',
+            '  }',
+            ']'
+        ].join('\n')
+
+        expect(extractPlanModeMessage(result)).toBe('Unrecognized key: "bad_field"')
+    })
+
+    it('returns null when no message can be parsed', () => {
+        expect(extractPlanModeMessage('InputValidationError: not-a-json-payload')).toBeNull()
     })
 })

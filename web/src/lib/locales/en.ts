@@ -259,6 +259,8 @@ export default {
   "tool.rejected": "Rejected",
   "tool.cancel": "Cancel",
   "tool.exitPlan": "Exit Plan Mode",
+  "tool.exitPlanMode.success": "Exited plan mode successfully.",
+  "tool.exitPlanMode.failed": "Failed to exit plan mode.",
   "tool.patch": "Patch",
   "tool.input": "Input",
   "tool.result": "Result",

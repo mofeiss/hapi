@@ -18,6 +18,7 @@ import {
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
 import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
+import { isResultOnlyToolName } from '@/components/ToolCard/toolRenderModes'
 import { useTranslation } from '@/lib/use-translation'
 import { cn } from '@/lib/utils'
 
@@ -242,6 +243,7 @@ function StepNodeDetails(props: {
     const toolName = props.block.tool.name
     const FullToolView = getToolFullViewComponent(toolName)
     const ResultToolView = getToolResultViewComponent(toolName)
+    const isResultOnlyTool = isResultOnlyToolName(toolName)
     const isAskUserQuestion = isAskUserQuestionToolName(toolName)
     const isRequestUserInput = isRequestUserInputToolName(toolName)
     const isQuestionTool = isAskUserQuestion || isRequestUserInput
@@ -321,7 +323,9 @@ function StepNodeDetails(props: {
 
     return (
         <div className="tool-io-scope space-y-2">
-            {useAskUserQuestionPendingLayout ? (
+            {isResultOnlyTool ? (
+                <ResultToolView block={props.block} metadata={props.metadata} />
+            ) : useAskUserQuestionPendingLayout ? (
                 <AskUserQuestionFooter
                     api={props.api as ApiClient}
                     sessionId={props.sessionId as string}

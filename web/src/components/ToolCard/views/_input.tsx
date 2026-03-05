@@ -72,10 +72,6 @@ function formatCharsLabel(text: string): string {
     return `${text.length} chars`
 }
 
-function countLines(text: string): number {
-    return text.split('\n').length
-}
-
 function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadataSummary | null): ParamRow[] | null {
     const toolName = normalizeCoreToolName(block.tool.name)
     const input = block.tool.input
@@ -266,26 +262,6 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
             }
             break
         }
-        case 'EnterPlanMode': {
-            const prompt = getInputScalar(inputObj, ['prompt', 'description'])
-            if (prompt) {
-                pushRow(rows, 'prompt', truncate(prompt, 160))
-            }
-            break
-        }
-        case 'ExitPlanMode': {
-            const explanation = getInputScalar(inputObj, ['explanation'])
-            if (explanation) {
-                pushRow(rows, 'explanation', truncate(explanation, 160))
-            }
-            const planValue = inputObj ? inputObj.plan : null
-            if (typeof planValue === 'string') {
-                pushRow(rows, 'plan', `${countLines(planValue)} lines`)
-            } else if (Array.isArray(planValue)) {
-                pushRow(rows, 'plan', `${planValue.length} steps`)
-            }
-            break
-        }
         default:
             return null
     }
@@ -409,18 +385,6 @@ export function renderToolInputContent(block: ToolCallBlock, metadata: SessionMe
 
     if (toolName === 'CodexDiff' && isObject(input) && typeof input.unified_diff === 'string') {
         return <CodeBlock code={input.unified_diff} language="diff" />
-    }
-
-    if (toolName === 'ExitPlanMode' || toolName === 'exit_plan_mode') {
-        if (isObject(input) && typeof input.plan === 'string' && input.plan.trim().length > 0) {
-            const rows = extractCoreToolParamRows(block, metadata)
-            return (
-                <div className="space-y-2">
-                    {rows ? renderParamRows(rows) : null}
-                    <MarkdownRenderer content={input.plan} />
-                </div>
-            )
-        }
     }
 
     const coreRows = extractCoreToolParamRows(block, metadata)

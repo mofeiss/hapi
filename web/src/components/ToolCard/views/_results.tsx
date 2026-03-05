@@ -131,6 +131,87 @@ function extractTextFromResult(result: unknown, depth: number = 0): string | nul
     return null
 }
 
+function extractMessageFromStructuredResult(result: unknown, depth: number = 0): string | null {
+    if (depth > 4) return null
+
+    if (Array.isArray(result)) {
+        for (const item of result) {
+            const message = extractMessageFromStructuredResult(item, depth + 1)
+            if (message) return message
+        }
+        return null
+    }
+
+    if (!isObject(result)) return null
+
+    if (typeof result.message === 'string') {
+        const message = sanitizeToolResultText(result.message).trim()
+        if (message.length > 0) return message
+    }
+
+    const nestedKeys = ['error', 'errors', 'issues', 'details', 'result', 'data', 'output', 'content']
+    for (const key of nestedKeys) {
+        const message = extractMessageFromStructuredResult(result[key], depth + 1)
+        if (message) return message
+    }
+
+    return null
+}
+
+function parseJsonValue(text: string): unknown | null {
+    try {
+        return JSON.parse(text)
+    } catch {
+        return null
+    }
+}
+
+export function extractPlanModeMessage(result: unknown): string | null {
+    if (result === null || result === undefined) return null
+
+    const directMessage = extractMessageFromStructuredResult(result)
+    if (directMessage) return directMessage
+
+    if (typeof result !== 'string') return null
+
+    const raw = sanitizeToolResultText(result)
+    const trimmed = raw.trim()
+    if (trimmed.length === 0) return null
+
+    const directParsed = parseJsonValue(trimmed)
+    if (directParsed) {
+        const parsedMessage = extractMessageFromStructuredResult(directParsed)
+        if (parsedMessage) return parsedMessage
+    }
+
+    const separatorIndex = trimmed.indexOf(':')
+    if (separatorIndex >= 0) {
+        const suffix = trimmed.slice(separatorIndex + 1).trim()
+        if (suffix.startsWith('{') || suffix.startsWith('[')) {
+            const parsedSuffix = parseJsonValue(suffix)
+            if (parsedSuffix) {
+                const parsedMessage = extractMessageFromStructuredResult(parsedSuffix)
+                if (parsedMessage) return parsedMessage
+            }
+        }
+    }
+
+    const messageMatch = trimmed.match(/"message"\s*:\s*"((?:\\.|[^"\\])*)"/)
+    if (messageMatch?.[1]) {
+        try {
+            const decoded = JSON.parse(`"${messageMatch[1]}"`)
+            if (typeof decoded === 'string') {
+                const normalized = sanitizeToolResultText(decoded).trim()
+                if (normalized.length > 0) return normalized
+            }
+        } catch {
+            // ignore malformed escape sequences and fall back to raw rendering.
+        }
+    }
+
+    return null
+}
+
 interface CodexBashOutput {
     exitCode: number | null
     wallTime: string | null
@@ -855,6 +936,83 @@ const TodoWriteResultView: ToolViewComponent = (props: ToolViewProps) => {
     )
 }
 
+const EnterPlanModeResultView: ToolViewComponent = (props: ToolViewProps) => {
+    const { state, result } = props.block.tool
+
+    if (result === undefined || result === null) {
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(state)}</div>
+    }
+
+    const message = extractPlanModeMessage(result)
+    if (message) {
+        return (
+            <>
+                <CodeBlock code={message} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    if (typeof result === 'string') {
+        return (
+            <>
+                <CodeBlock code={sanitizeToolResultText(result)} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    return (
+        <>
+            <CodeBlock code={safeStringify(result)} language="json" />
+            <RawJsonDevOnly value={result} />
+        </>
+    )
+}
+
+const ExitPlanModeResultView: ToolViewComponent = (props: ToolViewProps) => {
+    const { t } = useTranslation()
+    const { state, result } = props.block.tool
+
+    if (state === 'completed') {
+        return (
+            <>
+                <CodeBlock code={t('tool.exitPlanMode.success')} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    if (state === 'error') {
+        return (
+            <>
+                <CodeBlock code={t('tool.exitPlanMode.failed')} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    if (result === undefined || result === null) {
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(state)}</div>
+    }
+
+    if (typeof result === 'string') {
+        return (
+            <>
+                <CodeBlock code={sanitizeToolResultText(result)} language="text" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    return (
+        <>
+            <CodeBlock code={safeStringify(result)} language="json" />
+            <RawJsonDevOnly value={result} />
+        </>
+    )
+}
+
 const RawResultView: ToolViewComponent = (props: ToolViewProps) => {
     const result = props.block.tool.result
 
@@ -941,7 +1099,8 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     TodoWrite: TodoWriteResultView,
     TaskOutput: RawResultView,
     TaskStop: RawResultView,
-    EnterPlanMode: RawResultView,
+    EnterPlanMode: EnterPlanModeResultView,
+    enter_plan_mode: EnterPlanModeResultView,
     EnterWorktree: RawResultView,
     TeamCreate: RawResultView,
     TeamDelete: RawResultView,
@@ -952,9 +1111,9 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     CodexPatch: CodexPatchResultView,
     CodexDiff: CodexDiffResultView,
     AskUserQuestion: AskUserQuestionResultView,
-    ExitPlanMode: MarkdownResultView,
+    ExitPlanMode: ExitPlanModeResultView,
     ask_user_question: AskUserQuestionResultView,
-    exit_plan_mode: MarkdownResultView
+    exit_plan_mode: ExitPlanModeResultView
 }
 
 export function getToolResultViewComponent(toolName: string): ToolViewComponent {
