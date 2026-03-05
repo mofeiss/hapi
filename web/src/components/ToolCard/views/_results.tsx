@@ -562,6 +562,7 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
 const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
     const result = props.block.tool.result
     const [skillViewMode, setSkillViewMode] = useState<SkillViewMode>('source')
+    const isSkillErrorResult = props.block.tool.state === 'error' || hasToolUseErrorResult(result)
     const skillData = result === undefined || result === null
         ? null
         : extractSkillReadData(props.block.tool.input, result)
@@ -569,8 +570,7 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
     const canToggleSkillView = Boolean(
         skillContent
         && skillContent.trim().length > 0
-        && props.block.tool.state !== 'error'
-        && !hasToolUseErrorResult(result)
+        && !isSkillErrorResult
     )
 
     useEffect(() => {
@@ -625,8 +625,8 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
                     />
                     <CodeBlock
                         code={skillContent}
-                        language="markdown"
-                        showLineNumbers
+                        language={isSkillErrorResult ? 'text' : 'markdown'}
+                        showLineNumbers={!isSkillErrorResult}
                         showCopyButton={false}
                         contentRightPaddingClassName={canToggleSkillView ? 'pr-14' : 'pr-8'}
                     />
@@ -653,7 +653,7 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
                         <CodeBlock
                             code={sanitizedText}
                             language="text"
-                            showLineNumbers
+                            showLineNumbers={!isSkillErrorResult}
                             showCopyButton={false}
                             contentRightPaddingClassName="pr-8"
                         />
