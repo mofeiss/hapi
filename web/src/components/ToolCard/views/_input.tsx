@@ -6,6 +6,7 @@ import { CodeBlock } from '@/components/CodeBlock'
 import { DiffView } from '@/components/DiffView'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ToolParamField } from '@/components/ToolCard/ToolParamField'
+import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
 import { resolveDisplayPath } from '@/utils/path'
 
@@ -309,6 +310,27 @@ function renderEditInput(input: unknown): ReactNode | null {
     )
 }
 
+function renderNotebookEditInput(block: ToolCallBlock, metadata: SessionMetadataSummary | null): ReactNode {
+    const { oldSource, newSource } = resolveNotebookEditDiffData(block.tool.input, block.tool.result)
+
+    if (oldSource === null || newSource === null) {
+        return <CodeBlock code={safeStringify(block.tool.input)} language="json" />
+    }
+
+    const rows = extractCoreToolParamRows(block, metadata)
+
+    return (
+        <div className="space-y-2">
+            {rows ? renderParamRows(rows) : null}
+            <DiffView
+                oldString={oldSource}
+                newString={newSource}
+                variant="inline"
+            />
+        </div>
+    )
+}
+
 export function renderToolInputContent(block: ToolCallBlock, metadata: SessionMetadataSummary | null): ReactNode {
     const toolName = block.tool.name
     const input = block.tool.input
@@ -320,6 +342,10 @@ export function renderToolInputContent(block: ToolCallBlock, metadata: SessionMe
     if (toolName === 'Edit') {
         const diff = renderEditInput(input)
         if (diff) return diff
+    }
+
+    if (toolName === 'NotebookEdit') {
+        return renderNotebookEditInput(block, metadata)
     }
 
     if (toolName === 'MultiEdit' && isObject(input)) {

@@ -2,6 +2,7 @@ import type { ToolViewComponent, ToolViewProps } from '@/components/ToolCard/vie
 import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
 import { parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
+import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
 import { basename, resolveDisplayPath } from '@/utils/path'
 
 function parseToolUseError(message: string): { isToolUseError: boolean; errorMessage: string | null } {
@@ -226,6 +227,42 @@ function extractLineList(text: string): string[] {
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line.length > 0)
+}
+
+function NotebookEditStatsBar(props: { oldSource: string; newSource: string }) {
+    const oldChars = props.oldSource.length
+    const newChars = props.newSource.length
+    const label = `old: ${oldChars.toLocaleString()} chars → new: ${newChars.toLocaleString()} chars`
+
+    return (
+        <div className="overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)]">
+            <div className="px-2 py-2">
+                <div className="min-w-0 font-mono text-xs text-[var(--app-hint)] truncate">
+                    {label}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+const NotebookEditResultView: ToolViewComponent = (props: ToolViewProps) => {
+    const result = props.block.tool.result
+
+    if (result === undefined || result === null) {
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
+    }
+
+    const { oldSource, newSource } = resolveNotebookEditDiffData(props.block.tool.input, result)
+    if (oldSource !== null && newSource !== null) {
+        return (
+            <NotebookEditStatsBar
+                oldSource={oldSource}
+                newSource={newSource}
+            />
+        )
+    }
+
+    return <CodeBlock code={safeStringify(result)} language="json" />
 }
 
 const AskUserQuestionResultView: ToolViewComponent = (props: ToolViewProps) => {
@@ -690,7 +727,7 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     WebFetch: WebFetchResultView,
     WebSearch: MarkdownResultView,
     NotebookRead: ReadResultView,
-    NotebookEdit: RawResultView,
+    NotebookEdit: NotebookEditResultView,
     TodoWrite: TodoWriteResultView,
     TaskOutput: RawResultView,
     TaskStop: RawResultView,

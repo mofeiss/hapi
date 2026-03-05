@@ -122,6 +122,16 @@ export class SDKToLogConverter {
                     message: userMsg.message
                 }
 
+                const userRaw = sdkMessage as Record<string, unknown>
+                const embeddedToolUseResult = ('toolUseResult' in userRaw && userRaw.toolUseResult !== undefined)
+                    ? userRaw.toolUseResult
+                    : (('tool_use_result' in userRaw && userRaw.tool_use_result !== undefined)
+                        ? userRaw.tool_use_result
+                        : undefined)
+                if (embeddedToolUseResult !== undefined) {
+                    (logMessage as Record<string, unknown>).toolUseResult = embeddedToolUseResult
+                }
+
                 // Check if this is a tool result and add mode if available
                 if (Array.isArray(userMsg.message.content)) {
                     for (const content of userMsg.message.content) {

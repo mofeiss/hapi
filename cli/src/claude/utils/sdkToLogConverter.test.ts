@@ -69,6 +69,34 @@ describe('SDKToLogConverter', () => {
             expect(logMessage?.type).toBe('user')
             expect((logMessage as any).message.content).toHaveLength(2)
         })
+
+        it('should preserve top-level tool_use_result for tool result user messages', () => {
+            const sdkMessage: SDKUserMessage & { tool_use_result: Record<string, unknown> } = {
+                type: 'user',
+                message: {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'tool_result',
+                            tool_use_id: 'tool_notebook_1',
+                            content: 'Updated cell'
+                        }
+                    ]
+                },
+                tool_use_result: {
+                    cell_id: 'cell-001',
+                    new_source: 'print(1)'
+                }
+            }
+
+            const logMessage = converter.convert(sdkMessage)
+
+            expect(logMessage).toBeTruthy()
+            expect((logMessage as any).toolUseResult).toEqual({
+                cell_id: 'cell-001',
+                new_source: 'print(1)'
+            })
+        })
     })
 
     describe('Assistant messages', () => {

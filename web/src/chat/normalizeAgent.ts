@@ -143,7 +143,12 @@ function normalizeUserOutput(
             if (block.type === 'tool_result' && typeof block.tool_use_id === 'string') {
                 const isError = Boolean(block.is_error)
                 const rawContent = 'content' in block ? (block as Record<string, unknown>).content : undefined
-                const embeddedToolUseResult = 'toolUseResult' in data ? (data as Record<string, unknown>).toolUseResult : null
+                const embeddedToolUseResult = (() => {
+                    if ('toolUseResult' in data) return (data as Record<string, unknown>).toolUseResult
+                    // Compatibility: some Claude streams emit snake_case payload key.
+                    if ('tool_use_result' in data) return (data as Record<string, unknown>).tool_use_result
+                    return null
+                })()
 
                 const permissions = normalizeToolResultPermissions(block.permissions)
 
