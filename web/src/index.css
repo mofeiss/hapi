@@ -110,7 +110,9 @@ body {
     height: var(--tg-viewport-stable-height, 100dvh);
     overflow: hidden;
     touch-action: pan-x pan-y;
-    overscroll-behavior: none;
+    /* Keep vertical overscroll disabled, but allow horizontal edge-swipe navigation. */
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: auto;
     -webkit-text-size-adjust: 100%;
 }
 
