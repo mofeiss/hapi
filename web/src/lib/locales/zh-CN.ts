@@ -400,7 +400,7 @@ export default {
   'misc.permissionMode': '权限模式',
   'misc.model': '模型',
   'misc.loading': '加载中…',
-  'misc.loadOlder': '加载更早的',
+  'misc.loadOlder': '上滑继续加载',
   'misc.newMessage': '{n} 条新消息',
   'misc.loadingMessages': '加载消息中…',
   'misc.typeMessage': "输入 'continue' 继续...",

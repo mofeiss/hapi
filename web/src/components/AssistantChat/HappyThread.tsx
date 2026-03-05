@@ -6,7 +6,6 @@ import { HappyChatProvider } from '@/components/AssistantChat/context'
 import { HappyAssistantMessage } from '@/components/AssistantChat/messages/AssistantMessage'
 import { HappyUserMessage } from '@/components/AssistantChat/messages/UserMessage'
 import { HappySystemMessage } from '@/components/AssistantChat/messages/SystemMessage'
-import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/Spinner'
 import { QueuedMessages } from '@/components/AssistantChat/QueuedMessages'
 import type { QueuedMessage } from '@/hooks/useMessageQueue'
@@ -88,11 +87,10 @@ export function HappyThread(props: {
 }) {
     const { t } = useTranslation()
     const viewportRef = useRef<HTMLDivElement | null>(null)
-    const topSentinelRef = useRef<HTMLDivElement | null>(null)
     const loadLockRef = useRef(false)
-    const pendingScrollRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null)
+    const pendingScrollRef = useRef<{ scrollTop: number; scrollHeight: number; startVersion: number } | null>(null)
+    const lastScrollTopRef = useRef(0)
     const prevLoadingMoreRef = useRef(false)
-    const loadStartedRef = useRef(false)
     const isLoadingMoreRef = useRef(props.isLoadingMoreMessages)
     const hasMoreMessagesRef = useRef(props.hasMoreMessages)
     const isLoadingMessagesRef = useRef(props.isLoadingMessages)
@@ -132,11 +130,15 @@ export function HappyThread(props: {
         const viewport = viewportRef.current
         if (!viewport) return
 
-        const THRESHOLD_PX = 120
+        const BOTTOM_THRESHOLD_PX = 120
+        const TOP_LOAD_THRESHOLD_PX = 72
+        lastScrollTopRef.current = viewport.scrollTop
 
         const handleScroll = () => {
             const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
-            const isNearBottom = distanceFromBottom < THRESHOLD_PX
+            const isNearBottom = distanceFromBottom < BOTTOM_THRESHOLD_PX
+            const currentScrollTop = viewport.scrollTop
+            const isScrollingUp = currentScrollTop < lastScrollTopRef.current
 
             if (isNearBottom) {
                 if (!autoScrollEnabledRef.current) setAutoScrollEnabled(true)
@@ -151,6 +153,14 @@ export function HappyThread(props: {
                     onFlushPendingRef.current()
                 }
             }
+
+            // Support "swipe/scroll up to load more" so loading older messages
+            // does not require clicking the top button.
+            if (!isNearBottom && isScrollingUp && currentScrollTop <= TOP_LOAD_THRESHOLD_PX) {
+                handleLoadMoreRef.current()
+            }
+
+            lastScrollTopRef.current = currentScrollTop
         }
 
         viewport.addEventListener('scroll', handleScroll, { passive: true })
@@ -217,10 +227,10 @@ export function HappyThread(props: {
         }
         pendingScrollRef.current = {
             scrollTop: viewport.scrollTop,
-            scrollHeight: viewport.scrollHeight
+            scrollHeight: viewport.scrollHeight,
+            startVersion: props.messagesVersion
         }
         loadLockRef.current = true
-        loadStartedRef.current = false
         let loadPromise: Promise<unknown>
         try {
             loadPromise = onLoadMoreRef.current()
@@ -233,69 +243,63 @@ export function HappyThread(props: {
             pendingScrollRef.current = null
             loadLockRef.current = false
             console.error('Failed to load older messages:', error)
-        }).finally(() => {
-            if (!loadStartedRef.current && !isLoadingMoreRef.current && pendingScrollRef.current) {
-                pendingScrollRef.current = null
-                loadLockRef.current = false
-            }
         })
-    }, [])
+    }, [props.messagesVersion])
 
     useEffect(() => {
         handleLoadMoreRef.current = handleLoadMore
     }, [handleLoadMore])
 
-    useEffect(() => {
-        const sentinel = topSentinelRef.current
-        const viewport = viewportRef.current
-        if (!sentinel || !viewport || !props.hasMoreMessages || props.isLoadingMessages) {
-            return
-        }
-        if (typeof IntersectionObserver === 'undefined') {
-            return
-        }
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                for (const entry of entries) {
-                    if (entry.isIntersecting) {
-                        handleLoadMoreRef.current()
-                    }
-                }
-            },
-            {
-                root: viewport,
-                rootMargin: '200px 0px 0px 0px'
-            }
-        )
-
-        observer.observe(sentinel)
-        return () => observer.disconnect()
-    }, [props.hasMoreMessages, props.isLoadingMessages])
-
     useLayoutEffect(() => {
-        const pending = pendingScrollRef.current
         const viewport = viewportRef.current
-        if (!pending || !viewport) {
+        if (!viewport) {
             return
         }
-        const delta = viewport.scrollHeight - pending.scrollHeight
-        viewport.scrollTop = pending.scrollTop + delta
-        pendingScrollRef.current = null
-        loadLockRef.current = false
+        const pending = pendingScrollRef.current
+        if (!pending) {
+            return
+        }
+        if (props.messagesVersion <= pending.startVersion) {
+            return
+        }
+
+        let cancelled = false
+        const restore = (attempt: number) => {
+            if (cancelled) return
+            const currentPending = pendingScrollRef.current
+            const currentViewport = viewportRef.current
+            if (!currentPending || !currentViewport) return
+
+            const delta = currentViewport.scrollHeight - currentPending.scrollHeight
+            if (delta <= 0 && attempt < 6) {
+                requestAnimationFrame(() => restore(attempt + 1))
+                return
+            }
+
+            currentViewport.scrollTop = currentPending.scrollTop + Math.max(0, delta)
+            lastScrollTopRef.current = currentViewport.scrollTop
+            pendingScrollRef.current = null
+            loadLockRef.current = false
+        }
+
+        restore(0)
+
+        return () => {
+            cancelled = true
+        }
     }, [props.messagesVersion])
 
     useEffect(() => {
         isLoadingMoreRef.current = props.isLoadingMoreMessages
-        if (props.isLoadingMoreMessages) {
-            loadStartedRef.current = true
-        }
         if (prevLoadingMoreRef.current && !props.isLoadingMoreMessages && pendingScrollRef.current) {
-            pendingScrollRef.current = null
-            loadLockRef.current = false
+            const pending = pendingScrollRef.current
+            if (pending && props.messagesVersion <= pending.startVersion) {
+                pendingScrollRef.current = null
+                loadLockRef.current = false
+            }
         }
         prevLoadingMoreRef.current = props.isLoadingMoreMessages
-    }, [props.isLoadingMoreMessages])
+    }, [props.isLoadingMoreMessages, props.messagesVersion])
 
     const showSkeleton = props.isLoadingMessages && props.rawMessagesCount === 0 && props.pendingCount === 0
 
@@ -317,10 +321,14 @@ export function HappyThread(props: {
                     <div
                         ref={viewportRef}
                         data-chat-viewport="true"
-                        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+                        className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
                     >
+                        {props.isLoadingMoreMessages ? (
+                            <div className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2" aria-live="polite">
+                                <Spinner size="sm" label={t('misc.loading')} className="text-current" />
+                            </div>
+                        ) : null}
                         <div className="mx-auto w-full max-w-content min-w-0 p-3">
-                            <div ref={topSentinelRef} className="h-px w-full" aria-hidden="true" />
                             {showSkeleton ? (
                                 <MessageSkeleton />
                             ) : (
@@ -328,33 +336,6 @@ export function HappyThread(props: {
                                     {props.messagesWarning ? (
                                         <div className="mb-3 rounded-md bg-amber-500/10 p-2 text-xs">
                                             {props.messagesWarning}
-                                        </div>
-                                    ) : null}
-
-                                    {props.hasMoreMessages && !props.isLoadingMessages ? (
-                                        <div className="py-1 mb-2">
-                                            <div className="mx-auto w-fit">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleLoadMore}
-                                                    disabled={props.isLoadingMoreMessages || props.isLoadingMessages}
-                                                    aria-busy={props.isLoadingMoreMessages}
-                                                    className="gap-1.5 text-xs opacity-80 hover:opacity-100"
-                                                >
-                                                    {props.isLoadingMoreMessages ? (
-                                                        <>
-                                                            <Spinner size="sm" label={null} className="text-current" />
-                                                            {t('misc.loading')}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <span aria-hidden="true">↑</span>
-                                                            {t('misc.loadOlder')}
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            </div>
                                         </div>
                                     ) : null}
 

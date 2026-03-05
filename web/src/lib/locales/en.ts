@@ -419,7 +419,7 @@ export default {
   "misc.permissionMode": "Permission Mode",
   "misc.model": "Model",
   "misc.loading": "Loading…",
-  "misc.loadOlder": "Load older",
+  "misc.loadOlder": "Swipe up to load more",
   "misc.newMessage": "{n} New message",
   "misc.loadingMessages": "Loading messages…",
   "misc.typeMessage": "Type 'continue' to resume...",
