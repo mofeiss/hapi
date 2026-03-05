@@ -174,6 +174,21 @@ function SidebarExpandIcon(props: { className?: string }) {
 }
 
 const MAX_CACHED_SESSIONS = 3;
+const SWIPE_NARROW_BREAKPOINT_PX = 1024;
+const SWIPE_WHEEL_TRIGGER_PX = 140;
+const SWIPE_WHEEL_CANCEL_PX = 24;
+const SWIPE_WHEEL_IDLE_RESET_MS = 220;
+const SWIPE_WHEEL_RELEASE_MS = 50;
+const SWIPE_WHEEL_UNLOCK_MS = 280;
+
+type SwipeAction = "back" | "forward";
+type SwipeDirection = -1 | 0 | 1;
+
+function toSwipeDirection(value: number): SwipeDirection {
+  if (value > 0) return 1;
+  if (value < 0) return -1;
+  return 0;
+}
 
 function BatchArchiveIcon(props: { className?: string }) {
   return (
@@ -479,6 +494,51 @@ function SessionsPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const hasOverlay = settingsOpen || newSessionOpen;
+  const [narrowViewport, setNarrowViewport] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX : false,
+  );
+  const [swipeForwardSessionId, setSwipeForwardSessionId] = useState<string | null>(null);
+  const wheelBackDirectionRef = useRef<SwipeDirection>(0);
+  const wheelGestureRef = useRef<{
+    accumX: number;
+    accumY: number;
+    eventCount: number;
+    lastTs: number;
+    action: SwipeAction | null;
+    ready: boolean;
+    wasReady: boolean;
+    cancelled: boolean;
+    direction: SwipeDirection;
+    releaseTimer: ReturnType<typeof window.setTimeout> | null;
+    releaseArmed: boolean;
+    blocked: boolean;
+    unlockTimer: ReturnType<typeof window.setTimeout> | null;
+  }>({
+    accumX: 0,
+    accumY: 0,
+    eventCount: 0,
+    lastTs: 0,
+    action: null,
+    ready: false,
+    wasReady: false,
+    cancelled: false,
+    direction: 0,
+    releaseTimer: null,
+    releaseArmed: false,
+    blocked: false,
+    unlockTimer: null,
+  });
+  const swipeCapabilityRef = useRef<{
+    canBack: boolean;
+    canForward: boolean;
+    activeSessionId: string | null;
+    forwardSessionId: string | null;
+  }>({
+    canBack: false,
+    canForward: false,
+    activeSessionId: null,
+    forwardSessionId: null,
+  });
 
   // Batch mode state
   const queryClient = useQueryClient();
@@ -586,6 +646,16 @@ function SessionsPage() {
   const activeSessionRef = useRef(activeSessionId);
   activeSessionRef.current = activeSessionId;
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const update = () => {
+      setNarrowViewport(window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   // Close toolbar menu on Escape
   useEffect(() => {
     if (!toolbarMenuOpen) return;
@@ -616,8 +686,19 @@ function SessionsPage() {
     }
   }, [selectedSessionId]);
 
-  const handleSelectSession = useCallback(
-    (sessionId: string) => {
+  useEffect(() => {
+    if (!swipeForwardSessionId) return;
+    const exists = sessions.some((session) => session.id === swipeForwardSessionId);
+    if (!exists) {
+      setSwipeForwardSessionId(null);
+    }
+  }, [sessions, swipeForwardSessionId]);
+
+  const openSession = useCallback(
+    (sessionId: string, options?: { preserveForward?: boolean }) => {
+      if (!options?.preserveForward) {
+        setSwipeForwardSessionId(null);
+      }
       setActiveSessionId(sessionId);
       setMountedSessions((prev) => {
         const filtered = prev.filter((id) => id !== sessionId);
@@ -633,7 +714,17 @@ function SessionsPage() {
     [navigate],
   );
 
+  const handleSelectSession = useCallback(
+    (sessionId: string) => {
+      openSession(sessionId);
+    },
+    [openSession],
+  );
+
   const handleSessionBack = useCallback(() => {
+    if (activeSessionRef.current) {
+      setSwipeForwardSessionId(activeSessionRef.current);
+    }
     setActiveSessionId(null);
     navigate({ to: "/sessions" });
   }, [navigate]);
@@ -641,6 +732,7 @@ function SessionsPage() {
   const handleSessionDeleted = useCallback(
     (deletedId: string) => {
       setMountedSessions((prev) => prev.filter((id) => id !== deletedId));
+      setSwipeForwardSessionId((prev) => (prev === deletedId ? null : prev));
       if (activeSessionRef.current === deletedId) {
         setActiveSessionId(null);
         navigate({ to: "/sessions" });
@@ -836,6 +928,246 @@ function SessionsPage() {
     pathname !== `/sessions/${activeSessionId}/` &&
     pathname.startsWith(`/sessions/${activeSessionId}/`);
 
+  const swipeNavEnabled = narrowViewport;
+  const canSwipeBackToList =
+    swipeNavEnabled &&
+    activeSessionId !== null &&
+    !isSubRoute &&
+    !hasOverlay;
+  const canSwipeForwardToSession =
+    swipeNavEnabled &&
+    isSessionsIndex &&
+    !hasOverlay &&
+    Boolean(swipeForwardSessionId);
+
+  swipeCapabilityRef.current = {
+    canBack: canSwipeBackToList,
+    canForward: canSwipeForwardToSession,
+    activeSessionId,
+    forwardSessionId: swipeForwardSessionId,
+  };
+
+  const clearWheelReleaseTimer = useCallback(() => {
+    const timer = wheelGestureRef.current.releaseTimer;
+    if (timer !== null) {
+      window.clearTimeout(timer);
+      wheelGestureRef.current.releaseTimer = null;
+    }
+    wheelGestureRef.current.releaseArmed = false;
+  }, []);
+
+  const clearWheelUnlockTimer = useCallback(() => {
+    const timer = wheelGestureRef.current.unlockTimer;
+    if (timer !== null) {
+      window.clearTimeout(timer);
+      wheelGestureRef.current.unlockTimer = null;
+    }
+  }, []);
+
+  const scheduleWheelUnlock = useCallback(() => {
+    clearWheelUnlockTimer();
+    wheelGestureRef.current.unlockTimer = window.setTimeout(() => {
+      wheelGestureRef.current.blocked = false;
+      wheelGestureRef.current.unlockTimer = null;
+    }, SWIPE_WHEEL_UNLOCK_MS);
+  }, [clearWheelUnlockTimer]);
+
+  const resetWheelGesture = useCallback((options?: { keepBlock?: boolean }) => {
+    clearWheelReleaseTimer();
+    const blocked = options?.keepBlock ? wheelGestureRef.current.blocked : false;
+    wheelGestureRef.current.accumX = 0;
+    wheelGestureRef.current.accumY = 0;
+    wheelGestureRef.current.eventCount = 0;
+    wheelGestureRef.current.lastTs = 0;
+    wheelGestureRef.current.action = null;
+    wheelGestureRef.current.ready = false;
+    wheelGestureRef.current.wasReady = false;
+    wheelGestureRef.current.cancelled = false;
+    wheelGestureRef.current.direction = 0;
+    wheelGestureRef.current.releaseArmed = false;
+    wheelGestureRef.current.blocked = blocked;
+    if (!blocked) {
+      clearWheelUnlockTimer();
+    }
+  }, [clearWheelReleaseTimer, clearWheelUnlockTimer]);
+
+  const performSwipeAction = useCallback((action: SwipeAction): boolean => {
+    const capability = swipeCapabilityRef.current;
+    if (action === "back") {
+      if (!capability.canBack || !capability.activeSessionId) {
+        return false;
+      }
+      setSwipeForwardSessionId(capability.activeSessionId);
+      setActiveSessionId(null);
+      navigate({ to: "/sessions" });
+      return true;
+    }
+    if (!capability.canForward || !capability.forwardSessionId) {
+      return false;
+    }
+    openSession(capability.forwardSessionId, { preserveForward: true });
+    return true;
+  }, [navigate, openSession]);
+
+  const finalizeWheelGesture = useCallback(() => {
+    const gesture = wheelGestureRef.current;
+    const action = gesture.action;
+    const shouldCommit = action !== null && gesture.ready && !gesture.cancelled;
+    if (shouldCommit) {
+      if (action === "back" && wheelBackDirectionRef.current === 0 && gesture.direction !== 0) {
+        wheelBackDirectionRef.current = gesture.direction;
+      }
+      if (performSwipeAction(action)) {
+        wheelGestureRef.current.blocked = true;
+        scheduleWheelUnlock();
+      }
+    }
+    resetWheelGesture({ keepBlock: true });
+  }, [performSwipeAction, resetWheelGesture, scheduleWheelUnlock]);
+
+  const scheduleWheelRelease = useCallback(() => {
+    if (wheelGestureRef.current.releaseTimer !== null) {
+      return;
+    }
+    wheelGestureRef.current.releaseArmed = true;
+    wheelGestureRef.current.releaseTimer = window.setTimeout(() => {
+      finalizeWheelGesture();
+    }, SWIPE_WHEEL_RELEASE_MS);
+  }, [finalizeWheelGesture]);
+
+  const hasHorizontalScrollableAncestor = useCallback((target: EventTarget | null, deltaX: number) => {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+    let el: Element | null = target;
+    while (el && el !== document.body) {
+      if (el instanceof HTMLElement) {
+        const style = window.getComputedStyle(el);
+        const overflowX = style.overflowX;
+        const canOverflow = overflowX === "auto" || overflowX === "scroll";
+        if (canOverflow && el.scrollWidth > el.clientWidth + 1) {
+          const canScrollLeft = el.scrollLeft > 0;
+          const canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+          if ((deltaX < 0 && canScrollRight) || (deltaX > 0 && canScrollLeft)) {
+            return true;
+          }
+        }
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }, []);
+
+  const handleRootWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    if (!swipeNavEnabled) {
+      return;
+    }
+
+    const gesture = wheelGestureRef.current;
+    if (gesture.blocked) {
+      scheduleWheelUnlock();
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (now - gesture.lastTs > SWIPE_WHEEL_IDLE_RESET_MS) {
+      gesture.accumX = 0;
+      gesture.accumY = 0;
+      gesture.eventCount = 0;
+      gesture.action = null;
+      gesture.ready = false;
+      gesture.wasReady = false;
+      gesture.cancelled = false;
+      gesture.direction = 0;
+    }
+    gesture.lastTs = now;
+
+    const absX = Math.abs(event.deltaX);
+    const absY = Math.abs(event.deltaY);
+    if (absX <= absY * 1.2) {
+      return;
+    }
+
+    if (hasHorizontalScrollableAncestor(event.target, event.deltaX)) {
+      return;
+    }
+
+    const action: SwipeAction | null = canSwipeBackToList
+      ? "back"
+      : (canSwipeForwardToSession ? "forward" : null);
+    if (!action) {
+      resetWheelGesture();
+      return;
+    }
+
+    gesture.accumX += event.deltaX;
+    gesture.accumY += event.deltaY;
+    gesture.eventCount += 1;
+    gesture.action = action;
+    gesture.direction = toSwipeDirection(gesture.accumX);
+
+    const learnedBackDirection = wheelBackDirectionRef.current;
+    const expectedDirection: SwipeDirection = action === "back"
+      ? learnedBackDirection
+      : (learnedBackDirection === 0 ? 0 : (learnedBackDirection === 1 ? -1 : 1));
+    const directionAligned =
+      gesture.direction !== 0 &&
+      (expectedDirection === 0 || gesture.direction === expectedDirection);
+
+    const progressPx = directionAligned ? Math.abs(gesture.accumX) : 0;
+    const horizontalBurst =
+      gesture.eventCount >= 3 &&
+      Math.abs(gesture.accumX) > Math.abs(gesture.accumY) * 1.2;
+    const ready = directionAligned && horizontalBurst && progressPx >= SWIPE_WHEEL_TRIGGER_PX;
+    if (ready) {
+      gesture.wasReady = true;
+    }
+    gesture.cancelled =
+      gesture.wasReady &&
+      (progressPx <= SWIPE_WHEEL_CANCEL_PX || !directionAligned);
+    gesture.ready = ready && !gesture.cancelled;
+
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+    if (gesture.ready) {
+      scheduleWheelRelease();
+    } else if (gesture.releaseArmed) {
+      clearWheelReleaseTimer();
+    }
+  }, [
+    canSwipeBackToList,
+    canSwipeForwardToSession,
+    clearWheelReleaseTimer,
+    hasHorizontalScrollableAncestor,
+    resetWheelGesture,
+    scheduleWheelRelease,
+    scheduleWheelUnlock,
+    swipeNavEnabled,
+  ]);
+
+  useEffect(() => {
+    resetWheelGesture();
+  }, [
+    activeSessionId,
+    canSwipeBackToList,
+    canSwipeForwardToSession,
+    hasOverlay,
+    isSubRoute,
+    isSessionsIndex,
+    resetWheelGesture,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      clearWheelReleaseTimer();
+      clearWheelUnlockTimer();
+    };
+  }, [clearWheelReleaseTimer, clearWheelUnlockTimer]);
+
   const handleDragStart = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -892,7 +1224,7 @@ function SessionsPage() {
     (typeof window !== "undefined" ? window.innerWidth >= 1024 : false);
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0" onWheel={handleRootWheel}>
       {/* Left panel */}
       <div
         className={`${leftPanelVisible} max-lg:!w-full shrink-0 flex-col bg-[var(--app-bg)] lg:border-r lg:border-[var(--app-divider)]`}
