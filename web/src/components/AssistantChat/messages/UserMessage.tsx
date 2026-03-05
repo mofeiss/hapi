@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MessagePrimitive, useAssistantState } from '@assistant-ui/react'
 import { useHappyChatContext } from '@/components/AssistantChat/context'
 import type { HappyChatMessageMetadata } from '@/lib/assistant-runtime'
@@ -8,8 +8,11 @@ import { MessageCopyButton } from '@/components/AssistantChat/messages/MessageCo
 import { MessageEditButton } from '@/components/AssistantChat/messages/MessageEditButton'
 import { MessageResendButton } from '@/components/AssistantChat/messages/MessageResendButton'
 import { CliOutputBlock } from '@/components/CliOutputBlock'
+import { ChevronDownIcon } from '@/components/icons'
 import { useTranslation } from '@/lib/use-translation'
 import { Button } from '@/components/ui/button'
+
+const MAX_COLLAPSED_PROMPT_LINES = 5
 
 function formatTimeGap(ms: number): string | null {
     const normalizedMs = Math.max(0, ms)
@@ -44,6 +47,7 @@ export function HappyUserMessage() {
     const { t } = useTranslation()
     const [isEditing, setIsEditing] = useState(false)
     const [isPreparingEdit, setIsPreparingEdit] = useState(false)
+    const [isPromptExpanded, setIsPromptExpanded] = useState(false)
     const [draft, setDraft] = useState('')
     const role = useAssistantState(({ message }) => message.role)
     const threadMessageId = useAssistantState(({ message }) => message.id)
@@ -107,6 +111,11 @@ export function HappyUserMessage() {
     const onRetry = canRetry ? () => ctx.onRetryMessage!(localId) : undefined
     const messageId = threadMessageId.startsWith('user:') ? threadMessageId.slice(5) : threadMessageId
     const effectiveText = ctx.editedMessageTextById?.[messageId] ?? text
+    const promptLines = effectiveText.split(/\r?\n/)
+    const shouldCollapsePrompt = promptLines.length > MAX_COLLAPSED_PROMPT_LINES
+    const visibleText = shouldCollapsePrompt && !isPromptExpanded
+        ? promptLines.slice(0, MAX_COLLAPSED_PROMPT_LINES).join('\n')
+        : effectiveText
     const isEdited = Boolean(ctx.editedMessageTextById?.[messageId])
     const canEdit = !isCliOutput
         && isLastUserMessage
@@ -120,6 +129,10 @@ export function HappyUserMessage() {
     const containerClass = isEditing
         ? 'ml-auto flex w-full min-w-0 max-w-[92%] flex-col items-end gap-1'
         : 'ml-auto flex w-fit min-w-0 max-w-[92%] flex-col items-end gap-1'
+
+    useEffect(() => {
+        setIsPromptExpanded(false)
+    }, [messageId])
 
     const beginEdit = async () => {
         if (!canEdit || !ctx.onStartEditMessage) return
@@ -227,7 +240,25 @@ export function HappyUserMessage() {
                                 </>
                             ) : (
                                 <>
-                                    {hasText && <span className="whitespace-pre-wrap">{effectiveText}</span>}
+                                    {hasText && (
+                                        <>
+                                            <span className="whitespace-pre-wrap">{visibleText}</span>
+                                            {shouldCollapsePrompt && !isPromptExpanded ? (
+                                                <div className="mt-1 inline-flex items-center gap-1 text-xs text-[var(--app-hint)]">
+                                                    <span className="select-none">...</span>
+                                                    <button
+                                                        type="button"
+                                                        title={t('chat.prompt.expand')}
+                                                        aria-label={t('chat.prompt.expand')}
+                                                        onClick={() => setIsPromptExpanded(true)}
+                                                        className="relative -top-px inline-flex items-center rounded p-0.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
+                                                    >
+                                                        <ChevronDownIcon className="h-5 w-5" />
+                                                    </button>
+                                                </div>
+                                            ) : null}
+                                        </>
+                                    )}
                                     {hasAttachments && <MessageAttachments attachments={attachments} />}
                                 </>
                             )}

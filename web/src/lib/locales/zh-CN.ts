@@ -213,6 +213,7 @@ export default {
   'chat.edited.notice': '编辑后重发已生效 · 已折叠 {n} 条旧消息',
   'chat.edited.show': '显示旧消息',
   'chat.edited.hide': '隐藏旧消息',
+  'chat.prompt.expand': '展开完整提示词',
 
   // Terminal
   'terminal.commandName': '命令',

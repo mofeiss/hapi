@@ -223,6 +223,7 @@ export default {
     "Edited resend active · {n} previous messages collapsed",
   "chat.edited.show": "Show previous",
   "chat.edited.hide": "Hide previous",
+  "chat.prompt.expand": "Expand full prompt",
 
   // Terminal
   "terminal.commandName": "Command",

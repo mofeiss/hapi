@@ -42,6 +42,14 @@ export function PlusCircleIcon(props: IconProps) {
     )
 }
 
+export function ChevronDownIcon(props: IconProps) {
+    return createIcon(
+        <path d="m6 9 6 6 6-6" />,
+        props,
+        2
+    )
+}
+
 export function CopyIcon(props: IconProps) {
     return createIcon(
         <>
