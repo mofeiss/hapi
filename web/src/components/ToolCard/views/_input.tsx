@@ -7,6 +7,7 @@ import { DiffView } from '@/components/DiffView'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
+import { extractSkillReadData } from '@/lib/skillRead'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
 import { resolveDisplayPath } from '@/utils/path'
 
@@ -219,8 +220,14 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
             pushRow(rows, 'uri', getInputScalar(inputObj, ['uri']))
             break
         }
-        case 'Skill': {
-            pushRow(rows, 'skill', getInputScalar(inputObj, ['skill', 'name', 'skill_name']))
+        case 'Skill':
+        case 'SkillRead': {
+            const skillReadData = extractSkillReadData(inputObj, result)
+            const skillName = skillReadData?.skillName ?? getInputScalar(inputObj, ['skill', 'name', 'skill_name'])
+            pushRow(rows, 'skill', skillName)
+            if (skillReadData?.path) {
+                pushRow(rows, 'path', resolveDisplayPath(skillReadData.path, metadata))
+            }
             const query = getInputScalar(inputObj, ['query', 'prompt', 'question'])
             if (query) {
                 pushRow(rows, 'query', truncate(query, 160))

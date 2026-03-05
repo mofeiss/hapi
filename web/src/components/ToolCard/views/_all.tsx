@@ -10,7 +10,6 @@ import { RequestUserInputView } from '@/components/ToolCard/views/RequestUserInp
 import { ExitPlanModeView } from '@/components/ToolCard/views/ExitPlanModeView'
 import { MultiEditFullView, MultiEditView } from '@/components/ToolCard/views/MultiEditView'
 import { WriteView } from '@/components/ToolCard/views/WriteView'
-import { SkillReadView } from '@/components/ToolCard/views/SkillReadView'
 import { StepsView } from '@/components/ToolCard/views/StepsView'
 
 export type ToolViewProps = {
@@ -30,7 +29,6 @@ export const toolViewRegistry: Record<string, ToolViewComponent> = {
     Write: WriteView,
     CodexDiff: CodexDiffCompactView,
     AskUserQuestion: AskUserQuestionView,
-    SkillRead: SkillReadView,
     Steps: StepsView,
     ExitPlanMode: ExitPlanModeView,
     ask_user_question: AskUserQuestionView,
@@ -45,7 +43,6 @@ export const toolFullViewRegistry: Record<string, ToolViewComponent> = {
     CodexDiff: CodexDiffFullView,
     CodexPatch: CodexPatchView,
     AskUserQuestion: AskUserQuestionView,
-    SkillRead: SkillReadView,
     Steps: StepsView,
     ExitPlanMode: ExitPlanModeView,
     ask_user_question: AskUserQuestionView,

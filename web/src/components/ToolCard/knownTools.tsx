@@ -202,7 +202,8 @@ type ToolOpts = {
 
 const CORE_TOOL_NAME_ALIASES: Record<string, string> = {
     ask_user_question: 'AskUserQuestion',
-    exit_plan_mode: 'ExitPlanMode'
+    exit_plan_mode: 'ExitPlanMode',
+    SkillRead: 'Skill'
 }
 
 const CORE_TOOL_NAMES = new Set<string>([
@@ -216,6 +217,7 @@ const CORE_TOOL_NAMES = new Set<string>([
     'TodoWrite',
     'AskUserQuestion',
     'Skill',
+    'SkillRead',
     'WebFetch',
     'NotebookEdit',
     'TaskOutput',
@@ -329,6 +331,7 @@ function getCoreToolNarrative(opts: ToolOpts): string | null {
         }
         case 'Skill': {
             const name = getInputStringAny(opts.input, ['name', 'skill', 'skill_name'])
+                ?? extractSkillReadData(opts.input, opts.result)?.skillName
             if (name) return zh ? `调用技能 ${name}` : `invoke skill ${name}`
             return zh ? '调用技能' : 'invoke skill'
         }
@@ -724,6 +727,11 @@ export const knownTools: Record<string, {
             }
             return question.length > 0 ? truncate(question, 120) : null
         },
+        minimal: true
+    },
+    Skill: {
+        icon: () => <PuzzleIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => getInputStringAny(opts.input, ['name', 'skill', 'skill_name']) ?? 'Skill',
         minimal: true
     },
     SkillRead: {

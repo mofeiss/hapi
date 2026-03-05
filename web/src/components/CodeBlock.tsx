@@ -2,16 +2,19 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { useShikiHighlighter } from '@/lib/shiki'
 import { CopyIcon, CheckIcon } from '@/components/icons'
 import { useTranslation } from '@/lib/use-translation'
+import { cn } from '@/lib/utils'
 
 export function CodeBlock(props: {
     code: string
     language?: string
     showCopyButton?: boolean
     showLineNumbers?: boolean
+    contentRightPaddingClassName?: string
 }) {
     const { t } = useTranslation()
     const showCopyButton = props.showCopyButton ?? true
     const showLineNumbers = props.showLineNumbers ?? false
+    const contentRightPaddingClassName = props.contentRightPaddingClassName ?? 'pr-8'
     const { copied, copy } = useCopyToClipboard()
     const highlighted = useShikiHighlighter(props.code, props.language)
     const normalizedCode = props.code.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
@@ -41,7 +44,7 @@ export function CodeBlock(props: {
                     style={{ direction: 'ltr' }}
                     className="min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden rounded-md bg-[var(--app-code-bg)]"
                 >
-                    <div className="min-w-0 w-full pr-8 text-xs font-mono leading-5" style={{ direction: 'ltr' }}>
+                    <div className={cn('min-w-0 w-full text-xs font-mono leading-5', contentRightPaddingClassName)} style={{ direction: 'ltr' }}>
                         {displayLines.map((line, index) => (
                             <div key={index} className="flex items-start" style={{ direction: 'ltr' }}>
                                 <span className="w-7 shrink-0 select-none border-r border-[var(--app-border)] bg-[var(--app-subtle-bg)] pl-0.5 pr-1 text-right tabular-nums text-[var(--app-hint)] opacity-55">
@@ -59,7 +62,7 @@ export function CodeBlock(props: {
                     data-codeblock-scroll="true"
                     className="min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden rounded-md bg-[var(--app-code-bg)]"
                 >
-                    <pre className="shiki m-0 w-max min-w-full p-2 pr-8 text-xs font-mono">
+                    <pre className={cn('shiki m-0 w-max min-w-full p-2 text-xs font-mono', contentRightPaddingClassName)}>
                         <code className="block">{highlighted ?? props.code}</code>
                     </pre>
                 </div>

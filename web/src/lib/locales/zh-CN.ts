@@ -255,6 +255,8 @@ export default {
   'tool.skillContent': '查看技能内容',
   'tool.skillContentFor': '技能内容：{name}',
   'tool.skillContentUnavailable': '技能内容不可用',
+  'tool.viewMarkdown': '渲染 Markdown',
+  'tool.viewSource': '查看源码',
   'tool.submit': '提交',
   'tool.submitting': '提交中…',
   'tool.prev': '← 上一个',

@@ -1,8 +1,16 @@
+import { useEffect, useState } from 'react'
 import type { ToolViewComponent, ToolViewProps } from '@/components/ToolCard/views/_all'
 import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
+import { CopyIcon, CheckIcon } from '@/components/icons'
+import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
+import { EyeIcon, TerminalIcon } from '@/components/ToolCard/icons'
 import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { extractSkillReadData } from '@/lib/skillRead'
+import { useTranslation } from '@/lib/use-translation'
+import { cn } from '@/lib/utils'
 import { basename, resolveDisplayPath } from '@/utils/path'
 
 function parseToolUseError(message: string): { isToolUseError: boolean; errorMessage: string | null } {
@@ -182,6 +190,85 @@ function placeholderForState(state: ToolViewProps['block']['tool']['state']): st
 function RawJsonDevOnly(props: { value: unknown }) {
     void props
     return null
+}
+
+function countVisibleLines(text: string): number {
+    const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    const lines = normalized.split('\n')
+    while (lines.length > 1 && lines[lines.length - 1]?.trim().length === 0) {
+        lines.pop()
+    }
+    return lines.length
+}
+
+function hasToolUseErrorResult(result: unknown): boolean {
+    if (typeof result === 'string') {
+        return parseToolUseError(result).isToolUseError
+    }
+    if (!isObject(result)) return false
+
+    const candidates: unknown[] = [
+        result.content,
+        result.text,
+        result.output,
+        result.error,
+        result.message
+    ]
+
+    for (const candidate of candidates) {
+        if (typeof candidate === 'string' && parseToolUseError(candidate).isToolUseError) {
+            return true
+        }
+    }
+
+    return false
+}
+
+type SkillViewMode = 'source' | 'markdown'
+
+function SkillResultActions(props: {
+    copyText: string
+    mode: SkillViewMode
+    canToggleMode: boolean
+    onToggleMode?: () => void
+    centered: boolean
+}) {
+    const { t } = useTranslation()
+    const { copied, copy } = useCopyToClipboard()
+
+    return (
+        <div
+            className={cn(
+                'absolute right-1.5 z-10 flex items-center gap-0.5',
+                props.centered ? 'top-1/2 -translate-y-1/2' : 'top-1.5'
+            )}
+        >
+            {props.canToggleMode ? (
+                <button
+                    type="button"
+                    onClick={props.onToggleMode}
+                    className="rounded p-1 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)] transition-colors"
+                    title={props.mode === 'source' ? t('tool.viewMarkdown') : t('tool.viewSource')}
+                    aria-label={props.mode === 'source' ? t('tool.viewMarkdown') : t('tool.viewSource')}
+                >
+                    {props.mode === 'source' ? (
+                        <EyeIcon className="h-3.5 w-3.5" />
+                    ) : (
+                        <TerminalIcon className="h-3.5 w-3.5" />
+                    )}
+                </button>
+            ) : null}
+            <button
+                type="button"
+                onClick={() => copy(props.copyText)}
+                className="rounded p-1 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)] transition-colors"
+                title={t('code.copy')}
+                aria-label={t('code.copy')}
+            >
+                {copied ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
+            </button>
+        </div>
+    )
 }
 
 function extractStdoutStderr(result: unknown): { stdout: string | null; stderr: string | null } | null {
@@ -472,6 +559,128 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
     )
 }
 
+const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
+    const result = props.block.tool.result
+    const [skillViewMode, setSkillViewMode] = useState<SkillViewMode>('source')
+    const skillData = result === undefined || result === null
+        ? null
+        : extractSkillReadData(props.block.tool.input, result)
+    const skillContent = typeof skillData?.content === 'string' ? sanitizeReadResultText(skillData.content) : null
+    const canToggleSkillView = Boolean(
+        skillContent
+        && skillContent.trim().length > 0
+        && props.block.tool.state !== 'error'
+        && !hasToolUseErrorResult(result)
+    )
+
+    useEffect(() => {
+        setSkillViewMode('source')
+    }, [props.block.id])
+
+    useEffect(() => {
+        if (!canToggleSkillView && skillViewMode !== 'source') {
+            setSkillViewMode('source')
+        }
+    }, [canToggleSkillView, skillViewMode])
+
+    if (result === undefined || result === null) {
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
+    }
+
+    if (skillContent && skillContent.trim().length > 0) {
+        const toggleMode = () => {
+            setSkillViewMode((prev) => (prev === 'source' ? 'markdown' : 'source'))
+        }
+        if (canToggleSkillView && skillViewMode === 'markdown') {
+            return (
+                <>
+                    <div className="relative min-w-0 max-w-full">
+                        <SkillResultActions
+                            copyText={skillContent}
+                            mode={skillViewMode}
+                            canToggleMode={canToggleSkillView}
+                            onToggleMode={toggleMode}
+                            centered={false}
+                        />
+                        <div className="max-h-[48vh] overflow-auto rounded-md bg-[var(--app-bg)] p-3 pr-12">
+                            <MarkdownRenderer content={skillContent} />
+                        </div>
+                    </div>
+                    <RawJsonDevOnly value={result} />
+                </>
+            )
+        }
+
+        const centeredActions = !canToggleSkillView && countVisibleLines(skillContent) <= 1
+
+        return (
+            <>
+                <div className="relative min-w-0 max-w-full">
+                    <SkillResultActions
+                        copyText={skillContent}
+                        mode={skillViewMode}
+                        canToggleMode={canToggleSkillView}
+                        onToggleMode={toggleMode}
+                        centered={centeredActions}
+                    />
+                    <CodeBlock
+                        code={skillContent}
+                        language="markdown"
+                        showLineNumbers
+                        showCopyButton={false}
+                        contentRightPaddingClassName={canToggleSkillView ? 'pr-14' : 'pr-8'}
+                    />
+                </div>
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    const text = extractTextFromResult(result)
+    if (text) {
+        const sanitizedText = sanitizeReadResultText(text)
+        if (sanitizedText.trim().length > 0) {
+            const centeredActions = countVisibleLines(sanitizedText) <= 1
+            return (
+                <>
+                    <div className="relative min-w-0 max-w-full">
+                        <SkillResultActions
+                            copyText={sanitizedText}
+                            mode="source"
+                            canToggleMode={false}
+                            centered={centeredActions}
+                        />
+                        <CodeBlock
+                            code={sanitizedText}
+                            language="text"
+                            showLineNumbers
+                            showCopyButton={false}
+                            contentRightPaddingClassName="pr-8"
+                        />
+                    </div>
+                    <RawJsonDevOnly value={result} />
+                </>
+            )
+        }
+    }
+
+    if (typeof result !== 'string') {
+        return (
+            <>
+                <CodeBlock code={safeStringify(result)} language="json" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    return (
+        <>
+            <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+            <RawJsonDevOnly value={result} />
+        </>
+    )
+}
+
 const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
     const { state, result } = props.block.tool
 
@@ -723,7 +932,8 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     MultiEdit: MutationResultView,
     Write: MutationResultView,
     Agent: RawResultView,
-    Skill: RawResultView,
+    Skill: SkillResultView,
+    SkillRead: SkillResultView,
     WebFetch: WebFetchResultView,
     WebSearch: MarkdownResultView,
     NotebookRead: ReadResultView,

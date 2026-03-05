@@ -266,6 +266,8 @@ export default {
   "tool.skillContent": "View skill content",
   "tool.skillContentFor": "Skill content: {name}",
   "tool.skillContentUnavailable": "Skill content unavailable",
+  "tool.viewMarkdown": "Render Markdown",
+  "tool.viewSource": "View source",
   "tool.submit": "Submit",
   "tool.submitting": "Submitting…",
   "tool.prev": "← Prev",
