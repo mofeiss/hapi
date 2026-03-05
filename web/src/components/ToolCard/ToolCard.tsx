@@ -362,6 +362,9 @@ function ToolCardInner(props: ToolCardProps) {
                     <div className="shrink-0 flex h-3.5 w-3.5 items-center justify-center text-[var(--app-hint)] leading-none">
                         {presentation.icon}
                     </div>
+                    <span className={cn('shrink-0', stateColor)}>
+                        <StatusIcon state={props.block.tool.state} />
+                    </span>
                     <CardTitle className="min-w-0 text-sm font-medium leading-tight break-words">
                         {toolTitle}
                     </CardTitle>
@@ -374,9 +377,6 @@ function ToolCardInner(props: ToolCardProps) {
                             <ExpandIcon expanded={expanded} />
                         </span>
                     ) : null}
-                    <span className={stateColor}>
-                        <StatusIcon state={props.block.tool.state} />
-                    </span>
                 </div>
             </div>
 
