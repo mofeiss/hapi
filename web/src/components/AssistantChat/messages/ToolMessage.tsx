@@ -7,6 +7,7 @@ import { CodeBlock } from '@/components/CodeBlock'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { LazyRainbowText } from '@/components/LazyRainbowText'
 import { MessageStatusIndicator } from '@/components/AssistantChat/messages/MessageStatusIndicator'
+import { ApiErrorNotice, isApiErrorText } from '@/components/AssistantChat/messages/ApiErrorNotice'
 import { ToolCard } from '@/components/ToolCard/ToolCard'
 import { getStandardToolTitle } from '@/components/ToolCard/knownTools'
 import { useHappyChatContext } from '@/components/AssistantChat/context'
@@ -118,6 +119,14 @@ function HappyNestedBlockList(props: {
                 }
 
                 if (block.kind === 'agent-text') {
+                    const text = block.text.trim()
+                    if (isApiErrorText(text)) {
+                        return (
+                            <div key={`agent:${block.id}`} className="px-1">
+                                <ApiErrorNotice text={text} />
+                            </div>
+                        )
+                    }
                     return (
                         <div key={`agent:${block.id}`} className="px-1">
                             <MarkdownRenderer content={block.text} />
