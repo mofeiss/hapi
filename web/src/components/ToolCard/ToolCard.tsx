@@ -2,7 +2,7 @@ import type { ToolCallBlock } from '@/chat/types'
 import type { ApiClient } from '@/api/client'
 import type { SessionMetadataSummary } from '@/types/api'
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeBlock } from '@/components/CodeBlock'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
@@ -358,35 +358,37 @@ function ToolCardInner(props: ToolCardProps) {
     }
 
     const header = (
-        <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 flex items-center gap-2">
-                    <div className="shrink-0 flex h-3.5 w-3.5 items-center justify-center text-[var(--app-hint)] leading-none">
-                        {presentation.icon}
-                    </div>
-                    <span className={cn('shrink-0', stateColor)}>
-                        <StatusIcon state={props.block.tool.state} />
-                    </span>
-                    <CardTitle className="min-w-0 text-sm font-medium leading-tight break-words">
+        <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex items-center gap-2">
+                <div className="shrink-0 flex h-3.5 w-3.5 items-center justify-center text-[var(--app-hint)] leading-none">
+                    {presentation.icon}
+                </div>
+                <span className={cn('shrink-0', stateColor)}>
+                    <StatusIcon state={props.block.tool.state} />
+                </span>
+                <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+                    <CardTitle className="shrink-0 text-sm font-medium leading-tight">
                         {toolTitle}
                     </CardTitle>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                    <ElapsedView from={runningFrom} active={props.block.tool.state === 'running'} />
-                    {canExpand ? (
-                        <span className="text-[var(--app-hint)]">
-                            <ExpandIcon expanded={expanded} />
+                    {subtitle ? (
+                        <span
+                            className="min-w-0 truncate font-mono text-xs leading-tight text-[var(--app-hint)] opacity-80"
+                            title={subtitle}
+                        >
+                            {truncate(subtitle, 160)}
                         </span>
                     ) : null}
                 </div>
             </div>
 
-            {subtitle ? (
-                <CardDescription className="font-mono text-xs break-all opacity-80">
-                    {truncate(subtitle, 160)}
-                </CardDescription>
-            ) : null}
+            <div className="flex items-center gap-2 shrink-0">
+                <ElapsedView from={runningFrom} active={props.block.tool.state === 'running'} />
+                {canExpand ? (
+                    <span className="text-[var(--app-hint)]">
+                        <ExpandIcon expanded={expanded} />
+                    </span>
+                ) : null}
+            </div>
         </div>
     )
 
@@ -442,7 +444,7 @@ function ToolCardInner(props: ToolCardProps) {
 
     return (
         <Card ref={cardRef} className="overflow-hidden shadow-sm">
-            <CardHeader className="p-3 space-y-0">
+            <CardHeader className="px-3 pt-3 pb-1.5 space-y-0">
                 {canExpand ? (
                     <button
                         type="button"
@@ -465,18 +467,18 @@ function ToolCardInner(props: ToolCardProps) {
             {hasBody ? (
                 <CardContent className="tool-io-scope px-3 pb-3 pt-0">
                     {taskSummary ? (
-                        <div className="mt-2">
+                        <div className="mt-1">
                             {taskSummary}
                         </div>
                     ) : null}
 
                     {isResultOnlyTool ? (
-                        <div className="mt-3">
+                        <div className="mt-1.5">
                             <ResultToolView block={props.block} metadata={props.metadata} />
                         </div>
                     ) : showInline ? (
                         CompactToolView ? (
-                            <div className="mt-3">
+                            <div className="mt-1.5">
                                 <CompactToolView
                                     block={props.block}
                                     metadata={props.metadata}
@@ -487,7 +489,7 @@ function ToolCardInner(props: ToolCardProps) {
                                 />
                             </div>
                         ) : (
-                            <div className="mt-3 flex flex-col gap-3">
+                            <div className="mt-1.5 flex flex-col gap-3">
                                 <div>
                                     <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
                                     {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
@@ -512,7 +514,7 @@ function ToolCardInner(props: ToolCardProps) {
                             </div>
                         )
                     ) : toolName !== 'Task' ? (
-                        <div className="mt-3 flex flex-col gap-3">
+                        <div className="mt-1.5 flex flex-col gap-3">
                             {useAskUserQuestionPendingLayout ? (
                                 <AskUserQuestionFooter
                                     api={props.api}

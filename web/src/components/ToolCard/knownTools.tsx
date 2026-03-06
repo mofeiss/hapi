@@ -781,6 +781,7 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
     if (known) {
         const minimal = typeof known.minimal === 'function' ? known.minimal(toolOpts) : (known.minimal ?? false)
         const computedTitle = known.title(toolOpts)
+        const preferComputedTitle = toolOpts.toolName === 'Steps'
         let subtitle = known.subtitle ? known.subtitle(toolOpts) : null
         if (coreRichTitle) {
             subtitle = null
@@ -794,8 +795,8 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
         }
         return {
             icon: known.icon(toolOpts),
-            title: coreRichTitle ?? standardTitle ?? computedTitle,
-            subtitle,
+            title: preferComputedTitle ? computedTitle : (coreRichTitle ?? standardTitle ?? computedTitle),
+            subtitle: preferComputedTitle ? null : subtitle,
             minimal
         }
     }
