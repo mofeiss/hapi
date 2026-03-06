@@ -1,8 +1,13 @@
 import { useState, useEffect, type FC, type PropsWithChildren } from 'react'
-import { useMessage } from '@assistant-ui/react'
+import { useMessage, type ReasoningGroupProps } from '@assistant-ui/react'
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown'
 import { cn } from '@/lib/utils'
 import { defaultComponents, MARKDOWN_PLUGINS } from '@/components/assistant-ui/markdown-text'
+
+type ReasoningMessagePart = {
+    type: 'reasoning'
+    text: string
+}
 
 function ChevronIcon(props: { className?: string; open?: boolean }) {
     return (
@@ -27,7 +32,7 @@ function ChevronIcon(props: { className?: string; open?: boolean }) {
     )
 }
 
-function BrainIcon(props: { className?: string }) {
+export function BrainIcon(props: { className?: string }) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -60,6 +65,14 @@ function ShimmerDot() {
     )
 }
 
+function summarizeReasoning(text: string): string {
+    return text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .join(' ')
+}
+
 /**
  * Renders individual reasoning message part content with markdown support.
  */
@@ -68,7 +81,7 @@ export const Reasoning: FC = () => {
         <MarkdownTextPrimitive
             remarkPlugins={MARKDOWN_PLUGINS}
             components={defaultComponents}
-            className={cn('aui-reasoning-content min-w-0 max-w-full break-words text-sm text-[var(--app-hint)]')}
+            className={cn('aui-reasoning-content min-w-0 max-w-full break-words text-sm text-[var(--app-hint)] opacity-80')}
         />
     )
 }
@@ -77,11 +90,17 @@ export const Reasoning: FC = () => {
  * Wraps consecutive reasoning parts in a collapsible container.
  * Shows shimmer effect while reasoning is streaming.
  */
-export const ReasoningGroup: FC<PropsWithChildren> = ({ children }) => {
+export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ children, startIndex, endIndex }) => {
     const [isOpen, setIsOpen] = useState(false)
 
     // Check if reasoning is still streaming
     const message = useMessage()
+    const reasoningText = message.content
+        .slice(startIndex, endIndex + 1)
+        .filter((part): part is ReasoningMessagePart => part.type === 'reasoning' && typeof (part as ReasoningMessagePart).text === 'string')
+        .map((part) => part.text)
+        .join('\n')
+    const preview = summarizeReasoning(reasoningText)
     const isStreaming = message.status?.type === 'running'
         && message.content.length > 0
         && message.content[message.content.length - 1]?.type === 'reasoning'
@@ -99,16 +118,26 @@ export const ReasoningGroup: FC<PropsWithChildren> = ({ children }) => {
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    'flex items-center gap-1.5 text-xs font-medium',
-                    'text-[var(--app-hint)] hover:text-[var(--app-fg)]',
+                    'flex w-full min-w-0 items-center gap-1.5 text-left',
                     'transition-colors cursor-pointer select-none'
                 )}
             >
-                <BrainIcon />
-                <ChevronIcon open={isOpen} />
-                <span>Reasoning</span>
+                <span className="shrink-0 text-[var(--app-hint)]">
+                    <BrainIcon className="h-3 w-3" />
+                </span>
+                <span className="shrink-0 text-[var(--app-hint)]">
+                    <ChevronIcon open={isOpen} />
+                </span>
+                <span className="min-w-0 flex-1 truncate whitespace-nowrap">
+                    <span className="text-sm text-[var(--app-hint)] opacity-90">Reasoning</span>
+                    {preview ? (
+                        <span className="ml-2 font-mono text-xs text-[var(--app-hint)] opacity-60">
+                            {preview}
+                        </span>
+                    ) : null}
+                </span>
                 {isStreaming && (
-                    <span className="flex items-center gap-1 ml-1 text-[var(--app-hint)]">
+                    <span className="ml-1 flex items-center gap-1 text-[var(--app-hint)]">
                         <ShimmerDot />
                     </span>
                 )}
@@ -120,7 +149,7 @@ export const ReasoningGroup: FC<PropsWithChildren> = ({ children }) => {
                     isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
                 )}
             >
-                <div className="pl-4 pt-2 border-l-2 border-[var(--app-border)] ml-0.5">
+                <div className="ml-0.5 border-l-2 border-[var(--app-border)] pl-4 pt-2">
                     {children}
                 </div>
             </div>

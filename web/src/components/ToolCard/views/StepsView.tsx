@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { isObject } from '@hapi/protocol'
 import type { ApiClient } from '@/api/client'
-import type { ToolCallBlock } from '@/chat/types'
+import type { AgentReasoningBlock, ChatBlock, ToolCallBlock } from '@/chat/types'
 import type { SessionMetadataSummary } from '@/types/api'
 import { CodeBlock } from '@/components/CodeBlock'
+import { BrainIcon } from '@/components/assistant-ui/reasoning'
+import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { getToolFullViewComponent, type ToolViewComponent } from '@/components/ToolCard/views/_all'
 import { renderToolInputContent } from '@/components/ToolCard/views/_input'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
@@ -228,6 +230,118 @@ function StepNodeChevron(props: { open: boolean }) {
             <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     )
+}
+
+function useAnchoredStepToggle() {
+    const nodeRef = useRef<HTMLDivElement | null>(null)
+
+    const toggleWithAnchor = (next: boolean, setOpen: (value: boolean) => void) => {
+        const nodeEl = nodeRef.current
+        const viewport = nodeEl?.closest('[data-chat-viewport="true"]') as HTMLElement | null
+        const wasAtBottom = viewport
+            ? (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) <= 2
+            : false
+        const anchorTopBefore = nodeEl?.getBoundingClientRect().top ?? null
+
+        setOpen(next)
+
+        if (wasAtBottom && nodeEl && viewport) {
+            viewport?.dispatchEvent(new CustomEvent('hapi:disable-auto-scroll'))
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    if (!nodeRef.current) return
+                    if (!viewport.isConnected) return
+                    if (anchorTopBefore === null) return
+                    const anchorTopAfter = nodeRef.current.getBoundingClientRect().top
+                    const delta = anchorTopAfter - anchorTopBefore
+                    if (Math.abs(delta) > 0.5) {
+                        viewport.scrollTop += delta
+                    }
+                })
+            })
+        }
+    }
+
+    return { nodeRef, toggleWithAnchor }
+}
+
+function summarizeReasoning(text: string): string {
+    return text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .join(' ')
+}
+
+function StepReasoningNode(props: { block: AgentReasoningBlock }) {
+    const [open, setOpen] = useState(false)
+    const { nodeRef, toggleWithAnchor } = useAnchoredStepToggle()
+    const label = 'Reasoning'
+    const preview = summarizeReasoning(props.block.text)
+
+    const toggleOpen = () => {
+        toggleWithAnchor(!open, setOpen)
+    }
+
+    return (
+        <div ref={nodeRef} className="space-y-0.5">
+            <button
+                type="button"
+                className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-[var(--app-subtle-bg)]"
+                onClick={toggleOpen}
+            >
+                <span className="shrink-0 text-[var(--app-hint)]">
+                    <StepNodeChevron open={open} />
+                </span>
+                <span className="shrink-0 text-[var(--app-hint)]">
+                    <BrainIcon className="h-3 w-3" />
+                </span>
+                <span className="min-w-0 flex-1 truncate whitespace-nowrap">
+                    <span className="text-sm text-[var(--app-hint)] opacity-90">{label}</span>
+                    {preview ? (
+                        <span className="ml-2 font-mono text-xs text-[var(--app-hint)] opacity-60">
+                            {preview}
+                        </span>
+                    ) : null}
+                </span>
+            </button>
+
+            {open ? (
+                <div className="ml-5 border-l border-[var(--app-border)] pl-2.5">
+                    <div className="text-[var(--app-hint)] opacity-80 [&_.aui-md]:text-sm [&_.aui-md]:leading-5 [&_.aui-md_p]:my-0">
+                        <MarkdownRenderer content={props.block.text} />
+                    </div>
+                </div>
+            ) : null}
+        </div>
+    )
+}
+
+function renderStepAuxiliaryBlock(child: ChatBlock): ReactNode | null {
+    if (child.kind === 'agent-reasoning') {
+        return (
+            <div className="text-xs text-[var(--app-hint)]">
+                {child.text}
+            </div>
+        )
+    }
+    if (child.kind === 'agent-text') {
+        return (
+            <div className="text-xs text-[var(--app-hint)]">
+                {child.text}
+            </div>
+        )
+    }
+    if (child.kind === 'agent-event') {
+        return (
+            <div className="text-xs text-[var(--app-hint)]">
+                {isObject(child.event) && typeof child.event.type === 'string'
+                    ? child.event.type
+                    : 'event'}
+            </div>
+        )
+    }
+    return null
 }
 
 function StepNodeDetails(props: {
@@ -491,7 +605,7 @@ function StepNode(props: {
     const shouldAutoOpen = hasPendingPermissionInSubtree(props.block)
         || hasBlockIdInSubtree(props.block, props.activeAskUserQuestionPendingId)
     const [open, setOpen] = useState(shouldAutoOpen)
-    const nodeRef = useRef<HTMLDivElement | null>(null)
+    const { nodeRef, toggleWithAnchor } = useAnchoredStepToggle()
     const prevShouldAutoOpenRef = useRef(shouldAutoOpen)
     const presentation = useMemo(() => getToolPresentation({
         toolName: props.block.tool.name,
@@ -516,31 +630,7 @@ function StepNode(props: {
     if (shouldHideQueuedAskUserQuestionPending) return null
 
     const toggleOpen = () => {
-        const next = !open
-        const nodeEl = nodeRef.current
-        const viewport = nodeEl?.closest('[data-chat-viewport="true"]') as HTMLElement | null
-        const wasAtBottom = viewport
-            ? (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) <= 2
-            : false
-        const anchorTopBefore = nodeEl?.getBoundingClientRect().top ?? null
-
-        setOpen(next)
-
-        if (wasAtBottom && nodeEl && viewport) {
-            viewport?.dispatchEvent(new CustomEvent('hapi:disable-auto-scroll'))
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    if (!nodeRef.current) return
-                    if (!viewport.isConnected) return
-                    if (anchorTopBefore === null) return
-                    const anchorTopAfter = nodeRef.current.getBoundingClientRect().top
-                    const delta = anchorTopAfter - anchorTopBefore
-                    if (Math.abs(delta) > 0.5) {
-                        viewport.scrollTop += delta
-                    }
-                })
-            })
-        }
+        toggleWithAnchor(!open, setOpen)
     }
 
     return (
@@ -663,23 +753,8 @@ function StepNode(props: {
                     })()}
 
                     {otherChildren.map((child) => {
-                        if (child.kind === 'agent-text') {
-                            return (
-                                <div key={child.id} className="text-xs text-[var(--app-hint)]">
-                                    {child.text}
-                                </div>
-                            )
-                        }
-                        if (child.kind === 'agent-event') {
-                            return (
-                                <div key={child.id} className="text-xs text-[var(--app-hint)]">
-                                    {isObject(child.event) && typeof child.event.type === 'string'
-                                        ? child.event.type
-                                        : 'event'}
-                                </div>
-                            )
-                        }
-                        return null
+                        const content = renderStepAuxiliaryBlock(child)
+                        return content ? <div key={child.id}>{content}</div> : null
                     })}
 
                     {childTools.length > 0 ? (
@@ -705,10 +780,14 @@ function StepNode(props: {
 }
 
 export const StepsView: ToolViewComponent = (props) => {
-    const children = props.block.children.filter((child): child is ToolCallBlock => child.kind === 'tool-call')
-    const askUserQuestionPendingCandidates = useMemo(
-        () => collectAskUserQuestionPendingCandidates(children),
+    const children = props.block.children
+    const toolChildren = useMemo(
+        () => children.filter((child): child is ToolCallBlock => child.kind === 'tool-call'),
         [children]
+    )
+    const askUserQuestionPendingCandidates = useMemo(
+        () => collectAskUserQuestionPendingCandidates(toolChildren),
+        [toolChildren]
     )
     const [activeAskUserQuestionPendingId, setActiveAskUserQuestionPendingId] = useState<string | null>(
         pickActiveAskUserQuestionPendingId(null, askUserQuestionPendingCandidates)
@@ -721,63 +800,38 @@ export const StepsView: ToolViewComponent = (props) => {
     }, [askUserQuestionPendingCandidates])
 
     const visibleChildren = useMemo(
-        () => children.filter((child) => !shouldHideQueuedAskUserQuestionPendingNode(child, activeAskUserQuestionPendingId)),
+        () => children.filter((child) => child.kind !== 'tool-call' || !shouldHideQueuedAskUserQuestionPendingNode(child, activeAskUserQuestionPendingId)),
         [children, activeAskUserQuestionPendingId]
     )
-    const visibleChildIds = useMemo(
-        () => visibleChildren.map((child) => child.id),
-        [visibleChildren]
-    )
-    const [visibleOrderIds, setVisibleOrderIds] = useState<string[]>(visibleChildIds)
 
-    useEffect(() => {
-        setVisibleOrderIds((previous) => {
-            const visibleSet = new Set(visibleChildIds)
-            const next = previous.filter((id) => visibleSet.has(id))
-            for (const id of visibleChildIds) {
-                if (!next.includes(id)) {
-                    next.push(id)
-                }
-            }
-
-            if (next.length === previous.length && next.every((id, idx) => previous[idx] === id)) {
-                return previous
-            }
-            return next
-        })
-    }, [visibleChildIds])
-
-    const orderedVisibleChildren = useMemo(() => {
-        if (visibleChildren.length <= 1) return visibleChildren
-        const rankById = new Map<string, number>()
-        visibleOrderIds.forEach((id, idx) => {
-            rankById.set(id, idx)
-        })
-        return [...visibleChildren].sort((a, b) => {
-            const rankA = rankById.get(a.id) ?? Number.MAX_SAFE_INTEGER
-            const rankB = rankById.get(b.id) ?? Number.MAX_SAFE_INTEGER
-            return rankA - rankB
-        })
-    }, [visibleChildren, visibleOrderIds])
-
-    if (children.length === 0) {
+    if (toolChildren.length === 0) {
         return null
     }
 
     return (
         <div className="space-y-0.5">
-            {orderedVisibleChildren.map((child) => (
-                <StepNode
-                    key={child.id}
-                    block={child}
-                    metadata={props.metadata}
-                    api={props.api}
-                    sessionId={props.sessionId}
-                    disabled={props.disabled}
-                    onDone={props.onDone}
-                    activeAskUserQuestionPendingId={activeAskUserQuestionPendingId}
-                />
-            ))}
+            {visibleChildren.map((child) => {
+                if (child.kind === 'tool-call') {
+                    return (
+                        <StepNode
+                            key={child.id}
+                            block={child}
+                            metadata={props.metadata}
+                            api={props.api}
+                            sessionId={props.sessionId}
+                            disabled={props.disabled}
+                            onDone={props.onDone}
+                            activeAskUserQuestionPendingId={activeAskUserQuestionPendingId}
+                        />
+                    )
+                }
+                if (child.kind === 'agent-reasoning') {
+                    return <StepReasoningNode key={child.id} block={child} />
+                }
+
+                const content = renderStepAuxiliaryBlock(child)
+                return content ? <div key={child.id}>{content}</div> : null
+            })}
         </div>
     )
 }

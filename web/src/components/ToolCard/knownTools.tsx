@@ -751,7 +751,9 @@ export const knownTools: Record<string, {
     Steps: {
         icon: () => <ClipboardIcon className={DEFAULT_ICON_CLASS} />,
         title: (opts) => {
-            const count = opts.childrenCount
+            const count = isObject(opts.input) && typeof opts.input.count === 'number'
+                ? opts.input.count
+                : opts.childrenCount
             return count > 0 ? `${count} Steps` : 'Steps'
         },
         subtitle: () => null,
