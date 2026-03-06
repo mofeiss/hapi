@@ -4,6 +4,7 @@ import {
     extractMcpResourceServerGroups,
     extractPlanModeMessage,
     groupMcpResourceListEntries,
+    isMarkdownFilePath,
     shouldUseGroupedMcpResourceListLayout,
     sanitizeReadResultText
 } from '@/components/ToolCard/views/_results'
@@ -89,6 +90,15 @@ describe('extractPlanModeMessage', () => {
 
     it('returns null when no message can be parsed', () => {
         expect(extractPlanModeMessage('InputValidationError: not-a-json-payload')).toBeNull()
+    })
+})
+
+describe('isMarkdownFilePath', () => {
+    it('detects markdown file paths', () => {
+        expect(isMarkdownFilePath('docs/readme.md')).toBe(true)
+        expect(isMarkdownFilePath('docs/guide.markdown')).toBe(true)
+        expect(isMarkdownFilePath('docs/readme.txt')).toBe(false)
+        expect(isMarkdownFilePath(null)).toBe(false)
     })
 })
 

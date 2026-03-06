@@ -12,7 +12,7 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { extractSkillReadData } from '@/lib/skillRead'
 import { useTranslation } from '@/lib/use-translation'
 import { cn } from '@/lib/utils'
-import { basename, resolveDisplayPath } from '@/utils/path'
+import { resolveDisplayPath } from '@/utils/path'
 
 function parseToolUseError(message: string): { isToolUseError: boolean; errorMessage: string | null } {
     const regex = /<tool_use_error>(.*?)<\/tool_use_error>/s
@@ -306,11 +306,11 @@ function hasToolUseErrorResult(result: unknown): boolean {
     return false
 }
 
-type SkillViewMode = 'source' | 'markdown'
+type PreviewMode = 'source' | 'markdown'
 
-function SkillResultActions(props: {
+function MarkdownPreviewActions(props: {
     copyText: string
-    mode: SkillViewMode
+    mode: PreviewMode
     canToggleMode: boolean
     onToggleMode?: () => void
     centered: boolean
@@ -389,6 +389,28 @@ function extractReadFileContent(result: unknown): { filePath: string | null; con
             : null
 
     return { filePath, content }
+}
+
+function extractReadInputPath(input: unknown, metadata: ToolViewProps['metadata']): string | null {
+    if (!isObject(input)) return null
+
+    const rawPath = typeof input.file_path === 'string'
+        ? input.file_path
+        : typeof input.path === 'string'
+            ? input.path
+            : typeof input.filePath === 'string'
+                ? input.filePath
+                : typeof input.notebook_path === 'string'
+                    ? input.notebook_path
+                    : null
+
+    return rawPath ? resolveDisplayPath(rawPath, metadata) : null
+}
+
+export function isMarkdownFilePath(path: string | null | undefined): boolean {
+    if (typeof path !== 'string') return false
+    const normalized = path.trim().toLowerCase()
+    return normalized.endsWith('.md') || normalized.endsWith('.markdown')
 }
 
 function extractLineList(text: string): string[] {
@@ -769,6 +791,12 @@ const LineListResultView: ToolViewComponent = (props: ToolViewProps) => {
 
 const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
     const result = props.block.tool.result
+    const [readViewMode, setReadViewMode] = useState<PreviewMode>('source')
+    const isReadErrorResult = props.block.tool.state === 'error' || hasToolUseErrorResult(result)
+
+    useEffect(() => {
+        setReadViewMode('source')
+    }, [props.block.id])
 
     if (result === undefined || result === null) {
         return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
@@ -777,15 +805,54 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
     const file = extractReadFileContent(result)
     if (file) {
         const sanitizedContent = sanitizeReadResultText(file.content)
-        const path = file.filePath ? resolveDisplayPath(file.filePath, props.metadata) : null
+        const path = file.filePath
+            ? resolveDisplayPath(file.filePath, props.metadata)
+            : extractReadInputPath(props.block.tool.input, props.metadata)
+        const canPreviewMarkdown = Boolean(
+            path
+            && isMarkdownFilePath(path)
+            && sanitizedContent.trim().length > 0
+            && !isReadErrorResult
+        )
+        const toggleMode = () => {
+            setReadViewMode((prev) => (prev === 'source' ? 'markdown' : 'source'))
+        }
+
         return (
             <>
-                {path ? (
-                    <div className="mb-2 text-xs text-[var(--app-hint)] font-mono break-all">
-                        {basename(path)}
+                {canPreviewMarkdown && readViewMode === 'markdown' ? (
+                    <div className="relative min-w-0 max-w-full">
+                        <MarkdownPreviewActions
+                            copyText={sanitizedContent}
+                            mode={readViewMode}
+                            canToggleMode={canPreviewMarkdown}
+                            onToggleMode={toggleMode}
+                            centered={false}
+                        />
+                        <div className="max-h-[48vh] overflow-auto rounded-md bg-[var(--app-bg)] p-3 pr-12">
+                            <MarkdownRenderer content={sanitizedContent} />
+                        </div>
                     </div>
-                ) : null}
-                <CodeBlock code={sanitizedContent} language="text" showLineNumbers />
+                ) : canPreviewMarkdown ? (
+                    <div className="relative min-w-0 max-w-full">
+                        <MarkdownPreviewActions
+                            copyText={sanitizedContent}
+                            mode={readViewMode}
+                            canToggleMode={canPreviewMarkdown}
+                            onToggleMode={toggleMode}
+                            centered={false}
+                        />
+                        <CodeBlock
+                            code={sanitizedContent}
+                            language="text"
+                            showLineNumbers
+                            showCopyButton={false}
+                            contentRightPaddingClassName="pr-14"
+                        />
+                    </div>
+                ) : (
+                    <CodeBlock code={sanitizedContent} language="text" showLineNumbers />
+                )}
                 <RawJsonDevOnly value={result} />
             </>
         )
@@ -820,7 +887,7 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
 
 const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
     const result = props.block.tool.result
-    const [skillViewMode, setSkillViewMode] = useState<SkillViewMode>('source')
+    const [skillViewMode, setSkillViewMode] = useState<PreviewMode>('source')
     const isSkillErrorResult = props.block.tool.state === 'error' || hasToolUseErrorResult(result)
     const skillData = result === undefined || result === null
         ? null
@@ -854,7 +921,7 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
             return (
                 <>
                     <div className="relative min-w-0 max-w-full">
-                        <SkillResultActions
+                        <MarkdownPreviewActions
                             copyText={skillContent}
                             mode={skillViewMode}
                             canToggleMode={canToggleSkillView}
@@ -875,7 +942,7 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
         return (
             <>
                 <div className="relative min-w-0 max-w-full">
-                    <SkillResultActions
+                    <MarkdownPreviewActions
                         copyText={skillContent}
                         mode={skillViewMode}
                         canToggleMode={canToggleSkillView}
@@ -903,7 +970,7 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
             return (
                 <>
                     <div className="relative min-w-0 max-w-full">
-                        <SkillResultActions
+                        <MarkdownPreviewActions
                             copyText={sanitizedText}
                             mode="source"
                             canToggleMode={false}
