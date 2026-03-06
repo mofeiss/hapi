@@ -286,7 +286,7 @@ function ToolCardInner(props: ToolCardProps) {
     const taskSummary = renderTaskSummary(props.block, props.metadata, locale)
     const runningFrom = props.block.tool.startedAt ?? props.block.tool.createdAt
     const showInline = !presentation.minimal && toolName !== 'Task'
-    const isResultOnlyTool = isResultOnlyToolName(toolName)
+    const isResultOnlyTool = isResultOnlyToolName(toolName, props.block.tool.input, props.block.tool.result)
     const CompactToolView = !isResultOnlyTool && showInline ? getToolViewComponent(toolName) : null
     const FullToolView = !isResultOnlyTool ? getToolFullViewComponent(toolName) : null
     const ResultToolView = getToolResultViewComponent(toolName)

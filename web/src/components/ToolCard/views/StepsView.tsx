@@ -243,7 +243,7 @@ function StepNodeDetails(props: {
     const toolName = props.block.tool.name
     const FullToolView = getToolFullViewComponent(toolName)
     const ResultToolView = getToolResultViewComponent(toolName)
-    const isResultOnlyTool = isResultOnlyToolName(toolName)
+    const isResultOnlyTool = isResultOnlyToolName(toolName, props.block.tool.input, props.block.tool.result)
     const isAskUserQuestion = isAskUserQuestionToolName(toolName)
     const isRequestUserInput = isRequestUserInputToolName(toolName)
     const isQuestionTool = isAskUserQuestion || isRequestUserInput

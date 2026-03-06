@@ -4,6 +4,7 @@ import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
 import { CopyIcon, CheckIcon } from '@/components/icons'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
+import { ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
 import { EyeIcon, TerminalIcon } from '@/components/ToolCard/icons'
 import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
@@ -395,6 +396,183 @@ function extractLineList(text: string): string[] {
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => line.length > 0)
+}
+
+type McpResourceListEntry = {
+    server: string | null
+    name: string | null
+    description: string | null
+}
+
+type McpResourceServerGroup = {
+    server: string
+    resources: Array<{
+        name: string | null
+        description: string | null
+    }>
+}
+
+function normalizeMcpResourceField(value: unknown): string | null {
+    if (typeof value !== 'string') return null
+    const normalized = sanitizeToolResultText(value).replace(/\s+/g, ' ').trim()
+    return normalized.length > 0 ? normalized : null
+}
+
+function extractMcpResourceListEntry(value: unknown): McpResourceListEntry | null {
+    if (!isObject(value)) return null
+
+    const name = normalizeMcpResourceField(value.name)
+    const description = normalizeMcpResourceField(value.description)
+    const isResourceLike = name !== null
+        || description !== null
+        || typeof value.uri === 'string'
+        || typeof value.mimeType === 'string'
+        || typeof value.server === 'string'
+
+    if (!isResourceLike) return null
+
+    return {
+        server: normalizeMcpResourceField(value.server),
+        name,
+        description
+    }
+}
+
+export function shouldUseGroupedMcpResourceListLayout(input: unknown): boolean {
+    return isObject(input) && Object.keys(input).length === 0
+}
+
+export function extractMcpResourceListEntries(result: unknown, depth: number = 0): McpResourceListEntry[] | null {
+    if (depth > 4 || result === null || result === undefined) return null
+
+    if (typeof result === 'string') {
+        const normalized = sanitizeToolResultText(result).trim()
+        if (!normalized.startsWith('[') && !normalized.startsWith('{')) return null
+        const parsed = parseJsonValue(normalized)
+        return parsed ? extractMcpResourceListEntries(parsed, depth + 1) : null
+    }
+
+    if (Array.isArray(result)) {
+        const entries = result
+            .map(extractMcpResourceListEntry)
+            .filter((entry): entry is McpResourceListEntry => entry !== null)
+
+        if (entries.length > 0) return entries
+        return result.length === 0 ? [] : null
+    }
+
+    if (!isObject(result)) return null
+
+    const nestedCandidates: unknown[] = [
+        result.resources,
+        result.result,
+        result.data,
+        result.output,
+        result.content
+    ]
+
+    for (const candidate of nestedCandidates) {
+        const entries = extractMcpResourceListEntries(candidate, depth + 1)
+        if (entries !== null) return entries
+    }
+
+    return null
+}
+
+export function groupMcpResourceListEntries(entries: McpResourceListEntry[]): McpResourceServerGroup[] {
+    const groups = new Map<string, McpResourceServerGroup>()
+    const orderedServers: string[] = []
+
+    for (const entry of entries) {
+        if (entry.name === null && entry.description === null) continue
+
+        const server = entry.server ?? 'Unknown server'
+        let group = groups.get(server)
+        if (!group) {
+            group = { server, resources: [] }
+            groups.set(server, group)
+            orderedServers.push(server)
+        }
+
+        group.resources.push({
+            name: entry.name,
+            description: entry.description
+        })
+    }
+
+    return orderedServers
+        .map((server) => groups.get(server))
+        .filter((group): group is McpResourceServerGroup => group !== undefined && group.resources.length > 0)
+}
+
+export function extractMcpResourceServerGroups(result: unknown): McpResourceServerGroup[] | null {
+    const entries = extractMcpResourceListEntries(result)
+    if (entries === null) return null
+
+    const groups = groupMcpResourceListEntries(entries)
+    if (groups.length > 0 || entries.length === 0) return groups
+    return null
+}
+
+function McpServerNodeStatusIcon(props: { state: ToolViewProps['block']['tool']['state'] }) {
+    if (props.state === 'completed') {
+        return (
+            <svg className="h-3.5 w-3.5 text-emerald-600" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M5.2 8.3l1.8 1.8 3.8-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+        )
+    }
+    if (props.state === 'error') {
+        return (
+            <svg className="h-3.5 w-3.5 text-red-600" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+        )
+    }
+    if (props.state === 'pending') {
+        return (
+            <svg className="h-3.5 w-3.5 text-amber-600" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+        )
+    }
+    return (
+        <svg className="h-3.5 w-3.5 animate-spin text-amber-600" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.25" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.75" />
+        </svg>
+    )
+}
+
+function McpServerNodeChevron(props: { open: boolean }) {
+    return (
+        <svg
+            className={`h-3.5 w-3.5 transition-transform ${props.open ? 'rotate-90' : 'rotate-0'}`}
+            viewBox="0 0 16 16"
+            fill="none"
+        >
+            <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    )
+}
+
+function formatMcpResourceCount(count: number): string {
+    return count === 1 ? '1 resource' : `${count} resources`
+}
+
+function renderMcpResourceRows(entries: McpResourceListEntry[]) {
+    return (
+        <div className="space-y-2">
+            {entries.map((resource, idx) => (
+                <div key={`${resource.server ?? 'server'}-${resource.name ?? 'resource'}-${idx}`} className="space-y-0">
+                    {resource.name ? <ToolParamField name="name" value={resource.name} /> : null}
+                    {resource.description ? <ToolParamField name="description" value={resource.description} /> : null}
+                </div>
+            ))}
+        </div>
+    )
 }
 
 function NotebookEditStatsBar(props: { oldSource: string; newSource: string }) {
@@ -936,6 +1114,98 @@ const TodoWriteResultView: ToolViewComponent = (props: ToolViewProps) => {
     )
 }
 
+const ListMcpResourcesResultView: ToolViewComponent = (props: ToolViewProps) => {
+    const { input, result, state } = props.block.tool
+    const entries = extractMcpResourceListEntries(result)
+    const [openServers, setOpenServers] = useState<Record<string, boolean>>({})
+    const shouldUseGroupedLayout = shouldUseGroupedMcpResourceListLayout(input)
+
+    useEffect(() => {
+        setOpenServers({})
+    }, [props.block.id])
+
+    if (result === undefined || result === null) {
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(state)}</div>
+    }
+
+    if (state === 'error' || hasToolUseErrorResult(result)) {
+        return <RawResultView {...props} />
+    }
+
+    if (entries === null) {
+        return <RawResultView {...props} />
+    }
+
+    const displayEntries = entries.filter((entry) => entry.name !== null || entry.description !== null)
+
+    if (displayEntries.length === 0) {
+        return (
+            <>
+                <div className="text-sm text-[var(--app-hint)]">0 resources</div>
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    if (!shouldUseGroupedLayout) {
+        return (
+            <>
+                {renderMcpResourceRows(displayEntries)}
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    const groups = groupMcpResourceListEntries(displayEntries)
+
+    return (
+        <>
+            <div className="space-y-0.5">
+                {groups.map((group) => (
+                    <div key={group.server} className="space-y-0.5">
+                        <button
+                            type="button"
+                            className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-[var(--app-subtle-bg)]"
+                            onClick={() => {
+                                setOpenServers((prev) => ({
+                                    ...prev,
+                                    [group.server]: !prev[group.server]
+                                }))
+                            }}
+                            aria-expanded={Boolean(openServers[group.server])}
+                            aria-label={`Toggle ${group.server}`}
+                        >
+                            <span className="shrink-0 text-[var(--app-hint)]">
+                                <McpServerNodeChevron open={Boolean(openServers[group.server])} />
+                            </span>
+                            <span className="shrink-0">
+                                <McpServerNodeStatusIcon state={state} />
+                            </span>
+                            <span className="min-w-0 flex-1 truncate whitespace-nowrap">
+                                <span className="text-sm text-[var(--app-fg)]">{group.server}</span>
+                                <span className="ml-2 font-mono text-xs text-[var(--app-hint)]">
+                                    {formatMcpResourceCount(group.resources.length)}
+                                </span>
+                            </span>
+                        </button>
+
+                        {openServers[group.server] ? (
+                            <div className="ml-5 border-l border-[var(--app-border)] pl-2.5 space-y-1">
+                                {renderMcpResourceRows(group.resources.map((resource) => ({
+                                    server: group.server,
+                                    name: resource.name,
+                                    description: resource.description
+                                })))}
+                            </div>
+                        ) : null}
+                    </div>
+                ))}
+            </div>
+            <RawJsonDevOnly value={result} />
+        </>
+    )
+}
+
 const EnterPlanModeResultView: ToolViewComponent = (props: ToolViewProps) => {
     const { state, result } = props.block.tool
 
@@ -1105,7 +1375,7 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     TeamCreate: RawResultView,
     TeamDelete: RawResultView,
     SendMessage: RawResultView,
-    ListMcpResourcesTool: RawResultView,
+    ListMcpResourcesTool: ListMcpResourcesResultView,
     ReadMcpResourceTool: RawResultView,
     CodexReasoning: CodexReasoningResultView,
     CodexPatch: CodexPatchResultView,
