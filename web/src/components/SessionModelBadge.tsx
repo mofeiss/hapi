@@ -20,8 +20,8 @@ function normalizeModelLabel(value: string | null | undefined): string {
     if (!trimmed) {
         return ''
     }
-    if (trimmed === 'default') {
-        return 'auto'
+    if (trimmed === 'default' || trimmed === 'auto') {
+        return 'Default'
     }
     return trimmed
 }

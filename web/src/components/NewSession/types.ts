@@ -14,12 +14,9 @@ export type CodexModelOption = ModelOption & {
 
 export const MODEL_OPTIONS: Record<Exclude<AgentType, 'codex'>, ModelOption[]> = {
     claude: [
-        { value: 'auto', label: 'Auto' },
+        { value: 'auto', label: 'Default' },
         { value: 'opus', label: 'Opus' },
         { value: 'sonnet', label: 'Sonnet' },
-        { value: 'codex', label: 'codex' },
-        { value: 'opus4.6', label: 'opus4.6' },
-        { value: 'opus4.5', label: 'opus4.5' },
         { value: 'custom', label: 'Custom' },
     ],
     gemini: [

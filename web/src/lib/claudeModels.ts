@@ -7,12 +7,9 @@ export const CLAUDE_CUSTOM_MODEL_OPTION_VALUE = 'custom'
 const CLAUDE_CUSTOM_MODEL_VALUE_STORAGE_KEY = 'hapi:claude:customModelValue'
 
 const CLAUDE_BASE_MODEL_OPTIONS: ClaudeModelOption[] = [
-    { value: 'auto', label: 'Auto' },
+    { value: 'auto', label: 'Default' },
     { value: 'opus', label: 'Opus' },
-    { value: 'sonnet', label: 'Sonnet' },
-    { value: 'codex', label: 'codex' },
-    { value: 'opus4.6', label: 'opus4.6' },
-    { value: 'opus4.5', label: 'opus4.5' }
+    { value: 'sonnet', label: 'Sonnet' }
 ]
 
 const CLAUDE_BASE_MODEL_KEYS = new Set(

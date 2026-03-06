@@ -18,9 +18,6 @@ describe('claudeModels', () => {
             'auto',
             'opus',
             'sonnet',
-            'codex',
-            'opus4.6',
-            'opus4.5',
             CLAUDE_CUSTOM_MODEL_OPTION_VALUE
         ])
     })

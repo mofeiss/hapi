@@ -34,9 +34,15 @@ describe('formatSessionModelLabel', () => {
         ).toBe('sonnet')
     })
 
-    it('maps default fallback model to auto', () => {
+    it('maps default fallback model to Default', () => {
         expect(
             formatSessionModelLabel({}, { fallbackModel: 'default' })
-        ).toBe('auto')
+        ).toBe('Default')
+    })
+
+    it('maps auto model to Default', () => {
+        expect(
+            formatSessionModelLabel({ model: 'auto' })
+        ).toBe('Default')
     })
 })
