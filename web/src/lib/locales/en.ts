@@ -154,6 +154,7 @@ export default {
   "button.close": "Close",
   "button.dismiss": "Dismiss",
   "button.copy": "Copy",
+  "button.copyAll": "Copy all",
   "button.edit": "Edit",
   "button.resend": "Resend",
   "button.paste": "Paste",

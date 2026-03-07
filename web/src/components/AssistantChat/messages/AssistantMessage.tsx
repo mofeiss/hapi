@@ -1,4 +1,4 @@
-import { MessagePrimitive, useAssistantState } from '@assistant-ui/react'
+import { MessagePrimitive, useAssistantApi, useAssistantState } from '@assistant-ui/react'
 import { MarkdownText } from '@/components/assistant-ui/markdown-text'
 import { Reasoning, ReasoningGroup } from '@/components/assistant-ui/reasoning'
 import { HappyToolMessage } from '@/components/AssistantChat/messages/ToolMessage'
@@ -7,6 +7,7 @@ import { MessageCopyButton } from '@/components/AssistantChat/messages/MessageCo
 import { useHappyChatContext } from '@/components/AssistantChat/context'
 import { ApiErrorNotice, isApiErrorText } from '@/components/AssistantChat/messages/ApiErrorNotice'
 import { buildAssistantCopyText, type AssistantCopyPart } from '@/components/AssistantChat/messages/messageCopy'
+import { buildLoadedTranscriptCopyText } from '@/components/AssistantChat/messages/messageTranscriptCopy'
 import type { HappyChatMessageMetadata } from '@/lib/assistant-runtime'
 import { useTranslation } from '@/lib/use-translation'
 
@@ -22,8 +23,9 @@ const MESSAGE_PART_COMPONENTS = {
 } as const
 
 export function HappyAssistantMessage() {
+    const assistantApi = useAssistantApi()
     const ctx = useHappyChatContext()
-    const { locale } = useTranslation()
+    const { locale, t } = useTranslation()
     const isCliOutput = useAssistantState(({ message }) => {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return custom?.kind === 'cli-output'
@@ -36,6 +38,14 @@ export function HappyAssistantMessage() {
     const assistantContent = useAssistantState(({ message }) => (
         message.role === 'assistant' ? message.content : []
     ))
+    const threadMessagesLength = useAssistantState(({ thread }) => thread.messages.length)
+    const currentMessageIndex = useAssistantState(({ message }) => {
+        const idx = (message as { index?: number }).index
+        return typeof idx === 'number' ? idx : -1
+    })
+    const transcriptMessages = currentMessageIndex >= 0 && threadMessagesLength > 0
+        ? assistantApi.thread().getState().messages.slice(0, currentMessageIndex + 1)
+        : []
     const toolOnly = assistantContent.length > 0 && assistantContent.every((part) => part.type === 'tool-call')
     const apiErrorText = (() => {
         if (assistantContent.length !== 1) return null
@@ -51,6 +61,15 @@ export function HappyAssistantMessage() {
             locale
         }
     )
+    const allCopyText = buildLoadedTranscriptCopyText(
+        transcriptMessages as Parameters<typeof buildLoadedTranscriptCopyText>[0],
+        {
+            metadata: ctx.metadata,
+            locale,
+            t,
+            editedMessageTextById: ctx.editedMessageTextById
+        }
+    )
     const rootClass = toolOnly
         ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
         : 'px-1 min-w-0 max-w-full overflow-x-hidden'
@@ -61,7 +80,10 @@ export function HappyAssistantMessage() {
                 <MessagePrimitive.Root className="px-1 min-w-0 max-w-full overflow-x-hidden">
                     <CliOutputBlock text={cliText} />
                 </MessagePrimitive.Root>
-                <MessageCopyButton text={cliText} className="ml-1" />
+                <div className="ml-1 flex w-fit items-center gap-1">
+                    <MessageCopyButton text={cliText} />
+                    <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+                </div>
             </div>
         )
     }
@@ -72,7 +94,10 @@ export function HappyAssistantMessage() {
                 <MessagePrimitive.Root className="px-1 min-w-0 max-w-full overflow-x-hidden">
                     <ApiErrorNotice text={apiErrorText} />
                 </MessagePrimitive.Root>
-                <MessageCopyButton text={apiErrorText} className="ml-1" />
+                <div className="ml-1 flex w-fit items-center gap-1">
+                    <MessageCopyButton text={apiErrorText} />
+                    <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+                </div>
             </div>
         )
     }
@@ -82,7 +107,10 @@ export function HappyAssistantMessage() {
             <MessagePrimitive.Root className={rootClass}>
                 <MessagePrimitive.Content components={MESSAGE_PART_COMPONENTS} />
             </MessagePrimitive.Root>
-            <MessageCopyButton text={copyText} className="ml-1" />
+            <div className="ml-1 flex w-fit items-center gap-1">
+                <MessageCopyButton text={copyText} />
+                <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+            </div>
         </div>
     )
 }

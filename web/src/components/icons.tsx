@@ -61,6 +61,18 @@ export function CopyIcon(props: IconProps) {
     )
 }
 
+export function CopyAllIcon(props: IconProps) {
+    return createIcon(
+        <>
+            <rect x="9" y="9" width="11" height="11" rx="2" ry="2" />
+            <path d="M15 5H7a2 2 0 0 0-2 2v8" />
+            <path d="M9 5H7a2 2 0 0 0-2 2v2" />
+        </>,
+        props,
+        2.2
+    )
+}
+
 export function CheckIcon(props: IconProps) {
     return createIcon(
         <polyline points="20 6 9 17 4 12" />,

@@ -146,6 +146,7 @@ export default {
   'button.close': '关闭',
   'button.dismiss': '忽略',
   'button.copy': '复制',
+  'button.copyAll': '复制全部',
   'button.edit': '编辑',
   'button.resend': '重发',
   'button.paste': '粘贴',
