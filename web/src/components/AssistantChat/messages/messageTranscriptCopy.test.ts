@@ -115,7 +115,7 @@ describe('buildLoadedTranscriptCopyText', () => {
         })).toBe(
             [
                 '<UserPrompt>\nnew text\n</UserPrompt>',
-                'Permission granted',
+                '<Event>\nPermission granted\n</Event>',
                 'Done.'
             ].join('\n\n')
         )

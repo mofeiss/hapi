@@ -39,6 +39,16 @@ function formatUserPrompt(text: string): string {
     ].join('\n')
 }
 
+function formatEvent(text: string): string {
+    const trimmed = text.trim()
+    if (!trimmed) return ''
+    return [
+        '<Event>',
+        trimmed,
+        '</Event>'
+    ].join('\n')
+}
+
 function resolveVisibleUserText(
     message: TranscriptMessage,
     editedMessageTextById?: Record<string, string>
@@ -77,7 +87,7 @@ function formatTranscriptMessage(
     }
 
     if (custom?.kind === 'event' && custom.event) {
-        return getEventPresentation(custom.event, options.t).text.trim()
+        return formatEvent(getEventPresentation(custom.event, options.t).text)
     }
 
     return getJoinedText(message.content)
