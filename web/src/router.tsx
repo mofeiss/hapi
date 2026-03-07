@@ -13,7 +13,11 @@ import {
 } from "@tanstack/react-router";
 import { App } from "@/App";
 import { SessionChat } from "@/components/SessionChat";
-import { SessionList, groupSessionsByHost, getSessionTitle } from "@/components/SessionList";
+import {
+  SessionList,
+  groupSessionsByHost,
+  getSessionTitle,
+} from "@/components/SessionList";
 import { NewSession } from "@/components/NewSession";
 import { LoadingState } from "@/components/LoadingState";
 import { SessionActionMenu } from "@/components/SessionActionMenu";
@@ -193,7 +197,18 @@ function toSwipeDirection(value: number): SwipeDirection {
 
 function BatchArchiveIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <rect width="20" height="5" x="2" y="3" rx="1" />
       <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
       <path d="M10 12h4" />
@@ -203,7 +218,18 @@ function BatchArchiveIcon(props: { className?: string }) {
 
 function BatchTrashIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <path d="M3 6h18" />
       <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
       <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -213,7 +239,18 @@ function BatchTrashIcon(props: { className?: string }) {
 
 function BatchCheckIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -221,7 +258,18 @@ function BatchCheckIcon(props: { className?: string }) {
 
 function BatchXIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <circle cx="12" cy="12" r="10" />
       <path d="m4.9 4.9 14.2 14.2" />
     </svg>
@@ -230,7 +278,18 @@ function BatchXIcon(props: { className?: string }) {
 
 function BatchSelectAllIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <rect width="18" height="18" x="3" y="3" rx="2" />
       <path d="m9 12 2 2 4-4" />
     </svg>
@@ -239,7 +298,18 @@ function BatchSelectAllIcon(props: { className?: string }) {
 
 function BatchDeselectAllIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <rect width="18" height="18" x="3" y="3" rx="2" />
       <path d="M9 12h6" />
     </svg>
@@ -248,7 +318,18 @@ function BatchDeselectAllIcon(props: { className?: string }) {
 
 function SunIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2v2" />
       <path d="M12 20v2" />
@@ -264,7 +345,18 @@ function SunIcon(props: { className?: string }) {
 
 function MoonIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
     </svg>
   );
@@ -272,7 +364,18 @@ function MoonIcon(props: { className?: string }) {
 
 function OnlineFilterIcon(props: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
       <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
       <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
       <circle cx="12" cy="12" r="2" />
@@ -302,7 +405,10 @@ function SearchIcon(props: { className?: string }) {
   );
 }
 
-function matchesSessionSearch(session: SessionSummary, search: string): boolean {
+function matchesSessionSearch(
+  session: SessionSummary,
+  search: string,
+): boolean {
   if (!search) {
     return true;
   }
@@ -319,6 +425,11 @@ function matchesSessionSearch(session: SessionSummary, search: string): boolean 
     .toLowerCase();
 
   return haystack.includes(search);
+}
+
+function getSessionInitial(title: string): string {
+  const firstChar = Array.from(title.trim())[0];
+  return firstChar ? firstChar.toUpperCase() : "N";
 }
 
 function CollapsedSessionItem({
@@ -342,13 +453,12 @@ function CollapsedSessionItem({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const sessionName = useSessionTitleOverride(session.id) ?? getSessionTitle(session);
+  const sessionName =
+    useSessionTitleOverride(session.id) ?? getSessionTitle(session);
+  const sessionInitial = getSessionInitial(sessionName);
 
-  const { archiveSession, renameSession, deleteSession, isPending } = useSessionActions(
-    api,
-    session.id,
-    session.metadata?.flavor ?? null,
-  );
+  const { archiveSession, renameSession, deleteSession, isPending } =
+    useSessionActions(api, session.id, session.metadata?.flavor ?? null);
 
   const skipArchiveConfirm = (() => {
     try {
@@ -418,15 +528,15 @@ function CollapsedSessionItem({
         title={sessionName}
       >
         <span
-          className={`flex h-4 w-4 shrink-0 items-center justify-center ${session.active && session.thinking ? "rounded-[4px] bg-[var(--app-orange-base)]" : ""}`}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[14px] font-medium leading-none select-none ${
+            session.active && session.thinking
+              ? "bg-[var(--app-orange-base)] text-white"
+              : session.active
+                ? "bg-[var(--app-subtle-bg)] text-emerald-500"
+                : "bg-[var(--app-subtle-bg)] text-[var(--app-hint)]"
+          }`}
         >
-          {session.active && session.thinking ? (
-            <span className="inline-block text-[15px] leading-none text-white" style={{ animation: "spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite" }}>✻</span>
-          ) : session.active ? (
-            <span className="text-[15px] leading-none text-emerald-500">✻</span>
-          ) : (
-            <span className="text-[15px] leading-none text-[var(--app-hint)]">✻</span>
-          )}
+          {sessionInitial}
         </span>
       </button>
 
@@ -435,8 +545,14 @@ function CollapsedSessionItem({
         onClose={() => setMenuOpen(false)}
         sessionActive={session.active}
         onRename={() => setRenameOpen(true)}
-        onArchive={() => (skipArchiveConfirm ? runArchive() : setArchiveOpen(true))}
-        onDelete={() => (skipDeleteConfirm ? void runDelete().catch(() => {}) : setDeleteOpen(true))}
+        onArchive={() =>
+          skipArchiveConfirm ? runArchive() : setArchiveOpen(true)
+        }
+        onDelete={() =>
+          skipDeleteConfirm
+            ? void runDelete().catch(() => {})
+            : setDeleteOpen(true)
+        }
         anchorPoint={menuAnchorPoint}
       />
 
@@ -488,14 +604,22 @@ function SessionsPage() {
   const { sessions, isLoading, error, refetch } = useSessions(api);
 
   const [filterOnlineOnly, setFilterOnlineOnly] = useState(() => {
-    try { return localStorage.getItem('hapi:filter:onlineOnly') === '1' } catch { return false }
+    try {
+      return localStorage.getItem("hapi:filter:onlineOnly") === "1";
+    } catch {
+      return false;
+    }
   });
   const [sessionSearch, setSessionSearch] = useState("");
 
   const toggleFilterOnline = useCallback(() => {
-    setFilterOnlineOnly(prev => {
+    setFilterOnlineOnly((prev) => {
       const next = !prev;
-      try { localStorage.setItem('hapi:filter:onlineOnly', next ? '1' : '0') } catch { /* ignore */ }
+      try {
+        localStorage.setItem("hapi:filter:onlineOnly", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   }, []);
@@ -542,9 +666,13 @@ function SessionsPage() {
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const hasOverlay = settingsOpen || newSessionOpen;
   const [narrowViewport, setNarrowViewport] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX : false,
+    typeof window !== "undefined"
+      ? window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX
+      : false,
   );
-  const [swipeForwardSessionId, setSwipeForwardSessionId] = useState<string | null>(null);
+  const [swipeForwardSessionId, setSwipeForwardSessionId] = useState<
+    string | null
+  >(null);
   const wheelBackDirectionRef = useRef<SwipeDirection>(0);
   const wheelGestureRef = useRef<{
     accumX: number;
@@ -593,22 +721,23 @@ function SessionsPage() {
   const [batchSelectedIds, setBatchSelectedIds] = useState<Set<string>>(
     new Set(),
   );
-  const [batchArchivingIds, setBatchArchivingIds] = useState<Set<string>>(new Set());
-  const [batchDeletingIds, setBatchDeletingIds] = useState<Set<string>>(new Set());
+  const [batchArchivingIds, setBatchArchivingIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [batchDeletingIds, setBatchDeletingIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
   const [batchPending, setBatchPending] = useState(false);
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
 
-  const handleEnterBatchMode = useCallback(
-    (mode: "archive" | "delete") => {
-      setBatchMode(mode);
-      setBatchSelectedIds(new Set());
-      setSettingsOpen(false);
-      setNewSessionOpen(false);
-      setToolbarMenuOpen(false);
-    },
-    [],
-  );
+  const handleEnterBatchMode = useCallback((mode: "archive" | "delete") => {
+    setBatchMode(mode);
+    setBatchSelectedIds(new Set());
+    setSettingsOpen(false);
+    setNewSessionOpen(false);
+    setToolbarMenuOpen(false);
+  }, []);
 
   const handleExitBatchMode = useCallback(() => {
     setBatchMode(null);
@@ -652,7 +781,9 @@ function SessionsPage() {
         return prev;
       }
       const activeIds = new Set(
-        sessions.filter((session) => session.active).map((session) => session.id),
+        sessions
+          .filter((session) => session.active)
+          .map((session) => session.id),
       );
       let changed = false;
       const next = new Set<string>();
@@ -763,7 +894,9 @@ function SessionsPage() {
 
   useEffect(() => {
     if (!swipeForwardSessionId) return;
-    const exists = sessions.some((session) => session.id === swipeForwardSessionId);
+    const exists = sessions.some(
+      (session) => session.id === swipeForwardSessionId,
+    );
     if (!exists) {
       setSwipeForwardSessionId(null);
     }
@@ -834,12 +967,16 @@ function SessionsPage() {
     }
 
     const permissionMode = activeSession.permissionMode ?? "default";
-    const basePermissionMode = activeSession.basePermissionMode
-      ?? (permissionMode === "plan" ? "default" : permissionMode);
-    const spawnSessionType = activeSession.metadata?.worktree ? "worktree" : "simple";
-    const worktreeName = spawnSessionType === "worktree"
-      ? (activeSession.metadata?.worktree?.name?.trim() || undefined)
-      : undefined;
+    const basePermissionMode =
+      activeSession.basePermissionMode ??
+      (permissionMode === "plan" ? "default" : permissionMode);
+    const spawnSessionType = activeSession.metadata?.worktree
+      ? "worktree"
+      : "simple";
+    const worktreeName =
+      spawnSessionType === "worktree"
+        ? activeSession.metadata?.worktree?.name?.trim() || undefined
+        : undefined;
     const model = activeSession.metadata?.model?.trim() || undefined;
 
     setQuickNewSessionPending(true);
@@ -853,7 +990,7 @@ function SessionsPage() {
         permissionMode,
         basePermissionMode,
         spawnSessionType,
-        worktreeName
+        worktreeName,
       );
 
       if (result.type !== "success") {
@@ -870,9 +1007,10 @@ function SessionsPage() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
       handleSelectSession(result.sessionId);
     } catch (error) {
-      const message = error instanceof Error && error.message
-        ? error.message
-        : t("dialog.error.default");
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : t("dialog.error.default");
       addToast({
         title: t("sessions.quickNew.failedTitle"),
         body: message,
@@ -975,7 +1113,15 @@ function SessionsPage() {
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
     })();
-  }, [api, batchMode, batchSelectedIds, activeSessionId, navigate, queryClient, handleExitBatchMode]);
+  }, [
+    api,
+    batchMode,
+    batchSelectedIds,
+    activeSessionId,
+    navigate,
+    queryClient,
+    handleExitBatchMode,
+  ]);
 
   const handleBatchConfirmClick = useCallback(() => {
     if (batchSelectedIds.size === 0) return;
@@ -1005,10 +1151,7 @@ function SessionsPage() {
 
   const swipeNavEnabled = narrowViewport;
   const canSwipeBackToList =
-    swipeNavEnabled &&
-    activeSessionId !== null &&
-    !isSubRoute &&
-    !hasOverlay;
+    swipeNavEnabled && activeSessionId !== null && !isSubRoute && !hasOverlay;
   const canSwipeForwardToSession =
     swipeNavEnabled &&
     isSessionsIndex &&
@@ -1047,49 +1190,61 @@ function SessionsPage() {
     }, SWIPE_WHEEL_UNLOCK_MS);
   }, [clearWheelUnlockTimer]);
 
-  const resetWheelGesture = useCallback((options?: { keepBlock?: boolean }) => {
-    clearWheelReleaseTimer();
-    const blocked = options?.keepBlock ? wheelGestureRef.current.blocked : false;
-    wheelGestureRef.current.accumX = 0;
-    wheelGestureRef.current.accumY = 0;
-    wheelGestureRef.current.eventCount = 0;
-    wheelGestureRef.current.lastTs = 0;
-    wheelGestureRef.current.action = null;
-    wheelGestureRef.current.ready = false;
-    wheelGestureRef.current.wasReady = false;
-    wheelGestureRef.current.cancelled = false;
-    wheelGestureRef.current.direction = 0;
-    wheelGestureRef.current.releaseArmed = false;
-    wheelGestureRef.current.blocked = blocked;
-    if (!blocked) {
-      clearWheelUnlockTimer();
-    }
-  }, [clearWheelReleaseTimer, clearWheelUnlockTimer]);
+  const resetWheelGesture = useCallback(
+    (options?: { keepBlock?: boolean }) => {
+      clearWheelReleaseTimer();
+      const blocked = options?.keepBlock
+        ? wheelGestureRef.current.blocked
+        : false;
+      wheelGestureRef.current.accumX = 0;
+      wheelGestureRef.current.accumY = 0;
+      wheelGestureRef.current.eventCount = 0;
+      wheelGestureRef.current.lastTs = 0;
+      wheelGestureRef.current.action = null;
+      wheelGestureRef.current.ready = false;
+      wheelGestureRef.current.wasReady = false;
+      wheelGestureRef.current.cancelled = false;
+      wheelGestureRef.current.direction = 0;
+      wheelGestureRef.current.releaseArmed = false;
+      wheelGestureRef.current.blocked = blocked;
+      if (!blocked) {
+        clearWheelUnlockTimer();
+      }
+    },
+    [clearWheelReleaseTimer, clearWheelUnlockTimer],
+  );
 
-  const performSwipeAction = useCallback((action: SwipeAction): boolean => {
-    const capability = swipeCapabilityRef.current;
-    if (action === "back") {
-      if (!capability.canBack || !capability.activeSessionId) {
+  const performSwipeAction = useCallback(
+    (action: SwipeAction): boolean => {
+      const capability = swipeCapabilityRef.current;
+      if (action === "back") {
+        if (!capability.canBack || !capability.activeSessionId) {
+          return false;
+        }
+        setSwipeForwardSessionId(capability.activeSessionId);
+        setActiveSessionId(null);
+        navigate({ to: "/sessions" });
+        return true;
+      }
+      if (!capability.canForward || !capability.forwardSessionId) {
         return false;
       }
-      setSwipeForwardSessionId(capability.activeSessionId);
-      setActiveSessionId(null);
-      navigate({ to: "/sessions" });
+      openSession(capability.forwardSessionId, { preserveForward: true });
       return true;
-    }
-    if (!capability.canForward || !capability.forwardSessionId) {
-      return false;
-    }
-    openSession(capability.forwardSessionId, { preserveForward: true });
-    return true;
-  }, [navigate, openSession]);
+    },
+    [navigate, openSession],
+  );
 
   const finalizeWheelGesture = useCallback(() => {
     const gesture = wheelGestureRef.current;
     const action = gesture.action;
     const shouldCommit = action !== null && gesture.ready && !gesture.cancelled;
     if (shouldCommit) {
-      if (action === "back" && wheelBackDirectionRef.current === 0 && gesture.direction !== 0) {
+      if (
+        action === "back" &&
+        wheelBackDirectionRef.current === 0 &&
+        gesture.direction !== 0
+      ) {
         wheelBackDirectionRef.current = gesture.direction;
       }
       if (performSwipeAction(action)) {
@@ -1110,119 +1265,140 @@ function SessionsPage() {
     }, SWIPE_WHEEL_RELEASE_MS);
   }, [finalizeWheelGesture]);
 
-  const hasHorizontalScrollableAncestor = useCallback((target: EventTarget | null, deltaX: number) => {
-    if (!(target instanceof Element)) {
-      return false;
-    }
-    let el: Element | null = target;
-    while (el && el !== document.body) {
-      if (el instanceof HTMLElement) {
-        const style = window.getComputedStyle(el);
-        const overflowX = style.overflowX;
-        const canOverflow = overflowX === "auto" || overflowX === "scroll";
-        if (canOverflow && el.scrollWidth > el.clientWidth + 1) {
-          const canScrollLeft = el.scrollLeft > 0;
-          const canScrollRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
-          if ((deltaX < 0 && canScrollRight) || (deltaX > 0 && canScrollLeft)) {
-            return true;
+  const hasHorizontalScrollableAncestor = useCallback(
+    (target: EventTarget | null, deltaX: number) => {
+      if (!(target instanceof Element)) {
+        return false;
+      }
+      let el: Element | null = target;
+      while (el && el !== document.body) {
+        if (el instanceof HTMLElement) {
+          const style = window.getComputedStyle(el);
+          const overflowX = style.overflowX;
+          const canOverflow = overflowX === "auto" || overflowX === "scroll";
+          if (canOverflow && el.scrollWidth > el.clientWidth + 1) {
+            const canScrollLeft = el.scrollLeft > 0;
+            const canScrollRight =
+              el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+            if (
+              (deltaX < 0 && canScrollRight) ||
+              (deltaX > 0 && canScrollLeft)
+            ) {
+              return true;
+            }
           }
         }
+        el = el.parentElement;
       }
-      el = el.parentElement;
-    }
-    return false;
-  }, []);
+      return false;
+    },
+    [],
+  );
 
-  const handleRootWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    if (!swipeNavEnabled) {
-      return;
-    }
+  const handleRootWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (!swipeNavEnabled) {
+        return;
+      }
 
-    const gesture = wheelGestureRef.current;
-    if (gesture.blocked) {
-      scheduleWheelUnlock();
+      const gesture = wheelGestureRef.current;
+      if (gesture.blocked) {
+        scheduleWheelUnlock();
+        if (event.cancelable) {
+          event.preventDefault();
+        }
+        return;
+      }
+
+      const now =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+      if (now - gesture.lastTs > SWIPE_WHEEL_IDLE_RESET_MS) {
+        gesture.accumX = 0;
+        gesture.accumY = 0;
+        gesture.eventCount = 0;
+        gesture.action = null;
+        gesture.ready = false;
+        gesture.wasReady = false;
+        gesture.cancelled = false;
+        gesture.direction = 0;
+      }
+      gesture.lastTs = now;
+
+      const absX = Math.abs(event.deltaX);
+      const absY = Math.abs(event.deltaY);
+      if (absX <= absY * 1.2) {
+        return;
+      }
+
+      if (hasHorizontalScrollableAncestor(event.target, event.deltaX)) {
+        return;
+      }
+
+      const action: SwipeAction | null = canSwipeBackToList
+        ? "back"
+        : canSwipeForwardToSession
+          ? "forward"
+          : null;
+      if (!action) {
+        resetWheelGesture();
+        return;
+      }
+
+      gesture.accumX += event.deltaX;
+      gesture.accumY += event.deltaY;
+      gesture.eventCount += 1;
+      gesture.action = action;
+      gesture.direction = toSwipeDirection(gesture.accumX);
+
+      const learnedBackDirection = wheelBackDirectionRef.current;
+      const expectedDirection: SwipeDirection =
+        action === "back"
+          ? learnedBackDirection
+          : learnedBackDirection === 0
+            ? 0
+            : learnedBackDirection === 1
+              ? -1
+              : 1;
+      const directionAligned =
+        gesture.direction !== 0 &&
+        (expectedDirection === 0 || gesture.direction === expectedDirection);
+
+      const progressPx = directionAligned ? Math.abs(gesture.accumX) : 0;
+      const horizontalBurst =
+        gesture.eventCount >= 3 &&
+        Math.abs(gesture.accumX) > Math.abs(gesture.accumY) * 1.2;
+      const ready =
+        directionAligned &&
+        horizontalBurst &&
+        progressPx >= SWIPE_WHEEL_TRIGGER_PX;
+      if (ready) {
+        gesture.wasReady = true;
+      }
+      gesture.cancelled =
+        gesture.wasReady &&
+        (progressPx <= SWIPE_WHEEL_CANCEL_PX || !directionAligned);
+      gesture.ready = ready && !gesture.cancelled;
+
       if (event.cancelable) {
         event.preventDefault();
       }
-      return;
-    }
-
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    if (now - gesture.lastTs > SWIPE_WHEEL_IDLE_RESET_MS) {
-      gesture.accumX = 0;
-      gesture.accumY = 0;
-      gesture.eventCount = 0;
-      gesture.action = null;
-      gesture.ready = false;
-      gesture.wasReady = false;
-      gesture.cancelled = false;
-      gesture.direction = 0;
-    }
-    gesture.lastTs = now;
-
-    const absX = Math.abs(event.deltaX);
-    const absY = Math.abs(event.deltaY);
-    if (absX <= absY * 1.2) {
-      return;
-    }
-
-    if (hasHorizontalScrollableAncestor(event.target, event.deltaX)) {
-      return;
-    }
-
-    const action: SwipeAction | null = canSwipeBackToList
-      ? "back"
-      : (canSwipeForwardToSession ? "forward" : null);
-    if (!action) {
-      resetWheelGesture();
-      return;
-    }
-
-    gesture.accumX += event.deltaX;
-    gesture.accumY += event.deltaY;
-    gesture.eventCount += 1;
-    gesture.action = action;
-    gesture.direction = toSwipeDirection(gesture.accumX);
-
-    const learnedBackDirection = wheelBackDirectionRef.current;
-    const expectedDirection: SwipeDirection = action === "back"
-      ? learnedBackDirection
-      : (learnedBackDirection === 0 ? 0 : (learnedBackDirection === 1 ? -1 : 1));
-    const directionAligned =
-      gesture.direction !== 0 &&
-      (expectedDirection === 0 || gesture.direction === expectedDirection);
-
-    const progressPx = directionAligned ? Math.abs(gesture.accumX) : 0;
-    const horizontalBurst =
-      gesture.eventCount >= 3 &&
-      Math.abs(gesture.accumX) > Math.abs(gesture.accumY) * 1.2;
-    const ready = directionAligned && horizontalBurst && progressPx >= SWIPE_WHEEL_TRIGGER_PX;
-    if (ready) {
-      gesture.wasReady = true;
-    }
-    gesture.cancelled =
-      gesture.wasReady &&
-      (progressPx <= SWIPE_WHEEL_CANCEL_PX || !directionAligned);
-    gesture.ready = ready && !gesture.cancelled;
-
-    if (event.cancelable) {
-      event.preventDefault();
-    }
-    if (gesture.ready) {
-      scheduleWheelRelease();
-    } else if (gesture.releaseArmed) {
-      clearWheelReleaseTimer();
-    }
-  }, [
-    canSwipeBackToList,
-    canSwipeForwardToSession,
-    clearWheelReleaseTimer,
-    hasHorizontalScrollableAncestor,
-    resetWheelGesture,
-    scheduleWheelRelease,
-    scheduleWheelUnlock,
-    swipeNavEnabled,
-  ]);
+      if (gesture.ready) {
+        scheduleWheelRelease();
+      } else if (gesture.releaseArmed) {
+        clearWheelReleaseTimer();
+      }
+    },
+    [
+      canSwipeBackToList,
+      canSwipeForwardToSession,
+      clearWheelReleaseTimer,
+      hasHorizontalScrollableAncestor,
+      resetWheelGesture,
+      scheduleWheelRelease,
+      scheduleWheelUnlock,
+      swipeNavEnabled,
+    ],
+  );
 
   useEffect(() => {
     resetWheelGesture();
@@ -1313,7 +1489,9 @@ function SessionsPage() {
           <div className="mx-auto w-full max-w-content flex items-center justify-between px-3 py-2">
             <div className="flex items-center gap-1.5 min-w-0 shrink-0">
               <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
-              <span className="text-sm font-semibold text-[var(--app-fg)] select-none shrink-0">HAPI</span>
+              <span className="text-sm font-semibold text-[var(--app-fg)] select-none shrink-0">
+                HAPI
+              </span>
             </div>
             <div className="flex items-center gap-0 shrink-0">
               <button
@@ -1330,9 +1508,15 @@ function SessionsPage() {
                 type="button"
                 onClick={toggleTheme}
                 className="inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                title={isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
+                title={
+                  isDark ? t("theme.switchToLight") : t("theme.switchToDark")
+                }
               >
-                {isDark ? <SunIcon className="h-[18px] w-[18px]" /> : <MoonIcon className="h-[18px] w-[18px]" />}
+                {isDark ? (
+                  <SunIcon className="h-[18px] w-[18px]" />
+                ) : (
+                  <MoonIcon className="h-[18px] w-[18px]" />
+                )}
               </button>
               <button
                 type="button"
@@ -1393,14 +1577,27 @@ function SessionsPage() {
                     <>
                       <button
                         type="button"
-                        onClick={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? () => setBatchSelectedIds(new Set()) : handleBatchSelectAll}
+                        onClick={
+                          batchSelectedIds.size === batchFilteredIds.size &&
+                          batchFilteredIds.size > 0
+                            ? () => setBatchSelectedIds(new Set())
+                            : handleBatchSelectAll
+                        }
                         disabled={batchPending || batchFilteredIds.size === 0}
                         className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? t("batch.deselectAll") : t("batch.selectAll")}
+                        title={
+                          batchSelectedIds.size === batchFilteredIds.size &&
+                          batchFilteredIds.size > 0
+                            ? t("batch.deselectAll")
+                            : t("batch.selectAll")
+                        }
                       >
-                        {batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0
-                          ? <BatchDeselectAllIcon className="h-[18px] w-[18px]" />
-                          : <BatchSelectAllIcon className="h-[18px] w-[18px]" />}
+                        {batchSelectedIds.size === batchFilteredIds.size &&
+                        batchFilteredIds.size > 0 ? (
+                          <BatchDeselectAllIcon className="h-[18px] w-[18px]" />
+                        ) : (
+                          <BatchSelectAllIcon className="h-[18px] w-[18px]" />
+                        )}
                       </button>
                       <button
                         type="button"
@@ -1445,7 +1642,11 @@ function SessionsPage() {
                         type="button"
                         onClick={toggleFilterOnline}
                         className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
-                        title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
+                        title={
+                          filterOnlineOnly
+                            ? t("filter.showAll")
+                            : t("filter.onlineOnly")
+                        }
                       >
                         <OnlineFilterIcon className="h-[18px] w-[18px]" />
                       </button>
@@ -1455,7 +1656,11 @@ function SessionsPage() {
                       type="button"
                       onClick={toggleFilterOnline}
                       className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
-                      title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
+                      title={
+                        filterOnlineOnly
+                          ? t("filter.showAll")
+                          : t("filter.onlineOnly")
+                      }
                     >
                       <OnlineFilterIcon className="h-[18px] w-[18px]" />
                     </button>
@@ -1472,7 +1677,10 @@ function SessionsPage() {
               <div className="text-sm text-red-600">{error}</div>
             </div>
           ) : null}
-          {!error && !isLoading && normalizedSessionSearch && displaySessions.length === 0 ? (
+          {!error &&
+          !isLoading &&
+          normalizedSessionSearch &&
+          displaySessions.length === 0 ? (
             <div className="mx-auto w-full max-w-content px-3 py-4 text-sm text-[var(--app-hint)]">
               {t("sessions.search.noMatch")}
             </div>
@@ -1502,17 +1710,35 @@ function SessionsPage() {
         <ConfirmDialog
           isOpen={batchConfirmOpen}
           onClose={() => setBatchConfirmOpen(false)}
-          title={t(batchMode === "archive" ? "batch.archive.title" : "batch.delete.title")}
+          title={t(
+            batchMode === "archive"
+              ? "batch.archive.title"
+              : "batch.delete.title",
+          )}
           description={t(
-            batchMode === "archive" ? "batch.archive.description" : "batch.delete.description",
+            batchMode === "archive"
+              ? "batch.archive.description"
+              : "batch.delete.description",
             { count: batchSelectedIds.size },
           )}
-          confirmLabel={t(batchMode === "archive" ? "dialog.archive.confirm" : "dialog.delete.confirm")}
-          confirmingLabel={t(batchMode === "archive" ? "dialog.archive.confirming" : "dialog.delete.confirming")}
+          confirmLabel={t(
+            batchMode === "archive"
+              ? "dialog.archive.confirm"
+              : "dialog.delete.confirm",
+          )}
+          confirmingLabel={t(
+            batchMode === "archive"
+              ? "dialog.archive.confirming"
+              : "dialog.delete.confirming",
+          )}
           onConfirm={executeBatchOperation}
           isPending={batchPending}
           destructive
-          dontAskAgainKey={batchMode === "archive" ? "hapi:skip-confirm:archive" : "hapi:skip-confirm:delete"}
+          dontAskAgainKey={
+            batchMode === "archive"
+              ? "hapi:skip-confirm:archive"
+              : "hapi:skip-confirm:delete"
+          }
         />
       </div>
 
@@ -1573,13 +1799,9 @@ function SessionsPage() {
           <div className="flex-1 min-h-0 overflow-y-auto py-1 desktop-scrollbar-left">
             {collapsedGroups.map((group, gi) => (
               <div key={group.host}>
-                {gi > 0 && <div className="mx-2 my-1 h-px bg-[var(--app-divider)]" />}
-                {/* Group label: first character */}
-                <div className="flex items-center justify-center py-1.5 px-1" title={group.host}>
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--app-subtle-bg)] text-[10px] font-medium text-[var(--app-hint)] select-none">
-                    {group.host.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                {gi > 0 && (
+                  <div className="mx-2 my-1 h-px bg-[var(--app-divider)]" />
+                )}
                 {/* Session icons */}
                 {group.sessions.map((s) => (
                   <CollapsedSessionItem
@@ -1601,8 +1823,10 @@ function SessionsPage() {
             <button
               type="button"
               onClick={toggleFilterOnline}
-              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? 'bg-emerald-500/15 text-emerald-500' : 'text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]'}`}
-              title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
+              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+              title={
+                filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")
+              }
             >
               <OnlineFilterIcon className="h-[18px] w-[18px]" />
             </button>
@@ -1612,9 +1836,15 @@ function SessionsPage() {
               type="button"
               onClick={toggleTheme}
               className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-              title={isDark ? t("theme.switchToLight") : t("theme.switchToDark")}
+              title={
+                isDark ? t("theme.switchToLight") : t("theme.switchToDark")
+              }
             >
-              {isDark ? <SunIcon className="h-[18px] w-[18px]" /> : <MoonIcon className="h-[18px] w-[18px]" />}
+              {isDark ? (
+                <SunIcon className="h-[18px] w-[18px]" />
+              ) : (
+                <MoonIcon className="h-[18px] w-[18px]" />
+              )}
             </button>
             <button
               type="button"
@@ -1697,15 +1927,24 @@ function shouldRetryPermissionSync(error: unknown): boolean {
     return false;
   }
   const text = error.message.toLowerCase();
-  return text.includes("session is inactive")
-    || text.includes("rpc handler not registered")
-    || text.includes("rpc socket disconnected")
-    || text.includes("network error")
-    || text.includes("failed to fetch");
+  return (
+    text.includes("session is inactive") ||
+    text.includes("rpc handler not registered") ||
+    text.includes("rpc socket disconnected") ||
+    text.includes("network error") ||
+    text.includes("failed to fetch")
+  );
 }
 
-function resolveSpawnAgent(flavor?: string | null): "claude" | "codex" | "gemini" | "opencode" | undefined {
-  if (flavor === "claude" || flavor === "codex" || flavor === "gemini" || flavor === "opencode") {
+function resolveSpawnAgent(
+  flavor?: string | null,
+): "claude" | "codex" | "gemini" | "opencode" | undefined {
+  if (
+    flavor === "claude" ||
+    flavor === "codex" ||
+    flavor === "gemini" ||
+    flavor === "opencode"
+  ) {
     return flavor;
   }
   return undefined;
@@ -1715,7 +1954,7 @@ function isSessionPermissionSynced(
   currentPermissionMode: PermissionMode | undefined,
   currentBasePermissionMode: PermissionMode | undefined,
   expectedPermissionMode: PermissionMode,
-  expectedBasePermissionMode?: PermissionMode
+  expectedBasePermissionMode?: PermissionMode,
 ): boolean {
   if (currentPermissionMode !== expectedPermissionMode) {
     return false;
@@ -1764,7 +2003,7 @@ function SessionView({
       session.permissionMode,
       session.basePermissionMode,
       pendingSessionMode.permissionMode,
-      pendingSessionMode.basePermissionMode
+      pendingSessionMode.basePermissionMode,
     );
 
     if (alreadySynced) {
@@ -1790,7 +2029,7 @@ function SessionView({
           await api.setPermissionMode(
             session.id,
             pendingSessionMode.permissionMode,
-            pendingSessionMode.basePermissionMode
+            pendingSessionMode.basePermissionMode,
           );
           if (cancelled) {
             return;
@@ -1837,7 +2076,7 @@ function SessionView({
       session.permissionMode,
       session.basePermissionMode,
       pendingSessionMode.permissionMode,
-      pendingSessionMode.basePermissionMode
+      pendingSessionMode.basePermissionMode,
     );
   }, [pendingSessionMode, session]);
 
@@ -1852,10 +2091,13 @@ function SessionView({
     if (!session || !pendingSessionMode) {
       return undefined;
     }
-    return session.basePermissionMode
-      ?? (pendingSessionMode.permissionMode === "plan"
+    return (
+      session.basePermissionMode ??
+      (pendingSessionMode.permissionMode === "plan"
         ? (pendingSessionMode.basePermissionMode ?? "default")
-        : (pendingSessionMode.basePermissionMode ?? pendingSessionMode.permissionMode));
+        : (pendingSessionMode.basePermissionMode ??
+          pendingSessionMode.permissionMode))
+    );
   }, [pendingSessionMode, session]);
 
   const {
@@ -1973,12 +2215,14 @@ function SessionView({
     }
 
     const permissionMode = session.permissionMode ?? "default";
-    const basePermissionMode = session.basePermissionMode
-      ?? (permissionMode === "plan" ? "default" : permissionMode);
+    const basePermissionMode =
+      session.basePermissionMode ??
+      (permissionMode === "plan" ? "default" : permissionMode);
     const spawnSessionType = session.metadata?.worktree ? "worktree" : "simple";
-    const worktreeName = spawnSessionType === "worktree"
-      ? (session.metadata?.worktree?.name?.trim() || undefined)
-      : undefined;
+    const worktreeName =
+      spawnSessionType === "worktree"
+        ? session.metadata?.worktree?.name?.trim() || undefined
+        : undefined;
     const model = session.metadata?.model?.trim() || undefined;
 
     setQuickNewSessionPending(true);
@@ -1992,7 +2236,7 @@ function SessionView({
         permissionMode,
         basePermissionMode,
         spawnSessionType,
-        worktreeName
+        worktreeName,
       );
 
       if (result.type !== "success") {
@@ -2012,9 +2256,10 @@ function SessionView({
         params: { sessionId: result.sessionId },
       });
     } catch (error) {
-      const message = error instanceof Error && error.message
-        ? error.message
-        : t("dialog.error.default");
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : t("dialog.error.default");
       addToast({
         title: t("sessions.quickNew.failedTitle"),
         body: message,
@@ -2024,7 +2269,15 @@ function SessionView({
     } finally {
       setQuickNewSessionPending(false);
     }
-  }, [api, addToast, navigate, queryClient, quickNewSessionPending, session, t]);
+  }, [
+    api,
+    addToast,
+    navigate,
+    queryClient,
+    quickNewSessionPending,
+    session,
+    t,
+  ]);
 
   if (!session) {
     return (
@@ -2124,7 +2377,7 @@ function NewSessionPanel({ onClose }: { onClose: () => void }) {
               <BackIcon />
             </button>
           )}
-          <div className="flex-1 font-semibold">{t('newSession.title')}</div>
+          <div className="flex-1 font-semibold">{t("newSession.title")}</div>
         </div>
       </div>
 
