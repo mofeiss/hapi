@@ -310,6 +310,8 @@ export default {
   "composer.switchRemote": "Switch to remote mode",
   "composer.controlledByTerminal":
     "Terminal in control \u00b7 Type to take over\u2026",
+  "composer.inactivePlaceholder":
+    "Session is inactive. Sending will resume it automatically.",
   "composer.copy": "Copy input",
   "composer.copied": "Copied",
   "composer.attach": "Attach file",

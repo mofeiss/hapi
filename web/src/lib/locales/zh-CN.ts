@@ -297,6 +297,7 @@ export default {
   'composer.abort': '中止',
   'composer.switchRemote': '切换到远程模式',
   'composer.controlledByTerminal': '终端控制中 \u00b7 输入消息接管会话\u2026',
+  'composer.inactivePlaceholder': '会话当前未激活。发送消息会自动恢复。',
   'composer.copy': '复制输入',
   'composer.copied': '已复制',
   'composer.attach': '添加文件',

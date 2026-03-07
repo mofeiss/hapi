@@ -712,7 +712,15 @@ export function HappyComposer(props: {
                                 <ComposerPrimitive.Input
                                     ref={textareaRef}
                                     autoFocus={!controlsDisabled && !isTouch}
-                                    placeholder={controlledByUser ? t('composer.controlledByTerminal') : showContinueHint ? t('misc.typeMessage') : t('misc.typeAMessage')}
+                                    placeholder={
+                                        controlledByUser
+                                            ? t('composer.controlledByTerminal')
+                                            : showContinueHint
+                                                ? t('misc.typeMessage')
+                                                : !active
+                                                    ? t('composer.inactivePlaceholder')
+                                                    : t('misc.typeAMessage')
+                                    }
                                     disabled={controlsDisabled}
                                     maxRows={5}
                                     submitOnEnter={!isTouch}

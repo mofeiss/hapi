@@ -973,14 +973,6 @@ export function SessionChat(props: {
                 onSessionDeleted={props.onSessionDeleted ?? props.onBack}
             />
 
-            {sessionInactive ? (
-                <div className="px-3 pt-3">
-                    <div className="mx-auto w-full max-w-content rounded-md bg-[var(--app-subtle-bg)] p-3 text-sm text-[var(--app-hint)]">
-                        Session is inactive. Sending will resume it automatically.
-                    </div>
-                </div>
-            ) : null}
-
             {props.permissionSyncPending ? (
                 <div className="px-3 pt-3">
                     <div className="mx-auto w-full max-w-content rounded-md bg-[var(--app-subtle-bg)] p-3 text-sm text-[var(--app-hint)]">
