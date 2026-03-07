@@ -3,6 +3,7 @@ import type { SessionMetadataSummary } from '@/types/api'
 import type { Locale } from '@/lib/i18n-context'
 import { isObject } from '@hapi/protocol'
 import { BulbIcon, ClipboardIcon, EyeIcon, FileDiffIcon, GlobeIcon, PencilIcon, PuzzleIcon, QuestionIcon, RocketIcon, SearchIcon, TerminalIcon, WrenchIcon } from '@/components/ToolCard/icons'
+import { ChecklistIcon } from '@/components/TodoPanel'
 import { extractToolTodos, getTodoStats } from '@/lib/todos'
 import { basename, resolveDisplayPath } from '@/utils/path'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
@@ -597,7 +598,7 @@ export const knownTools: Record<string, {
         minimal: false
     },
     TodoWrite: {
-        icon: () => <BulbIcon className={DEFAULT_ICON_CLASS} />,
+        icon: () => <ChecklistIcon className={DEFAULT_ICON_CLASS} />,
         title: (opts) => opts.locale === 'zh-CN' ? '更新任务列表' : 'Update todo list',
         subtitle: (opts) => {
             const todos = extractToolTodos(opts.input, opts.result)

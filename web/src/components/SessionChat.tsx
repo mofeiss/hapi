@@ -1020,69 +1020,77 @@ export function SessionChat(props: {
 
                     <div className="bg-[var(--app-bg)] px-3 pb-0 pt-2">
                         <div className="mx-auto w-full max-w-content">
-                            <StatusBar
-                                active={props.session.active}
-                                thinking={props.session.thinking}
-                                agentState={props.session.agentState}
-                                contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
-                                modelMode={props.session.modelMode}
-                                voiceStatus={sttVoiceStatus}
-                                className="px-0 pb-2"
-                            />
+                            <div className="relative flex items-end gap-3">
+                                <StatusBar
+                                    active={props.session.active}
+                                    thinking={props.session.thinking}
+                                    agentState={props.session.agentState}
+                                    contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
+                                    modelMode={props.session.modelMode}
+                                    voiceStatus={sttVoiceStatus}
+                                    className="relative z-10 min-w-0 flex-1 self-end px-0 pb-2"
+                                />
+
+                                {composerTodos.length > 0 ? (
+                                    <>
+                                        <div aria-hidden="true" className="w-[70%] min-w-0 max-w-[70%] shrink-0 self-end" />
+
+                                        <div className="pointer-events-none absolute bottom-0 right-0 z-0 w-[70%] min-w-0 max-w-[70%]">
+                                            <div className="pointer-events-auto w-full pl-1 pr-4 sm:pl-2 sm:pr-5">
+                                                <TodoPanel
+                                                    todos={composerTodos}
+                                                    variant="dock"
+                                                    collapsible
+                                                    resetKey={composerTodoResetKey}
+                                                    className="relative z-0 -mb-7 w-full"
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : null}
+                            </div>
                         </div>
                     </div>
 
-                    {composerTodos.length > 0 ? (
-                        <div className="bg-[var(--app-bg)] px-3 pb-0 pt-0">
-                            <div className="mx-auto w-full max-w-content px-2 sm:px-3">
-                                <TodoPanel
-                                    todos={composerTodos}
-                                    variant="dock"
-                                    collapsible
-                                    resetKey={composerTodoResetKey}
-                                    className="relative z-0 -mb-7"
-                                />
-                            </div>
-                        </div>
-                    ) : null}
-
-                    <HappyComposer
-                        disabled={props.isSending}
-                        sendDisabled={props.permissionSyncPending === true}
-                        permissionMode={props.permissionModeOverride ?? props.session.permissionMode}
-                        basePermissionMode={props.basePermissionModeOverride ?? props.session.basePermissionMode}
-                        modelMode={props.session.modelMode}
-                        agentFlavor={agentFlavor}
-                        active={props.session.active}
-                        allowSendWhenInactive
-                        thinking={props.session.thinking}
-                        agentState={props.session.agentState}
-                        contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
-                        controlledByUser={props.session.agentState?.controlledByUser === true}
-                        onPermissionModeChange={handlePermissionModeChange}
-                        onModelModeChange={handleModelModeChange}
-                        onPlanToggle={handlePlanToggle}
-                        claudeModel={composerClaudeModel}
-                        claudeModelOptions={claudeComposerModelOptions}
-                        onClaudeModelChange={handleClaudeModelChange}
-                        codexModel={composerCodexModel}
-                        codexModelOptions={codexComposerModelOptions}
-                        codexReasoningEffort={composerCodexReasoningEffort}
-                        codexReasoningOptions={codexComposerReasoningOptions}
-                        onCodexModelChange={setComposerCodexModel}
-                        onCodexReasoningEffortChange={setComposerCodexReasoningEffort}
-                        autocompleteSuggestions={props.autocompleteSuggestions}
-                        voiceStatus={sttVoiceStatus}
-                        voiceRawText={stt.rawText}
-                        voiceCorrectedText={stt.correctedText}
-                        voiceError={stt.error}
-                        voiceCorrectionUnavailable={stt.correctionAvailability === 'unavailable'}
-                        onVoiceToggle={handleVoiceToggle}
-                        onTranscript={stt.setOnTranscript}
-                        onQueueSend={messageQueue.enqueue}
-                        hasQueue={messageQueue.queue.length > 0}
-                        onFlushQueue={handleFlushNow}
-                    />
+                    <div className="relative z-20">
+                        <HappyComposer
+                            disabled={props.isSending}
+                            sendDisabled={props.permissionSyncPending === true}
+                            permissionMode={props.permissionModeOverride ?? props.session.permissionMode}
+                            basePermissionMode={props.basePermissionModeOverride ?? props.session.basePermissionMode}
+                            modelMode={props.session.modelMode}
+                            agentFlavor={agentFlavor}
+                            active={props.session.active}
+                            allowSendWhenInactive
+                            thinking={props.session.thinking}
+                            agentState={props.session.agentState}
+                            contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
+                            controlledByUser={props.session.agentState?.controlledByUser === true}
+                            onPermissionModeChange={handlePermissionModeChange}
+                            onModelModeChange={handleModelModeChange}
+                            onPlanToggle={handlePlanToggle}
+                            claudeModel={composerClaudeModel}
+                            claudeModelOptions={claudeComposerModelOptions}
+                            onClaudeModelChange={handleClaudeModelChange}
+                            codexModel={composerCodexModel}
+                            codexModelOptions={codexComposerModelOptions}
+                            codexReasoningEffort={composerCodexReasoningEffort}
+                            codexReasoningOptions={codexComposerReasoningOptions}
+                            onCodexModelChange={setComposerCodexModel}
+                            onCodexReasoningEffortChange={setComposerCodexReasoningEffort}
+                            autocompleteSuggestions={props.autocompleteSuggestions}
+                            voiceStatus={sttVoiceStatus}
+                            voiceRawText={stt.rawText}
+                            voiceCorrectedText={stt.correctedText}
+                            voiceError={stt.error}
+                            voiceCorrectionUnavailable={stt.correctionAvailability === 'unavailable'}
+                            onVoiceToggle={handleVoiceToggle}
+                            onTranscript={stt.setOnTranscript}
+                            onQueueSend={messageQueue.enqueue}
+                            hasQueue={messageQueue.queue.length > 0}
+                            onFlushQueue={handleFlushNow}
+                        />
+                    </div>
 
                     {/* Files overlay - covers main content area only */}
                     <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${filesOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>

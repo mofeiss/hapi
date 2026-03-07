@@ -689,7 +689,7 @@ export function HappyComposer(props: {
                 <ComposerPrimitive.Root className="relative" onSubmit={handleSubmit}>
                     {overlays}
 
-                    <div className="overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)]">
+                    <div className="overflow-hidden rounded-[20px] border border-[var(--app-panel-border)] bg-[var(--app-secondary-bg)]">
                         {!isVoiceFocusMode && attachments.length > 0 ? (
                             <div className="flex flex-wrap gap-2 px-4 pt-3">
                                 <ComposerImagePreviewContext.Provider value={imagePreviewCtx}>
