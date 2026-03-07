@@ -33,13 +33,28 @@ function isToolCallBlock(value: unknown): value is ToolCallBlock {
     return true
 }
 
+function formatFence(label: string, content: string): string {
+    const trimmed = content.trim()
+    if (!trimmed) return ''
+    return [
+        `\`\`\`${label}`,
+        trimmed,
+        '```'
+    ].join('\n')
+}
+
 function formatReasoningSection(text: string): string {
     const trimmed = text.trim()
     if (!trimmed) return ''
+    return formatFence('Reasoning', trimmed)
+}
+
+function formatInlineReasoningSection(text: string): string {
+    const trimmed = text.trim()
+    if (!trimmed) return ''
     return [
-        '```Reasoning',
-        trimmed,
-        '```'
+        'Reasoning:',
+        trimmed
     ].join('\n')
 }
 
@@ -90,7 +105,7 @@ function formatStepsChildren(
 
     for (const child of children) {
         if (child.kind === 'agent-reasoning') {
-            const reasoning = formatReasoningSection(child.text)
+            const reasoning = formatInlineReasoningSection(child.text)
             if (reasoning) sections.push(reasoning)
             continue
         }
@@ -150,24 +165,39 @@ export function buildAssistantCopyText(
     }
 ): string {
     const sections: string[] = []
+    let idx = 0
 
-    for (const part of parts) {
+    while (idx < parts.length) {
+        const part = parts[idx]
         if (isTextPart(part)) {
             const text = part.text.trim()
             if (text) sections.push(text)
+            idx += 1
             continue
         }
 
         if (isReasoningPart(part)) {
             const reasoning = formatReasoningSection(part.text)
             if (reasoning) sections.push(reasoning)
+            idx += 1
             continue
         }
 
         if (isToolCallPart(part)) {
-            const tool = formatToolPart(part, options.metadata, options.locale)
-            if (tool) sections.push(tool)
+            const toolSections: string[] = []
+            while (idx < parts.length) {
+                const current = parts[idx]
+                if (!isToolCallPart(current)) break
+                const tool = formatToolPart(current, options.metadata, options.locale)
+                if (tool) toolSections.push(tool)
+                idx += 1
+            }
+            const toolBlock = formatFence('Tool_Call', toolSections.join('\n\n'))
+            if (toolBlock) sections.push(toolBlock)
+            continue
         }
+
+        idx += 1
     }
 
     return sections.join('\n\n').trim()

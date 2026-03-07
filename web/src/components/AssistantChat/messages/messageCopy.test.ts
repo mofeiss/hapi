@@ -55,7 +55,7 @@ describe('buildAssistantCopyText', () => {
             [
                 'Done.',
                 '```Reasoning\nInspect src/app.ts\nCheck types\n```',
-                'View src/app.ts file'
+                '```Tool_Call\nView src/app.ts file\n```'
             ].join('\n\n')
         )
     })
@@ -77,12 +77,7 @@ describe('buildAssistantCopyText', () => {
         ]
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
-            [
-                'Tool Calls | 2 calls',
-                '- View src/app.ts file',
-                '```Reasoning\nNeed to verify after edit\n```',
-                '- Run command bun test web'
-            ].join('\n\n')
+            '```Tool_Call\nTool Calls | 2 calls\n\n- View src/app.ts file\n\nReasoning:\nNeed to verify after edit\n\n- Run command bun test web\n```'
         )
     })
 
@@ -98,7 +93,18 @@ describe('buildAssistantCopyText', () => {
         ]
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
-            'Write 5 chars to src/app.ts'
+            '```Tool_Call\nWrite 5 chars to src/app.ts\n```'
+        )
+    })
+
+    it('merges consecutive tool-call parts into one tool_call block', () => {
+        const parts: AssistantCopyPart[] = [
+            { type: 'tool-call', artifact: createToolBlock('read-1', 'Read', { file_path: '/workspace/src/app.ts' }) },
+            { type: 'tool-call', artifact: createToolBlock('bash-1', 'Bash', { command: 'bun test web' }) }
+        ]
+
+        expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
+            '```Tool_Call\nView src/app.ts file\n\nRun command bun test web\n```'
         )
     })
 })
