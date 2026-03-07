@@ -31,6 +31,7 @@ type AskUserQuestionPendingCandidate = {
     kind: AskUserQuestionPendingCandidateType
 }
 const OPTION_SNAPSHOT_LIMIT = 4
+const STEP_LIST_ITEM_SHIFT_CLASS = '-ml-[2px]'
 
 function normalizeQuestionAnswers(answers: unknown): FlatQuestionAnswers {
     if (!answers || typeof answers !== 'object') return {}
@@ -284,7 +285,7 @@ function StepReasoningNode(props: { block: AgentReasoningBlock }) {
     }
 
     return (
-        <div ref={nodeRef} className="space-y-0.5">
+        <div ref={nodeRef} className={cn('space-y-0.5', STEP_LIST_ITEM_SHIFT_CLASS)}>
             <button
                 type="button"
                 className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-[var(--app-subtle-bg)]"
@@ -634,7 +635,7 @@ function StepNode(props: {
     }
 
     return (
-        <div ref={nodeRef} className="space-y-0.5">
+        <div ref={nodeRef} className={cn('space-y-0.5', STEP_LIST_ITEM_SHIFT_CLASS)}>
             <button
                 type="button"
                 className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-[var(--app-subtle-bg)]"

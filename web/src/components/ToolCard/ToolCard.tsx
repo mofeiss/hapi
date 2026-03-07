@@ -358,7 +358,7 @@ function ToolCardInner(props: ToolCardProps) {
     }
 
     const header = (
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 -translate-y-[3px]">
             <div className="min-w-0 flex items-center gap-2">
                 <div className="shrink-0 flex h-3.5 w-3.5 items-center justify-center text-[var(--app-hint)] leading-none">
                     {presentation.icon}
@@ -443,7 +443,7 @@ function ToolCardInner(props: ToolCardProps) {
     )
 
     return (
-        <Card ref={cardRef} className="overflow-hidden shadow-sm">
+        <Card ref={cardRef} className="overflow-hidden shadow-none">
             <CardHeader className="px-3 pt-3 pb-1.5 space-y-0">
                 {canExpand ? (
                     <button

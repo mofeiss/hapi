@@ -197,7 +197,7 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
 
         return (
             <div className="py-1 min-w-0 max-w-full overflow-x-hidden">
-                <div className="rounded-xl bg-[var(--app-secondary-bg)] p-3 shadow-sm">
+                <div className="rounded-xl bg-[var(--app-secondary-bg)] p-3">
                     <div className="flex items-center gap-2 text-xs">
                         <div className="font-mono text-[var(--app-hint)]">
                             {t('event.toolLabel', { name: displayToolName })}
