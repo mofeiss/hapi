@@ -88,7 +88,7 @@ function TodoStatusIcon(props: {
 
 function todoTextClass(status: TodoViewItem['status']): string {
     if (status === 'completed') {
-        return 'text-[var(--app-hint)] line-through decoration-[var(--app-border)]'
+        return 'text-[var(--app-hint)] line-through decoration-current'
     }
     if (status === 'in_progress') {
         return 'text-[var(--app-fg)] font-medium'
