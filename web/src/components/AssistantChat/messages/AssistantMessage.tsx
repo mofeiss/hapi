@@ -73,6 +73,7 @@ export function HappyAssistantMessage() {
     const rootClass = toolOnly
         ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
         : 'px-1 min-w-0 max-w-full overflow-x-hidden'
+    const actionsClass = 'ml-1 mt-0.5 flex w-fit items-center gap-1'
 
     if (isCliOutput) {
         return (
@@ -80,7 +81,7 @@ export function HappyAssistantMessage() {
                 <MessagePrimitive.Root className="px-1 min-w-0 max-w-full overflow-x-hidden">
                     <CliOutputBlock text={cliText} />
                 </MessagePrimitive.Root>
-                <div className="ml-1 flex w-fit items-center gap-1">
+                <div className={actionsClass}>
                     <MessageCopyButton text={cliText} />
                     <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
                 </div>
@@ -94,7 +95,7 @@ export function HappyAssistantMessage() {
                 <MessagePrimitive.Root className="px-1 min-w-0 max-w-full overflow-x-hidden">
                     <ApiErrorNotice text={apiErrorText} />
                 </MessagePrimitive.Root>
-                <div className="ml-1 flex w-fit items-center gap-1">
+                <div className={actionsClass}>
                     <MessageCopyButton text={apiErrorText} />
                     <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
                 </div>
@@ -107,7 +108,7 @@ export function HappyAssistantMessage() {
             <MessagePrimitive.Root className={rootClass}>
                 <MessagePrimitive.Content components={MESSAGE_PART_COMPONENTS} />
             </MessagePrimitive.Root>
-            <div className="ml-1 flex w-fit items-center gap-1">
+            <div className={actionsClass}>
                 <MessageCopyButton text={copyText} />
                 <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
             </div>
