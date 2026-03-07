@@ -1497,10 +1497,10 @@ function SessionsPage() {
               <button
                 type="button"
                 onClick={toggleCollapsed}
-                className="hidden lg:inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                className="hidden lg:inline-flex -ml-[2px] mr-[2px] p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
                 title="Collapse sidebar"
               >
-                <SidebarCollapseIcon className="h-[18px] w-[18px] -translate-x-[2px]" />
+                <SidebarCollapseIcon className="h-[18px] w-[18px]" />
               </button>
               <div className="hidden lg:block mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
               <QuickLanguageToggle className="inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]" />
@@ -1754,11 +1754,11 @@ function SessionsPage() {
       {collapsed && (
         <div className="hidden lg:flex flex-col h-[100dvh] shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
           {/* Top: expand button */}
-          <div className="px-3 py-2 shrink-0">
+          <div className="flex shrink-0 justify-center px-2 py-2">
             <button
               type="button"
               onClick={toggleCollapsed}
-              className="mt-[2px] ml-[-5px] p-1 text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] rounded transition-colors"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
               title="Expand sidebar"
             >
               <SidebarExpandIcon className="h-[18px] w-[18px]" />
