@@ -51,9 +51,9 @@ export function DiffView(props: {
                     onKeyDown={onTriggerKeyDown}
                     onBlur={onTriggerBlur}
                 >
-                    <div className="overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)] hover:bg-[var(--app-secondary-bg)] transition-colors">
+                    <div className="tool-plain-surface overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)] hover:bg-[var(--app-secondary-bg)] transition-colors">
                         {props.filePath ? (
-                            <div className="border-b border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2 py-1 text-xs text-[var(--app-hint)] truncate">
+                            <div className="tool-plain-surface-header border-b border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2 py-1 text-xs text-[var(--app-hint)] truncate">
                                 {props.filePath}
                             </div>
                         ) : null}
@@ -93,9 +93,9 @@ function DiffInlineView(props: {
     const diff = useMemo(() => diffLines(props.oldString, props.newString), [props.oldString, props.newString])
 
     return (
-        <div className="overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)]">
+        <div className="tool-plain-surface overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)]">
             {props.filePath ? (
-                <div className="border-b border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2 py-1 text-xs text-[var(--app-hint)] truncate">
+                <div className="tool-plain-surface-header border-b border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2 py-1 text-xs text-[var(--app-hint)] truncate">
                     {props.filePath}
                 </div>
             ) : null}

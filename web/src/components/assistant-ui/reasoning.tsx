@@ -1,35 +1,13 @@
 import { useState, useEffect, type FC, type PropsWithChildren, type TransitionEvent } from 'react'
 import { useMessage, type ReasoningGroupProps } from '@assistant-ui/react'
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown'
+import { DisclosureChevron, DisclosureRail } from '@/components/Disclosure'
 import { cn } from '@/lib/utils'
 import { defaultComponents, MARKDOWN_BLOCK_SPACING_CLASSNAME, MARKDOWN_PLUGINS } from '@/components/assistant-ui/markdown-text'
 
 type ReasoningMessagePart = {
     type: 'reasoning'
     text: string
-}
-
-function ChevronIcon(props: { className?: string; open?: boolean }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={cn(
-                'transition-transform duration-200',
-                props.open ? 'rotate-90' : '',
-                props.className
-            )}
-        >
-            <polyline points="9 18 15 12 9 6" />
-        </svg>
-    )
 }
 
 export function BrainIcon(props: { className?: string }) {
@@ -139,11 +117,11 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
                     'transition-colors cursor-pointer select-none'
                 )}
             >
-                <span className="shrink-0 text-[var(--app-hint)]">
+                <span className="shrink-0 flex h-3.5 w-3.5 items-center justify-center text-[var(--app-hint)] leading-none">
                     <BrainIcon className="h-3 w-3" />
                 </span>
                 <span className="shrink-0 text-[var(--app-hint)]">
-                    <ChevronIcon open={isOpen} />
+                    <DisclosureChevron open={isOpen} />
                 </span>
                 <span className="min-w-0 flex flex-1 items-baseline gap-2">
                     <span className="shrink-0 text-sm text-[var(--app-hint)] opacity-90">Reasoning</span>
@@ -167,9 +145,9 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
                     isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
                 )}
             >
-                <div className="ml-0.5 border-l-2 border-[var(--app-border)] pl-4 pt-2">
+                <DisclosureRail level="outer">
                     {children}
-                </div>
+                </DisclosureRail>
             </div>
         </div>
     )

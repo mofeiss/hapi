@@ -39,7 +39,7 @@ function ensureDefaultSelection(question: AskUserQuestionQuestion, state: Questi
 
 function QuestionRow(props: { tag: string | null; text: string }) {
     return (
-        <div className="min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5">
+        <div className="tool-param-field min-w-0 w-full max-w-full rounded-md bg-transparent pl-0 pr-2 py-0.5">
             <div className="font-mono text-xs leading-4 text-[var(--app-fg)] break-all">
                 {props.tag ? (
                     <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
@@ -482,7 +482,7 @@ export function AskUserQuestionFooter(props: {
                                     {!questionState.otherSelected ? (
                                         <div className="mt-1 min-h-4 min-w-0">
                                             <div
-                                                className="rounded-md bg-[var(--app-code-bg)] px-2 py-0.5 font-mono text-xs text-[var(--app-hint)] whitespace-nowrap overflow-hidden text-ellipsis"
+                                                className="tool-param-field rounded-md bg-transparent px-2 py-0.5 font-mono text-xs text-[var(--app-hint)] whitespace-nowrap overflow-hidden text-ellipsis"
                                                 title={summaryText}
                                             >
                                                 {summaryText}
@@ -493,7 +493,7 @@ export function AskUserQuestionFooter(props: {
                             ) : null}
 
                             {(question.options.length === 0 || questionState.otherSelected) ? (
-                                <div className="mt-1 min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5">
+                                <div className="tool-param-field mt-1 min-w-0 w-full max-w-full rounded-md bg-transparent pl-0 pr-2 py-0.5">
                                     <div className="flex items-center gap-2 font-mono text-xs leading-4 text-[var(--app-fg)]">
                                         <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
                                             {labelInput}

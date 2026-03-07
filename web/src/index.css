@@ -356,3 +356,21 @@ html[data-theme="dark"] .shiki span {
   white-space: pre-wrap !important;
   word-break: break-word;
 }
+
+.tool-io-scope .tool-plain-surface {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+.tool-io-scope .tool-plain-surface:hover {
+  background-color: transparent !important;
+}
+
+.tool-io-scope .tool-plain-surface-header {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+.tool-io-scope [data-codeblock-line-number="true"] {
+  background-color: transparent !important;
+}

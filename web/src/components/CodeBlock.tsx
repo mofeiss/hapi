@@ -42,12 +42,12 @@ export function CodeBlock(props: {
                     data-codeblock-scroll="true"
                     dir="ltr"
                     style={{ direction: 'ltr' }}
-                    className="min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden rounded-md bg-[var(--app-code-bg)]"
+                    className="tool-plain-surface min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden rounded-md bg-[var(--app-code-bg)]"
                 >
                     <div className={cn('min-w-0 w-full text-xs font-mono leading-5', contentRightPaddingClassName)} style={{ direction: 'ltr' }}>
                         {displayLines.map((line, index) => (
                             <div key={index} className="flex items-start" style={{ direction: 'ltr' }}>
-                                <span className="w-7 shrink-0 select-none border-r border-[var(--app-border)] bg-[var(--app-subtle-bg)] pl-0.5 pr-1 text-right tabular-nums text-[var(--app-hint)] opacity-55">
+                                <span data-codeblock-line-number="true" className="w-7 shrink-0 select-none border-r border-[var(--app-border)] bg-[var(--app-subtle-bg)] pl-0.5 pr-1 text-right tabular-nums text-[var(--app-hint)] opacity-55">
                                     {index + 1}
                                 </span>
                                 <code className="block min-w-0 flex-1 whitespace-pre-wrap break-words pl-1.5 text-left text-[var(--app-fg)]">
@@ -60,7 +60,7 @@ export function CodeBlock(props: {
             ) : (
                 <div
                     data-codeblock-scroll="true"
-                    className="min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden rounded-md bg-[var(--app-code-bg)]"
+                    className="tool-plain-surface min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden rounded-md bg-[var(--app-code-bg)]"
                 >
                     <pre className={cn('shiki m-0 w-max min-w-full p-2 text-xs font-mono', contentRightPaddingClassName)}>
                         <code className="block">{highlighted ?? props.code}</code>

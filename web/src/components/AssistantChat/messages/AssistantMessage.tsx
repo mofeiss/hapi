@@ -120,7 +120,6 @@ export function HappyAssistantMessage() {
         && turnDurationInfo.turnEndIndex === threadMessagesLength - 1
     const shouldShowTurnActions = turnDurationInfo !== null
         && turnDurationInfo.lastAssistantOutputIndex === currentMessageIndex
-    const toolOnly = assistantContent.length > 0 && assistantContent.every((part) => part.type === 'tool-call')
     const apiErrorText = (() => {
         if (assistantContent.length !== 1) return null
         const first = assistantContent[0]
@@ -144,9 +143,7 @@ export function HappyAssistantMessage() {
             editedMessageTextById: ctx.editedMessageTextById
         }
     )
-    const rootClass = toolOnly
-        ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
-        : 'px-1 min-w-0 max-w-full overflow-x-hidden'
+    const rootClass = 'px-1 min-w-0 max-w-full overflow-x-hidden'
     const actionsClass = 'ml-1 mt-0.5 flex w-fit items-center gap-1'
     const durationBadge = (
         <MessageTurnDurationBadge

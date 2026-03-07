@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ToolViewComponent, ToolViewProps } from '@/components/ToolCard/views/_all'
 import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
+import { DisclosureChevron, DisclosureRail } from '@/components/Disclosure'
 import { CopyIcon, CheckIcon } from '@/components/icons'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { TodoList } from '@/components/TodoPanel'
@@ -570,18 +571,6 @@ function McpServerNodeStatusIcon(props: { state: ToolViewProps['block']['tool'][
     )
 }
 
-function McpServerNodeChevron(props: { open: boolean }) {
-    return (
-        <svg
-            className={`h-3.5 w-3.5 transition-transform ${props.open ? 'rotate-90' : 'rotate-0'}`}
-            viewBox="0 0 16 16"
-            fill="none"
-        >
-            <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    )
-}
-
 function formatMcpResourceCount(count: number): string {
     return count === 1 ? '1 resource' : `${count} resources`
 }
@@ -605,7 +594,7 @@ function NotebookEditStatsBar(props: { oldSource: string; newSource: string }) {
     const label = `old: ${oldChars.toLocaleString()} chars → new: ${newChars.toLocaleString()} chars`
 
     return (
-        <div className="overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)]">
+        <div className="tool-plain-surface overflow-hidden rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)]">
             <div className="px-2 py-2">
                 <div className="min-w-0 font-mono text-xs text-[var(--app-hint)] truncate">
                     {label}
@@ -1204,7 +1193,7 @@ const ListMcpResourcesResultView: ToolViewComponent = (props: ToolViewProps) => 
                             aria-label={`Toggle ${group.server}`}
                         >
                             <span className="shrink-0 text-[var(--app-hint)]">
-                                <McpServerNodeChevron open={Boolean(openServers[group.server])} />
+                                <DisclosureChevron open={Boolean(openServers[group.server])} />
                             </span>
                             <span className="shrink-0">
                                 <McpServerNodeStatusIcon state={state} />
@@ -1218,13 +1207,13 @@ const ListMcpResourcesResultView: ToolViewComponent = (props: ToolViewProps) => 
                         </button>
 
                         {openServers[group.server] ? (
-                            <div className="ml-5 border-l border-[var(--app-border)] pl-2.5 space-y-1">
+                            <DisclosureRail level="inner" className="space-y-1">
                                 {renderMcpResourceRows(group.resources.map((resource) => ({
                                     server: group.server,
                                     name: resource.name,
                                     description: resource.description
                                 })))}
-                            </div>
+                            </DisclosureRail>
                         ) : null}
                     </div>
                 ))}

@@ -1,5 +1,6 @@
 import { useAssistantState } from '@assistant-ui/react'
 import { getEventPresentation } from '@/chat/presentation'
+import { DisclosureInlineRail } from '@/components/Disclosure'
 import type { HappyChatMessageMetadata } from '@/lib/assistant-runtime'
 import { useTranslation } from '@/lib/use-translation'
 
@@ -23,10 +24,10 @@ export function HappySystemMessage() {
 
     return (
         <div className="py-1">
-            <div className="max-w-[92%] px-1 text-xs text-[var(--app-hint)] opacity-80">
-                <span className="inline-flex items-center border-l-2 border-[var(--app-border)] pl-1.5">
+            <div className="max-w-[92%] px-1 text-xs text-[var(--app-hint)]">
+                <DisclosureInlineRail level="outer">
                     <span>{text}</span>
-                </span>
+                </DisclosureInlineRail>
             </div>
         </div>
     )

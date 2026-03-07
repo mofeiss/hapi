@@ -2,8 +2,8 @@ import type { ToolCallBlock } from '@/chat/types'
 import type { ApiClient } from '@/api/client'
 import type { SessionMetadataSummary } from '@/types/api'
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeBlock } from '@/components/CodeBlock'
+import { DisclosureChevron, DisclosureRail, type DisclosureLevel } from '@/components/Disclosure'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
@@ -170,18 +170,6 @@ function statusColorClass(state: ToolCallBlock['tool']['state']): string {
     return 'text-[var(--app-hint)]'
 }
 
-function ExpandIcon(props: { expanded: boolean }) {
-    return (
-        <svg
-            className={cn('h-4 w-4 transition-transform', props.expanded ? 'rotate-180' : 'rotate-0')}
-            viewBox="0 0 16 16"
-            fill="none"
-        >
-            <path d="M3.5 6l4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    )
-}
-
 type ToolCardProps = {
     api: ApiClient
     sessionId: string
@@ -189,6 +177,7 @@ type ToolCardProps = {
     disabled: boolean
     onDone: () => void
     block: ToolCallBlock
+    disclosureLevel?: DisclosureLevel
 }
 
 type FlatQuestionAnswers = Record<string, string[]>
@@ -262,6 +251,7 @@ function buildOptionSnapshot(options: string[]): { preview: string; full: string
 }
 
 function ToolCardInner(props: ToolCardProps) {
+    const disclosureLevel = props.disclosureLevel ?? 'outer'
     const { t, locale } = useTranslation()
     const presentation = useMemo(() => getToolPresentation({
         toolName: props.block.tool.name,
@@ -313,7 +303,7 @@ function ToolCardInner(props: ToolCardProps) {
         permission.status === 'pending'
         || ((permission.status === 'denied' || permission.status === 'canceled') && Boolean(permission.reason))
     ))
-    const hasBody = expanded && (hasInlineDetails || showsPermissionFooter)
+    const hasBodyContent = hasInlineDetails || showsPermissionFooter
     const canExpand = hasInlineDetails || showsPermissionFooter
     const stateColor = statusColorClass(props.block.tool.state)
     const { suppressFocusRing, onTriggerPointerDown, onTriggerKeyDown, onTriggerBlur } = usePointerFocusRing()
@@ -359,18 +349,23 @@ function ToolCardInner(props: ToolCardProps) {
     }
 
     const header = (
-        <div className="flex items-center justify-between gap-3 -translate-y-[3px]">
-            <div className="min-w-0 flex items-center gap-2">
+        <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex items-center gap-1.5">
                 <div className="shrink-0 flex h-3.5 w-3.5 items-center justify-center text-[var(--app-hint)] leading-none">
                     {presentation.icon}
                 </div>
+                {canExpand ? (
+                    <span className="shrink-0 text-[var(--app-hint)]">
+                        <DisclosureChevron open={expanded} />
+                    </span>
+                ) : null}
                 <span className={cn('shrink-0', stateColor)}>
                     <StatusIcon state={props.block.tool.state} />
                 </span>
                 <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-                    <CardTitle className="shrink-0 text-sm font-medium leading-tight">
+                    <span className="shrink-0 text-sm font-medium leading-tight text-[var(--app-fg)]">
                         {toolTitle}
-                    </CardTitle>
+                    </span>
                     {subtitle ? (
                         <span
                             className="min-w-0 truncate font-mono text-xs leading-tight text-[var(--app-hint)] opacity-80"
@@ -384,11 +379,6 @@ function ToolCardInner(props: ToolCardProps) {
 
             <div className="flex items-center gap-2 shrink-0">
                 <ElapsedView from={runningFrom} active={props.block.tool.state === 'running'} />
-                {canExpand ? (
-                    <span className="text-[var(--app-hint)]">
-                        <ExpandIcon expanded={expanded} />
-                    </span>
-                ) : null}
             </div>
         </div>
     )
@@ -443,44 +433,36 @@ function ToolCardInner(props: ToolCardProps) {
         && permission.status !== 'pending'
     )
 
-    return (
-        <Card ref={cardRef} className="overflow-hidden bg-[var(--app-subtle-bg)] shadow-none">
-            <CardHeader className="px-3 pt-3 pb-1.5 space-y-0">
-                {canExpand ? (
-                    <button
-                        type="button"
-                        className={cn(
-                            'w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]',
-                            suppressFocusRing && 'focus-visible:ring-0'
-                        )}
-                        onClick={toggleExpanded}
-                        onPointerDown={onTriggerPointerDown}
-                        onKeyDown={onTriggerKeyDown}
-                        onBlur={onTriggerBlur}
-                    >
-                        {header}
-                    </button>
+    const bodyContent = (
+        <>
+            {taskSummary ? (
+                <div>
+                    {taskSummary}
+                </div>
+            ) : null}
+
+            {isResultOnlyTool ? (
+                <div>
+                    <ResultToolView block={props.block} metadata={props.metadata} />
+                </div>
+            ) : showInline ? (
+                CompactToolView ? (
+                    <div>
+                        <CompactToolView
+                            block={props.block}
+                            metadata={props.metadata}
+                            api={props.api}
+                            sessionId={props.sessionId}
+                            disabled={props.disabled}
+                            onDone={props.onDone}
+                        />
+                    </div>
                 ) : (
-                    <div>{header}</div>
-                )}
-            </CardHeader>
-
-            {hasBody ? (
-                <CardContent className="tool-io-scope px-3 pb-3 pt-0">
-                    {taskSummary ? (
-                        <div className="mt-1">
-                            {taskSummary}
-                        </div>
-                    ) : null}
-
-                    {isResultOnlyTool ? (
-                        <div className="mt-1.5">
-                            <ResultToolView block={props.block} metadata={props.metadata} />
-                        </div>
-                    ) : showInline ? (
-                        CompactToolView ? (
-                            <div className="mt-1.5">
-                                <CompactToolView
+                    <div className="flex flex-col gap-3">
+                        <div>
+                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
+                            {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
+                                <FullToolView
                                     block={props.block}
                                     metadata={props.metadata}
                                     api={props.api}
@@ -488,187 +470,21 @@ function ToolCardInner(props: ToolCardProps) {
                                     disabled={props.disabled}
                                     onDone={props.onDone}
                                 />
-                            </div>
-                        ) : (
-                            <div className="mt-1.5 flex flex-col gap-3">
-                                <div>
-                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                                    {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
-                                        <FullToolView
-                                            block={props.block}
-                                            metadata={props.metadata}
-                                            api={props.api}
-                                            sessionId={props.sessionId}
-                                            disabled={props.disabled}
-                                            onDone={props.onDone}
-                                        />
-                                    ) : (
-                                        renderToolInputContent(props.block, props.metadata)
-                                    )}
-                                </div>
-                                {!isQuestionToolWithStructuredAnswers ? (
-                                    <div>
-                                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                                        <ResultToolView block={props.block} metadata={props.metadata} />
-                                    </div>
-                                ) : null}
-                            </div>
-                        )
-                    ) : toolName !== 'Task' ? (
-                        <div className="mt-1.5 flex flex-col gap-3">
-                            {useAskUserQuestionPendingLayout ? (
-                                <AskUserQuestionFooter
-                                    api={props.api}
-                                    sessionId={props.sessionId}
-                                    tool={props.block.tool}
-                                    disabled={props.disabled}
-                                    onDone={props.onDone}
-                                />
-                            ) : useAskUserQuestionViewLayout ? (
-                                (() => {
-                                    const showSharedInterruptedAnswer = Boolean(
-                                        askQuestions.length > 1
-                                        && !hasAnyAskAnswers
-                                        && askResultText
-                                    )
-                                    const questionsLabel = locale === 'zh-CN' ? '问题' : 'Questions'
-                                    const answersLabel = locale === 'zh-CN' ? '回答' : 'Answers'
-                                    const optionsLabel = locale === 'zh-CN' ? '选项' : 'Options'
-
-                                    if (showSharedInterruptedAnswer) {
-                                        return (
-                                            <>
-                                                <div>
-                                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                                        {questionsLabel}
-                                                    </div>
-                                                    <div className="space-y-0">
-                                                        {askQuestions.map((question, idx) => {
-                                                            const optionLabels = question.options
-                                                                .map((option) => option.label.trim())
-                                                                .filter((label) => label.length > 0)
-                                                            const optionSnapshot = optionLabels.length > 0
-                                                                ? buildOptionSnapshot(optionLabels)
-                                                                : null
-
-                                                            return (
-                                                                <div key={idx} className="space-y-0">
-                                                                    <QuestionRow
-                                                                        header={question.header}
-                                                                        question={question.question.trim()}
-                                                                        position={optionSnapshot ? 'first' : 'single'}
-                                                                    />
-                                                                    {optionSnapshot ? (
-                                                                        <OptionSnapshotRow
-                                                                            tag={optionsLabel}
-                                                                            text={optionSnapshot.preview}
-                                                                            fullText={optionSnapshot.full}
-                                                                            position="last"
-                                                                        />
-                                                                    ) : null}
-                                                                </div>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                                        {answersLabel}
-                                                    </div>
-                                                    <CodeBlock code={askResultText as string} language="text" />
-                                                </div>
-                                            </>
-                                        )
-                                    }
-
-                                    return (
-                                        <>
-                                            {askQuestions.map((question, idx) => {
-                                                const optionLabels = question.options
-                                                    .map((option) => option.label.trim())
-                                                    .filter((label) => label.length > 0)
-                                                const optionSnapshot = optionLabels.length > 0
-                                                    ? buildOptionSnapshot(optionLabels)
-                                                    : null
-                                                const answerValues = normalizedAskAnswers[String(idx)] ?? []
-                                                const displayAnswerValues = formatAskUserQuestionAnswersForDisplay(
-                                                    question,
-                                                    answerValues,
-                                                    locale === 'zh-CN' ? 'zh-CN' : 'en'
-                                                )
-                                                const answerDisplayText = displayAnswerValues.length > 0
-                                                    ? displayAnswerValues.join(' / ')
-                                                    : (!hasAnyAskAnswers ? askResultText : null)
-
-                                                return (
-                                                    <div key={idx} className="space-y-0">
-                                                        <div>
-                                                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                                                {questionsLabel}
-                                                            </div>
-                                                            <QuestionRow
-                                                                header={question.header}
-                                                                question={question.question.trim()}
-                                                                position={optionSnapshot ? 'first' : 'single'}
-                                                            />
-                                                            {optionSnapshot ? (
-                                                                <div className="mt-0">
-                                                                    <OptionSnapshotRow
-                                                                        tag={optionsLabel}
-                                                                        text={optionSnapshot.preview}
-                                                                        fullText={optionSnapshot.full}
-                                                                        position="last"
-                                                                    />
-                                                                </div>
-                                                            ) : null}
-                                                        </div>
-                                                        <div>
-                                                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                                                {answersLabel}
-                                                            </div>
-                                                            {answerDisplayText ? (
-                                                                <CodeBlock code={answerDisplayText} language="text" />
-                                                            ) : (
-                                                                <div className="text-sm text-[var(--app-hint)]">(no output)</div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
-                                        </>
-                                    )
-                                })()
                             ) : (
-                                <>
-                                    <div>
-                                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                            {isQuestionToolWithStructuredAnswers ? t('tool.questionsAnswers') : t('tool.input')}
-                                        </div>
-                                        {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
-                                            <FullToolView
-                                                block={props.block}
-                                                metadata={props.metadata}
-                                                api={props.api}
-                                                sessionId={props.sessionId}
-                                                disabled={props.disabled}
-                                                onDone={props.onDone}
-                                            />
-                                        ) : (
-                                            renderToolInputContent(props.block, props.metadata)
-                                        )}
-                                    </div>
-                                    {!isQuestionToolWithStructuredAnswers ? (
-                                        <div>
-                                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
-                                            <ResultToolView block={props.block} metadata={props.metadata} />
-                                        </div>
-                                    ) : null}
-                                </>
+                                renderToolInputContent(props.block, props.metadata)
                             )}
                         </div>
-                    ) : null}
-
-                    {useAskUserQuestionPendingLayout ? null : isAskUserQuestion && permission?.status === 'pending' && !isAskUserQuestionMalformed ? (
+                        {!isQuestionToolWithStructuredAnswers ? (
+                            <div>
+                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                                <ResultToolView block={props.block} metadata={props.metadata} />
+                            </div>
+                        ) : null}
+                    </div>
+                )
+            ) : toolName !== 'Task' ? (
+                <div className="flex flex-col gap-3">
+                    {useAskUserQuestionPendingLayout ? (
                         <AskUserQuestionFooter
                             api={props.api}
                             sessionId={props.sessionId}
@@ -676,27 +492,214 @@ function ToolCardInner(props: ToolCardProps) {
                             disabled={props.disabled}
                             onDone={props.onDone}
                         />
-                    ) : isRequestUserInput && permission?.status === 'pending' ? (
-                        <RequestUserInputFooter
-                            api={props.api}
-                            sessionId={props.sessionId}
-                            tool={props.block.tool}
-                            disabled={props.disabled}
-                            onDone={props.onDone}
-                        />
-                    ) : hideAskUserQuestionReasonFooter ? null : (
-                        <PermissionFooter
-                            api={props.api}
-                            sessionId={props.sessionId}
-                            metadata={props.metadata}
-                            tool={props.block.tool}
-                            disabled={props.disabled}
-                            onDone={props.onDone}
-                        />
+                    ) : useAskUserQuestionViewLayout ? (
+                        (() => {
+                            const showSharedInterruptedAnswer = Boolean(
+                                askQuestions.length > 1
+                                && !hasAnyAskAnswers
+                                && askResultText
+                            )
+                            const questionsLabel = locale === 'zh-CN' ? '问题' : 'Questions'
+                            const answersLabel = locale === 'zh-CN' ? '回答' : 'Answers'
+                            const optionsLabel = locale === 'zh-CN' ? '选项' : 'Options'
+
+                            if (showSharedInterruptedAnswer) {
+                                return (
+                                    <>
+                                        <div>
+                                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                {questionsLabel}
+                                            </div>
+                                            <div className="space-y-0">
+                                                {askQuestions.map((question, idx) => {
+                                                    const optionLabels = question.options
+                                                        .map((option) => option.label.trim())
+                                                        .filter((label) => label.length > 0)
+                                                    const optionSnapshot = optionLabels.length > 0
+                                                        ? buildOptionSnapshot(optionLabels)
+                                                        : null
+
+                                                    return (
+                                                        <div key={idx} className="space-y-0">
+                                                            <QuestionRow
+                                                                header={question.header}
+                                                                question={question.question.trim()}
+                                                                position={optionSnapshot ? 'first' : 'single'}
+                                                            />
+                                                            {optionSnapshot ? (
+                                                                <OptionSnapshotRow
+                                                                    tag={optionsLabel}
+                                                                    text={optionSnapshot.preview}
+                                                                    fullText={optionSnapshot.full}
+                                                                    position="last"
+                                                                />
+                                                            ) : null}
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                {answersLabel}
+                                            </div>
+                                            <CodeBlock code={askResultText as string} language="text" />
+                                        </div>
+                                    </>
+                                )
+                            }
+
+                            return (
+                                <>
+                                    {askQuestions.map((question, idx) => {
+                                        const optionLabels = question.options
+                                            .map((option) => option.label.trim())
+                                            .filter((label) => label.length > 0)
+                                        const optionSnapshot = optionLabels.length > 0
+                                            ? buildOptionSnapshot(optionLabels)
+                                            : null
+                                        const answerValues = normalizedAskAnswers[String(idx)] ?? []
+                                        const displayAnswerValues = formatAskUserQuestionAnswersForDisplay(
+                                            question,
+                                            answerValues,
+                                            locale === 'zh-CN' ? 'zh-CN' : 'en'
+                                        )
+                                        const answerDisplayText = displayAnswerValues.length > 0
+                                            ? displayAnswerValues.join(' / ')
+                                            : (!hasAnyAskAnswers ? askResultText : null)
+
+                                        return (
+                                            <div key={idx} className="space-y-0">
+                                                <div>
+                                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                        {questionsLabel}
+                                                    </div>
+                                                    <QuestionRow
+                                                        header={question.header}
+                                                        question={question.question.trim()}
+                                                        position={optionSnapshot ? 'first' : 'single'}
+                                                    />
+                                                    {optionSnapshot ? (
+                                                        <div className="mt-0">
+                                                            <OptionSnapshotRow
+                                                                tag={optionsLabel}
+                                                                text={optionSnapshot.preview}
+                                                                fullText={optionSnapshot.full}
+                                                                position="last"
+                                                            />
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                                <div>
+                                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                                        {answersLabel}
+                                                    </div>
+                                                    {answerDisplayText ? (
+                                                        <CodeBlock code={answerDisplayText} language="text" />
+                                                    ) : (
+                                                        <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </>
+                            )
+                        })()
+                    ) : (
+                        <>
+                            <div>
+                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                    {isQuestionToolWithStructuredAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                                </div>
+                                {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
+                                    <FullToolView
+                                        block={props.block}
+                                        metadata={props.metadata}
+                                        api={props.api}
+                                        sessionId={props.sessionId}
+                                        disabled={props.disabled}
+                                        onDone={props.onDone}
+                                    />
+                                ) : (
+                                    renderToolInputContent(props.block, props.metadata)
+                                )}
+                            </div>
+                            {!isQuestionToolWithStructuredAnswers ? (
+                                <div>
+                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                                    <ResultToolView block={props.block} metadata={props.metadata} />
+                                </div>
+                            ) : null}
+                        </>
                     )}
-                </CardContent>
+                </div>
             ) : null}
-        </Card>
+
+            {useAskUserQuestionPendingLayout ? null : isAskUserQuestion && permission?.status === 'pending' && !isAskUserQuestionMalformed ? (
+                <AskUserQuestionFooter
+                    api={props.api}
+                    sessionId={props.sessionId}
+                    tool={props.block.tool}
+                    disabled={props.disabled}
+                    onDone={props.onDone}
+                />
+            ) : isRequestUserInput && permission?.status === 'pending' ? (
+                <RequestUserInputFooter
+                    api={props.api}
+                    sessionId={props.sessionId}
+                    tool={props.block.tool}
+                    disabled={props.disabled}
+                    onDone={props.onDone}
+                />
+            ) : hideAskUserQuestionReasonFooter ? null : (
+                <PermissionFooter
+                    api={props.api}
+                    sessionId={props.sessionId}
+                    metadata={props.metadata}
+                    tool={props.block.tool}
+                    disabled={props.disabled}
+                    onDone={props.onDone}
+                />
+            )}
+        </>
+    )
+
+    return (
+        <div ref={cardRef} className="min-w-0">
+            {canExpand ? (
+                <button
+                    type="button"
+                    className={cn(
+                        'flex w-full min-w-0 items-center gap-1.5 text-left transition-colors cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]',
+                        suppressFocusRing && 'focus-visible:ring-0'
+                    )}
+                    onClick={toggleExpanded}
+                    onPointerDown={onTriggerPointerDown}
+                    onKeyDown={onTriggerKeyDown}
+                    onBlur={onTriggerBlur}
+                >
+                    {header}
+                </button>
+            ) : (
+                <div>{header}</div>
+            )}
+
+            {hasBodyContent ? (
+                <div
+                    className={cn(
+                        'overflow-hidden transition-all duration-200 ease-in-out',
+                        expanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
+                    )}
+                >
+                    <DisclosureRail level={disclosureLevel}>
+                        <div className="tool-io-scope flex flex-col gap-3 pb-1">
+                            {bodyContent}
+                        </div>
+                    </DisclosureRail>
+                </div>
+            ) : null}
+        </div>
     )
 }
 

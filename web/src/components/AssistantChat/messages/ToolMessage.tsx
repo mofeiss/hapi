@@ -1,9 +1,11 @@
 import type { ToolCallMessagePartProps } from '@assistant-ui/react'
 import type { ChatBlock } from '@/chat/types'
 import type { ToolCallBlock } from '@/chat/types'
+import { useState } from 'react'
 import { isObject, safeStringify } from '@hapi/protocol'
 import { getEventPresentation } from '@/chat/presentation'
 import { CodeBlock } from '@/components/CodeBlock'
+import { DisclosureChevron, DisclosureInlineRail, DisclosureRail } from '@/components/Disclosure'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { LazyRainbowText } from '@/components/LazyRainbowText'
 import { MessageStatusIndicator } from '@/components/AssistantChat/messages/MessageStatusIndicator'
@@ -12,6 +14,7 @@ import { ToolCard } from '@/components/ToolCard/ToolCard'
 import { getStandardToolTitle } from '@/components/ToolCard/knownTools'
 import { useHappyChatContext } from '@/components/AssistantChat/context'
 import { CliOutputBlock } from '@/components/CliOutputBlock'
+import { cn } from '@/lib/utils'
 import { useTranslation } from '@/lib/use-translation'
 
 function isToolCallBlock(value: unknown): value is ToolCallBlock {
@@ -57,10 +60,121 @@ function getToolDetailsLabel(
     return t('event.toolDetails', { count })
 }
 
+function getFallbackStatusTone(statusType: ToolCallMessagePartProps['status']['type'], isError: boolean): string {
+    if (isError || statusType === 'incomplete') return 'text-red-600'
+    if (statusType === 'complete') return 'text-emerald-600'
+    if (statusType === 'requires-action') return 'text-amber-600'
+    return 'text-[var(--app-hint)]'
+}
+
+function getFallbackStatusGlyph(statusType: ToolCallMessagePartProps['status']['type'], isError: boolean): string {
+    if (isError || statusType === 'incomplete') return '✕'
+    if (statusType === 'complete') return '✓'
+    if (statusType === 'requires-action') return '🔐'
+    return '●'
+}
+
+function FallbackToolCallMessage(props: {
+    displayToolName: string
+    argsText: string
+    hasArgsText: boolean
+    hasResult: boolean
+    result: ToolCallMessagePartProps['result']
+    resultText: string
+    status: ToolCallMessagePartProps['status']
+    isError: boolean
+}) {
+    const { t } = useTranslation()
+    const [expanded, setExpanded] = useState(false)
+    const canExpand = props.hasArgsText || props.hasResult
+    const statusTone = getFallbackStatusTone(props.status.type, props.isError)
+    const statusLabel = props.isError
+        ? t('event.toolError')
+        : props.status.type === 'running' && !props.hasResult
+            ? t('event.toolRunning')
+            : null
+
+    return (
+        <div className="py-1 min-w-0 max-w-full overflow-x-hidden">
+            {canExpand ? (
+                <button
+                    type="button"
+                    className="flex w-full min-w-0 items-center gap-1.5 text-left transition-colors cursor-pointer select-none"
+                    onClick={() => setExpanded((current) => !current)}
+                >
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <span className="shrink-0 text-[var(--app-hint)]">
+                            <DisclosureChevron open={expanded} />
+                        </span>
+                        <span className={cn('shrink-0 font-mono text-xs', statusTone)}>
+                            {getFallbackStatusGlyph(props.status.type, props.isError)}
+                        </span>
+                        <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+                            <span className="shrink-0 text-sm font-medium text-[var(--app-fg)]">
+                                {props.displayToolName}
+                            </span>
+                            {statusLabel ? (
+                                <span className="min-w-0 truncate font-mono text-xs text-[var(--app-hint)] opacity-80">
+                                    {statusLabel}
+                                </span>
+                            ) : null}
+                        </div>
+                    </div>
+                </button>
+            ) : (
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <span className={cn('shrink-0 font-mono text-xs', statusTone)}>
+                        {getFallbackStatusGlyph(props.status.type, props.isError)}
+                    </span>
+                    <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
+                        <span className="shrink-0 text-sm font-medium text-[var(--app-fg)]">
+                            {props.displayToolName}
+                        </span>
+                        {statusLabel ? (
+                            <span className="min-w-0 truncate font-mono text-xs text-[var(--app-hint)] opacity-80">
+                                {statusLabel}
+                            </span>
+                        ) : null}
+                    </div>
+                </div>
+            )}
+
+            {canExpand ? (
+                <div
+                    className={cn(
+                        'overflow-hidden transition-all duration-200 ease-in-out',
+                        expanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
+                    )}
+                >
+                    <DisclosureRail level="outer">
+                        <div className="tool-io-scope flex flex-col gap-3 pb-1">
+                            {props.hasArgsText ? (
+                                <div>
+                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
+                                    <CodeBlock code={props.argsText} language="json" />
+                                </div>
+                            ) : null}
+
+                            {props.hasResult ? (
+                                <div>
+                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
+                                    <CodeBlock code={props.resultText} language={typeof props.result === 'string' ? 'text' : 'json'} />
+                                </div>
+                            ) : null}
+                        </div>
+                    </DisclosureRail>
+                </div>
+            ) : null}
+        </div>
+    )
+}
+
 function ToolChildren(props: {
     block: ToolCallBlock
     t: (key: string, params?: Record<string, string | number>) => string
 }) {
+    const [restOpen, setRestOpen] = useState(false)
+
     if (props.block.tool.name === 'Steps') return null
     if (props.block.children.length === 0) return null
 
@@ -74,14 +188,26 @@ function ToolChildren(props: {
                 </div>
             ) : null}
             {children.rest.length > 0 ? (
-                <details className="mt-2">
-                    <summary className="cursor-pointer text-xs text-[var(--app-hint)]">
-                        {getToolDetailsLabel(props.block.tool.name, children.rest.length, props.t)}
-                    </summary>
-                    <div className="mt-2 pl-3">
-                        <HappyNestedBlockList blocks={children.rest} />
-                    </div>
-                </details>
+                <div className="mt-2 space-y-2">
+                    <button
+                        type="button"
+                        className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left hover:bg-[var(--app-subtle-bg)]"
+                        onClick={() => setRestOpen((current) => !current)}
+                        aria-expanded={restOpen}
+                    >
+                        <span className="shrink-0 text-[var(--app-hint)]">
+                            <DisclosureChevron open={restOpen} />
+                        </span>
+                        <span className="text-xs text-[var(--app-hint)]">
+                            {getToolDetailsLabel(props.block.tool.name, children.rest.length, props.t)}
+                        </span>
+                    </button>
+                    {restOpen ? (
+                        <div className="pl-3">
+                            <HappyNestedBlockList blocks={children.rest} />
+                        </div>
+                    ) : null}
+                </div>
             ) : null}
         </>
     )
@@ -148,14 +274,14 @@ function HappyNestedBlockList(props: {
                 if (block.kind === 'agent-event') {
                     const presentation = getEventPresentation(block.event, t)
                     const alignCls = presentation.source === 'user'
-                        ? 'ml-auto w-fit max-w-[92%] px-1 text-right'
-                        : 'max-w-[92%] px-1'
+                        ? 'ml-auto w-fit max-w-[92%] text-right'
+                        : 'max-w-[92%]'
                     return (
                         <div key={`event:${block.id}`} className="py-1">
-                            <div className={`${alignCls} text-xs text-[var(--app-hint)] opacity-80`}>
-                                <span className="inline-flex items-center border-l-2 border-[var(--app-border)] pl-1.5">
-                                    <span>{presentation.text}</span>
-                                </span>
+                            <div className={`${alignCls} text-xs text-[var(--app-hint)]`}>
+                                <DisclosureInlineRail level="inner">
+                                    <span className="opacity-80">{presentation.text}</span>
+                                </DisclosureInlineRail>
                             </div>
                         </div>
                     )
@@ -171,6 +297,7 @@ function HappyNestedBlockList(props: {
                                 disabled={ctx.disabled}
                                 onDone={ctx.onRefresh}
                                 block={block}
+                                disclosureLevel="inner"
                             />
                             <ToolChildren block={block} t={t} />
                         </div>
@@ -194,35 +321,17 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
         const hasArgsText = argsText.length > 0
         const hasResult = props.result !== undefined
         const resultText = hasResult ? safeStringify(props.result) : ''
-
         return (
-            <div className="py-1 min-w-0 max-w-full overflow-x-hidden">
-                <div className="rounded-xl bg-[var(--app-subtle-bg)] p-3">
-                    <div className="flex items-center gap-2 text-xs">
-                        <div className="font-mono text-[var(--app-hint)]">
-                            {t('event.toolLabel', { name: displayToolName })}
-                        </div>
-                        {props.isError ? (
-                            <span className="text-red-500">{t('event.toolError')}</span>
-                        ) : null}
-                        {props.status.type === 'running' && !hasResult ? (
-                            <span className="text-[var(--app-hint)]">{t('event.toolRunning')}</span>
-                        ) : null}
-                    </div>
-
-                    {hasArgsText ? (
-                        <div className="mt-2">
-                            <CodeBlock code={argsText} language="json" />
-                        </div>
-                    ) : null}
-
-                    {hasResult ? (
-                        <div className="mt-2">
-                            <CodeBlock code={resultText} language={typeof props.result === 'string' ? 'text' : 'json'} />
-                        </div>
-                    ) : null}
-                </div>
-            </div>
+            <FallbackToolCallMessage
+                displayToolName={displayToolName}
+                argsText={argsText}
+                hasArgsText={hasArgsText}
+                hasResult={hasResult}
+                result={props.result}
+                resultText={resultText}
+                status={props.status}
+                isError={Boolean(props.isError)}
+            />
         )
     }
 

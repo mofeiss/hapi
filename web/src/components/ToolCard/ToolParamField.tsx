@@ -11,7 +11,7 @@ export function getToolParamFieldPosition(index: number, total: number): ToolPar
 
 export function getToolParamFieldContainerClass(position: ToolParamFieldPosition = 'single'): string {
     return cn(
-        'min-w-0 w-full max-w-full bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5',
+        'tool-param-field min-w-0 w-full max-w-full bg-transparent pl-0 pr-2 py-0.5',
         position === 'single' && 'rounded-md',
         position === 'first' && 'rounded-t-md',
         position === 'middle' && 'rounded-none',

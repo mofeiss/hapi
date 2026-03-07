@@ -5,6 +5,7 @@ import type { AgentReasoningBlock, ChatBlock, ToolCallBlock } from '@/chat/types
 import type { SessionMetadataSummary } from '@/types/api'
 import { CodeBlock } from '@/components/CodeBlock'
 import { BrainIcon } from '@/components/assistant-ui/reasoning'
+import { DisclosureChevron, DisclosureRail } from '@/components/Disclosure'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { getToolFullViewComponent, type ToolViewComponent } from '@/components/ToolCard/views/_all'
 import { renderToolInputContent } from '@/components/ToolCard/views/_input'
@@ -222,18 +223,6 @@ function StepStatusIcon(props: { state: ToolCallBlock['tool']['state'] }) {
     )
 }
 
-function StepNodeChevron(props: { open: boolean }) {
-    return (
-        <svg
-            className={`h-3.5 w-3.5 transition-transform ${props.open ? 'rotate-90' : 'rotate-0'}`}
-            viewBox="0 0 16 16"
-            fill="none"
-        >
-            <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    )
-}
-
 function useAnchoredStepToggle() {
     const nodeRef = useRef<HTMLDivElement | null>(null)
 
@@ -293,9 +282,9 @@ function StepReasoningNode(props: { block: AgentReasoningBlock }) {
                 onClick={toggleOpen}
             >
                 <span className="shrink-0 text-[var(--app-hint)]">
-                    <StepNodeChevron open={open} />
+                    <DisclosureChevron open={open} />
                 </span>
-                <span className="shrink-0 text-[var(--app-hint)]">
+                <span className="shrink-0 flex h-3.5 w-3.5 items-center justify-center text-[var(--app-hint)] leading-none">
                     <BrainIcon className="h-3 w-3" />
                 </span>
                 <span className="min-w-0 flex flex-1 items-baseline gap-2">
@@ -309,11 +298,11 @@ function StepReasoningNode(props: { block: AgentReasoningBlock }) {
             </button>
 
             {open ? (
-                <div className="ml-5 border-l border-[var(--app-border)] pl-2.5">
+                <DisclosureRail level="inner">
                     <div className="text-[var(--app-hint)] opacity-80 [&_.aui-md]:text-xs [&_.aui-md]:leading-4 [&_.aui-md_p]:my-0">
                         <MarkdownRenderer content={props.block.text} />
                     </div>
-                </div>
+                </DisclosureRail>
             ) : null}
         </div>
     )
@@ -647,7 +636,7 @@ function StepNode(props: {
                 onClick={toggleOpen}
             >
                 <span className="shrink-0 text-[var(--app-hint)]">
-                    <StepNodeChevron open={open} />
+                    <DisclosureChevron open={open} />
                 </span>
                 <span className="shrink-0">
                     <StepStatusIcon state={props.block.tool.state} />
@@ -663,7 +652,7 @@ function StepNode(props: {
             </button>
 
             {open ? (
-                <div className="ml-5 border-l border-[var(--app-border)] pl-2.5 space-y-1">
+                <DisclosureRail level="inner" className="space-y-1">
                     <StepNodeDetails
                         block={props.block}
                         metadata={props.metadata}
@@ -755,7 +744,7 @@ function StepNode(props: {
 
                         if (!content) return null
 
-                        return <div className="mt-1 rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2 py-1.5">{content}</div>
+                        return <div className="tool-plain-surface mt-1 rounded-md border border-[var(--app-border)] bg-[var(--app-subtle-bg)] px-2 py-1.5">{content}</div>
                     })()}
 
                     {otherChildren.map((child) => {
@@ -779,7 +768,7 @@ function StepNode(props: {
                             ))}
                         </div>
                     ) : null}
-                </div>
+                </DisclosureRail>
             ) : null}
         </div>
     )
