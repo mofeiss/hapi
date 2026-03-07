@@ -12,6 +12,7 @@ import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { CopyIcon, CheckIcon } from '@/components/icons'
 
 export const MARKDOWN_PLUGINS = [remarkGfm]
+export const MARKDOWN_BLOCK_SPACING_CLASSNAME = '[&>*+*]:mt-3 [&_li+li]:mt-1.5'
 
 function CodeHeader(props: CodeHeaderProps) {
     const { copied, copy } = useCopyToClipboard()
@@ -106,11 +107,11 @@ function Blockquote(props: ComponentPropsWithoutRef<'blockquote'>) {
 }
 
 function UnorderedList(props: ComponentPropsWithoutRef<'ul'>) {
-    return <ul {...props} className={cn('aui-md-ul list-disc pl-6', props.className)} />
+    return <ul {...props} className={cn('aui-md-ul list-disc space-y-1.5 pl-6', props.className)} />
 }
 
 function OrderedList(props: ComponentPropsWithoutRef<'ol'>) {
-    return <ol {...props} className={cn('aui-md-ol list-decimal pl-6', props.className)} />
+    return <ol {...props} className={cn('aui-md-ol list-decimal space-y-1.5 pl-6', props.className)} />
 }
 
 function ListItem(props: ComponentPropsWithoutRef<'li'>) {
@@ -160,27 +161,27 @@ function Td(props: ComponentPropsWithoutRef<'td'>) {
 }
 
 function H1(props: ComponentPropsWithoutRef<'h1'>) {
-    return <h1 {...props} className={cn('aui-md-h1 mt-3 text-base font-semibold', props.className)} />
+    return <h1 {...props} className={cn('aui-md-h1 text-base font-semibold', props.className)} />
 }
 
 function H2(props: ComponentPropsWithoutRef<'h2'>) {
-    return <h2 {...props} className={cn('aui-md-h2 mt-3 text-base font-semibold', props.className)} />
+    return <h2 {...props} className={cn('aui-md-h2 text-base font-semibold', props.className)} />
 }
 
 function H3(props: ComponentPropsWithoutRef<'h3'>) {
-    return <h3 {...props} className={cn('aui-md-h3 mt-2 text-base font-semibold', props.className)} />
+    return <h3 {...props} className={cn('aui-md-h3 text-base font-semibold', props.className)} />
 }
 
 function H4(props: ComponentPropsWithoutRef<'h4'>) {
-    return <h4 {...props} className={cn('aui-md-h4 mt-2 text-base font-semibold', props.className)} />
+    return <h4 {...props} className={cn('aui-md-h4 text-base font-semibold', props.className)} />
 }
 
 function H5(props: ComponentPropsWithoutRef<'h5'>) {
-    return <h5 {...props} className={cn('aui-md-h5 mt-2 text-base font-semibold', props.className)} />
+    return <h5 {...props} className={cn('aui-md-h5 text-base font-semibold', props.className)} />
 }
 
 function H6(props: ComponentPropsWithoutRef<'h6'>) {
-    return <h6 {...props} className={cn('aui-md-h6 mt-2 text-base font-semibold', props.className)} />
+    return <h6 {...props} className={cn('aui-md-h6 text-base font-semibold', props.className)} />
 }
 
 function Strong(props: ComponentPropsWithoutRef<'strong'>) {
@@ -229,7 +230,7 @@ export function MarkdownText() {
         <MarkdownTextPrimitive
             remarkPlugins={MARKDOWN_PLUGINS}
             components={defaultComponents}
-            className={cn('aui-md min-w-0 max-w-full break-words text-base')}
+            className={cn('aui-md min-w-0 max-w-full break-words text-base', MARKDOWN_BLOCK_SPACING_CLASSNAME)}
         />
     )
 }

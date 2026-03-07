@@ -2,7 +2,7 @@ import { useState, useEffect, type FC, type PropsWithChildren, type TransitionEv
 import { useMessage, type ReasoningGroupProps } from '@assistant-ui/react'
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown'
 import { cn } from '@/lib/utils'
-import { defaultComponents, MARKDOWN_PLUGINS } from '@/components/assistant-ui/markdown-text'
+import { defaultComponents, MARKDOWN_BLOCK_SPACING_CLASSNAME, MARKDOWN_PLUGINS } from '@/components/assistant-ui/markdown-text'
 
 type ReasoningMessagePart = {
     type: 'reasoning'
@@ -81,7 +81,10 @@ export const Reasoning: FC = () => {
         <MarkdownTextPrimitive
             remarkPlugins={MARKDOWN_PLUGINS}
             components={defaultComponents}
-            className={cn('aui-reasoning-content min-w-0 max-w-full break-words text-xs text-[var(--app-hint)] opacity-80')}
+            className={cn(
+                'aui-reasoning-content min-w-0 max-w-full break-words text-xs text-[var(--app-hint)] opacity-80',
+                MARKDOWN_BLOCK_SPACING_CLASSNAME
+            )}
         />
     )
 }
