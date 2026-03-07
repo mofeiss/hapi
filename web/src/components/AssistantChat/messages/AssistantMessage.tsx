@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { MessagePrimitive, useAssistantApi, useAssistantState } from '@assistant-ui/react'
 import { MarkdownText } from '@/components/assistant-ui/markdown-text'
 import { Reasoning, ReasoningGroup } from '@/components/assistant-ui/reasoning'
@@ -7,7 +8,9 @@ import { MessageCopyButton } from '@/components/AssistantChat/messages/MessageCo
 import { useHappyChatContext } from '@/components/AssistantChat/context'
 import { ApiErrorNotice, isApiErrorText } from '@/components/AssistantChat/messages/ApiErrorNotice'
 import { buildAssistantCopyText, type AssistantCopyPart } from '@/components/AssistantChat/messages/messageCopy'
+import { formatTurnDurationCompact, getAssistantTurnDurationInfo } from '@/components/AssistantChat/messages/messageDuration'
 import { buildLoadedTranscriptCopyText } from '@/components/AssistantChat/messages/messageTranscriptCopy'
+import { ClockIcon } from '@/components/icons'
 import type { HappyChatMessageMetadata } from '@/lib/assistant-runtime'
 import { useTranslation } from '@/lib/use-translation'
 
@@ -22,10 +25,68 @@ const MESSAGE_PART_COMPONENTS = {
     tools: TOOL_COMPONENTS
 } as const
 
+function MessageTurnDurationBadge(props: {
+    startAt: number | null
+    fallbackEndAt: number | null
+    finalEndAt: number | null
+    isLive: boolean
+    turnKey: string
+}) {
+    const { t } = useTranslation()
+    const [liveNow, setLiveNow] = useState(() => Date.now())
+    const [frozenEndAt, setFrozenEndAt] = useState<number | null>(props.finalEndAt)
+    const previousIsLiveRef = useRef(props.isLive)
+
+    useEffect(() => {
+        setFrozenEndAt(props.finalEndAt)
+        previousIsLiveRef.current = props.isLive
+    }, [props.turnKey])
+
+    useEffect(() => {
+        if (!props.isLive) return
+        setLiveNow(Date.now())
+        const timer = window.setInterval(() => {
+            setLiveNow(Date.now())
+        }, 1000)
+        return () => window.clearInterval(timer)
+    }, [props.isLive])
+
+    useEffect(() => {
+        if (props.finalEndAt !== null) {
+            setFrozenEndAt(props.finalEndAt)
+        } else if (!props.isLive && previousIsLiveRef.current) {
+            setFrozenEndAt(Date.now())
+        } else if (props.isLive) {
+            setFrozenEndAt(null)
+        }
+        previousIsLiveRef.current = props.isLive
+    }, [props.finalEndAt, props.isLive])
+
+    if (props.startAt === null || props.fallbackEndAt === null) return null
+
+    const endAt = props.isLive
+        ? liveNow
+        : (props.finalEndAt ?? frozenEndAt ?? props.fallbackEndAt)
+    const durationMs = Math.max(0, endAt - props.startAt)
+    const label = formatTurnDurationCompact(durationMs)
+
+    return (
+        <span
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--app-hint)] select-none"
+            title={t('event.turnDuration', { duration: label })}
+            aria-label={t('event.turnDuration', { duration: label })}
+        >
+            <ClockIcon className="h-3.5 w-3.5" />
+            <span className="leading-none">{label}</span>
+        </span>
+    )
+}
+
 export function HappyAssistantMessage() {
     const assistantApi = useAssistantApi()
     const ctx = useHappyChatContext()
     const { locale, t } = useTranslation()
+    const threadIsRunning = useAssistantState(({ thread }) => thread.isRunning)
     const isCliOutput = useAssistantState(({ message }) => {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return custom?.kind === 'cli-output'
@@ -43,9 +104,20 @@ export function HappyAssistantMessage() {
         const idx = (message as { index?: number }).index
         return typeof idx === 'number' ? idx : -1
     })
-    const transcriptMessages = currentMessageIndex >= 0 && threadMessagesLength > 0
-        ? assistantApi.thread().getState().messages.slice(0, currentMessageIndex + 1)
+    const allThreadMessages = threadMessagesLength > 0
+        ? assistantApi.thread().getState().messages
         : []
+    const transcriptMessages = currentMessageIndex >= 0 && allThreadMessages.length > 0
+        ? allThreadMessages.slice(0, currentMessageIndex + 1)
+        : []
+    const turnDurationInfo = currentMessageIndex >= 0
+        ? getAssistantTurnDurationInfo(
+            allThreadMessages as Parameters<typeof getAssistantTurnDurationInfo>[0],
+            currentMessageIndex
+        )
+        : null
+    const isCurrentTurnTailVisible = turnDurationInfo !== null
+        && turnDurationInfo.turnEndIndex === threadMessagesLength - 1
     const toolOnly = assistantContent.length > 0 && assistantContent.every((part) => part.type === 'tool-call')
     const apiErrorText = (() => {
         if (assistantContent.length !== 1) return null
@@ -74,6 +146,15 @@ export function HappyAssistantMessage() {
         ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
         : 'px-1 min-w-0 max-w-full overflow-x-hidden'
     const actionsClass = 'ml-1 mt-0.5 flex w-fit items-center gap-1'
+    const durationBadge = (
+        <MessageTurnDurationBadge
+            startAt={turnDurationInfo?.startAt ?? null}
+            fallbackEndAt={turnDurationInfo?.fallbackEndAt ?? null}
+            finalEndAt={turnDurationInfo?.finalEndAt ?? null}
+            isLive={threadIsRunning && isCurrentTurnTailVisible}
+            turnKey={turnDurationInfo ? `${turnDurationInfo.startAt}:${turnDurationInfo.turnEndIndex}` : 'none'}
+        />
+    )
 
     if (isCliOutput) {
         return (
@@ -84,6 +165,7 @@ export function HappyAssistantMessage() {
                 <div className={actionsClass}>
                     <MessageCopyButton text={cliText} />
                     <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+                    {durationBadge}
                 </div>
             </div>
         )
@@ -98,6 +180,7 @@ export function HappyAssistantMessage() {
                 <div className={actionsClass}>
                     <MessageCopyButton text={apiErrorText} />
                     <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+                    {durationBadge}
                 </div>
             </div>
         )
@@ -111,6 +194,7 @@ export function HappyAssistantMessage() {
             <div className={actionsClass}>
                 <MessageCopyButton text={copyText} />
                 <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+                {durationBadge}
             </div>
         </div>
     )
