@@ -45,6 +45,8 @@ export default {
   'sessions.quickNew.creating': '快速新建中…',
   'sessions.quickNew.unavailable': '当前会话缺少机器或目录配置，无法快速新建。',
   'sessions.quickNew.failedTitle': '快速新建失败',
+  'sessions.search.placeholder': '搜索会话',
+  'sessions.search.noMatch': '没有匹配的会话。',
   'menu': '菜单',
 
   // Session list

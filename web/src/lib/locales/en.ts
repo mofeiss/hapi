@@ -46,6 +46,8 @@ export default {
   "sessions.quickNew.unavailable":
     "Current session is missing machine or directory config.",
   "sessions.quickNew.failedTitle": "Quick create failed",
+  "sessions.search.placeholder": "Search sessions",
+  "sessions.search.noMatch": "No sessions match your search.",
   menu: "Menu",
 
   // Session list

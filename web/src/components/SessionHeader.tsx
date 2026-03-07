@@ -5,6 +5,7 @@ import { isTelegramApp } from '@/hooks/useTelegram'
 import { useSessionActions } from '@/hooks/mutations/useSessionActions'
 import { SessionActionMenu } from '@/components/SessionActionMenu'
 import { RenameSessionDialog } from '@/components/RenameSessionDialog'
+import { QuickLanguageToggle } from '@/components/QuickLanguageToggle'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { useWidescreen } from '@/hooks/useWidescreen'
@@ -357,6 +358,7 @@ export function SessionHeader(props: {
 
                     {props.onToggleTheme && props.onOpenSettings && props.onOpenNewSession ? (
                         <div className="flex lg:hidden items-center">
+                            <QuickLanguageToggle className="flex h-8 min-w-8 items-center justify-center rounded-full px-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]" />
                             <button
                                 type="button"
                                 onClick={props.onToggleTheme}

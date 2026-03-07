@@ -18,6 +18,7 @@ import { NewSession } from "@/components/NewSession";
 import { LoadingState } from "@/components/LoadingState";
 import { SessionActionMenu } from "@/components/SessionActionMenu";
 import { RenameSessionDialog } from "@/components/RenameSessionDialog";
+import { QuickLanguageToggle } from "@/components/QuickLanguageToggle";
 import { useAppContext } from "@/lib/app-context";
 import { useAppGoBack } from "@/hooks/useAppGoBack";
 import { isTelegramApp } from "@/hooks/useTelegram";
@@ -281,6 +282,45 @@ function OnlineFilterIcon(props: { className?: string }) {
   );
 }
 
+function SearchIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.35-4.35" />
+    </svg>
+  );
+}
+
+function matchesSessionSearch(session: SessionSummary, search: string): boolean {
+  if (!search) {
+    return true;
+  }
+
+  const haystack = [
+    getSessionTitle(session),
+    session.metadata?.summary?.text,
+    session.metadata?.path,
+    session.metadata?.host,
+    session.metadata?.flavor,
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .toLowerCase();
+
+  return haystack.includes(search);
+}
+
 function CollapsedSessionItem({
   session,
   selected,
@@ -450,6 +490,7 @@ function SessionsPage() {
   const [filterOnlineOnly, setFilterOnlineOnly] = useState(() => {
     try { return localStorage.getItem('hapi:filter:onlineOnly') === '1' } catch { return false }
   });
+  const [sessionSearch, setSessionSearch] = useState("");
 
   const toggleFilterOnline = useCallback(() => {
     setFilterOnlineOnly(prev => {
@@ -459,10 +500,16 @@ function SessionsPage() {
     });
   }, []);
 
+  const normalizedSessionSearch = sessionSearch.trim().toLowerCase();
+
   const displaySessions = useMemo(() => {
-    if (!filterOnlineOnly) return sessions;
-    return sessions.filter(s => s.active);
-  }, [sessions, filterOnlineOnly]);
+    return sessions.filter((session) => {
+      if (filterOnlineOnly && !session.active) {
+        return false;
+      }
+      return matchesSessionSearch(session, normalizedSessionSearch);
+    });
+  }, [filterOnlineOnly, normalizedSessionSearch, sessions]);
 
   const collapsedGroups = useMemo(
     () => groupSessionsByHost(displaySessions),
@@ -584,11 +631,20 @@ function SessionsPage() {
   const batchFilteredIds = useMemo(() => {
     if (!batchMode) return new Set<string>();
     return new Set(
-      sessions
+      displaySessions
         .filter((s) => (batchMode === "archive" ? s.active : !s.active))
         .map((s) => s.id),
     );
-  }, [sessions, batchMode]);
+  }, [displaySessions, batchMode]);
+
+  const visibleArchivableCount = useMemo(
+    () => displaySessions.filter((session) => session.active).length,
+    [displaySessions],
+  );
+  const visibleDeletableCount = useMemo(
+    () => displaySessions.filter((session) => !session.active).length,
+    [displaySessions],
+  );
 
   useEffect(() => {
     setBatchArchivingIds((prev) => {
@@ -633,6 +689,25 @@ function SessionsPage() {
   const handleBatchSelectAll = useCallback(() => {
     setBatchSelectedIds(new Set(batchFilteredIds));
   }, [batchFilteredIds]);
+
+  useEffect(() => {
+    if (!batchMode) {
+      return;
+    }
+
+    setBatchSelectedIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (batchFilteredIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [batchFilteredIds, batchMode]);
 
   // Session keep-alive state
   const [activeSessionId, setActiveSessionId] = useState<string | null>(
@@ -1218,10 +1293,14 @@ function SessionsPage() {
     : isSessionsIndex && !hasOverlay
       ? "flex"
       : "hidden lg:flex";
-  const compactToolbar =
-    !batchMode &&
-    panelWidth <= 360 &&
-    (typeof window !== "undefined" ? window.innerWidth >= 1024 : false);
+  const showSidebarSearchRow = !collapsed && !narrowViewport && panelWidth > 360;
+  const showTopOnlineFilter = narrowViewport && !collapsed;
+
+  useEffect(() => {
+    if (batchMode && !showSidebarSearchRow) {
+      handleExitBatchMode();
+    }
+  }, [batchMode, handleExitBatchMode, showSidebarSearchRow]);
 
   return (
     <div className="flex h-full min-h-0" onWheel={handleRootWheel}>
@@ -1246,82 +1325,20 @@ function SessionsPage() {
                 <SidebarCollapseIcon className="h-5 w-5" />
               </button>
               <div className="hidden lg:block mx-1 h-5 w-0.5 bg-[var(--app-divider)]" />
-
-              {batchMode ? (
+              {showTopOnlineFilter ? (
                 <>
                   <button
                     type="button"
-                    onClick={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? () => setBatchSelectedIds(new Set()) : handleBatchSelectAll}
-                    disabled={batchPending || batchFilteredIds.size === 0}
-                    className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                    title={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? t("batch.deselectAll") : t("batch.selectAll")}
+                    onClick={toggleFilterOnline}
+                    className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+                    title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
                   >
-                    {batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0
-                      ? <BatchDeselectAllIcon className="h-5 w-5" />
-                      : <BatchSelectAllIcon className="h-5 w-5" />}
+                    <OnlineFilterIcon className="h-5 w-5" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleBatchConfirmClick}
-                    disabled={batchSelectedIds.size === 0 || batchPending}
-                    className={`p-1.5 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)] opacity-50 cursor-not-allowed"}`}
-                    title={t("batch.confirm.tooltip")}
-                  >
-                    <BatchCheckIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExitBatchMode}
-                    disabled={batchPending}
-                    className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                    title={t("batch.cancel.tooltip")}
-                  >
-                    <BatchXIcon className="h-5 w-5" />
-                  </button>
+                  <div className="mx-1 h-5 w-0.5 bg-[var(--app-divider)]" />
                 </>
-              ) : (
-                <>
-                  {compactToolbar ? (
-                    <button
-                      type="button"
-                      onClick={toggleFilterOnline}
-                      className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
-                      title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
-                    >
-                      <OnlineFilterIcon className="h-5 w-5" />
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleEnterBatchMode("archive")}
-                        className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                        title={t("batch.archive.tooltip")}
-                      >
-                        <BatchArchiveIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEnterBatchMode("delete")}
-                        className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                        title={t("batch.delete.tooltip")}
-                      >
-                        <BatchTrashIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={toggleFilterOnline}
-                        className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
-                        title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
-                      >
-                        <OnlineFilterIcon className="h-5 w-5" />
-                      </button>
-                    </>
-                  )}
-
-                </>
-              )}
-              <div className="mx-1 h-5 w-0.5 bg-[var(--app-divider)]" />
+              ) : null}
+              <QuickLanguageToggle />
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -1370,6 +1387,87 @@ function SessionsPage() {
               </button>
             </div>
           </div>
+          {showSidebarSearchRow ? (
+            <div className="mx-auto w-full max-w-content px-3 pb-2">
+              <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
+                <SearchIcon className="h-4 w-4 shrink-0 text-[var(--app-hint)]" />
+                <input
+                  value={sessionSearch}
+                  onChange={(event) => setSessionSearch(event.target.value)}
+                  placeholder={t("sessions.search.placeholder")}
+                  aria-label={t("sessions.search.placeholder")}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <div className="flex shrink-0 items-center gap-0.5">
+                  {batchMode ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? () => setBatchSelectedIds(new Set()) : handleBatchSelectAll}
+                        disabled={batchPending || batchFilteredIds.size === 0}
+                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? t("batch.deselectAll") : t("batch.selectAll")}
+                      >
+                        {batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0
+                          ? <BatchDeselectAllIcon className="h-4 w-4" />
+                          : <BatchSelectAllIcon className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleBatchConfirmClick}
+                        disabled={batchSelectedIds.size === 0 || batchPending}
+                        className={`p-1 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
+                        title={t("batch.confirm.tooltip")}
+                      >
+                        <BatchCheckIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExitBatchMode}
+                        disabled={batchPending}
+                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={t("batch.cancel.tooltip")}
+                      >
+                        <BatchXIcon className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleEnterBatchMode("archive")}
+                        disabled={visibleArchivableCount === 0}
+                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={t("batch.archive.tooltip")}
+                      >
+                        <BatchArchiveIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEnterBatchMode("delete")}
+                        disabled={visibleDeletableCount === 0}
+                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={t("batch.delete.tooltip")}
+                      >
+                        <BatchTrashIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={toggleFilterOnline}
+                        className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                        title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
+                      >
+                        <OnlineFilterIcon className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto desktop-scrollbar-left">
@@ -1378,24 +1476,30 @@ function SessionsPage() {
               <div className="text-sm text-red-600">{error}</div>
             </div>
           ) : null}
-          <SessionList
-            sessions={displaySessions}
-            selectedSessionId={activeSessionId}
-            onSelect={handleSelectSession}
-            onNewSession={() => {
-              setNewSessionOpen(true);
-              setSettingsOpen(false);
-            }}
-            onRefresh={handleRefresh}
-            isLoading={isLoading}
-            renderHeader={false}
-            api={api}
-            batchMode={batchMode}
-            batchSelectedIds={batchSelectedIds}
-            archivingSessionIds={batchArchivingIds}
-            deletingSessionIds={batchDeletingIds}
-            onBatchToggleSelect={handleBatchToggleSelect}
-          />
+          {!error && !isLoading && normalizedSessionSearch && displaySessions.length === 0 ? (
+            <div className="mx-auto w-full max-w-content px-3 py-4 text-sm text-[var(--app-hint)]">
+              {t("sessions.search.noMatch")}
+            </div>
+          ) : (
+            <SessionList
+              sessions={displaySessions}
+              selectedSessionId={activeSessionId}
+              onSelect={handleSelectSession}
+              onNewSession={() => {
+                setNewSessionOpen(true);
+                setSettingsOpen(false);
+              }}
+              onRefresh={handleRefresh}
+              isLoading={isLoading}
+              renderHeader={false}
+              api={api}
+              batchMode={batchMode}
+              batchSelectedIds={batchSelectedIds}
+              archivingSessionIds={batchArchivingIds}
+              deletingSessionIds={batchDeletingIds}
+              onBatchToggleSelect={handleBatchToggleSelect}
+            />
+          )}
         </div>
 
         {/* Batch operation confirm dialog */}
@@ -1498,67 +1602,16 @@ function SessionsPage() {
           {/* Bottom: toolbar buttons (vertical) */}
           <div className="shrink-0 flex flex-col items-center py-2 gap-0.5">
             <div className="mx-2 mb-1 h-px w-full bg-[var(--app-divider)]" />
-            {batchMode ? (
-              <>
-                <button
-                  type="button"
-                  onClick={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? () => setBatchSelectedIds(new Set()) : handleBatchSelectAll}
-                  disabled={batchPending || batchFilteredIds.size === 0}
-                  className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                  title={batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0 ? t("batch.deselectAll") : t("batch.selectAll")}
-                >
-                  {batchSelectedIds.size === batchFilteredIds.size && batchFilteredIds.size > 0
-                    ? <BatchDeselectAllIcon className="h-5 w-5" />
-                    : <BatchSelectAllIcon className="h-5 w-5" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleBatchConfirmClick}
-                  disabled={batchSelectedIds.size === 0 || batchPending}
-                  className={`p-1.5 rounded-full transition-colors ${batchSelectedIds.size > 0 ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-[var(--app-hint)] opacity-50 cursor-not-allowed'}`}
-                  title={t("batch.confirm.tooltip")}
-                >
-                  <BatchCheckIcon className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExitBatchMode}
-                  disabled={batchPending}
-                  className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                  title={t("batch.cancel.tooltip")}
-                >
-                  <BatchXIcon className="h-5 w-5" />
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleEnterBatchMode("archive")}
-                  className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                  title={t("batch.archive.tooltip")}
-                >
-                  <BatchArchiveIcon className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleEnterBatchMode("delete")}
-                  className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                  title={t("batch.delete.tooltip")}
-                >
-                  <BatchTrashIcon className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleFilterOnline}
-                  className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? 'bg-emerald-500/15 text-emerald-500' : 'text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]'}`}
-                  title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
-                >
-                  <OnlineFilterIcon className="h-5 w-5" />
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={toggleFilterOnline}
+              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? 'bg-emerald-500/15 text-emerald-500' : 'text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]'}`}
+              title={filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")}
+            >
+              <OnlineFilterIcon className="h-5 w-5" />
+            </button>
             <div className="mx-2 my-0.5 h-px w-full bg-[var(--app-divider)]" />
+            <QuickLanguageToggle className="inline-flex h-8 min-w-8 items-center justify-center rounded-full px-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]" />
             <button
               type="button"
               onClick={toggleTheme}
