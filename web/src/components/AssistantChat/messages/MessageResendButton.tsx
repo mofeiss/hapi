@@ -26,9 +26,9 @@ export function MessageResendButton(props: {
             title={t('button.resend')}
             aria-label={t('button.resend')}
             disabled={props.disabled}
-            className={`rounded p-1 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${alignClass} ${props.className ?? ''}`}
+            className={`inline-flex items-center justify-center rounded p-1 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${alignClass} ${props.className ?? ''}`}
         >
-            <ResendIcon className="h-3.5 w-3.5" />
+            <ResendIcon className="block h-3.5 w-3.5" />
         </button>
     )
 }
