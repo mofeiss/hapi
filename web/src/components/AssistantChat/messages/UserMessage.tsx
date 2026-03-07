@@ -123,7 +123,7 @@ export function HappyUserMessage() {
         && Boolean(ctx.onCommitEditMessage)
         && !ctx.disabled
 
-    const userBubbleClass = 'w-fit min-w-0 max-w-full rounded-xl bg-[var(--app-user-bubble-bg)] px-3 py-2 text-[var(--app-fg)]'
+    const userBubbleClass = 'w-fit min-w-0 max-w-full rounded-xl bg-[var(--app-secondary-bg)] px-3 py-2 text-[var(--app-fg)]'
     const editComposerClass = 'w-full min-w-0 max-w-full overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)] text-[var(--app-fg)] shadow-sm'
     const rootClass = isEditing ? editComposerClass : userBubbleClass
     const containerClass = isEditing

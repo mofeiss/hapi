@@ -443,7 +443,7 @@ function ToolCardInner(props: ToolCardProps) {
     )
 
     return (
-        <Card ref={cardRef} className="overflow-hidden shadow-none">
+        <Card ref={cardRef} className="overflow-hidden bg-[var(--app-subtle-bg)] shadow-none">
             <CardHeader className="px-3 pt-3 pb-1.5 space-y-0">
                 {canExpand ? (
                     <button
