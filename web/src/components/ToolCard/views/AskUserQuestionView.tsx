@@ -1,6 +1,6 @@
 import type { ToolViewProps } from '@/components/ToolCard/views/_all'
 import { parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
-import { ToolParamField } from '@/components/ToolCard/ToolParamField'
+import { getToolParamFieldPosition, ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { Badge } from '@/components/ui/badge'
 import { truncate } from '@/lib/toolInputUtils'
 import { cn } from '@/lib/utils'
@@ -39,11 +39,21 @@ export function AskUserQuestionView(props: ToolViewProps) {
     const firstQuestion = questions[0]
     const firstHeader = firstQuestion?.header?.trim() || ''
     const firstPrompt = firstQuestion?.question?.trim() || ''
+    const inputParamRows = [
+        questions.length > 0 ? { name: 'questions', value: String(questions.length) } : null,
+        firstHeader ? { name: 'header', value: truncate(firstHeader, 160) } : null,
+        firstPrompt ? { name: 'first_question', value: truncate(firstPrompt, 160) } : null
+    ].filter((row): row is { name: string; value: string } => row !== null)
     const inputParams = questions.length > 0 ? (
         <div className="space-y-0">
-            <ToolParamField name="questions" value={String(questions.length)} />
-            {firstHeader ? <ToolParamField name="header" value={truncate(firstHeader, 160)} /> : null}
-            {firstPrompt ? <ToolParamField name="first_question" value={truncate(firstPrompt, 160)} /> : null}
+            {inputParamRows.map((row, idx) => (
+                <ToolParamField
+                    key={row.name}
+                    name={row.name}
+                    value={row.value}
+                    position={getToolParamFieldPosition(idx, inputParamRows.length)}
+                />
+            ))}
         </div>
     ) : null
 

@@ -5,7 +5,7 @@ import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
 import { DiffView } from '@/components/DiffView'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
-import { ToolParamField } from '@/components/ToolCard/ToolParamField'
+import { getToolParamFieldPosition, ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
 import { extractSkillReadData } from '@/lib/skillRead'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
@@ -273,7 +273,12 @@ function renderParamRows(rows: ParamRow[]): ReactNode {
     return (
         <div className="space-y-0">
             {rows.map((row, idx) => (
-                <ToolParamField key={`${row.name}-${idx}`} name={row.name} value={row.value} />
+                <ToolParamField
+                    key={`${row.name}-${idx}`}
+                    name={row.name}
+                    value={row.value}
+                    position={getToolParamFieldPosition(idx, rows.length)}
+                />
             ))}
         </div>
     )

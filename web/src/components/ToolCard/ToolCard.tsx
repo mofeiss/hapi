@@ -7,6 +7,7 @@ import { CodeBlock } from '@/components/CodeBlock'
 import { PermissionFooter } from '@/components/ToolCard/PermissionFooter'
 import { AskUserQuestionFooter } from '@/components/ToolCard/AskUserQuestionFooter'
 import { RequestUserInputFooter } from '@/components/ToolCard/RequestUserInputFooter'
+import { getToolParamFieldContainerClass, type ToolParamFieldPosition } from '@/components/ToolCard/ToolParamField'
 import {
     extractAskUserQuestionResultText,
     formatAskUserQuestionAnswersForDisplay,
@@ -210,9 +211,9 @@ function normalizeQuestionAnswers(answers: unknown): FlatQuestionAnswers {
     return out
 }
 
-function TaggedTextRow(props: { tag: string | null; text: string }) {
+function TaggedTextRow(props: { tag: string | null; text: string; position?: ToolParamFieldPosition }) {
     return (
-        <div className="min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5">
+        <div className={getToolParamFieldContainerClass(props.position)}>
             <div className="font-mono text-xs leading-4 text-[var(--app-fg)] break-all">
                 {props.tag ? (
                     <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
@@ -227,13 +228,13 @@ function TaggedTextRow(props: { tag: string | null; text: string }) {
     )
 }
 
-function QuestionRow(props: { header: string | null; question: string }) {
-    return <TaggedTextRow tag={props.header} text={props.question} />
+function QuestionRow(props: { header: string | null; question: string; position?: ToolParamFieldPosition }) {
+    return <TaggedTextRow tag={props.header} text={props.question} position={props.position} />
 }
 
-function OptionSnapshotRow(props: { tag: string; text: string; fullText: string }) {
+function OptionSnapshotRow(props: { tag: string; text: string; fullText: string; position?: ToolParamFieldPosition }) {
     return (
-        <div className="min-w-0 w-full max-w-full rounded-md bg-[var(--app-code-bg)] pl-0 pr-2 py-0.5" title={props.fullText}>
+        <div className={getToolParamFieldContainerClass(props.position)} title={props.fullText}>
             <div className="min-w-0 flex items-center gap-2 font-mono text-xs leading-4 text-[var(--app-fg)]">
                 <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
                     {props.tag}
@@ -555,12 +556,14 @@ function ToolCardInner(props: ToolCardProps) {
                                                                     <QuestionRow
                                                                         header={question.header}
                                                                         question={question.question.trim()}
+                                                                        position={optionSnapshot ? 'first' : 'single'}
                                                                     />
                                                                     {optionSnapshot ? (
                                                                         <OptionSnapshotRow
                                                                             tag={optionsLabel}
                                                                             text={optionSnapshot.preview}
                                                                             fullText={optionSnapshot.full}
+                                                                            position="last"
                                                                         />
                                                                     ) : null}
                                                                 </div>
@@ -606,6 +609,7 @@ function ToolCardInner(props: ToolCardProps) {
                                                             <QuestionRow
                                                                 header={question.header}
                                                                 question={question.question.trim()}
+                                                                position={optionSnapshot ? 'first' : 'single'}
                                                             />
                                                             {optionSnapshot ? (
                                                                 <div className="mt-0">
@@ -613,6 +617,7 @@ function ToolCardInner(props: ToolCardProps) {
                                                                         tag={optionsLabel}
                                                                         text={optionSnapshot.preview}
                                                                         fullText={optionSnapshot.full}
+                                                                        position="last"
                                                                     />
                                                                 </div>
                                                             ) : null}
