@@ -751,12 +751,17 @@ export const knownTools: Record<string, {
     Steps: {
         icon: () => <ClipboardIcon className={DEFAULT_ICON_CLASS} />,
         title: (opts) => {
+            const zh = opts.locale === 'zh-CN'
+            return zh ? '工具调用' : 'Tool Calls'
+        },
+        subtitle: (opts) => {
+            const zh = opts.locale === 'zh-CN'
             const count = isObject(opts.input) && typeof opts.input.count === 'number'
                 ? opts.input.count
                 : opts.childrenCount
-            return count > 0 ? `${count} Steps` : 'Steps'
+            if (count <= 0) return null
+            return zh ? `连续 ${count} 次调用` : `${count} calls`
         },
-        subtitle: () => null,
         minimal: false
     }
 }
@@ -798,7 +803,7 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
         return {
             icon: known.icon(toolOpts),
             title: preferComputedTitle ? computedTitle : (coreRichTitle ?? standardTitle ?? computedTitle),
-            subtitle: preferComputedTitle ? null : subtitle,
+            subtitle,
             minimal
         }
     }
