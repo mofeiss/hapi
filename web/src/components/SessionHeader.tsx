@@ -160,26 +160,6 @@ function MoonIcon(props: { className?: string }) {
     )
 }
 
-function SettingsIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-    )
-}
-
 function NewChatIcon(props: { className?: string }) {
     return (
         <svg
@@ -304,12 +284,12 @@ export function SessionHeader(props: {
     return (
         <>
             <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-                <div className="mx-auto w-full max-w-content flex items-center gap-2 p-3 border-b border-[var(--app-border)]">
+                <div className="mx-auto w-full max-w-content flex items-center p-3 border-b border-[var(--app-border)]">
                     {/* Back button (mobile only) */}
                     <button
                         type="button"
                         onClick={props.onBack}
-                        className="flex lg:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
+                        className="mr-2 flex lg:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -327,58 +307,50 @@ export function SessionHeader(props: {
                         <div className="truncate font-semibold">
                             {title}
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--app-hint)]">
-                            <span className="inline-flex items-center gap-1">
+                        <div className="flex min-w-0 items-center gap-x-3 overflow-hidden whitespace-nowrap text-xs text-[var(--app-hint)]">
+                            <span className="inline-flex shrink-0 items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden="true"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
                                 {session.metadata?.flavor?.trim() || 'unknown'}
                             </span>
                             {modelLabel ? (
-                                <span className="inline-flex items-center gap-1 truncate" title={modelLabel}>
+                                <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden" title={modelLabel}>
                                     <ReasoningIcon className="shrink-0" />
                                     <span className="truncate">{modelLabel}</span>
                                 </span>
                             ) : null}
                             {worktreeBranch ? (
-                                <span>{t('session.item.worktree')}: {worktreeBranch}</span>
+                                <span className="min-w-0 truncate">{t('session.item.worktree')}: {worktreeBranch}</span>
                             ) : null}
                             {session.metadata?.host ? (
-                                <span className="inline-flex items-center gap-1">
+                                <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
-                                    {session.metadata.host}
+                                    <span className="truncate">{session.metadata.host}</span>
                                 </span>
                             ) : null}
                             {displayPath ? (
-                                <span className="inline-flex items-center gap-1 truncate">
+                                <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
                                     <span className="shrink-0 text-[10px]" aria-hidden="true">📂</span>
-                                    {displayPath}
+                                    <span className="truncate">{displayPath}</span>
                                 </span>
                             ) : null}
                         </div>
                     </div>
 
-                    {props.onToggleTheme && props.onOpenSettings && props.onOpenNewSession ? (
+                    {props.onToggleTheme && props.onOpenNewSession ? (
                         <div className="flex lg:hidden items-center">
-                            <QuickLanguageToggle className="flex h-8 min-w-8 items-center justify-center rounded-full px-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]" />
+                            <QuickLanguageToggle className="flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]" />
                             <button
                                 type="button"
                                 onClick={props.onToggleTheme}
-                                className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                                className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
                                 title={props.isDark ? t('theme.switchToLight') : t('theme.switchToDark')}
                             >
                                 {props.isDark ? <SunIcon /> : <MoonIcon />}
                             </button>
                             <button
                                 type="button"
-                                onClick={props.onOpenSettings}
-                                className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                                title={t('settings.title')}
-                            >
-                                <SettingsIcon />
-                            </button>
-                            <button
-                                type="button"
                                 onClick={props.onOpenNewSession}
-                                className="session-list-new-button flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-link)] transition-colors hover:bg-[var(--app-secondary-bg)]"
+                                className="session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-link)] transition-colors hover:bg-[var(--app-secondary-bg)]"
                                 title={t('sessions.new')}
                             >
                                 <NewChatIcon />
@@ -388,7 +360,7 @@ export function SessionHeader(props: {
                                     type="button"
                                     onClick={props.onQuickNewSession}
                                     disabled={props.quickNewSessionPending}
-                                    className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                                    className={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors ${
                                         props.quickNewSessionPending
                                             ? 'cursor-not-allowed text-[var(--app-hint)] opacity-50'
                                             : 'text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]'
@@ -400,63 +372,64 @@ export function SessionHeader(props: {
                                 </button>
                             ) : null}
                             {(props.onToggleTerminal || props.onToggleFiles) ? (
-                                <div className="mx-1 h-5 w-0.5 bg-[var(--app-divider)]" />
+                                <div className="mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
                             ) : null}
                         </div>
                     ) : null}
 
-                    {props.onToggleTerminal ? (
+                    <div className="flex items-center">
+                        {props.onToggleTerminal ? (
+                            <button
+                                type="button"
+                                onClick={props.onToggleTerminal}
+                                className={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors ${
+                                    props.terminalOpen
+                                        ? 'bg-[var(--app-secondary-bg)] text-[var(--app-fg)]'
+                                        : 'text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
+                                }`}
+                                title={t('composer.terminal')}
+                            >
+                                <TerminalIcon />
+                            </button>
+                        ) : null}
+
+                        {props.onToggleFiles ? (
+                            <button
+                                type="button"
+                                onClick={props.onToggleFiles}
+                                className={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors ${
+                                    props.filesOpen
+                                        ? 'bg-[var(--app-secondary-bg)] text-[var(--app-fg)]'
+                                        : 'text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
+                                }`}
+                                title={t('session.title')}
+                            >
+                                <FilesIcon />
+                            </button>
+                        ) : null}
                         <button
                             type="button"
-                            onClick={props.onToggleTerminal}
-                            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-                                props.terminalOpen
-                                    ? 'bg-[var(--app-secondary-bg)] text-[var(--app-fg)]'
-                                    : 'text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
-                            }`}
-                            title={t('composer.terminal')}
+                            onClick={handleMenuToggle}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            ref={menuAnchorRef}
+                            aria-haspopup="menu"
+                            aria-expanded={menuOpen}
+                            aria-controls={menuOpen ? menuId : undefined}
+                            className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                            title={t('session.more')}
                         >
-                            <TerminalIcon />
+                            <MoreVerticalIcon />
                         </button>
-                    ) : null}
 
-                    {props.onToggleFiles ? (
                         <button
                             type="button"
-                            onClick={props.onToggleFiles}
-                            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-                                props.filesOpen
-                                    ? 'bg-[var(--app-secondary-bg)] text-[var(--app-fg)]'
-                                    : 'text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
-                            }`}
-                            title={t('session.title')}
+                            onClick={toggleWidescreen}
+                            className={`hidden lg:flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
+                            title={widescreen ? 'Exit widescreen' : 'Widescreen'}
                         >
-                            <FilesIcon />
+                            <WidescreenIcon active={widescreen} />
                         </button>
-                    ) : null}
-
-                    <button
-                        type="button"
-                        onClick={handleMenuToggle}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        ref={menuAnchorRef}
-                        aria-haspopup="menu"
-                        aria-expanded={menuOpen}
-                        aria-controls={menuOpen ? menuId : undefined}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                        title={t('session.more')}
-                    >
-                        <MoreVerticalIcon />
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={toggleWidescreen}
-                        className={`hidden lg:flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
-                        title={widescreen ? 'Exit widescreen' : 'Widescreen'}
-                    >
-                        <WidescreenIcon active={widescreen} />
-                    </button>
+                    </div>
                 </div>
             </div>
 
