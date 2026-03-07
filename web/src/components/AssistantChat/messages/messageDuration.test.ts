@@ -39,7 +39,8 @@ describe('getAssistantTurnDurationInfo', () => {
             startAt: 1_000,
             fallbackEndAt: 5_000,
             finalEndAt: null,
-            turnEndIndex: 2
+            turnEndIndex: 2,
+            lastAssistantOutputIndex: 2
         })
     })
 
@@ -71,7 +72,41 @@ describe('getAssistantTurnDurationInfo', () => {
             startAt: 1_000,
             fallbackEndAt: 4_100,
             finalEndAt: 10_000,
-            turnEndIndex: 3
+            turnEndIndex: 3,
+            lastAssistantOutputIndex: 2
+        })
+    })
+
+    it('ignores title-changed events when picking the last assistant output in a turn', () => {
+        const range = getAssistantTurnDurationInfo([
+            {
+                role: 'user',
+                createdAt: new Date(1_000),
+                metadata: { custom: { kind: 'user' } }
+            },
+            {
+                role: 'assistant',
+                createdAt: new Date(2_000),
+                metadata: { custom: { kind: 'assistant' } }
+            },
+            {
+                role: 'system',
+                createdAt: new Date(2_500),
+                metadata: { custom: { kind: 'event', event: { type: 'title-changed', title: '日常对话' } } }
+            },
+            {
+                role: 'assistant',
+                createdAt: new Date(4_000),
+                metadata: { custom: { kind: 'assistant' } }
+            }
+        ], 1)
+
+        expect(range).toEqual({
+            startAt: 1_000,
+            fallbackEndAt: 4_000,
+            finalEndAt: null,
+            turnEndIndex: 3,
+            lastAssistantOutputIndex: 3
         })
     })
 })

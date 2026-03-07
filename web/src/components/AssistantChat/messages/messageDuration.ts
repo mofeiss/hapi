@@ -20,6 +20,10 @@ function isPromptUserMessage(message: DurationMessage | undefined): boolean {
     return custom?.kind !== 'cli-output'
 }
 
+function isAssistantOutputMessage(message: DurationMessage | undefined): boolean {
+    return message?.role === 'assistant'
+}
+
 function getTurnDurationMs(message: DurationMessage | undefined): number | null {
     const event = message?.metadata?.custom?.event
     if (!event || event.type !== 'turn-duration') return null
@@ -29,7 +33,13 @@ function getTurnDurationMs(message: DurationMessage | undefined): number | null 
 export function getAssistantTurnDurationInfo(
     messages: readonly DurationMessage[],
     currentMessageIndex: number
-): { startAt: number; fallbackEndAt: number; finalEndAt: number | null; turnEndIndex: number } | null {
+): {
+    startAt: number
+    fallbackEndAt: number
+    finalEndAt: number | null
+    turnEndIndex: number
+    lastAssistantOutputIndex: number
+} | null {
     if (currentMessageIndex < 0 || currentMessageIndex >= messages.length) return null
 
     let promptIndex = -1
@@ -54,6 +64,7 @@ export function getAssistantTurnDurationInfo(
 
     let fallbackEndAt = startAt
     let finalEndAt: number | null = null
+    let lastAssistantOutputIndex = -1
 
     for (let index = promptIndex + 1; index <= turnEndIndex; index += 1) {
         const timestamp = getMessageTimestamp(messages[index])
@@ -61,16 +72,23 @@ export function getAssistantTurnDurationInfo(
             fallbackEndAt = Math.max(fallbackEndAt, timestamp)
         }
 
+        if (isAssistantOutputMessage(messages[index])) {
+            lastAssistantOutputIndex = index
+        }
+
         const durationMs = getTurnDurationMs(messages[index])
         if (durationMs === null) continue
         finalEndAt = startAt + Math.max(0, durationMs)
     }
 
+    if (lastAssistantOutputIndex < 0) return null
+
     return {
         startAt,
         fallbackEndAt,
         finalEndAt,
-        turnEndIndex
+        turnEndIndex,
+        lastAssistantOutputIndex
     }
 }
 

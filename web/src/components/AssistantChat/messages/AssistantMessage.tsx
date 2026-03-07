@@ -118,6 +118,8 @@ export function HappyAssistantMessage() {
         : null
     const isCurrentTurnTailVisible = turnDurationInfo !== null
         && turnDurationInfo.turnEndIndex === threadMessagesLength - 1
+    const shouldShowTurnActions = turnDurationInfo !== null
+        && turnDurationInfo.lastAssistantOutputIndex === currentMessageIndex
     const toolOnly = assistantContent.length > 0 && assistantContent.every((part) => part.type === 'tool-call')
     const apiErrorText = (() => {
         if (assistantContent.length !== 1) return null
@@ -162,11 +164,13 @@ export function HappyAssistantMessage() {
                 <MessagePrimitive.Root className="px-1 min-w-0 max-w-full overflow-x-hidden">
                     <CliOutputBlock text={cliText} />
                 </MessagePrimitive.Root>
-                <div className={actionsClass}>
-                    <MessageCopyButton text={cliText} />
-                    <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
-                    {durationBadge}
-                </div>
+                {shouldShowTurnActions ? (
+                    <div className={actionsClass}>
+                        <MessageCopyButton text={cliText} />
+                        <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+                        {durationBadge}
+                    </div>
+                ) : null}
             </div>
         )
     }
@@ -177,11 +181,13 @@ export function HappyAssistantMessage() {
                 <MessagePrimitive.Root className="px-1 min-w-0 max-w-full overflow-x-hidden">
                     <ApiErrorNotice text={apiErrorText} />
                 </MessagePrimitive.Root>
-                <div className={actionsClass}>
-                    <MessageCopyButton text={apiErrorText} />
-                    <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
-                    {durationBadge}
-                </div>
+                {shouldShowTurnActions ? (
+                    <div className={actionsClass}>
+                        <MessageCopyButton text={apiErrorText} />
+                        <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+                        {durationBadge}
+                    </div>
+                ) : null}
             </div>
         )
     }
@@ -191,11 +197,13 @@ export function HappyAssistantMessage() {
             <MessagePrimitive.Root className={rootClass}>
                 <MessagePrimitive.Content components={MESSAGE_PART_COMPONENTS} />
             </MessagePrimitive.Root>
-            <div className={actionsClass}>
-                <MessageCopyButton text={copyText} />
-                <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
-                {durationBadge}
-            </div>
+            {shouldShowTurnActions ? (
+                <div className={actionsClass}>
+                    <MessageCopyButton text={copyText} />
+                    <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
+                    {durationBadge}
+                </div>
+            ) : null}
         </div>
     )
 }
