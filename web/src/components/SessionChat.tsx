@@ -17,6 +17,7 @@ import { reduceChatBlocks } from '@/chat/reducer'
 import { reconcileChatBlocks } from '@/chat/reconcile'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { HappyThread } from '@/components/AssistantChat/HappyThread'
+import { StatusBar } from '@/components/AssistantChat/StatusBar'
 import { useHappyRuntime } from '@/lib/assistant-runtime'
 import { createAttachmentAdapter } from '@/lib/attachmentAdapter'
 import { SessionHeader } from '@/components/SessionHeader'
@@ -1017,15 +1018,29 @@ export function SessionChat(props: {
                         queuedMessages={messageQueue.queue}
                     />
 
+                    <div className="bg-[var(--app-bg)] px-3 pb-0 pt-2">
+                        <div className="mx-auto w-full max-w-content">
+                            <StatusBar
+                                active={props.session.active}
+                                thinking={props.session.thinking}
+                                agentState={props.session.agentState}
+                                contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
+                                modelMode={props.session.modelMode}
+                                voiceStatus={sttVoiceStatus}
+                                className="px-0 pb-2"
+                            />
+                        </div>
+                    </div>
+
                     {composerTodos.length > 0 ? (
-                        <div className="bg-[var(--app-bg)] px-3 pb-0 pt-3">
-                            <div className="mx-auto w-full max-w-content">
+                        <div className="bg-[var(--app-bg)] px-3 pb-0 pt-0">
+                            <div className="mx-auto w-full max-w-content px-2 sm:px-3">
                                 <TodoPanel
                                     todos={composerTodos}
                                     variant="dock"
                                     collapsible
                                     resetKey={composerTodoResetKey}
-                                    className="relative z-10 -mb-4"
+                                    className="relative z-0 -mb-7"
                                 />
                             </div>
                         </div>

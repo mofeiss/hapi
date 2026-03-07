@@ -24,7 +24,6 @@ import { isCodexFamilyFlavor } from '@/lib/agentFlavorUtils'
 import { markSkillUsed } from '@/lib/recent-skills'
 import { FloatingOverlay } from '@/components/ChatInput/FloatingOverlay'
 import { Autocomplete } from '@/components/ChatInput/Autocomplete'
-import { StatusBar } from '@/components/AssistantChat/StatusBar'
 import { ComposerButtons } from '@/components/AssistantChat/ComposerButtons'
 import { AttachmentItem, ComposerImagePreviewContext } from '@/components/AssistantChat/AttachmentItem'
 import { ImagePreviewModal, type PreviewImage } from '@/components/AssistantChat/ImagePreviewModal'
@@ -685,19 +684,10 @@ export function HappyComposer(props: {
     const voicePreviewInputClass = 'flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] placeholder:opacity-55 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
 
     return (
-        <div className={`px-3 ${bottomPaddingClass} pt-2 bg-[var(--app-bg)]`}>
+        <div className={`px-3 ${bottomPaddingClass} pt-0 bg-[var(--app-bg)]`}>
             <div className="mx-auto w-full max-w-content">
                 <ComposerPrimitive.Root className="relative" onSubmit={handleSubmit}>
                     {overlays}
-
-                    <StatusBar
-                        active={active}
-                        thinking={thinking}
-                        agentState={agentState}
-                        contextSize={contextSize}
-                        modelMode={modelMode}
-                        voiceStatus={voiceStatus}
-                    />
 
                     <div className="overflow-hidden rounded-[20px] bg-[var(--app-secondary-bg)]">
                         {!isVoiceFocusMode && attachments.length > 0 ? (

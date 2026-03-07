@@ -79,6 +79,7 @@ export function StatusBar(props: {
     contextSize?: number
     modelMode?: ModelMode
     voiceStatus?: ConversationStatus
+    className?: string
 }) {
     const { t } = useTranslation()
     const connectionStatus = useMemo(
@@ -97,7 +98,7 @@ export function StatusBar(props: {
     )
 
     return (
-        <div className="flex items-center justify-between px-2 pb-1 min-h-6">
+        <div className={`flex min-h-5 items-center justify-between px-1 pb-1 ${props.className ?? ''}`}>
             <div className="flex items-baseline gap-3">
                 <div className={`flex items-center gap-1.5 ${connectionStatus.isPulsing ? 'animate-[snowflake-pulse_1.5s_ease-in-out_infinite]' : ''}`}>
                     {connectionStatus.isPulsing ? (

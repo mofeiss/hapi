@@ -16,10 +16,12 @@
     /* Theme-aware colors (light mode defaults) */
     --app-border: rgba(0, 0, 0, 0.1);
     --app-divider: rgba(0, 0, 0, 0.08);
+    --app-divider-soft: rgba(0, 0, 0, 0.045);
     --app-subtle-bg: rgba(0, 0, 0, 0.05);
     --app-code-bg: #f6f8fa;
     --app-inline-code-bg: rgba(0, 0, 0, 0.08);
     --app-orange-base: #f59e0b;
+    --app-panel-raised-bg: #f5f7fa;
 
     /* Diff colors (light) - from hapi-app */
     --app-diff-added-bg: #e6ffed;
@@ -66,10 +68,12 @@
 
     --app-border: rgba(255, 255, 255, 0.1);
     --app-divider: rgba(255, 255, 255, 0.08);
+    --app-divider-soft: rgba(255, 255, 255, 0.04);
     --app-subtle-bg: rgba(255, 255, 255, 0.05);
     --app-code-bg: #282c34;
     --app-inline-code-bg: rgba(255, 255, 255, 0.1);
     --app-orange-base: #f59e0b;
+    --app-panel-raised-bg: #36363a;
 
     /* Diff colors (dark) - from hapi-app */
     --app-diff-added-bg: #0d2e1f;

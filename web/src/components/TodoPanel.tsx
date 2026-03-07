@@ -20,7 +20,7 @@ function ChecklistIcon(props: { className?: string }) {
 function ToggleIcon(props: { expanded: boolean }) {
     return (
         <svg
-            className={cn('h-4 w-4 transition-transform duration-200', props.expanded ? 'rotate-180' : 'rotate-0')}
+            className={cn('h-4 w-4 transition-transform duration-200', props.expanded ? 'rotate-0' : 'rotate-180')}
             viewBox="0 0 16 16"
             fill="none"
             aria-hidden="true"
@@ -132,18 +132,19 @@ export function TodoPanel(props: {
 
     const isDock = variant === 'dock'
     const isExpanded = collapsible ? expanded : true
+    const overlapBufferClass = isDock ? 'h-7' : 'hidden'
 
     return (
         <div
             className={cn(
-                'overflow-hidden border border-[var(--app-border)]',
+                'overflow-hidden',
                 isDock
-                    ? 'rounded-[28px] bg-[var(--app-bg)] shadow-[0_14px_34px_rgba(15,23,42,0.08)]'
-                    : 'rounded-[18px] bg-[var(--app-secondary-bg)]',
+                    ? 'rounded-[24px] bg-[var(--app-panel-raised-bg)] shadow-[0_6px_18px_rgba(15,23,42,0.045)]'
+                    : 'rounded-[16px] bg-[var(--app-panel-raised-bg)]',
                 props.className
             )}
         >
-            <div className={cn('flex items-start justify-between gap-3', isDock ? 'px-6 py-4' : 'px-4 py-3')}>
+            <div className={cn('flex items-center justify-between gap-3', isDock ? 'px-5 py-2.5' : 'px-4 py-2.5')}>
                 <div className="min-w-0 flex items-center gap-3">
                     <span className="shrink-0 text-[var(--app-fg)]">
                         <ChecklistIcon className={isDock ? 'h-5 w-5' : 'h-4 w-4'} />
@@ -151,7 +152,7 @@ export function TodoPanel(props: {
                     <div className="min-w-0">
                         <div className={cn(
                             'truncate font-medium text-[var(--app-fg)]',
-                            isDock ? 'text-[15px] leading-6' : 'text-sm leading-5'
+                            isDock ? 'text-[14px] leading-5' : 'text-[13px] leading-5'
                         )}>
                             {t('todo.summary', { total: stats.total, completed: stats.completed })}
                         </div>
@@ -161,7 +162,7 @@ export function TodoPanel(props: {
                 {collapsible ? (
                     <button
                         type="button"
-                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)]"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)]"
                         aria-label={expanded ? t('todo.collapse') : t('todo.expand')}
                         title={expanded ? t('todo.collapse') : t('todo.expand')}
                         onClick={() => setExpanded((value) => !value)}
@@ -172,10 +173,12 @@ export function TodoPanel(props: {
             </div>
 
             {isExpanded ? (
-                <div className={cn('border-t border-[var(--app-divider)]', isDock ? 'px-6 pb-4 pt-2.5' : 'px-4 pb-3 pt-2')}>
+                <div className={cn('border-t border-[var(--app-divider-soft)]', isDock ? 'px-5 pb-3.5 pt-[13px]' : 'px-4 pb-3 pt-[13px]')}>
                     <TodoList todos={props.todos} variant={isDock ? 'dock' : 'inline'} />
                 </div>
             ) : null}
+
+            <div aria-hidden="true" className={overlapBufferClass} />
         </div>
     )
 }
