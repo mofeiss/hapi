@@ -283,6 +283,7 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
    ```bash
    cd cli/npm/darwin-arm64 && npm pack
    cd cli/npm/linux-x64 && npm pack
+   cd cli/npm/win32-x64 && npm pack
    cd cli/npm/main && npm pack
    ```
 
@@ -290,6 +291,7 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
    ```bash
    npm publish cli/npm/darwin-arm64/ofeiss-hapi-darwin-arm64-<ver>.tgz --access public --otp=
    npm publish cli/npm/linux-x64/ofeiss-hapi-linux-x64-<ver>.tgz --access public --otp=
+   npm publish cli/npm/win32-x64/ofeiss-hapi-win32-x64-<ver>.tgz --access public --otp=
    npm publish cli/npm/main/ofeiss-hapi-<ver>.tgz --access public --otp=
    ```
    Leave `--otp=` empty -> triggers browser-based auth -> macOS biometric verification.
@@ -298,7 +300,7 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
 
 - **必须用 `build:exe:allinone:all` 而不是 `build:exe:all`**：后者不含 web 前端资源，安装后 `hapi hub` 的 Web UI (端口 3006) 会报 "Embedded Mini App is missing index.html"。
 - npm 不允许重复发布同一版本，如果需要修复已发布的包必须升版本号。平台包很大（40-90MB），上传耗时较长，尽量一次发布成功。
-- 只需发布实际使用的平台包（darwin-arm64 + linux-x64），其他平台在 `optionalDependencies` 中找不到会被 npm 静默跳过。
+- 以后默认发布 3 个平台包：`darwin-arm64`、`linux-x64`、`win32-x64`，然后再发布主包。
 - `npm publish` runs a `prepack` script (`prepare-npm-packages`) that takes several seconds, causing OTP codes to expire if passed via `--otp=<code>`. Solution: use `npm pack` first, then publish the `.tgz`.
 - The "Access token expired or revoked" notice appears even with valid tokens - it's a non-blocking npm notice, not the actual error.
 - Do NOT use granular access tokens for publishing scoped packages - they consistently return E404/E403.
