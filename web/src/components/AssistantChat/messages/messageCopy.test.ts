@@ -54,7 +54,7 @@ describe('buildAssistantCopyText', () => {
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
             [
                 'Done.',
-                '```\nReasoning:\nInspect src/app.ts\nCheck types\n```',
+                '```Reasoning\nInspect src/app.ts\nCheck types\n```',
                 'View src/app.ts file'
             ].join('\n\n')
         )
@@ -80,7 +80,7 @@ describe('buildAssistantCopyText', () => {
             [
                 'Tool Calls | 2 calls',
                 '- View src/app.ts file',
-                '```\nReasoning:\nNeed to verify after edit\n```',
+                '```Reasoning\nNeed to verify after edit\n```',
                 '- Run command bun test web'
             ].join('\n\n')
         )
