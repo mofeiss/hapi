@@ -4,8 +4,11 @@ import { Reasoning, ReasoningGroup } from '@/components/assistant-ui/reasoning'
 import { HappyToolMessage } from '@/components/AssistantChat/messages/ToolMessage'
 import { CliOutputBlock } from '@/components/CliOutputBlock'
 import { MessageCopyButton } from '@/components/AssistantChat/messages/MessageCopyButton'
+import { useHappyChatContext } from '@/components/AssistantChat/context'
 import { ApiErrorNotice, isApiErrorText } from '@/components/AssistantChat/messages/ApiErrorNotice'
+import { buildAssistantCopyText, type AssistantCopyPart } from '@/components/AssistantChat/messages/messageCopy'
 import type { HappyChatMessageMetadata } from '@/lib/assistant-runtime'
+import { useTranslation } from '@/lib/use-translation'
 
 const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
@@ -19,6 +22,8 @@ const MESSAGE_PART_COMPONENTS = {
 } as const
 
 export function HappyAssistantMessage() {
+    const ctx = useHappyChatContext()
+    const { locale } = useTranslation()
     const isCliOutput = useAssistantState(({ message }) => {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return custom?.kind === 'cli-output'
@@ -28,26 +33,24 @@ export function HappyAssistantMessage() {
         if (custom?.kind !== 'cli-output') return ''
         return message.content.find((part) => part.type === 'text')?.text ?? ''
     })
-    const text = useAssistantState(({ message }) => {
-        if (message.role !== 'assistant') return ''
-        return message.content
-            .filter((part) => part.type === 'text')
-            .map((part) => part.text)
-            .join('\n\n')
-    })
-    const toolOnly = useAssistantState(({ message }) => {
-        if (message.role !== 'assistant') return false
-        const parts = message.content
-        return parts.length > 0 && parts.every((part) => part.type === 'tool-call')
-    })
-    const apiErrorText = useAssistantState(({ message }) => {
-        if (message.role !== 'assistant') return null
-        if (message.content.length !== 1) return null
-        const first = message.content[0]
+    const assistantContent = useAssistantState(({ message }) => (
+        message.role === 'assistant' ? message.content : []
+    ))
+    const toolOnly = assistantContent.length > 0 && assistantContent.every((part) => part.type === 'tool-call')
+    const apiErrorText = (() => {
+        if (assistantContent.length !== 1) return null
+        const first = assistantContent[0]
         if (first.type !== 'text') return null
         const candidate = first.text.trim()
         return isApiErrorText(candidate) ? candidate : null
-    })
+    })()
+    const copyText = buildAssistantCopyText(
+        assistantContent as readonly AssistantCopyPart[],
+        {
+            metadata: ctx.metadata,
+            locale
+        }
+    )
     const rootClass = toolOnly
         ? 'py-1 min-w-0 max-w-full overflow-x-hidden'
         : 'px-1 min-w-0 max-w-full overflow-x-hidden'
@@ -79,7 +82,7 @@ export function HappyAssistantMessage() {
             <MessagePrimitive.Root className={rootClass}>
                 <MessagePrimitive.Content components={MESSAGE_PART_COMPONENTS} />
             </MessagePrimitive.Root>
-            <MessageCopyButton text={text} className="ml-1" />
+            <MessageCopyButton text={copyText} className="ml-1" />
         </div>
     )
 }
