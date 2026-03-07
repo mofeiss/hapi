@@ -110,7 +110,7 @@ function FallbackToolCallMessage(props: {
                             {getFallbackStatusGlyph(props.status.type, props.isError)}
                         </span>
                         <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-                            <span className="shrink-0 text-sm font-medium text-[var(--app-fg)]">
+                            <span className="shrink-0 text-sm text-[var(--app-hint)] opacity-90">
                                 {props.displayToolName}
                             </span>
                             {statusLabel ? (
@@ -127,7 +127,7 @@ function FallbackToolCallMessage(props: {
                         {getFallbackStatusGlyph(props.status.type, props.isError)}
                     </span>
                     <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-                        <span className="shrink-0 text-sm font-medium text-[var(--app-fg)]">
+                        <span className="shrink-0 text-sm text-[var(--app-hint)] opacity-90">
                             {props.displayToolName}
                         </span>
                         {statusLabel ? (

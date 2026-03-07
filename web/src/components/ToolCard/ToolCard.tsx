@@ -364,7 +364,7 @@ function ToolCardInner(props: ToolCardProps) {
                     <StatusIcon state={props.block.tool.state} />
                 </span>
                 <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
-                    <span className="shrink-0 text-sm font-medium leading-tight text-[var(--app-fg)]">
+                    <span className="shrink-0 text-sm leading-tight text-[var(--app-hint)] opacity-90">
                         {toolTitle}
                     </span>
                     {subtitle ? (

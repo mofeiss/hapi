@@ -26,7 +26,7 @@ export function ToolParamField(props: { name: string; value: string; position?: 
                 <span className="inline-flex items-center rounded-sm bg-[var(--app-bg)] px-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--app-hint)]">
                     {props.name}
                 </span>
-                <span className="ml-2">{props.value}</span>
+                <span className="ml-2 text-[var(--app-hint)] opacity-85">{props.value}</span>
             </div>
         </div>
     )

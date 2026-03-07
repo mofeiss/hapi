@@ -362,10 +362,12 @@ html[data-theme="dark"] .shiki span {
 .tool-io-scope .tool-plain-surface {
   background-color: transparent !important;
   border-color: transparent !important;
+  opacity: 0.75;
 }
 
 .tool-io-scope .tool-plain-surface:hover {
   background-color: transparent !important;
+  opacity: 0.75;
 }
 
 .tool-io-scope .tool-plain-surface-header {
