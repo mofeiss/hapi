@@ -370,6 +370,10 @@ html[data-theme="dark"] .shiki span {
   opacity: 0.75;
 }
 
+.tool-io-scope .tool-markdown-surface {
+  opacity: 0.75;
+}
+
 .tool-io-scope .tool-plain-surface-header {
   background-color: transparent !important;
   border-color: transparent !important;

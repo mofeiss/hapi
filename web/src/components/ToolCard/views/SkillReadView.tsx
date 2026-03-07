@@ -16,7 +16,7 @@ export const SkillReadView: ToolViewComponent = (props) => {
     }
 
     return (
-        <div className="max-h-[48vh] overflow-auto rounded-md bg-[var(--app-bg)] p-3">
+        <div className="tool-markdown-surface max-h-[48vh] overflow-auto rounded-md bg-[var(--app-bg)] p-3">
             <MarkdownRenderer content={data.content} />
         </div>
     )

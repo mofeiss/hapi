@@ -799,9 +799,9 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
         const path = file.filePath
             ? resolveDisplayPath(file.filePath, props.metadata)
             : extractReadInputPath(props.block.tool.input, props.metadata)
+        const isMarkdownReadFile = Boolean(path && isMarkdownFilePath(path))
         const canPreviewMarkdown = Boolean(
-            path
-            && isMarkdownFilePath(path)
+            isMarkdownReadFile
             && sanitizedContent.trim().length > 0
             && !isReadErrorResult
         )
@@ -820,7 +820,7 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
                             onToggleMode={toggleMode}
                             centered={false}
                         />
-                        <div className="max-h-[48vh] overflow-auto rounded-md bg-[var(--app-bg)] p-3 pr-12">
+                        <div className="tool-markdown-surface max-h-[48vh] overflow-auto rounded-md bg-[var(--app-bg)] p-3 pr-12">
                             <MarkdownRenderer content={sanitizedContent} />
                         </div>
                     </div>
@@ -836,13 +836,13 @@ const ReadResultView: ToolViewComponent = (props: ToolViewProps) => {
                         <CodeBlock
                             code={sanitizedContent}
                             language="text"
-                            showLineNumbers
+                            showLineNumbers={!isMarkdownReadFile}
                             showCopyButton={false}
                             contentRightPaddingClassName="pr-14"
                         />
                     </div>
                 ) : (
-                    <CodeBlock code={sanitizedContent} language="text" showLineNumbers />
+                    <CodeBlock code={sanitizedContent} language="text" showLineNumbers={!isMarkdownReadFile} />
                 )}
                 <RawJsonDevOnly value={result} />
             </>
@@ -919,7 +919,7 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
                             onToggleMode={toggleMode}
                             centered={false}
                         />
-                        <div className="max-h-[48vh] overflow-auto rounded-md bg-[var(--app-bg)] p-3 pr-12">
+                        <div className="tool-markdown-surface max-h-[48vh] overflow-auto rounded-md bg-[var(--app-bg)] p-3 pr-12">
                             <MarkdownRenderer content={skillContent} />
                         </div>
                     </div>
@@ -943,7 +943,7 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
                     <CodeBlock
                         code={skillContent}
                         language={isSkillErrorResult ? 'text' : 'markdown'}
-                        showLineNumbers={!isSkillErrorResult}
+                        showLineNumbers={false}
                         showCopyButton={false}
                         contentRightPaddingClassName={canToggleSkillView ? 'pr-14' : 'pr-8'}
                     />
@@ -970,7 +970,7 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
                         <CodeBlock
                             code={sanitizedText}
                             language="text"
-                            showLineNumbers={!isSkillErrorResult}
+                            showLineNumbers={false}
                             showCopyButton={false}
                             contentRightPaddingClassName="pr-8"
                         />
