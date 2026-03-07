@@ -297,10 +297,10 @@ function StepReasoningNode(props: { block: AgentReasoningBlock }) {
                 <span className="shrink-0 text-[var(--app-hint)]">
                     <BrainIcon className="h-3 w-3" />
                 </span>
-                <span className="min-w-0 flex-1 truncate whitespace-nowrap">
-                    <span className="text-sm text-[var(--app-hint)] opacity-90">{label}</span>
-                    {preview ? (
-                        <span className="ml-2 font-mono text-xs text-[var(--app-hint)] opacity-60">
+                <span className="min-w-0 flex flex-1 items-baseline gap-2">
+                    <span className="shrink-0 text-sm text-[var(--app-hint)] opacity-90">{label}</span>
+                    {!open && preview ? (
+                        <span className="min-w-0 flex-1 truncate whitespace-nowrap font-mono text-xs text-[var(--app-hint)] opacity-60">
                             {preview}
                         </span>
                     ) : null}
@@ -309,7 +309,7 @@ function StepReasoningNode(props: { block: AgentReasoningBlock }) {
 
             {open ? (
                 <div className="ml-5 border-l border-[var(--app-border)] pl-2.5">
-                    <div className="text-[var(--app-hint)] opacity-80 [&_.aui-md]:text-sm [&_.aui-md]:leading-5 [&_.aui-md_p]:my-0">
+                    <div className="text-[var(--app-hint)] opacity-80 [&_.aui-md]:text-xs [&_.aui-md]:leading-4 [&_.aui-md_p]:my-0">
                         <MarkdownRenderer content={props.block.text} />
                     </div>
                 </div>

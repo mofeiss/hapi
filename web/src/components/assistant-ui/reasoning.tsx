@@ -1,4 +1,4 @@
-import { useState, useEffect, type FC, type PropsWithChildren } from 'react'
+import { useState, useEffect, type FC, type PropsWithChildren, type TransitionEvent } from 'react'
 import { useMessage, type ReasoningGroupProps } from '@assistant-ui/react'
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown'
 import { cn } from '@/lib/utils'
@@ -81,7 +81,7 @@ export const Reasoning: FC = () => {
         <MarkdownTextPrimitive
             remarkPlugins={MARKDOWN_PLUGINS}
             components={defaultComponents}
-            className={cn('aui-reasoning-content min-w-0 max-w-full break-words text-sm text-[var(--app-hint)] opacity-80')}
+            className={cn('aui-reasoning-content min-w-0 max-w-full break-words text-xs text-[var(--app-hint)] opacity-80')}
         />
     )
 }
@@ -91,8 +91,6 @@ export const Reasoning: FC = () => {
  * Shows shimmer effect while reasoning is streaming.
  */
 export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ children, startIndex, endIndex }) => {
-    const [isOpen, setIsOpen] = useState(false)
-
     // Check if reasoning is still streaming
     const message = useMessage()
     const reasoningText = message.content
@@ -104,19 +102,35 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
     const isStreaming = message.status?.type === 'running'
         && message.content.length > 0
         && message.content[message.content.length - 1]?.type === 'reasoning'
+    const [isOpen, setIsOpen] = useState(isStreaming)
+    const [showPreview, setShowPreview] = useState(!isStreaming)
 
     // Auto-expand while streaming
     useEffect(() => {
         if (isStreaming) {
+            setShowPreview(false)
             setIsOpen(true)
         }
     }, [isStreaming])
+
+    const toggleOpen = () => {
+        setShowPreview(false)
+        setIsOpen((current) => !current)
+    }
+
+    const handleCollapseTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
+        if (event.target !== event.currentTarget) return
+        if (event.propertyName !== 'max-height') return
+        if (!isOpen) {
+            setShowPreview(true)
+        }
+    }
 
     return (
         <div className="aui-reasoning-group my-2">
             <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggleOpen}
                 className={cn(
                     'flex w-full min-w-0 items-center gap-1.5 text-left',
                     'transition-colors cursor-pointer select-none'
@@ -128,10 +142,10 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
                 <span className="shrink-0 text-[var(--app-hint)]">
                     <ChevronIcon open={isOpen} />
                 </span>
-                <span className="min-w-0 flex-1 truncate whitespace-nowrap">
-                    <span className="text-sm text-[var(--app-hint)] opacity-90">Reasoning</span>
-                    {preview ? (
-                        <span className="ml-2 font-mono text-xs text-[var(--app-hint)] opacity-60">
+                <span className="min-w-0 flex flex-1 items-baseline gap-2">
+                    <span className="shrink-0 text-sm text-[var(--app-hint)] opacity-90">Reasoning</span>
+                    {!isOpen && showPreview && preview ? (
+                        <span className="min-w-0 flex-1 truncate whitespace-nowrap font-mono text-xs text-[var(--app-hint)] opacity-60">
                             {preview}
                         </span>
                     ) : null}
@@ -144,6 +158,7 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
             </button>
 
             <div
+                onTransitionEnd={handleCollapseTransitionEnd}
                 className={cn(
                     'overflow-hidden transition-all duration-200 ease-in-out',
                     isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
