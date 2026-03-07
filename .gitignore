@@ -55,3 +55,6 @@ cli/npm/**/*.tgz
 .worktrees/
 .security-key
 logs/security/
+
+# BitFun snapshot data - auto managed
+.bitfun/
