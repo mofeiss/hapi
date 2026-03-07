@@ -32,16 +32,18 @@ describe('AppServerEventConverter', () => {
         expect(failed).toEqual([{ type: 'task_failed', turn_id: 'turn-1', error: 'boom' }]);
     });
 
-    it('accumulates agent message deltas', () => {
+    it('accumulates agent message deltas and emits item ids for partial/final updates', () => {
         const converter = new AppServerEventConverter();
 
-        converter.handleNotification('item/agentMessage/delta', { itemId: 'msg-1', delta: 'Hello' });
-        converter.handleNotification('item/agentMessage/delta', { itemId: 'msg-1', delta: ' world' });
+        const firstDelta = converter.handleNotification('item/agentMessage/delta', { itemId: 'msg-1', delta: 'Hello' });
+        const secondDelta = converter.handleNotification('item/agentMessage/delta', { itemId: 'msg-1', delta: ' world' });
         const completed = converter.handleNotification('item/completed', {
             item: { id: 'msg-1', type: 'agentMessage' }
         });
 
-        expect(completed).toEqual([{ type: 'agent_message', message: 'Hello world' }]);
+        expect(firstDelta).toEqual([{ type: 'agent_message_delta', item_id: 'msg-1', delta: 'Hello' }]);
+        expect(secondDelta).toEqual([{ type: 'agent_message_delta', item_id: 'msg-1', delta: ' world' }]);
+        expect(completed).toEqual([{ type: 'agent_message', item_id: 'msg-1', message: 'Hello world' }]);
     });
 
     it('maps command execution items and output deltas', () => {

@@ -18,6 +18,7 @@ import { buildCodexStartConfig } from './utils/codexStartConfig';
 import { AppServerEventConverter } from './utils/appServerEventConverter';
 import { registerAppServerPermissionHandlers } from './utils/appServerPermissionAdapter';
 import { buildThreadStartParams, buildTurnStartParams } from './utils/appServerConfig';
+import { PartialCodexAssistantStreamTracker } from './utils/partialAssistantStream';
 import { parseSpecialCommand } from '@/parsers/specialCommands';
 import {
     RemoteLauncherBase,
@@ -40,6 +41,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
     private permissionHandler: CodexPermissionHandler | null = null;
     private reasoningProcessor: ReasoningProcessor | null = null;
     private diffProcessor: DiffProcessor | null = null;
+    private partialAssistantStream: PartialCodexAssistantStreamTracker | null = null;
     private happyServer: HappyServer | null = null;
     private abortController: AbortController = new AbortController();
     private currentThreadId: string | null = null;
@@ -80,6 +82,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             this.permissionHandler?.reset();
             this.reasoningProcessor?.abort();
             this.diffProcessor?.reset();
+            this.partialAssistantStream?.clear();
             logger.debug('[Codex] Abort completed - session remains active');
         } catch (error) {
             logger.debug('[Codex] Error during abort:', error);
@@ -219,9 +222,11 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         const diffProcessor = new DiffProcessor((message) => {
             session.sendCodexMessage(message);
         });
+        const partialAssistantStream = new PartialCodexAssistantStreamTracker();
         this.permissionHandler = permissionHandler;
         this.reasoningProcessor = reasoningProcessor;
         this.diffProcessor = diffProcessor;
+        this.partialAssistantStream = partialAssistantStream;
         let turnInFlight = false;
         let readySentForCurrentTurn = false;
         const currentTurnFailureMessages = new Set<string>();
@@ -361,12 +366,29 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             }
             if (msgType === 'agent_message') {
                 const message = asString(msg.message);
+                const itemId = asString(msg.item_id ?? msg.itemId);
                 if (message) {
+                    const partial = itemId ? partialAssistantStream.finish(itemId, message) : null;
+                    if (partial) {
+                        session.sendCodexMessage(partial.message, { messageId: partial.messageId });
+                        return;
+                    }
+
                     session.sendCodexMessage({
                         type: 'message',
                         message,
                         id: randomUUID()
                     });
+                }
+            }
+            if (msgType === 'agent_message_delta') {
+                const itemId = asString(msg.item_id ?? msg.itemId);
+                const delta = asString(msg.delta);
+                if (itemId && delta) {
+                    const partial = partialAssistantStream.consumeDelta(itemId, delta);
+                    if (partial) {
+                        session.sendCodexMessage(partial.message, { messageId: partial.messageId });
+                    }
                 }
             }
             if (msgType === 'exec_command_begin' || msgType === 'exec_approval_request') {
@@ -578,6 +600,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 permissionHandler.reset();
                 reasoningProcessor.abort();
                 diffProcessor.reset();
+                partialAssistantStream.clear();
                 setThinking(false, 'mode_changed_restart');
                 continue;
             }
@@ -745,6 +768,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 reasoningProcessor.abort();
                 diffProcessor.reset();
                 appServerEventConverter?.reset();
+                partialAssistantStream.clear();
                 if (!useAppServer || !turnInFlight) {
                     setThinking(false, 'turn_finally');
                     emitReadyIfIdle({
@@ -782,9 +806,11 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         this.permissionHandler?.reset();
         this.reasoningProcessor?.abort();
         this.diffProcessor?.reset();
+        this.partialAssistantStream?.clear();
         this.permissionHandler = null;
         this.reasoningProcessor = null;
         this.diffProcessor = null;
+        this.partialAssistantStream = null;
 
         logger.debug('[codex-remote]: cleanup done');
     }

@@ -402,7 +402,7 @@ export class ApiSessionClient extends EventEmitter {
         })
     }
 
-    sendCodexMessage(body: unknown): void {
+    sendCodexMessage(body: unknown, options?: { messageId?: string }): void {
         const content = {
             role: 'agent',
             content: {
@@ -415,7 +415,8 @@ export class ApiSessionClient extends EventEmitter {
         }
         this.socket.emit('message', {
             sid: this.sessionId,
-            message: content
+            message: content,
+            messageId: options?.messageId
         })
     }
 

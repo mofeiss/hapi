@@ -71,8 +71,8 @@ export class CodexSession extends AgentSessionBase<EnhancedMode> {
         logger.debug('[CodexSession] Session ID cleared');
     };
 
-    sendCodexMessage = (message: unknown): void => {
-        this.client.sendCodexMessage(message);
+    sendCodexMessage = (message: unknown, options?: { messageId?: string }): void => {
+        this.client.sendCodexMessage(message, options);
     };
 
     sendUserMessage = (text: string): void => {

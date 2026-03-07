@@ -339,6 +339,11 @@ export class AppServerEventConverter {
             if (itemId && delta) {
                 const prev = this.agentMessageBuffers.get(itemId) ?? '';
                 this.agentMessageBuffers.set(itemId, prev + delta);
+                events.push({
+                    type: 'agent_message_delta',
+                    item_id: itemId,
+                    delta
+                });
             }
             return events;
         }
@@ -388,7 +393,11 @@ export class AppServerEventConverter {
                 if (method === 'item/completed') {
                     const text = asString(item.text ?? item.message ?? item.content) ?? this.agentMessageBuffers.get(itemId);
                     if (text) {
-                        events.push({ type: 'agent_message', message: text });
+                        events.push({
+                            type: 'agent_message',
+                            item_id: itemId,
+                            message: text
+                        });
                     }
                     this.agentMessageBuffers.delete(itemId);
                 }
