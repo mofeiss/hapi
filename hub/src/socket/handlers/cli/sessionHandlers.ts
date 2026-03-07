@@ -33,7 +33,8 @@ type UpdateStateHandler = ClientToServerEvents['update-state']
 const messageSchema = z.object({
     sid: z.string(),
     message: z.union([z.string(), z.unknown()]),
-    localId: z.string().optional()
+    localId: z.string().optional(),
+    messageId: z.string().optional()
 })
 
 const updateMetadataSchema = z.object({
@@ -66,7 +67,7 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
             return
         }
 
-        const { sid, localId } = parsed.data
+        const { sid, localId, messageId } = parsed.data
         const raw = parsed.data.message
 
         const content = typeof raw === 'string'
@@ -86,7 +87,10 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
         }
         const session = sessionAccess.value
 
-        const msg = store.messages.addMessage(sid, content, localId)
+        const msg = store.messages.upsertMessage(sid, content, {
+            localId,
+            id: messageId
+        })
 
         const todos = extractTodoWriteTodosFromMessageContent(content)
         if (todos) {

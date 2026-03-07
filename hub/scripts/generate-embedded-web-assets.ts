@@ -85,7 +85,7 @@ function main(): void {
         const mimeType = resolveMimeType(filePath);
 
         imports.push(`import ${importName} from '${importPath}' assert { type: 'file' };`);
-        manifestLines.push(`    { path: '${requestPath}', sourcePath: ${importName}, mimeType: '${mimeType}' },`);
+        manifestLines.push(`    { path: '${requestPath}', sourcePath: ${importName} as unknown as string, mimeType: '${mimeType}' },`);
     });
 
     const output = [

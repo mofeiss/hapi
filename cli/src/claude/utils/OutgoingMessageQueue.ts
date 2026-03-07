@@ -7,9 +7,14 @@
 
 import { AsyncLock } from '@/utils/lock';
 
+export interface QueuedClaudeMessage {
+    logMessage: any;
+    messageId?: string;
+}
+
 interface QueueItem {
     id: number;                    // Incremental ID for ordering
-    logMessage: any;               
+    payload: QueuedClaudeMessage;
     delayed: boolean;              // Whether this message should be delayed
     delayMs: number;               // Delay duration (e.g., 250ms)
     toolCallIds?: string[];        // Tool calls to track for early release
@@ -24,19 +29,19 @@ export class OutgoingMessageQueue {
     private processTimer?: NodeJS.Timeout;
     private delayTimers = new Map<number, NodeJS.Timeout>();
     
-    constructor(private sendFunction: (message: any) => void) {}
+    constructor(private sendFunction: (message: QueuedClaudeMessage) => void) {}
     
     /**
      * Add message to queue
      */
-    enqueue(logMessage: any, options?: {
+    enqueue(payload: QueuedClaudeMessage, options?: {
         delay?: number,
         toolCallIds?: string[]
     }) {
         this.lock.inLock(async () => {
             const item: QueueItem = {
                 id: this.nextId++,
-                logMessage,
+                payload,
                 delayed: !!options?.delay,
                 delayMs: options?.delay || 0,
                 toolCallIds: options?.toolCallIds,
@@ -121,8 +126,8 @@ export class OutgoingMessageQueue {
             
             // Send if not already sent
             if (!item.sent) {
-                if (item.logMessage.type !== 'system') {
-                    this.sendFunction(item.logMessage);
+                if (item.payload.logMessage.type !== 'system') {
+                    this.sendFunction(item.payload);
                 }
                 item.sent = true;
             }

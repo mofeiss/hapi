@@ -24,11 +24,19 @@ function toStoredMessage(row: DbMessageRow): StoredMessage {
     }
 }
 
+function getNextSeq(db: Database, sessionId: string): number {
+    const msgSeqRow = db.prepare(
+        'SELECT COALESCE(MAX(seq), 0) + 1 AS nextSeq FROM messages WHERE session_id = ?'
+    ).get(sessionId) as { nextSeq: number }
+    return msgSeqRow.nextSeq
+}
+
 export function addMessage(
     db: Database,
     sessionId: string,
     content: unknown,
-    localId?: string
+    localId?: string,
+    id?: string
 ): StoredMessage {
     const now = Date.now()
 
@@ -41,12 +49,8 @@ export function addMessage(
         }
     }
 
-    const msgSeqRow = db.prepare(
-        'SELECT COALESCE(MAX(seq), 0) + 1 AS nextSeq FROM messages WHERE session_id = ?'
-    ).get(sessionId) as { nextSeq: number }
-    const msgSeq = msgSeqRow.nextSeq
-
-    const id = randomUUID()
+    const msgSeq = getNextSeq(db, sessionId)
+    const resolvedId = id ?? randomUUID()
     const json = JSON.stringify(content)
 
     db.prepare(`
@@ -56,7 +60,7 @@ export function addMessage(
             @id, @session_id, @content, @created_at, @seq, @local_id
         )
     `).run({
-        id,
+        id: resolvedId,
         session_id: sessionId,
         content: json,
         created_at: now,
@@ -64,11 +68,56 @@ export function addMessage(
         local_id: localId ?? null
     })
 
-    const row = db.prepare('SELECT * FROM messages WHERE id = ?').get(id) as DbMessageRow | undefined
+    const row = db.prepare('SELECT * FROM messages WHERE id = ?').get(resolvedId) as DbMessageRow | undefined
     if (!row) {
         throw new Error('Failed to create message')
     }
     return toStoredMessage(row)
+}
+
+export function upsertMessage(
+    db: Database,
+    sessionId: string,
+    content: unknown,
+    options?: {
+        localId?: string
+        id?: string
+    }
+): StoredMessage {
+    if (!options?.id) {
+        return addMessage(db, sessionId, content, options?.localId)
+    }
+
+    const existing = db.prepare(
+        'SELECT * FROM messages WHERE id = ? LIMIT 1'
+    ).get(options.id) as DbMessageRow | undefined
+
+    if (!existing) {
+        return addMessage(db, sessionId, content, options.localId, options.id)
+    }
+
+    if (existing.session_id !== sessionId) {
+        throw new Error(`Message ${options.id} belongs to another session`)
+    }
+
+    const seq = getNextSeq(db, sessionId)
+
+    db.prepare(`
+        UPDATE messages
+        SET content = @content, seq = @seq
+        WHERE id = @id
+    `).run({
+        id: options.id,
+        content: JSON.stringify(content),
+        seq
+    })
+
+    const updated = db.prepare('SELECT * FROM messages WHERE id = ?').get(options.id) as DbMessageRow | undefined
+    if (!updated) {
+        throw new Error('Failed to update message')
+    }
+
+    return toStoredMessage(updated)
 }
 
 export function getMessages(

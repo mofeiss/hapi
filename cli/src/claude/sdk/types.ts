@@ -45,6 +45,15 @@ export interface SDKAssistantMessage extends SDKMessage {
     }
 }
 
+export interface SDKStreamEventMessage extends SDKMessage {
+    type: 'stream_event'
+    parent_tool_use_id?: string
+    event?: {
+        type?: string
+        [key: string]: unknown
+    }
+}
+
 export interface SDKSystemMessage extends SDKMessage {
     type: 'system'
     subtype: string

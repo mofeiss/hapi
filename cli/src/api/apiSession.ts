@@ -335,7 +335,7 @@ export class ApiSessionClient extends EventEmitter {
         await this.backfillInFlight
     }
 
-    sendClaudeSessionMessage(body: RawJSONLines): void {
+    sendClaudeSessionMessage(body: RawJSONLines, options?: { messageId?: string }): void {
         let content: MessageContent
 
         if (body.type === 'user' && typeof body.message.content === 'string' && body.isSidechain !== true && body.isMeta !== true) {
@@ -364,7 +364,8 @@ export class ApiSessionClient extends EventEmitter {
 
         this.socket.emit('message', {
             sid: this.sessionId,
-            message: content
+            message: content,
+            messageId: options?.messageId
         })
 
         if (body.type === 'summary' && 'summary' in body && 'leafUuid' in body) {

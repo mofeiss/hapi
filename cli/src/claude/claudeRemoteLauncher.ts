@@ -4,13 +4,15 @@ import { RemoteModeDisplay } from "@/ui/ink/RemoteModeDisplay";
 import { claudeRemote } from "./claudeRemote";
 import { PermissionHandler } from "./utils/permissionHandler";
 import { Future } from "@/utils/future";
-import { SDKAssistantMessage, SDKMessage, SDKUserMessage } from "./sdk";
+import { SDKAssistantMessage, SDKMessage, SDKStreamEventMessage, SDKUserMessage } from "./sdk";
 import { formatClaudeMessageForInk } from "@/ui/messageFormatterInk";
 import { logger } from "@/ui/logger";
 import { SDKToLogConverter } from "./utils/sdkToLogConverter";
 import { PLAN_FAKE_REJECT } from "./sdk/prompts";
 import { EnhancedMode } from "./loop";
 import { OutgoingMessageQueue } from "./utils/OutgoingMessageQueue";
+import { PartialAssistantStreamTracker } from "./utils/partialAssistantStream";
+import type { RawJSONLines } from "./types";
 import type { ClaudePermissionMode } from "@hapi/protocol/types";
 import {
     RemoteLauncherBase,
@@ -95,7 +97,9 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
         this.permissionHandler = permissionHandler;
 
         const messageQueue = new OutgoingMessageQueue(
-            (logMessage) => session.client.sendClaudeSessionMessage(logMessage)
+            (payload) => session.client.sendClaudeSessionMessage(payload.logMessage, {
+                messageId: payload.messageId
+            })
         );
 
         permissionHandler.setOnPermissionRequest((toolCallId: string) => {
@@ -107,6 +111,32 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
             cwd: session.path,
             version: process.env.npm_package_version
         }, permissionHandler.getResponses());
+        const partialAssistantStreams = new PartialAssistantStreamTracker({
+            cwd: session.path,
+            sessionId: () => session.sessionId || 'unknown',
+            version: process.env.npm_package_version
+        });
+
+        const enqueueClaudeMessage = (
+            logMessage: RawJSONLines | null,
+            options?: {
+                delay?: number
+                toolCallIds?: string[]
+                messageId?: string
+            }
+        ) => {
+            if (!logMessage) {
+                return;
+            }
+
+            messageQueue.enqueue({
+                logMessage,
+                messageId: options?.messageId
+            }, {
+                delay: options?.delay,
+                toolCallIds: options?.toolCallIds
+            });
+        };
 
         const handleSessionFound = (sessionId: string) => {
             sdkToLogConverter.updateSessionId(sessionId);
@@ -120,6 +150,14 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
         function onMessage(message: SDKMessage) {
             formatClaudeMessageForInk(message, messageBuffer);
             permissionHandler.onMessage(message);
+
+            if (message.type === 'stream_event') {
+                const partial = partialAssistantStreams.consume(message as SDKStreamEventMessage);
+                if (partial) {
+                    enqueueClaudeMessage(partial.logMessage, { messageId: partial.messageId });
+                }
+                return;
+            }
 
             if (message.type === 'assistant') {
                 let umessage = message as SDKAssistantMessage;
@@ -189,6 +227,10 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
 
             const logMessage = sdkToLogConverter.convert(msg);
             if (logMessage) {
+                const streamedMessageId = message.type === 'assistant'
+                    ? partialAssistantStreams.claimMessageId(message as SDKAssistantMessage)
+                    : undefined;
+
                 if (logMessage.type === 'user' && logMessage.message?.content) {
                     const content = Array.isArray(logMessage.message.content)
                         ? logMessage.message.content
@@ -239,16 +281,19 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                         const isSidechain = assistantMsg.parent_tool_use_id !== undefined;
 
                         if (!isSidechain) {
-                            messageQueue.enqueue(logMessage, {
+                            enqueueClaudeMessage(logMessage, {
                                 delay: 250,
-                                toolCallIds
+                                toolCallIds,
+                                messageId: streamedMessageId
                             });
                             return;
                         }
                     }
                 }
 
-                messageQueue.enqueue(logMessage);
+                enqueueClaudeMessage(logMessage, {
+                    messageId: streamedMessageId
+                });
             }
 
             if (message.type === 'assistant') {
@@ -258,7 +303,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                         if (c.type === 'tool_use' && c.name === 'Task' && c.input && typeof (c.input as any).prompt === 'string') {
                             const logMessage2 = sdkToLogConverter.convertSidechainUserMessage(c.id!, (c.input as any).prompt);
                             if (logMessage2) {
-                                messageQueue.enqueue(logMessage2);
+                                enqueueClaudeMessage(logMessage2);
                             }
                         }
                     }
@@ -282,6 +327,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                     messageBuffer.addMessage('Starting new Claude session...', 'status');
                     permissionHandler.reset();
                     sdkToLogConverter.resetParentChain();
+                    partialAssistantStreams.clear();
                     logger.debug(`[remote]: New session detected (previous: ${previousSessionId}, current: ${session.sessionId})`);
                 } else {
                     messageBuffer.addMessage('Continuing Claude session...', 'status');
@@ -377,6 +423,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                         }
                     }
                     ongoingToolCalls.clear();
+                    partialAssistantStreams.clear();
 
                     logger.debug('[remote]: flushing message queue');
                     await messageQueue.flush();
