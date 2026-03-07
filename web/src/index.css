@@ -166,15 +166,18 @@ body {
     }
 }
 
-/* Desktop-only: move the sidebar scrollbar to the left without flipping content, and hide it. */
+/* Session list: always hide scrollbar; on desktop also keep it on the left. */
+.desktop-scrollbar-left {
+    scrollbar-width: none; /* Firefox */
+}
+
+.desktop-scrollbar-left::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+}
+
 @media (min-width: 1024px) {
     .desktop-scrollbar-left {
         direction: rtl;
-        scrollbar-width: none; /* Firefox */
-    }
-
-    .desktop-scrollbar-left::-webkit-scrollbar {
-        display: none; /* Chrome, Safari, Edge */
     }
 
     .desktop-scrollbar-left > * {

@@ -263,12 +263,12 @@ function SessionItem(props: {
             <button
                 type="button"
                 {...(batchMode ? { onClick: onBatchToggleSelect } : longPressHandlers)}
-                className={`session-list-item flex w-full flex-col gap-1.5 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none ${batchMode ? (batchSelected ? 'bg-[var(--app-link)]/10' : '') : (selected ? 'bg-[var(--app-secondary-bg)]' : '')} ${!s.active ? 'opacity-70' : ''}`}
+                className={`session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none ${batchMode ? (batchSelected ? 'bg-[var(--app-link)]/10' : '') : (selected ? 'bg-[var(--app-secondary-bg)]' : '')} ${!s.active ? 'opacity-70' : ''}`}
                 style={{ WebkitTouchCallout: 'none' }}
                 aria-current={!batchMode && selected ? 'page' : undefined}
             >
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1 min-w-0">
                         {batchMode ? (
                             <input
                                 type="checkbox"
@@ -282,18 +282,18 @@ function SessionItem(props: {
                             aria-hidden="true"
                         >
                             {s.active && s.thinking ? (
-                                <span className="inline-block text-[15px] leading-none text-white" style={{ animation: 'spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite' }}>✻</span>
+                                <span className="inline-block -translate-y-px text-[15px] leading-none text-white" style={{ animation: 'spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite' }}>✻</span>
                             ) : s.active ? (
-                                <span className="text-[15px] leading-none text-emerald-500">✻</span>
+                                <span className="inline-block -translate-y-px text-[15px] leading-none text-emerald-500">✻</span>
                             ) : (
-                                <span className="text-[15px] leading-none text-[var(--app-hint)]">✻</span>
+                                <span className="inline-block -translate-y-px text-[15px] leading-none text-[var(--app-hint)]">✻</span>
                             )}
                         </span>
-                        <div className={`truncate text-base ${!s.active ? 'font-normal text-[var(--app-hint)]' : 'font-medium'}`}>
+                        <div className={`truncate text-[14px] leading-none ${!s.active ? 'font-normal text-[var(--app-hint)]' : 'font-medium'}`}>
                             {sessionName}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 text-xs">
+                    <div className="flex items-center gap-1 shrink-0 text-xs">
                         {s.thinking ? (
                             <span className="text-[var(--app-hint)] animate-pulse flex items-center">
                                 <svg
@@ -347,7 +347,7 @@ function SessionItem(props: {
                         </span>
                     </div>
                 </div>
-                <div className="flex items-center gap-x-3 text-xs text-[var(--app-hint)]">
+                <div className="flex items-center gap-x-2 text-xs text-[var(--app-hint)]">
                     <span className="inline-flex items-center gap-1 shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 ml-1" aria-hidden="true"><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg>
                         {getAgentLabel(s)}
@@ -523,7 +523,7 @@ export function SessionList(props: {
                                     collapsed={isCollapsed}
                                 />
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className="font-medium text-base break-words">
+                                    <span className="font-medium text-[14px] break-words">
                                         {group.host}
                                     </span>
                                     <span className="shrink-0 text-xs text-[var(--app-hint)]">
