@@ -160,6 +160,64 @@ describe('getToolPresentation', () => {
         expect(presentation.subtitle).toBeNull()
     })
 
+    it('localizes TodoWrite title and compact summary', () => {
+        const zhPresentation = getToolPresentation({
+            toolName: 'TodoWrite',
+            input: {
+                todos: [
+                    { id: '1', content: '实现任务面板', status: 'pending', priority: 'high' }
+                ]
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'zh-CN'
+        })
+        const enPresentation = getToolPresentation({
+            toolName: 'TodoWrite',
+            input: {
+                todos: [
+                    { id: '1', content: 'Implement task panel', status: 'pending', priority: 'high' }
+                ]
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'en'
+        })
+
+        expect(zhPresentation.title).toBe('更新任务列表')
+        expect(zhPresentation.subtitle).toBe('1 个任务，已完成 0 个')
+        expect(enPresentation.title).toBe('Update todo list')
+        expect(enPresentation.subtitle).toBe('1 tasks, 0 completed')
+    })
+
+    it('localizes Task default title', () => {
+        const zhPresentation = getToolPresentation({
+            toolName: 'Task',
+            input: {},
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'zh-CN'
+        })
+        const enPresentation = getToolPresentation({
+            toolName: 'Task',
+            input: {},
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'en'
+        })
+
+        expect(zhPresentation.title).toBe('任务')
+        expect(enPresentation.title).toBe('Task')
+    })
+
     it('uses standardized title for listed MCP tools', () => {
         const presentation = getToolPresentation({
             toolName: 'mcp__hapi__change_title',

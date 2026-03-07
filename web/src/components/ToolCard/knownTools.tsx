@@ -3,6 +3,7 @@ import type { SessionMetadataSummary } from '@/types/api'
 import type { Locale } from '@/lib/i18n-context'
 import { isObject } from '@hapi/protocol'
 import { BulbIcon, ClipboardIcon, EyeIcon, FileDiffIcon, GlobeIcon, PencilIcon, PuzzleIcon, QuestionIcon, RocketIcon, SearchIcon, TerminalIcon, WrenchIcon } from '@/components/ToolCard/icons'
+import { extractToolTodos, getTodoStats } from '@/lib/todos'
 import { basename, resolveDisplayPath } from '@/utils/path'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
 import { extractSkillReadData } from '@/lib/skillRead'
@@ -259,6 +260,13 @@ function getPathLabel(input: unknown, metadata: SessionMetadataSummary | null): 
     return getInputPathSubtitle(input, metadata)
 }
 
+function formatTodoCompactSummary(locale: Locale, total: number, completed: number): string {
+    if (locale === 'zh-CN') {
+        return `${total} 个任务，已完成 ${completed} 个`
+    }
+    return `${total} tasks, ${completed} completed`
+}
+
 function getCoreToolNarrative(opts: ToolOpts): string | null {
     const toolName = normalizeCoreToolName(opts.toolName)
     const path = getPathLabel(opts.input, opts.metadata)
@@ -419,7 +427,8 @@ export const knownTools: Record<string, {
         icon: () => <RocketIcon className={DEFAULT_ICON_CLASS} />,
         title: (opts) => {
             const description = getInputStringAny(opts.input, ['description'])
-            return description ?? 'Task'
+            if (description) return description
+            return opts.locale === 'zh-CN' ? '任务' : 'Task'
         },
         subtitle: (opts) => {
             const prompt = getInputStringAny(opts.input, ['prompt'])
@@ -589,13 +598,12 @@ export const knownTools: Record<string, {
     },
     TodoWrite: {
         icon: () => <BulbIcon className={DEFAULT_ICON_CLASS} />,
-        title: () => 'Todo list',
+        title: (opts) => opts.locale === 'zh-CN' ? '更新任务列表' : 'Update todo list',
         subtitle: (opts) => {
-            const todos = isObject(opts.input) && Array.isArray(opts.input.todos) ? opts.input.todos : null
-            if (todos && todos.length > 0) return `${todos.length} items`
-            const newTodos = isObject(opts.result) && Array.isArray(opts.result.newTodos) ? opts.result.newTodos : null
-            if (newTodos && newTodos.length > 0) return `${newTodos.length} items`
-            return null
+            const todos = extractToolTodos(opts.input, opts.result)
+            if (todos.length === 0) return null
+            const stats = getTodoStats(todos)
+            return formatTodoCompactSummary(opts.locale, stats.total, stats.completed)
         },
         minimal: (opts) => {
             const todos = isObject(opts.input) && Array.isArray(opts.input.todos) ? opts.input.todos : null
@@ -773,7 +781,7 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
     }
 
     const standardTitle = getStandardToolTitle(toolOpts.toolName)
-    const coreRichTitle = getCoreToolRichTitle(toolOpts)
+    const coreRichTitle = toolOpts.toolName === 'TodoWrite' ? null : getCoreToolRichTitle(toolOpts)
 
     if (toolOpts.toolName.startsWith('mcp__')) {
         return {
@@ -788,7 +796,7 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
     if (known) {
         const minimal = typeof known.minimal === 'function' ? known.minimal(toolOpts) : (known.minimal ?? false)
         const computedTitle = known.title(toolOpts)
-        const preferComputedTitle = toolOpts.toolName === 'Steps'
+        const preferComputedTitle = toolOpts.toolName === 'Steps' || toolOpts.toolName === 'Task' || toolOpts.toolName === 'TodoWrite'
         let subtitle = known.subtitle ? known.subtitle(toolOpts) : null
         if (coreRichTitle) {
             subtitle = null

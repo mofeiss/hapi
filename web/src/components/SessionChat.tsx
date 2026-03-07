@@ -20,6 +20,7 @@ import { HappyThread } from '@/components/AssistantChat/HappyThread'
 import { useHappyRuntime } from '@/lib/assistant-runtime'
 import { createAttachmentAdapter } from '@/lib/attachmentAdapter'
 import { SessionHeader } from '@/components/SessionHeader'
+import { TodoPanel } from '@/components/TodoPanel'
 import { FilesPanel } from '@/routes/sessions/files'
 import { TerminalPanel } from '@/routes/sessions/terminal'
 import { usePlatform } from '@/hooks/usePlatform'
@@ -42,6 +43,7 @@ import {
     normalizeClaudeModelValue,
     saveClaudeCustomModelValue
 } from '@/lib/claudeModels'
+import { createTodoFingerprint, findLatestTodoToolTodos, normalizeTodos } from '@/lib/todos'
 
 type SendOptions = {
     localId?: string
@@ -720,6 +722,17 @@ export function SessionChat(props: {
         () => reconcileChatBlocks(reduced.blocks, blocksByIdRef.current),
         [reduced.blocks]
     )
+    const composerTodos = useMemo(() => {
+        const sessionTodos = normalizeTodos(props.session.todos)
+        if (sessionTodos.length > 0) {
+            return sessionTodos
+        }
+        return findLatestTodoToolTodos(reconciled.blocks)
+    }, [props.session.todos, reconciled.blocks])
+    const composerTodoResetKey = useMemo(
+        () => `${props.session.id}:${createTodoFingerprint(composerTodos)}`,
+        [props.session.id, composerTodos]
+    )
 
     useEffect(() => {
         blocksByIdRef.current = reconciled.byId
@@ -1003,6 +1016,20 @@ export function SessionChat(props: {
                         forceScrollToken={forceScrollToken}
                         queuedMessages={messageQueue.queue}
                     />
+
+                    {composerTodos.length > 0 ? (
+                        <div className="bg-[var(--app-bg)] px-3 pb-0 pt-3">
+                            <div className="mx-auto w-full max-w-content">
+                                <TodoPanel
+                                    todos={composerTodos}
+                                    variant="dock"
+                                    collapsible
+                                    resetKey={composerTodoResetKey}
+                                    className="relative z-10 -mb-4"
+                                />
+                            </div>
+                        </div>
+                    ) : null}
 
                     <HappyComposer
                         disabled={props.isSending}

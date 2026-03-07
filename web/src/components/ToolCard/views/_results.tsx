@@ -4,12 +4,14 @@ import { isObject, safeStringify } from '@hapi/protocol'
 import { CodeBlock } from '@/components/CodeBlock'
 import { CopyIcon, CheckIcon } from '@/components/icons'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
+import { TodoList } from '@/components/TodoPanel'
 import { ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
 import { EyeIcon, TerminalIcon } from '@/components/ToolCard/icons'
 import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { extractSkillReadData } from '@/lib/skillRead'
+import { extractToolTodos } from '@/lib/todos'
 import { useTranslation } from '@/lib/use-translation'
 import { cn } from '@/lib/utils'
 import { resolveDisplayPath } from '@/utils/path'
@@ -1129,55 +1131,14 @@ const CodexDiffResultView: ToolViewComponent = (props: ToolViewProps) => {
     )
 }
 
-type TodoItem = {
-    id?: string
-    content?: string
-    status?: 'pending' | 'in_progress' | 'completed'
-    priority?: 'high' | 'medium' | 'low'
-}
-
-function extractTodos(input: unknown, result: unknown): TodoItem[] {
-    const todosFromInput = isObject(input) && Array.isArray(input.todos)
-        ? input.todos.filter(isObject)
-        : []
-    if (todosFromInput.length > 0) {
-        return todosFromInput.map((t) => ({
-            id: typeof t.id === 'string' ? t.id : undefined,
-            content: typeof t.content === 'string' ? t.content : undefined,
-            status: t.status === 'pending' || t.status === 'in_progress' || t.status === 'completed' ? t.status : undefined,
-            priority: t.priority === 'high' || t.priority === 'medium' || t.priority === 'low' ? t.priority : undefined
-        }))
-    }
-
-    const newTodos = isObject(result) && Array.isArray(result.newTodos)
-        ? result.newTodos.filter(isObject)
-        : []
-    return newTodos.map((t) => ({
-        id: typeof t.id === 'string' ? t.id : undefined,
-        content: typeof t.content === 'string' ? t.content : undefined,
-        status: t.status === 'pending' || t.status === 'in_progress' || t.status === 'completed' ? t.status : undefined,
-        priority: t.priority === 'high' || t.priority === 'medium' || t.priority === 'low' ? t.priority : undefined
-    }))
-}
-
-function todoIcon(todo: TodoItem): string {
-    if (todo.status === 'completed') return '☑'
-    return '☐'
-}
-
 const TodoWriteResultView: ToolViewComponent = (props: ToolViewProps) => {
-    const todos = extractTodos(props.block.tool.input, props.block.tool.result)
+    const todos = extractToolTodos(props.block.tool.input, props.block.tool.result)
     if (todos.length === 0) {
         return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
     }
 
-    const lines = todos.map((todo) => {
-        const text = todo.content?.trim() ? todo.content.trim() : '(empty)'
-        return `${todoIcon(todo)} ${text}`
-    })
-
     return (
-        <CodeBlock code={lines.join('\n')} language="text" />
+        <TodoList todos={todos} variant="inline" />
     )
 }
 
