@@ -24,6 +24,7 @@ export function useLongPress(options: UseLongPressOptions): UseLongPressHandlers
 
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const isLongPressRef = useRef(false)
+    const pressStartedRef = useRef(false)
     const touchMoved = useRef(false)
     const pressPointRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
@@ -35,10 +36,14 @@ export function useLongPress(options: UseLongPressOptions): UseLongPressHandlers
     }, [])
 
     const startTimer = useCallback((clientX: number, clientY: number) => {
-        if (disabled) return
+        if (disabled) {
+            pressStartedRef.current = false
+            return
+        }
 
         clearTimer()
         isLongPressRef.current = false
+        pressStartedRef.current = true
         touchMoved.current = false
         pressPointRef.current = { x: clientX, y: clientY }
 
@@ -50,8 +55,10 @@ export function useLongPress(options: UseLongPressOptions): UseLongPressHandlers
 
     const handleEnd = useCallback((shouldTriggerClick: boolean) => {
         clearTimer()
+        const pressStartedHere = pressStartedRef.current
+        pressStartedRef.current = false
 
-        if (shouldTriggerClick && !isLongPressRef.current && !touchMoved.current && onClick) {
+        if (pressStartedHere && shouldTriggerClick && !isLongPressRef.current && !touchMoved.current && onClick) {
             onClick()
         }
 
