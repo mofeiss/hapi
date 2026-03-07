@@ -12,7 +12,8 @@ function createToolBlock(
     id: string,
     name: string,
     input: unknown,
-    children: ToolCallBlock['children'] = []
+    children: ToolCallBlock['children'] = [],
+    state: ToolCallBlock['tool']['state'] = 'completed'
 ): ToolCallBlock {
     return {
         kind: 'tool-call',
@@ -22,11 +23,11 @@ function createToolBlock(
         tool: {
             id,
             name,
-            state: 'completed',
+            state,
             input,
             createdAt: 1,
             startedAt: 1,
-            completedAt: 2,
+            completedAt: state === 'completed' || state === 'error' ? 2 : null,
             description: null
         },
         children
@@ -55,7 +56,7 @@ describe('buildAssistantCopyText', () => {
             [
                 'Done.',
                 '```Reasoning\nInspect src/app.ts\nCheck types\n```',
-                '```Tool_Call\nView src/app.ts file\n```'
+                '```Tool_Call\n✓ View src/app.ts file\n```'
             ].join('\n\n')
         )
     })
@@ -67,8 +68,8 @@ describe('buildAssistantCopyText', () => {
             { count: 2 },
             [
                 createToolBlock('read-1', 'Read', { file_path: '/workspace/src/app.ts' }),
-                createReasoningBlock('reasoning-1', 'Need to verify after edit'),
-                createToolBlock('bash-1', 'Bash', { command: 'bun test web' })
+                createReasoningBlock('reasoning-1', 'Need to verify\nafter edit'),
+                createToolBlock('bash-1', 'Bash', { command: 'bun test web' }, [], 'running')
             ]
         )
 
@@ -77,7 +78,7 @@ describe('buildAssistantCopyText', () => {
         ]
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
-            '```Tool_Call\nTool Calls | 2 calls\n\n- View src/app.ts file\n\nReasoning:\nNeed to verify after edit\n\n- Run command bun test web\n```'
+            '```Tool Calls | 2 calls\n- ✓ View src/app.ts file\n- Reasoning: Need to verify after edit\n- ⋯ Run command bun test web\n```'
         )
     })
 
@@ -93,18 +94,18 @@ describe('buildAssistantCopyText', () => {
         ]
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
-            '```Tool_Call\nWrite 5 chars to src/app.ts\n```'
+            '```Tool_Call\n✓ Write 5 chars to src/app.ts\n```'
         )
     })
 
     it('merges consecutive tool-call parts into one tool_call block', () => {
         const parts: AssistantCopyPart[] = [
             { type: 'tool-call', artifact: createToolBlock('read-1', 'Read', { file_path: '/workspace/src/app.ts' }) },
-            { type: 'tool-call', artifact: createToolBlock('bash-1', 'Bash', { command: 'bun test web' }) }
+            { type: 'tool-call', artifact: createToolBlock('bash-1', 'Bash', { command: 'bun test web' }, [], 'error') }
         ]
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
-            '```Tool_Call\nView src/app.ts file\n\nRun command bun test web\n```'
+            '```Tool_Call\n✓ View src/app.ts file\n✗ Run command bun test web\n```'
         )
     })
 })

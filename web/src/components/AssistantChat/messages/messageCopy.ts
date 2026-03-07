@@ -49,13 +49,24 @@ function formatReasoningSection(text: string): string {
     return formatFence('Reasoning', trimmed)
 }
 
+function collapseToSingleLine(text: string): string {
+    return text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .join(' ')
+}
+
 function formatInlineReasoningSection(text: string): string {
-    const trimmed = text.trim()
-    if (!trimmed) return ''
-    return [
-        'Reasoning:',
-        trimmed
-    ].join('\n')
+    const summary = collapseToSingleLine(text)
+    if (!summary) return ''
+    return `- Reasoning: ${summary}`
+}
+
+function formatToolStatePrefix(state: ToolCallBlock['tool']['state']): string {
+    if (state === 'completed') return '✓'
+    if (state === 'error') return '✗'
+    return '⋯'
 }
 
 function formatToolSummary(
@@ -133,7 +144,8 @@ function formatToolBlockForCopy(
     if (!summary) return ''
 
     if (block.tool.name !== 'Steps') {
-        return nestedInSteps ? `- ${summary}` : summary
+        const prefixedSummary = `${formatToolStatePrefix(block.tool.state)} ${summary}`
+        return nestedInSteps ? `- ${prefixedSummary}` : prefixedSummary
     }
 
     const childSections = formatStepsChildren(block.children, metadata, locale)
@@ -142,7 +154,7 @@ function formatToolBlockForCopy(
     return [
         summary,
         ...childSections
-    ].join('\n\n')
+    ].join('\n')
 }
 
 function formatToolPart(
@@ -155,6 +167,16 @@ function formatToolPart(
     }
 
     return formatFallbackToolSummary(part.toolName)
+}
+
+function isTopLevelStepsToolPart(
+    parts: readonly (AssistantCopyPart & { type: 'tool-call' })[]
+): ToolCallBlock | null {
+    if (parts.length !== 1) return null
+    const [first] = parts
+    if (!isToolCallBlock(first.artifact)) return null
+    if (first.artifact.tool.name !== 'Steps') return null
+    return first.artifact
 }
 
 export function buildAssistantCopyText(
@@ -184,15 +206,23 @@ export function buildAssistantCopyText(
         }
 
         if (isToolCallPart(part)) {
+            const toolParts: Array<AssistantCopyPart & { type: 'tool-call' }> = []
             const toolSections: string[] = []
             while (idx < parts.length) {
                 const current = parts[idx]
                 if (!isToolCallPart(current)) break
+                toolParts.push(current)
                 const tool = formatToolPart(current, options.metadata, options.locale)
                 if (tool) toolSections.push(tool)
                 idx += 1
             }
-            const toolBlock = formatFence('Tool_Call', toolSections.join('\n\n'))
+            const topLevelSteps = isTopLevelStepsToolPart(toolParts)
+            const toolBlock = topLevelSteps
+                ? formatFence(
+                    formatToolSummary(topLevelSteps, options.metadata, options.locale),
+                    formatStepsChildren(topLevelSteps.children, options.metadata, options.locale).join('\n')
+                )
+                : formatFence('Tool_Call', toolSections.join('\n'))
             if (toolBlock) sections.push(toolBlock)
             continue
         }
