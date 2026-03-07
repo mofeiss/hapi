@@ -102,4 +102,113 @@ describe('reduceTimeline sidechain prompt handling', () => {
         expect(taskBlock.children).toHaveLength(1)
         expect(taskBlock.children[0]?.kind).toBe('user-text')
     })
+
+    it('merges duplicate CodexBash payloads and preserves richer output', () => {
+        const root: TracedMessage[] = [
+            {
+                id: 'tool-call-rich',
+                localId: null,
+                createdAt: 1,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-call',
+                    id: 'call-1',
+                    name: 'CodexBash',
+                    input: {
+                        command: '/bin/zsh -lc rg -n "todo|fixme" .',
+                        cwd: '/workspace',
+                        parsed_cmd: [{ type: 'search', query: 'todo|fixme', path: '.' }],
+                        source: 'unified_exec_startup',
+                        process_id: '123'
+                    },
+                    description: null,
+                    uuid: 'uuid-1',
+                    parentUUID: null
+                }]
+            },
+            {
+                id: 'tool-call-thin',
+                localId: null,
+                createdAt: 2,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-call',
+                    id: 'call-1',
+                    name: 'CodexBash',
+                    input: {
+                        command: '/bin/zsh -lc "rg -n \\"todo|fixme\\" ."',
+                        cwd: '/workspace'
+                    },
+                    description: null,
+                    uuid: 'uuid-2',
+                    parentUUID: null
+                }]
+            },
+            {
+                id: 'tool-result-rich',
+                localId: null,
+                createdAt: 3,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-result',
+                    tool_use_id: 'call-1',
+                    content: {
+                        command: '/bin/zsh -lc rg -n "todo|fixme" .',
+                        cwd: '/workspace',
+                        stdout: './foo.ts:1:// TODO\n',
+                        output: './foo.ts:1:// TODO\n',
+                        exit_code: 0,
+                        status: 'completed'
+                    },
+                    is_error: false,
+                    uuid: 'uuid-3',
+                    parentUUID: null
+                }]
+            },
+            {
+                id: 'tool-result-thin',
+                localId: null,
+                createdAt: 4,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-result',
+                    tool_use_id: 'call-1',
+                    content: {
+                        command: '/bin/zsh -lc "rg -n \\"todo|fixme\\" ."',
+                        cwd: '/workspace',
+                        exit_code: 0,
+                        status: 'completed'
+                    },
+                    is_error: false,
+                    uuid: 'uuid-4',
+                    parentUUID: null
+                }]
+            }
+        ]
+
+        const result = reduceTimeline(root, createReducerContext(new Map()))
+        expect(result.blocks).toHaveLength(1)
+
+        const block = result.blocks[0]
+        if (!block || block.kind !== 'tool-call') {
+            throw new Error('Expected first block to be tool-call')
+        }
+
+        expect(block.tool.input).toMatchObject({
+            cwd: '/workspace',
+            source: 'unified_exec_startup',
+            process_id: '123'
+        })
+        expect(block.tool.result).toMatchObject({
+            cwd: '/workspace',
+            stdout: './foo.ts:1:// TODO\n',
+            output: './foo.ts:1:// TODO\n',
+            exit_code: 0,
+            status: 'completed'
+        })
+    })
 })

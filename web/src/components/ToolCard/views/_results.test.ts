@@ -1,14 +1,56 @@
-import { describe, expect, it } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { createElement } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ToolCallBlock } from '@/chat/types'
 import {
     extractMcpResourceListEntries,
     extractMcpResourceServerGroups,
     extractPlanModeMessage,
+    getToolResultViewComponent,
     groupMcpResourceListEntries,
     isMarkdownFilePath,
     shouldUseGroupedMcpResourceListLayout,
     sanitizeReadResultText
 } from '@/components/ToolCard/views/_results'
 import { isResultOnlyToolName } from '@/components/ToolCard/toolRenderModes'
+import { I18nProvider } from '@/lib/i18n-context'
+
+function createToolBlock(name: string, result: unknown): ToolCallBlock {
+    return {
+        kind: 'tool-call',
+        id: `${name}-1`,
+        localId: null,
+        createdAt: 1,
+        tool: {
+            id: `${name}-1`,
+            name,
+            state: 'completed',
+            input: { command: 'sed -n 1,20p file.ts' },
+            createdAt: 1,
+            startedAt: 1,
+            completedAt: 2,
+            description: null,
+            result
+        },
+        children: []
+    }
+}
+
+beforeEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: vi.fn().mockImplementation(() => ({
+            matches: false,
+            media: '',
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn()
+        }))
+    })
+})
 
 describe('sanitizeReadResultText', () => {
     it('removes system reminder block from read output', () => {
@@ -59,6 +101,32 @@ describe('sanitizeReadResultText', () => {
         ].join('\n')
 
         expect(sanitizeReadResultText(input)).toBe(input)
+    })
+})
+
+describe('CodexBash result rendering', () => {
+    it('renders stdout content instead of falling back to raw json metadata', () => {
+        const ResultView = getToolResultViewComponent('CodexBash')
+
+        render(
+            createElement(
+                I18nProvider,
+                null,
+                createElement(ResultView, {
+                    block: createToolBlock('CodexBash', {
+                        command: '/bin/zsh -lc "sed -n 1,20p file.ts"',
+                        cwd: '/workspace',
+                        stdout: 'export const value = 1;\n',
+                        exit_code: 0,
+                        status: 'completed'
+                    }),
+                    metadata: null
+                })
+            )
+        )
+
+        expect(screen.getByText('export const value = 1;')).toBeInTheDocument()
+        expect(screen.queryByText(/"cwd": "\/workspace"/)).not.toBeInTheDocument()
     })
 })
 

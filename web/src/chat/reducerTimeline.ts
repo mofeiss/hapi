@@ -20,6 +20,12 @@ export function reduceTimeline(
     const blocks: ChatBlock[] = []
     const toolBlocksById = new Map<string, ToolCallBlock>()
     let hasReadyEvent = false
+    const mergeToolResultPayload = (previousResult: unknown, incomingResult: unknown): unknown => {
+        if (isObject(previousResult) && isObject(incomingResult)) {
+            return { ...previousResult, ...incomingResult }
+        }
+        return incomingResult
+    }
     const findLatestSkillReadBlock = (): ToolCallBlock | null => {
         let candidate: ToolCallBlock | null = null
         for (const block of toolBlocksById.values()) {
@@ -308,7 +314,7 @@ export function reduceTimeline(
                             block.tool.result = previousResult
                         }
                     } else {
-                        block.tool.result = c.content
+                        block.tool.result = mergeToolResultPayload(previousResult, c.content)
                     }
                     block.tool.completedAt = msg.createdAt
                     block.tool.state = c.is_error ? 'error' : 'completed'

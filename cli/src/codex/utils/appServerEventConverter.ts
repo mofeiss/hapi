@@ -82,6 +82,26 @@ export class AppServerEventConverter {
     private readonly commandOutputBuffers = new Map<string, string>();
     private readonly commandMeta = new Map<string, Record<string, unknown>>();
     private readonly fileChangeMeta = new Map<string, Record<string, unknown>>();
+    private readonly execCommandBeginScores = new Map<string, number>();
+    private readonly execCommandEndScores = new Map<string, number>();
+
+    private shouldEmitExecCommandBegin(callId: string, score: number): boolean {
+        const previous = this.execCommandBeginScores.get(callId);
+        if (previous !== undefined && previous >= score) {
+            return false;
+        }
+        this.execCommandBeginScores.set(callId, score);
+        return true;
+    }
+
+    private shouldEmitExecCommandEnd(callId: string, score: number): boolean {
+        const previous = this.execCommandEndScores.get(callId);
+        if (previous !== undefined && previous >= score) {
+            return false;
+        }
+        this.execCommandEndScores.set(callId, score);
+        return true;
+    }
 
     handleNotification(method: string, params: unknown): ConvertedEvent[] {
         const events: ConvertedEvent[] = [];
@@ -239,6 +259,15 @@ export class AppServerEventConverter {
             const parsedCmd = Array.isArray(source.parsed_cmd) ? source.parsed_cmd : null;
             const outputSource = asString(source.source);
             const processId = asString(source.process_id ?? source.processId);
+            const score = (command ? 2 : 0)
+                + (cwd ? 1 : 0)
+                + (parsedCmd && parsedCmd.length > 0 ? 4 : 0)
+                + (outputSource ? 2 : 0)
+                + (processId ? 1 : 0);
+
+            if (!this.shouldEmitExecCommandBegin(callId, score)) {
+                return events;
+            }
 
             const event: ConvertedEvent = {
                 type: 'exec_command_begin',
@@ -269,6 +298,21 @@ export class AppServerEventConverter {
             const status = asString(source.status);
             const error = asString(source.error);
             const exitCode = asNumber(source.exit_code ?? source.exitCode ?? source.exitcode);
+            const score = (command ? 2 : 0)
+                + (cwd ? 1 : 0)
+                + (parsedCmd && parsedCmd.length > 0 ? 4 : 0)
+                + (outputSource ? 1 : 0)
+                + (processId ? 1 : 0)
+                + (stdout ? 6 : 0)
+                + (stderr ? 3 : 0)
+                + (aggregatedOutput ? 6 : 0)
+                + (error ? 3 : 0)
+                + (exitCode !== null ? 1 : 0)
+                + (status ? 1 : 0);
+
+            if (!this.shouldEmitExecCommandEnd(callId, score)) {
+                return events;
+            }
 
             const event: ConvertedEvent = {
                 type: 'exec_command_end',
@@ -372,6 +416,13 @@ export class AppServerEventConverter {
                     if (cwd) meta.cwd = cwd;
                     if (autoApproved !== null) meta.auto_approved = autoApproved;
                     this.commandMeta.set(itemId, meta);
+                    const score = (command ? 2 : 0)
+                        + (cwd ? 1 : 0)
+                        + (autoApproved !== null ? 1 : 0);
+
+                    if (!this.shouldEmitExecCommandBegin(itemId, score)) {
+                        return events;
+                    }
 
                     events.push({
                         type: 'exec_command_begin',
@@ -382,16 +433,38 @@ export class AppServerEventConverter {
 
                 if (method === 'item/completed') {
                     const meta = this.commandMeta.get(itemId) ?? {};
-                    const output = asString(item.output ?? item.result ?? item.stdout) ?? this.commandOutputBuffers.get(itemId);
+                    const stdout = asString(item.stdout);
+                    const output = asString(
+                        item.formatted_output
+                        ?? item.aggregated_output
+                        ?? item.output
+                        ?? item.result
+                        ?? item.content
+                    ) ?? this.commandOutputBuffers.get(itemId) ?? stdout;
                     const stderr = asString(item.stderr);
                     const error = asString(item.error);
                     const exitCode = asNumber(item.exitCode ?? item.exit_code ?? item.exitcode);
                     const status = asString(item.status);
+                    const score = (typeof meta.command === 'string' ? 2 : 0)
+                        + (typeof meta.cwd === 'string' ? 1 : 0)
+                        + (stdout ? 6 : 0)
+                        + (stderr ? 3 : 0)
+                        + (output ? 6 : 0)
+                        + (error ? 3 : 0)
+                        + (exitCode !== null ? 1 : 0)
+                        + (status ? 1 : 0);
+
+                    if (!this.shouldEmitExecCommandEnd(itemId, score)) {
+                        this.commandMeta.delete(itemId);
+                        this.commandOutputBuffers.delete(itemId);
+                        return events;
+                    }
 
                     events.push({
                         type: 'exec_command_end',
                         call_id: itemId,
                         ...meta,
+                        ...(stdout ? { stdout } : {}),
                         ...(output ? { output } : {}),
                         ...(stderr ? { stderr } : {}),
                         ...(error ? { error } : {}),
@@ -454,5 +527,7 @@ export class AppServerEventConverter {
         this.commandOutputBuffers.clear();
         this.commandMeta.clear();
         this.fileChangeMeta.clear();
+        this.execCommandBeginScores.clear();
+        this.execCommandEndScores.clear();
     }
 }

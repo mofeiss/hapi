@@ -70,6 +70,71 @@ describe('AppServerEventConverter', () => {
         }]);
     });
 
+    it('preserves stdout and aggregated output for command execution items', () => {
+        const converter = new AppServerEventConverter();
+
+        converter.handleNotification('item/started', {
+            item: { id: 'cmd-2', type: 'commandExecution', command: 'sed -n 1,20p file.ts' }
+        });
+
+        const completed = converter.handleNotification('item/completed', {
+            item: {
+                id: 'cmd-2',
+                type: 'commandExecution',
+                stdout: 'export const value = 1;\n',
+                aggregated_output: 'export const value = 1;\n',
+                exitCode: 0,
+                status: 'completed'
+            }
+        });
+
+        expect(completed).toEqual([{
+            type: 'exec_command_end',
+            call_id: 'cmd-2',
+            command: 'sed -n 1,20p file.ts',
+            stdout: 'export const value = 1;\n',
+            output: 'export const value = 1;\n',
+            exit_code: 0,
+            status: 'completed'
+        }]);
+    });
+
+    it('ignores poorer duplicate exec_command_end wrapper after a richer item-completed event', () => {
+        const converter = new AppServerEventConverter();
+
+        converter.handleNotification('item/started', {
+            item: { id: 'cmd-3', type: 'commandExecution', command: 'sed -n 1,20p file.ts', cwd: '/tmp' }
+        });
+        converter.handleNotification('item/commandExecution/outputDelta', {
+            itemId: 'cmd-3',
+            delta: 'export const value = 1;\n'
+        });
+
+        const completed = converter.handleNotification('item/completed', {
+            item: { id: 'cmd-3', type: 'commandExecution', exitCode: 0, status: 'completed' }
+        });
+        expect(completed).toEqual([{
+            type: 'exec_command_end',
+            call_id: 'cmd-3',
+            command: 'sed -n 1,20p file.ts',
+            cwd: '/tmp',
+            output: 'export const value = 1;\n',
+            exit_code: 0,
+            status: 'completed'
+        }]);
+
+        const duplicate = converter.handleNotification('codex/event/exec_command_end', {
+            msg: {
+                call_id: 'cmd-3',
+                command: '/bin/zsh -lc "sed -n 1,20p file.ts"',
+                cwd: '/tmp',
+                exit_code: 0,
+                status: 'completed'
+            }
+        });
+        expect(duplicate).toEqual([]);
+    });
+
     it('ignores user message item lifecycle notifications', () => {
         const converter = new AppServerEventConverter();
 
