@@ -6,7 +6,6 @@ import {
     type CodeHeaderProps,
 } from '@assistant-ui/react-markdown'
 import remarkGfm from 'remark-gfm'
-import { OUTER_DISCLOSURE_ITEM_CLASS } from '@/components/Disclosure'
 import { cn } from '@/lib/utils'
 import { SyntaxHighlighter } from '@/components/assistant-ui/shiki-highlighter'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
@@ -232,8 +231,7 @@ export function MarkdownText() {
             remarkPlugins={MARKDOWN_PLUGINS}
             components={defaultComponents}
             className={cn(
-                'aui-md break-words text-base',
-                OUTER_DISCLOSURE_ITEM_CLASS,
+                'aui-md min-w-0 max-w-full overflow-x-hidden break-words py-[9px] text-base',
                 MARKDOWN_BLOCK_SPACING_CLASSNAME
             )}
         />
