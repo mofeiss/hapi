@@ -17,11 +17,12 @@ export const MARKDOWN_BLOCK_SPACING_CLASSNAME = '[&>*+*]:mt-3 [&_li+li]:mt-1.5'
 function CodeHeader(props: CodeHeaderProps) {
     const { copied, copy } = useCopyToClipboard()
     const language = props.language && props.language !== 'unknown' ? props.language : ''
+    const languageLabel = language ? `language: ${language}` : ''
 
     return (
         <div className="aui-md-codeheader flex items-center justify-between rounded-t-md bg-[var(--app-code-bg)] px-2 py-1">
             <div className="min-w-0 flex-1 pr-2 text-xs font-mono text-[var(--app-hint)]">
-                {language}
+                {languageLabel}
             </div>
             <button
                 type="button"

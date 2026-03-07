@@ -197,6 +197,13 @@ body {
     font-size: 0.875rem;
 }
 
+.aui-md > .aui-md-codeheader + .aui-md-codeblock,
+.aui-md > .aui-md-codeheader + .aui-md-pre-wrapper,
+.aui-reasoning-content > .aui-md-codeheader + .aui-md-codeblock,
+.aui-reasoning-content > .aui-md-codeheader + .aui-md-pre-wrapper {
+    margin-top: 0 !important;
+}
+
 .aui-md-codeblock pre.shiki code {
     display: block;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
