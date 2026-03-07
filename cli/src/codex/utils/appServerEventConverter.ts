@@ -78,6 +78,9 @@ function extractChanges(value: unknown): Record<string, unknown> | null {
 
 export class AppServerEventConverter {
     private readonly agentMessageBuffers = new Map<string, string>();
+    private readonly agentMessageSources = new Map<string, 'raw' | 'wrapper'>();
+    private readonly agentMessageItemsByTurn = new Map<string, string>();
+    private readonly completedAgentMessageItems = new Set<string>();
     private readonly reasoningBuffers = new Map<string, string>();
     private readonly commandOutputBuffers = new Map<string, string>();
     private readonly commandMeta = new Map<string, Record<string, unknown>>();
@@ -101,6 +104,99 @@ export class AppServerEventConverter {
         }
         this.execCommandEndScores.set(callId, score);
         return true;
+    }
+
+    private rememberAgentMessageItem(itemId: string, turnId?: string | null): void {
+        if (!turnId) {
+            return;
+        }
+        this.agentMessageItemsByTurn.set(turnId, itemId);
+    }
+
+    private resolveAgentMessageItemId(
+        params: Record<string, unknown>,
+        source?: Record<string, unknown> | null
+    ): string | null {
+        const direct = extractItemId(source ?? params);
+        if (direct) {
+            return direct;
+        }
+
+        const turnId = asString(
+            source?.turn_id
+            ?? source?.turnId
+            ?? params.turn_id
+            ?? params.turnId
+            ?? params.id
+        );
+
+        if (turnId) {
+            const mapped = this.agentMessageItemsByTurn.get(turnId);
+            if (mapped) {
+                return mapped;
+            }
+        }
+
+        if (this.agentMessageBuffers.size === 1) {
+            return this.agentMessageBuffers.keys().next().value ?? null;
+        }
+
+        return null;
+    }
+
+    private shouldAcceptAgentMessageDelta(itemId: string, source: 'raw' | 'wrapper'): boolean {
+        if (this.completedAgentMessageItems.has(itemId)) {
+            return false;
+        }
+
+        const existing = this.agentMessageSources.get(itemId);
+        if (existing && existing !== source) {
+            return false;
+        }
+
+        this.agentMessageSources.set(itemId, source);
+        return true;
+    }
+
+    private shouldAcceptAgentMessageCompletion(itemId: string, source: 'raw' | 'wrapper'): boolean {
+        if (this.completedAgentMessageItems.has(itemId)) {
+            return false;
+        }
+
+        const existing = this.agentMessageSources.get(itemId);
+        if (!existing || existing === source || this.agentMessageBuffers.has(itemId)) {
+            this.agentMessageSources.set(itemId, existing ?? source);
+            return true;
+        }
+
+        return false;
+    }
+
+    private completeAgentMessage(itemId: string, message?: string | null): ConvertedEvent[] {
+        if (this.completedAgentMessageItems.has(itemId)) {
+            return [];
+        }
+
+        const text = message ?? this.agentMessageBuffers.get(itemId);
+        if (!text) {
+            return [];
+        }
+
+        this.agentMessageBuffers.delete(itemId);
+        this.agentMessageSources.delete(itemId);
+        this.completedAgentMessageItems.add(itemId);
+
+        for (const [turnId, mappedItemId] of this.agentMessageItemsByTurn.entries()) {
+            if (mappedItemId === itemId) {
+                this.agentMessageItemsByTurn.delete(turnId);
+            }
+        }
+
+        return [{
+            type: 'agent_message',
+            item_id: itemId,
+            message: text
+        }];
     }
 
     handleNotification(method: string, params: unknown): ConvertedEvent[] {
@@ -243,6 +339,7 @@ export class AppServerEventConverter {
             || method === 'codex/event/mcp_startup_complete'
             || method === 'codex/event/item_started'
             || method === 'codex/event/item_completed'
+            || method === 'codex/event/agent_message_delta'
             || method === 'codex/event/user_message'
         ) {
             // These wrapper notifications are informative duplicates for flows we already track.
@@ -336,7 +433,7 @@ export class AppServerEventConverter {
         if (method === 'item/agentMessage/delta') {
             const itemId = extractItemId(paramsRecord);
             const delta = asString(paramsRecord.delta ?? paramsRecord.text ?? paramsRecord.message);
-            if (itemId && delta) {
+            if (itemId && delta && this.shouldAcceptAgentMessageDelta(itemId, 'raw')) {
                 const prev = this.agentMessageBuffers.get(itemId) ?? '';
                 this.agentMessageBuffers.set(itemId, prev + delta);
                 events.push({
@@ -344,6 +441,36 @@ export class AppServerEventConverter {
                     item_id: itemId,
                     delta
                 });
+            }
+            return events;
+        }
+
+        if (method === 'codex/event/agent_message_content_delta') {
+            const source = wrappedMsg ?? paramsRecord;
+            const itemId = this.resolveAgentMessageItemId(paramsRecord, source);
+            const turnId = asString(source.turn_id ?? source.turnId ?? paramsRecord.id);
+            const delta = asString(source.delta ?? source.text ?? source.message);
+
+            if (itemId && delta && this.shouldAcceptAgentMessageDelta(itemId, 'wrapper')) {
+                this.rememberAgentMessageItem(itemId, turnId);
+                const prev = this.agentMessageBuffers.get(itemId) ?? '';
+                this.agentMessageBuffers.set(itemId, prev + delta);
+                events.push({
+                    type: 'agent_message_delta',
+                    item_id: itemId,
+                    delta
+                });
+            }
+            return events;
+        }
+
+        if (method === 'codex/event/agent_message') {
+            const source = wrappedMsg ?? paramsRecord;
+            const itemId = this.resolveAgentMessageItemId(paramsRecord, source);
+            const message = asString(source.message ?? source.text ?? source.content);
+
+            if (itemId && message && this.shouldAcceptAgentMessageCompletion(itemId, 'wrapper')) {
+                events.push(...this.completeAgentMessage(itemId, message));
             }
             return events;
         }
@@ -392,14 +519,9 @@ export class AppServerEventConverter {
             if (itemType === 'agentmessage') {
                 if (method === 'item/completed') {
                     const text = asString(item.text ?? item.message ?? item.content) ?? this.agentMessageBuffers.get(itemId);
-                    if (text) {
-                        events.push({
-                            type: 'agent_message',
-                            item_id: itemId,
-                            message: text
-                        });
+                    if (text && this.shouldAcceptAgentMessageCompletion(itemId, 'raw')) {
+                        events.push(...this.completeAgentMessage(itemId, text));
                     }
-                    this.agentMessageBuffers.delete(itemId);
                 }
                 return events;
             }
@@ -532,6 +654,9 @@ export class AppServerEventConverter {
 
     reset(): void {
         this.agentMessageBuffers.clear();
+        this.agentMessageSources.clear();
+        this.agentMessageItemsByTurn.clear();
+        this.completedAgentMessageItems.clear();
         this.reasoningBuffers.clear();
         this.commandOutputBuffers.clear();
         this.commandMeta.clear();

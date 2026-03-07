@@ -46,6 +46,73 @@ describe('AppServerEventConverter', () => {
         expect(completed).toEqual([{ type: 'agent_message', item_id: 'msg-1', message: 'Hello world' }]);
     });
 
+    it('maps wrapper agent message deltas and reuses the same item id for the final message', () => {
+        const converter = new AppServerEventConverter();
+
+        const firstDelta = converter.handleNotification('codex/event/agent_message_content_delta', {
+            id: 'turn-1',
+            msg: {
+                type: 'agent_message_content_delta',
+                turn_id: 'turn-1',
+                item_id: 'msg-2',
+                delta: 'Hello'
+            }
+        });
+        const secondDelta = converter.handleNotification('codex/event/agent_message_content_delta', {
+            id: 'turn-1',
+            msg: {
+                type: 'agent_message_content_delta',
+                turn_id: 'turn-1',
+                item_id: 'msg-2',
+                delta: ' world'
+            }
+        });
+        const completed = converter.handleNotification('codex/event/agent_message', {
+            id: 'turn-1',
+            msg: {
+                type: 'agent_message',
+                message: 'Hello world'
+            }
+        });
+
+        expect(firstDelta).toEqual([{ type: 'agent_message_delta', item_id: 'msg-2', delta: 'Hello' }]);
+        expect(secondDelta).toEqual([{ type: 'agent_message_delta', item_id: 'msg-2', delta: ' world' }]);
+        expect(completed).toEqual([{ type: 'agent_message', item_id: 'msg-2', message: 'Hello world' }]);
+    });
+
+    it('avoids duplicating agent message text when raw and wrapper notifications overlap', () => {
+        const converter = new AppServerEventConverter();
+
+        const rawDelta = converter.handleNotification('item/agentMessage/delta', {
+            itemId: 'msg-3',
+            delta: 'Hello'
+        });
+        const duplicateWrapperDelta = converter.handleNotification('codex/event/agent_message_content_delta', {
+            id: 'turn-3',
+            msg: {
+                type: 'agent_message_content_delta',
+                turn_id: 'turn-3',
+                item_id: 'msg-3',
+                delta: 'Hello'
+            }
+        });
+        const completed = converter.handleNotification('codex/event/agent_message', {
+            id: 'turn-3',
+            msg: {
+                type: 'agent_message',
+                message: 'Hello'
+            }
+        });
+        const duplicateRawComplete = converter.handleNotification('item/completed', {
+            item: { id: 'msg-3', type: 'agentMessage', text: 'Hello' }
+        });
+
+        expect(rawDelta).toEqual([{ type: 'agent_message_delta', item_id: 'msg-3', delta: 'Hello' }]);
+        expect(duplicateWrapperDelta).toEqual([]);
+        expect(completed).toEqual([{ type: 'agent_message', item_id: 'msg-3', message: 'Hello' }]);
+        expect(duplicateRawComplete).toEqual([]);
+    });
+
     it('maps command execution items and output deltas', () => {
         const converter = new AppServerEventConverter();
 
@@ -307,6 +374,7 @@ describe('AppServerEventConverter', () => {
         expect(converter.handleNotification('codex/event/mcp_startup_complete', { msg: { ready: ['hapi'] } })).toEqual([]);
         expect(converter.handleNotification('codex/event/item_started', { msg: { item: { id: 'x' } } })).toEqual([]);
         expect(converter.handleNotification('codex/event/item_completed', { msg: { item: { id: 'x' } } })).toEqual([]);
+        expect(converter.handleNotification('codex/event/agent_message_delta', { msg: { delta: 'hello' } })).toEqual([]);
         expect(converter.handleNotification('codex/event/user_message', { msg: { message: 'hello' } })).toEqual([]);
     });
 });
