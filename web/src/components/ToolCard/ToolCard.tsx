@@ -20,6 +20,7 @@ import { getToolFullViewComponent, getToolViewComponent } from '@/components/Too
 import { renderToolInputContent } from '@/components/ToolCard/views/_input'
 import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
 import { isResultOnlyToolName } from '@/components/ToolCard/toolRenderModes'
+import { isViewportNearBottom } from '@/components/AssistantChat/scrollBehavior'
 import { usePointerFocusRing } from '@/hooks/usePointerFocusRing'
 import { truncate } from '@/lib/toolInputUtils'
 import { cn } from '@/lib/utils'
@@ -326,7 +327,7 @@ function ToolCardInner(props: ToolCardProps) {
         const cardEl = cardRef.current
         const viewport = cardEl?.closest('[data-chat-viewport="true"]') as HTMLElement | null
         const wasAtBottom = viewport
-            ? (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) <= 2
+            ? isViewportNearBottom(viewport)
             : false
         const anchorTopBefore = cardEl?.getBoundingClientRect().top ?? null
 
@@ -336,14 +337,15 @@ function ToolCardInner(props: ToolCardProps) {
             viewport?.dispatchEvent(new CustomEvent('hapi:disable-auto-scroll'))
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    if (!cardRef.current) return
                     if (!viewport.isConnected) return
-                    if (anchorTopBefore === null) return
-                    const anchorTopAfter = cardRef.current.getBoundingClientRect().top
-                    const delta = anchorTopAfter - anchorTopBefore
-                    if (Math.abs(delta) > 0.5) {
-                        viewport.scrollTop += delta
+                    if (cardRef.current && anchorTopBefore !== null) {
+                        const anchorTopAfter = cardRef.current.getBoundingClientRect().top
+                        const delta = anchorTopAfter - anchorTopBefore
+                        if (Math.abs(delta) > 0.5) {
+                            viewport.scrollTop += delta
+                        }
                     }
+                    viewport.dispatchEvent(new CustomEvent('hapi:sync-scroll-state'))
                 })
             })
         }

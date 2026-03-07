@@ -23,6 +23,7 @@ import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInp
 import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
 import { getToolPresentation } from '@/components/ToolCard/knownTools'
 import { isResultOnlyToolName } from '@/components/ToolCard/toolRenderModes'
+import { isViewportNearBottom } from '@/components/AssistantChat/scrollBehavior'
 import { useTranslation } from '@/lib/use-translation'
 import { cn } from '@/lib/utils'
 
@@ -230,7 +231,7 @@ function useAnchoredStepToggle() {
         const nodeEl = nodeRef.current
         const viewport = nodeEl?.closest('[data-chat-viewport="true"]') as HTMLElement | null
         const wasAtBottom = viewport
-            ? (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight) <= 2
+            ? isViewportNearBottom(viewport)
             : false
         const anchorTopBefore = nodeEl?.getBoundingClientRect().top ?? null
 
@@ -240,14 +241,15 @@ function useAnchoredStepToggle() {
             viewport?.dispatchEvent(new CustomEvent('hapi:disable-auto-scroll'))
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    if (!nodeRef.current) return
                     if (!viewport.isConnected) return
-                    if (anchorTopBefore === null) return
-                    const anchorTopAfter = nodeRef.current.getBoundingClientRect().top
-                    const delta = anchorTopAfter - anchorTopBefore
-                    if (Math.abs(delta) > 0.5) {
-                        viewport.scrollTop += delta
+                    if (nodeRef.current && anchorTopBefore !== null) {
+                        const anchorTopAfter = nodeRef.current.getBoundingClientRect().top
+                        const delta = anchorTopAfter - anchorTopBefore
+                        if (Math.abs(delta) > 0.5) {
+                            viewport.scrollTop += delta
+                        }
                     }
+                    viewport.dispatchEvent(new CustomEvent('hapi:sync-scroll-state'))
                 })
             })
         }

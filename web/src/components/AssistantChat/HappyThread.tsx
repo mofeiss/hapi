@@ -9,6 +9,7 @@ import { HappyUserMessage } from '@/components/AssistantChat/messages/UserMessag
 import { HappySystemMessage } from '@/components/AssistantChat/messages/SystemMessage'
 import { Spinner } from '@/components/Spinner'
 import { QueuedMessages } from '@/components/AssistantChat/QueuedMessages'
+import { CHAT_BOTTOM_THRESHOLD_PX, getDistanceFromBottom, isViewportNearBottom } from '@/components/AssistantChat/scrollBehavior'
 import type { QueuedMessage } from '@/hooks/useMessageQueue'
 import { useTranslation } from '@/lib/use-translation'
 
@@ -71,7 +72,7 @@ type ThreadMessageGroup =
         indices: number[]
     }
 
-function buildThreadMessageGroups(messages: readonly { id: string; role: ThreadMessageRole }[]): ThreadMessageGroup[] {
+export function buildThreadMessageGroups(messages: readonly { id: string; role: ThreadMessageRole }[]): ThreadMessageGroup[] {
     const groups: ThreadMessageGroup[] = []
 
     let index = 0
@@ -95,16 +96,17 @@ function buildThreadMessageGroups(messages: readonly { id: string; role: ThreadM
             indices.push(index)
             index += 1
         }
-        const endId = messages[indices[indices.length - 1]]?.id ?? startId
         groups.push({
             kind: 'agent-turn',
-            key: `${startId}:${endId}`,
+            key: startId,
             indices
         })
     }
 
     return groups
 }
+
+const TOP_LOAD_THRESHOLD_PX = 72
 
 export function HappyThread(props: {
     api: ApiClient
@@ -177,18 +179,43 @@ export function HappyThread(props: {
         onLoadMoreRef.current = props.onLoadMore
     }, [props.onLoadMore])
 
+    const syncViewportState = useCallback(() => {
+        const viewport = viewportRef.current
+        if (!viewport) {
+            return
+        }
+
+        const isNearBottom = isViewportNearBottom(viewport)
+
+        if (isNearBottom) {
+            if (!autoScrollEnabledRef.current) {
+                setAutoScrollEnabled(true)
+            }
+        } else if (autoScrollEnabledRef.current) {
+            setAutoScrollEnabled(false)
+        }
+
+        if (isNearBottom !== atBottomRef.current) {
+            atBottomRef.current = isNearBottom
+            onAtBottomChangeRef.current(isNearBottom)
+            if (isNearBottom) {
+                onFlushPendingRef.current()
+            }
+        }
+
+        lastScrollTopRef.current = viewport.scrollTop
+    }, [])
+
     // Track scroll position to toggle autoScroll (stable listener using refs)
     useEffect(() => {
         const viewport = viewportRef.current
         if (!viewport) return
 
-        const BOTTOM_THRESHOLD_PX = 120
-        const TOP_LOAD_THRESHOLD_PX = 72
         lastScrollTopRef.current = viewport.scrollTop
 
         const handleScroll = () => {
-            const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
-            const isNearBottom = distanceFromBottom < BOTTOM_THRESHOLD_PX
+            const distanceFromBottom = getDistanceFromBottom(viewport)
+            const isNearBottom = distanceFromBottom < CHAT_BOTTOM_THRESHOLD_PX
             const currentScrollTop = viewport.scrollTop
             const isScrollingUp = currentScrollTop < lastScrollTopRef.current
 
@@ -229,15 +256,19 @@ export function HappyThread(props: {
             if (autoScrollEnabledRef.current) {
                 setAutoScrollEnabled(false)
             }
-            if (atBottomRef.current) {
-                atBottomRef.current = false
-                onAtBottomChangeRef.current(false)
-            }
+        }
+
+        const onSyncScrollState = () => {
+            syncViewportState()
         }
 
         viewport.addEventListener('hapi:disable-auto-scroll', onDisableAutoScroll as EventListener)
-        return () => viewport.removeEventListener('hapi:disable-auto-scroll', onDisableAutoScroll as EventListener)
-    }, [])
+        viewport.addEventListener('hapi:sync-scroll-state', onSyncScrollState as EventListener)
+        return () => {
+            viewport.removeEventListener('hapi:disable-auto-scroll', onDisableAutoScroll as EventListener)
+            viewport.removeEventListener('hapi:sync-scroll-state', onSyncScrollState as EventListener)
+        }
+    }, [syncViewportState])
 
     // Scroll to bottom handler for the indicator button
     const scrollToBottom = useCallback(() => {
