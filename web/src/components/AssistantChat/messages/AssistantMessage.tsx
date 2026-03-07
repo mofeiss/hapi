@@ -18,14 +18,14 @@ const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
 } as const
 
-const MESSAGE_PART_COMPONENTS = {
+export const MESSAGE_PART_COMPONENTS = {
     Text: MarkdownText,
     Reasoning: Reasoning,
     ReasoningGroup: ReasoningGroup,
     tools: TOOL_COMPONENTS
 } as const
 
-function MessageTurnDurationBadge(props: {
+export function MessageTurnDurationBadge(props: {
     startAt: number | null
     fallbackEndAt: number | null
     finalEndAt: number | null
@@ -82,11 +82,7 @@ function MessageTurnDurationBadge(props: {
     )
 }
 
-export function HappyAssistantMessage() {
-    const assistantApi = useAssistantApi()
-    const ctx = useHappyChatContext()
-    const { locale, t } = useTranslation()
-    const threadIsRunning = useAssistantState(({ thread }) => thread.isRunning)
+function useAssistantMessageViewModel() {
     const isCliOutput = useAssistantState(({ message }) => {
         const custom = message.metadata.custom as Partial<HappyChatMessageMetadata> | undefined
         return custom?.kind === 'cli-output'
@@ -99,11 +95,47 @@ export function HappyAssistantMessage() {
     const assistantContent = useAssistantState(({ message }) => (
         message.role === 'assistant' ? message.content : []
     ))
+    const apiErrorText = (() => {
+        if (assistantContent.length !== 1) return null
+        const first = assistantContent[0]
+        if (first.type !== 'text') return null
+        const candidate = first.text.trim()
+        return isApiErrorText(candidate) ? candidate : null
+    })()
+
+    return {
+        isCliOutput,
+        cliText,
+        assistantContent,
+        apiErrorText
+    }
+}
+
+export function HappyAssistantMessageInline() {
+    const { isCliOutput, cliText, assistantContent, apiErrorText } = useAssistantMessageViewModel()
+
+    if (isCliOutput) {
+        return <CliOutputBlock text={cliText} />
+    }
+
+    if (apiErrorText) {
+        return <ApiErrorNotice text={apiErrorText} />
+    }
+
+    return <MessagePrimitive.Content components={MESSAGE_PART_COMPONENTS} />
+}
+
+export function HappyAssistantMessage() {
+    const assistantApi = useAssistantApi()
+    const ctx = useHappyChatContext()
+    const { locale, t } = useTranslation()
+    const threadIsRunning = useAssistantState(({ thread }) => thread.isRunning)
     const threadMessagesLength = useAssistantState(({ thread }) => thread.messages.length)
     const currentMessageIndex = useAssistantState(({ message }) => {
         const idx = (message as { index?: number }).index
         return typeof idx === 'number' ? idx : -1
     })
+    const { isCliOutput, cliText, assistantContent, apiErrorText } = useAssistantMessageViewModel()
     const allThreadMessages = threadMessagesLength > 0
         ? assistantApi.thread().getState().messages
         : []
@@ -120,13 +152,6 @@ export function HappyAssistantMessage() {
         && turnDurationInfo.turnEndIndex === threadMessagesLength - 1
     const shouldShowTurnActions = turnDurationInfo !== null
         && turnDurationInfo.lastAssistantOutputIndex === currentMessageIndex
-    const apiErrorText = (() => {
-        if (assistantContent.length !== 1) return null
-        const first = assistantContent[0]
-        if (first.type !== 'text') return null
-        const candidate = first.text.trim()
-        return isApiErrorText(candidate) ? candidate : null
-    })()
     const copyText = buildAssistantCopyText(
         assistantContent as readonly AssistantCopyPart[],
         {
@@ -159,7 +184,7 @@ export function HappyAssistantMessage() {
         return (
             <div className="flex min-w-0 max-w-full flex-col gap-1">
                 <MessagePrimitive.Root className="px-1 min-w-0 max-w-full overflow-x-hidden">
-                    <CliOutputBlock text={cliText} />
+                    <HappyAssistantMessageInline />
                 </MessagePrimitive.Root>
                 {shouldShowTurnActions ? (
                     <div className={actionsClass}>
@@ -176,7 +201,7 @@ export function HappyAssistantMessage() {
         return (
             <div className="flex min-w-0 max-w-full flex-col gap-1">
                 <MessagePrimitive.Root className="px-1 min-w-0 max-w-full overflow-x-hidden">
-                    <ApiErrorNotice text={apiErrorText} />
+                    <HappyAssistantMessageInline />
                 </MessagePrimitive.Root>
                 {shouldShowTurnActions ? (
                     <div className={actionsClass}>
@@ -192,7 +217,7 @@ export function HappyAssistantMessage() {
     return (
         <div className="flex min-w-0 max-w-full flex-col gap-1">
             <MessagePrimitive.Root className={rootClass}>
-                <MessagePrimitive.Content components={MESSAGE_PART_COMPONENTS} />
+                <HappyAssistantMessageInline />
             </MessagePrimitive.Root>
             {shouldShowTurnActions ? (
                 <div className={actionsClass}>

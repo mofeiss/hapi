@@ -1,7 +1,7 @@
 import { useState, useEffect, type FC, type PropsWithChildren, type TransitionEvent } from 'react'
 import { useMessage, type ReasoningGroupProps } from '@assistant-ui/react'
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown'
-import { DisclosureChevron, DisclosureRail } from '@/components/Disclosure'
+import { DisclosureChevron, DisclosureRail, OUTER_DISCLOSURE_ITEM_CLASS } from '@/components/Disclosure'
 import { cn } from '@/lib/utils'
 import { defaultComponents, MARKDOWN_BLOCK_SPACING_CLASSNAME, MARKDOWN_PLUGINS } from '@/components/assistant-ui/markdown-text'
 
@@ -108,7 +108,7 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
     }
 
     return (
-        <div className="aui-reasoning-group my-2">
+        <div className={cn('aui-reasoning-group', OUTER_DISCLOSURE_ITEM_CLASS)}>
             <button
                 type="button"
                 onClick={toggleOpen}
@@ -124,9 +124,9 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
                     <DisclosureChevron open={isOpen} />
                 </span>
                 <span className="min-w-0 flex flex-1 items-baseline gap-2">
-                    <span className="shrink-0 text-sm text-[var(--app-hint)] opacity-90">Reasoning</span>
+                    <span className="shrink-0 text-sm leading-tight text-[var(--app-hint)] opacity-90">Reasoning</span>
                     {!isOpen && showPreview && preview ? (
-                        <span className="min-w-0 flex-1 truncate whitespace-nowrap font-mono text-xs text-[var(--app-hint)] opacity-60">
+                        <span className="min-w-0 flex-1 truncate whitespace-nowrap font-mono text-xs leading-tight text-[var(--app-hint)] opacity-60">
                             {preview}
                         </span>
                     ) : null}

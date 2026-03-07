@@ -76,6 +76,18 @@ export function ClockIcon(props: IconProps) {
   );
 }
 
+export function EventIcon(props: IconProps) {
+  return createIcon(
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4" />
+      <circle cx="12" cy="16.25" r="0.75" fill="currentColor" stroke="none" />
+    </>,
+    props,
+    2,
+  );
+}
+
 export function CheckIcon(props: IconProps) {
   return createIcon(<polyline points="20 6 9 17 4 12" />, props, 2);
 }

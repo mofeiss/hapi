@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ThreadPrimitive } from '@assistant-ui/react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ThreadPrimitive, useAssistantApi, useAssistantState } from '@assistant-ui/react'
 import type { ApiClient } from '@/api/client'
 import type { AttachmentMetadata, SessionMetadataSummary } from '@/types/api'
 import { HappyChatProvider } from '@/components/AssistantChat/context'
 import { HappyAssistantMessage } from '@/components/AssistantChat/messages/AssistantMessage'
+import { HappyAgentTurnGroup } from '@/components/AssistantChat/messages/AgentTurnGroup'
 import { HappyUserMessage } from '@/components/AssistantChat/messages/UserMessage'
 import { HappySystemMessage } from '@/components/AssistantChat/messages/SystemMessage'
 import { Spinner } from '@/components/Spinner'
@@ -56,6 +57,55 @@ const THREAD_MESSAGE_COMPONENTS = {
     SystemMessage: HappySystemMessage
 } as const
 
+type ThreadMessageRole = 'user' | 'assistant' | 'system'
+
+type ThreadMessageGroup =
+    | {
+        kind: 'user'
+        key: string
+        index: number
+    }
+    | {
+        kind: 'agent-turn'
+        key: string
+        indices: number[]
+    }
+
+function buildThreadMessageGroups(messages: readonly { id: string; role: ThreadMessageRole }[]): ThreadMessageGroup[] {
+    const groups: ThreadMessageGroup[] = []
+
+    let index = 0
+    while (index < messages.length) {
+        const current = messages[index]
+        if (!current) break
+
+        if (current.role === 'user') {
+            groups.push({
+                kind: 'user',
+                key: current.id,
+                index
+            })
+            index += 1
+            continue
+        }
+
+        const indices: number[] = []
+        const startId = current.id
+        while (index < messages.length && messages[index]?.role !== 'user') {
+            indices.push(index)
+            index += 1
+        }
+        const endId = messages[indices[indices.length - 1]]?.id ?? startId
+        groups.push({
+            kind: 'agent-turn',
+            key: `${startId}:${endId}`,
+            indices
+        })
+    }
+
+    return groups
+}
+
 export function HappyThread(props: {
     api: ApiClient
     sessionId: string
@@ -85,7 +135,9 @@ export function HappyThread(props: {
     forceScrollToken: number
     queuedMessages?: QueuedMessage[]
 }) {
+    const assistantApi = useAssistantApi()
     const { t } = useTranslation()
+    const threadMessagesLength = useAssistantState(({ thread }) => thread.messages.length)
     const viewportRef = useRef<HTMLDivElement | null>(null)
     const loadLockRef = useRef(false)
     const pendingScrollRef = useRef<{ scrollTop: number; scrollHeight: number; startVersion: number } | null>(null)
@@ -302,6 +354,18 @@ export function HappyThread(props: {
     }, [props.isLoadingMoreMessages, props.messagesVersion])
 
     const showSkeleton = props.isLoadingMessages && props.rawMessagesCount === 0 && props.pendingCount === 0
+    const threadMessages = threadMessagesLength > 0
+        ? assistantApi.thread().getState().messages
+        : []
+    const messageGroups = useMemo(
+        () => buildThreadMessageGroups(
+            threadMessages.map((message) => ({
+                id: message.id,
+                role: message.role as ThreadMessageRole
+            }))
+        ),
+        [threadMessagesLength, props.messagesVersion]
+    )
 
     return (
         <HappyChatProvider value={{
@@ -347,7 +411,21 @@ export function HappyThread(props: {
                                 </>
                             )}
                             <div className="flex flex-col gap-3">
-                                <ThreadPrimitive.Messages components={THREAD_MESSAGE_COMPONENTS} />
+                                {messageGroups.map((group) => {
+                                    if (group.kind === 'user') {
+                                        return (
+                                            <ThreadPrimitive.MessageByIndex
+                                                key={group.key}
+                                                index={group.index}
+                                                components={THREAD_MESSAGE_COMPONENTS}
+                                            />
+                                        )
+                                    }
+
+                                    return (
+                                        <HappyAgentTurnGroup key={group.key} indices={group.indices} />
+                                    )
+                                })}
                                 <QueuedMessages messages={props.queuedMessages ?? []} />
                             </div>
                         </div>

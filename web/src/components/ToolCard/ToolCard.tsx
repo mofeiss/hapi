@@ -306,6 +306,7 @@ function ToolCardInner(props: ToolCardProps) {
     const hasBodyContent = hasInlineDetails || showsPermissionFooter
     const canExpand = hasInlineDetails || showsPermissionFooter
     const stateColor = statusColorClass(props.block.tool.state)
+    const disclosureRailClassName = toolName === 'Steps' ? 'pl-[14px]' : undefined
     const { suppressFocusRing, onTriggerPointerDown, onTriggerKeyDown, onTriggerBlur } = usePointerFocusRing()
 
     useEffect(() => {
@@ -692,7 +693,7 @@ function ToolCardInner(props: ToolCardProps) {
                         expanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
                     )}
                 >
-                    <DisclosureRail level={disclosureLevel}>
+                    <DisclosureRail level={disclosureLevel} className={disclosureRailClassName}>
                         <div className="tool-io-scope flex flex-col gap-3 pb-1">
                             {bodyContent}
                         </div>

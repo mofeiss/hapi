@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { isObject, safeStringify } from '@hapi/protocol'
 import { getEventPresentation } from '@/chat/presentation'
 import { CodeBlock } from '@/components/CodeBlock'
-import { DisclosureChevron, DisclosureInlineRail, DisclosureRail } from '@/components/Disclosure'
+import { DisclosureChevron, DisclosureRail, OUTER_DISCLOSURE_ITEM_CLASS } from '@/components/Disclosure'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { LazyRainbowText } from '@/components/LazyRainbowText'
 import { MessageStatusIndicator } from '@/components/AssistantChat/messages/MessageStatusIndicator'
@@ -95,7 +95,7 @@ function FallbackToolCallMessage(props: {
             : null
 
     return (
-        <div className="py-1 min-w-0 max-w-full overflow-x-hidden">
+        <div className={OUTER_DISCLOSURE_ITEM_CLASS}>
             {canExpand ? (
                 <button
                     type="button"
@@ -183,7 +183,7 @@ function ToolChildren(props: {
     return (
         <>
             {children.pending.length > 0 ? (
-                <div className="mt-2 pl-3">
+                <div className="mt-2 pl-1.5">
                     <HappyNestedBlockList blocks={children.pending} />
                 </div>
             ) : null}
@@ -203,7 +203,7 @@ function ToolChildren(props: {
                         </span>
                     </button>
                     {restOpen ? (
-                        <div className="pl-3">
+                        <div className="pl-1.5">
                             <HappyNestedBlockList blocks={children.rest} />
                         </div>
                     ) : null}
@@ -274,14 +274,24 @@ function HappyNestedBlockList(props: {
                 if (block.kind === 'agent-event') {
                     const presentation = getEventPresentation(block.event, t)
                     const alignCls = presentation.source === 'user'
-                        ? 'ml-auto w-fit max-w-[92%] text-right'
+                        ? 'ml-auto w-fit max-w-[92%]'
                         : 'max-w-[92%]'
                     return (
-                        <div key={`event:${block.id}`} className="py-1">
-                            <div className={`${alignCls} text-xs text-[var(--app-hint)]`}>
-                                <DisclosureInlineRail level="inner">
-                                    <span className="opacity-80">{presentation.text}</span>
-                                </DisclosureInlineRail>
+                        <div key={`event:${block.id}`} className={OUTER_DISCLOSURE_ITEM_CLASS}>
+                            <div className={cn('min-w-0', alignCls)}>
+                                <div className="w-fit min-w-0 max-w-full rounded-md bg-[var(--app-subtle-bg)] px-[3px] py-1">
+                                    <div className="flex min-w-0 items-center gap-0 text-[var(--app-hint)]">
+                                        <span className="shrink-0 flex h-4 w-4 items-center justify-center leading-none">
+                                            <span className="h-4 w-0.5 bg-[var(--app-border-on-subtle)]" />
+                                        </span>
+                                        <span className="min-w-0 break-words text-sm leading-tight opacity-80">
+                                            {presentation.text}
+                                        </span>
+                                        <span className="shrink-0 flex h-4 w-4 items-center justify-center leading-none">
+                                            <span className="h-4 w-0.5 bg-[var(--app-border-on-subtle)]" />
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )
@@ -338,7 +348,7 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
     const block = artifact
 
     return (
-        <div className="py-1 min-w-0 max-w-full overflow-x-hidden">
+        <div className={OUTER_DISCLOSURE_ITEM_CLASS}>
             <ToolCard
                 api={ctx.api}
                 sessionId={ctx.sessionId}

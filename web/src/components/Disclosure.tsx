@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils'
 
 export type DisclosureLevel = 'outer' | 'inner'
 
+export const OUTER_DISCLOSURE_ITEM_CLASS = 'py-1 min-w-0 max-w-full overflow-x-hidden'
+
 const OUTER_DISCLOSURE_BLOCK_CLASS = 'ml-0.5 border-l-2 border-[var(--app-border)] pl-4 pt-2'
 const INNER_DISCLOSURE_BLOCK_CLASS = 'ml-5 border-l border-[var(--app-border)] pl-2.5'
 

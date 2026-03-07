@@ -6,6 +6,7 @@ import {
     type CodeHeaderProps,
 } from '@assistant-ui/react-markdown'
 import remarkGfm from 'remark-gfm'
+import { OUTER_DISCLOSURE_ITEM_CLASS } from '@/components/Disclosure'
 import { cn } from '@/lib/utils'
 import { SyntaxHighlighter } from '@/components/assistant-ui/shiki-highlighter'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
@@ -230,7 +231,11 @@ export function MarkdownText() {
         <MarkdownTextPrimitive
             remarkPlugins={MARKDOWN_PLUGINS}
             components={defaultComponents}
-            className={cn('aui-md min-w-0 max-w-full break-words text-base', MARKDOWN_BLOCK_SPACING_CLASSNAME)}
+            className={cn(
+                'aui-md break-words text-base',
+                OUTER_DISCLOSURE_ITEM_CLASS,
+                MARKDOWN_BLOCK_SPACING_CLASSNAME
+            )}
         />
     )
 }
