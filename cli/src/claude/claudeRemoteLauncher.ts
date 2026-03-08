@@ -19,6 +19,7 @@ import {
     type RemoteLauncherDisplayContext,
     type RemoteLauncherExitReason
 } from "@/modules/common/remote/RemoteLauncherBase";
+import { formatSessionFailureMessage } from "@/utils/sessionFailure";
 
 interface PermissionsField {
     date: number;
@@ -409,7 +410,14 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                 } catch (e) {
                     logger.debug('[remote]: launch error', e);
                     if (!this.exitReason) {
-                        session.client.sendSessionEvent({ type: 'message', message: 'Process exited unexpectedly' });
+                        const failureMessage = formatSessionFailureMessage({
+                            headline: 'Claude process exited unexpectedly.',
+                            error: e,
+                            fallbackReason: 'Unknown Claude launcher error',
+                            logPath: session.logPath
+                        });
+                        messageBuffer.addMessage(failureMessage, 'status');
+                        session.client.sendSessionEvent({ type: 'message', message: failureMessage });
                         continue;
                     }
                 } finally {

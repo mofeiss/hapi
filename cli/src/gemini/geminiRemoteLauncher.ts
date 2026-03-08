@@ -10,6 +10,7 @@ import type { PermissionMode } from './types';
 import { createGeminiBackend } from './utils/geminiBackend';
 import { GeminiPermissionHandler } from './utils/permissionHandler';
 import { resolveGeminiRuntimeConfig } from './utils/config';
+import { formatSessionFailureMessage } from '@/utils/sessionFailure';
 
 class GeminiRemoteLauncher extends RemoteLauncherBase {
     private readonly session: GeminiSession;
@@ -62,8 +63,14 @@ class GeminiRemoteLauncher extends RemoteLauncherBase {
 
         backend.onStderrError((error) => {
             logger.debug('[gemini-remote] stderr error', error);
-            session.sendSessionEvent({ type: 'message', message: error.message });
-            messageBuffer.addMessage(error.message, 'status');
+            const failureMessage = formatSessionFailureMessage({
+                headline: 'Gemini runtime error.',
+                error,
+                fallbackReason: error.message,
+                logPath: session.logPath
+            });
+            session.sendSessionEvent({ type: 'message', message: failureMessage });
+            messageBuffer.addMessage(failureMessage, 'status');
         });
 
         await backend.initialize();
@@ -115,11 +122,17 @@ class GeminiRemoteLauncher extends RemoteLauncherBase {
                 });
             } catch (error) {
                 logger.warn('[gemini-remote] prompt failed', error);
+                const failureMessage = formatSessionFailureMessage({
+                    headline: 'Gemini prompt failed.',
+                    error,
+                    fallbackReason: 'Unknown Gemini prompt error',
+                    logPath: session.logPath
+                });
                 session.sendSessionEvent({
                     type: 'message',
-                    message: 'Gemini prompt failed. Check logs for details.'
+                    message: failureMessage
                 });
-                messageBuffer.addMessage('Gemini prompt failed', 'status');
+                messageBuffer.addMessage(failureMessage, 'status');
             } finally {
                 session.onThinkingChange(false);
                 await this.permissionHandler?.cancelAll('Prompt finished');

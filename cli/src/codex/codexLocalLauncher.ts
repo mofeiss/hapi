@@ -22,6 +22,7 @@ export async function codexLocalLauncher(session: CodexSession): Promise<'switch
     const launcher = new BaseLocalLauncher({
         label: 'codex-local',
         failureLabel: 'Local Codex process failed',
+        logPath: session.logPath,
         queue: session.queue,
         rpcHandlerManager: session.client.rpcHandlerManager,
         startedBy: session.startedBy,

@@ -323,7 +323,21 @@ export class SyncEngine {
         worktreeName?: string,
         resumeSessionId?: string
     ): Promise<{ type: 'success'; sessionId: string } | { type: 'error'; message: string }> {
-        return await this.rpcGateway.spawnSession(
+        const startedAt = Date.now()
+        console.log('[Hub][Spawn] Request', {
+            machineId,
+            directory,
+            agent,
+            model: model ?? null,
+            reasoningEffort: reasoningEffort ?? null,
+            permissionMode: permissionMode ?? null,
+            basePermissionMode: basePermissionMode ?? null,
+            sessionType: sessionType ?? null,
+            worktreeName: worktreeName ?? null,
+            resumeSessionId: resumeSessionId ?? null
+        })
+
+        const result = await this.rpcGateway.spawnSession(
             machineId,
             directory,
             agent,
@@ -335,6 +349,16 @@ export class SyncEngine {
             worktreeName,
             resumeSessionId
         )
+
+        console.log('[Hub][Spawn] Result', {
+            machineId,
+            directory,
+            agent,
+            result,
+            durationMs: Date.now() - startedAt
+        })
+
+        return result
     }
 
     async resumeSession(sessionId: string, namespace: string): Promise<ResumeSessionResult> {
@@ -432,10 +456,19 @@ export class SyncEngine {
         while (Date.now() - start < timeoutMs) {
             const session = this.getSession(sessionId)
             if (session?.active) {
+                console.log('[Hub][Spawn] Session became active', {
+                    sessionId,
+                    durationMs: Date.now() - start,
+                    controlledByUser: session.agentState?.controlledByUser ?? null
+                })
                 return true
             }
             await new Promise((resolve) => setTimeout(resolve, 250))
         }
+        console.log('[Hub][Spawn] Session activation timeout', {
+            sessionId,
+            timeoutMs
+        })
         return false
     }
 

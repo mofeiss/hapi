@@ -440,6 +440,7 @@ export async function startRunner(): Promise<void> {
 
         // sessionId reserved for future use
         const MAX_TAIL_CHARS = 4000;
+        let stdoutTail = '';
         let stderrTail = '';
         const appendTail = (current: string, chunk: Buffer | string): string => {
           const text = chunk.toString();
@@ -449,12 +450,39 @@ export async function startRunner(): Promise<void> {
           const combined = current + text;
           return combined.length > MAX_TAIL_CHARS ? combined.slice(-MAX_TAIL_CHARS) : combined;
         };
-        const logStderrTail = () => {
+        const envSummary = {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          USER: process.env.USER,
+          SHELL: process.env.SHELL,
+          HAPI_CLAUDE_PATH: process.env.HAPI_CLAUDE_PATH,
+          CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR,
+          XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME
+        };
+        logger.debug('[RUNNER RUN] Child spawn context', {
+          agent,
+          requestedDirectory,
+          spawnDirectory,
+          sessionType,
+          worktreePath: worktreeInfo?.worktreePath ?? null,
+          args,
+          envSummary
+        });
+        const logChildOutputTails = (reason: string) => {
+          const stdoutTrimmed = stdoutTail.trim();
           const trimmed = stderrTail.trim();
-          if (!trimmed) {
-            return;
+          if (stdoutTrimmed) {
+            logger.debug('[RUNNER RUN] Child stdout tail', {
+              reason,
+              stdout: stdoutTrimmed
+            });
           }
-          logger.debug('[RUNNER RUN] Child stderr tail', trimmed);
+          if (trimmed) {
+            logger.debug('[RUNNER RUN] Child stderr tail', {
+              reason,
+              stderr: trimmed
+            });
+          }
         };
 
         happyProcess = spawnHappyCLI(args, {
@@ -465,6 +493,10 @@ export async function startRunner(): Promise<void> {
             ...process.env,
             ...extraEnv
           }
+        });
+
+        happyProcess.stdout?.on('data', (data) => {
+          stdoutTail = appendTail(stdoutTail, data);
         });
 
         happyProcess.stderr?.on('data', (data) => {
@@ -496,13 +528,14 @@ export async function startRunner(): Promise<void> {
         happyProcess.on('exit', (code, signal) => {
           logger.debug(`[RUNNER RUN] Child PID ${pid} exited with code ${code}, signal ${signal}`);
           if (code !== 0 || signal) {
-            logStderrTail();
+            logChildOutputTails(`exit(code=${code ?? 'null'}, signal=${signal ?? 'null'})`);
           }
           onChildExited(pid);
         });
 
         happyProcess.on('error', (error) => {
           logger.debug(`[RUNNER RUN] Child process error:`, error);
+          logChildOutputTails('child-process-error');
           onChildExited(pid);
         });
 
@@ -514,7 +547,7 @@ export async function startRunner(): Promise<void> {
           const timeout = setTimeout(() => {
             pidToAwaiter.delete(pid);
             logger.debug(`[RUNNER RUN] Session webhook timeout for PID ${pid}`);
-            logStderrTail();
+            logChildOutputTails('session-webhook-timeout');
             resolve({
               type: 'error',
               errorMessage: `Session webhook timeout for PID ${pid}`
@@ -540,6 +573,14 @@ export async function startRunner(): Promise<void> {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.debug('[RUNNER RUN] Failed to spawn session:', error);
+        logger.debug('[RUNNER RUN] Spawn failure context', {
+          agent,
+          requestedDirectory,
+          spawnDirectory,
+          sessionType,
+          worktreePath: worktreeInfo?.worktreePath ?? null,
+          errorMessage
+        });
         await maybeCleanupWorktree('exception');
         return {
           type: 'error',

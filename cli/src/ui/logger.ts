@@ -12,6 +12,63 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join, basename } from 'node:path'
 import { readRunnerState } from '@/persistence'
 
+function serializeLogValue(value: unknown, depth: number = 0, seen?: WeakSet<object>): unknown {
+  if (depth > 6) {
+    return '[MaxDepth]'
+  }
+
+  if (value instanceof Error) {
+    const nextSeen = seen ?? new WeakSet<object>()
+    if (nextSeen.has(value)) {
+      return '[Circular]'
+    }
+    nextSeen.add(value)
+
+    const result: Record<string, unknown> = {
+      name: value.name,
+      message: value.message,
+    }
+
+    if (value.stack) {
+      result.stack = value.stack
+    }
+
+    const cause = (value as Error & { cause?: unknown }).cause
+    if (cause !== undefined) {
+      result.cause = serializeLogValue(cause, depth + 1, nextSeen)
+    }
+
+    for (const [key, nestedValue] of Object.entries(value as unknown as Record<string, unknown>)) {
+      if (key in result) {
+        continue
+      }
+      result[key] = serializeLogValue(nestedValue, depth + 1, nextSeen)
+    }
+
+    return result
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => serializeLogValue(item, depth + 1, seen))
+  }
+
+  if (value && typeof value === 'object') {
+    const nextSeen = seen ?? new WeakSet<object>()
+    if (nextSeen.has(value as object)) {
+      return '[Circular]'
+    }
+    nextSeen.add(value as object)
+
+    const result: Record<string, unknown> = {}
+    for (const [key, nestedValue] of Object.entries(value as Record<string, unknown>)) {
+      result[key] = serializeLogValue(nestedValue, depth + 1, nextSeen)
+    }
+    return result
+  }
+
+  return value
+}
+
 /**
  * Consistent date/time formatting functions
  */
@@ -201,7 +258,7 @@ class Logger {
 
   private logToFile(prefix: string, message: string, ...args: unknown[]): void {
     const logLine = `${prefix} ${message} ${args.map(arg => 
-      typeof arg === 'string' ? arg : JSON.stringify(arg)
+      typeof arg === 'string' ? arg : JSON.stringify(serializeLogValue(arg))
     ).join(' ')}\n`
     
     // Send to remote server if configured

@@ -30,6 +30,53 @@ import type { Writable } from 'node:stream'
 import { logger } from '@/ui/logger'
 import { appendMcpConfigArg } from '../utils/mcpConfig'
 
+const MAX_STDERR_TAIL_CHARS = 4000
+const MAX_USER_VISIBLE_STDERR_CHARS = 500
+
+function appendTail(current: string, chunk: Buffer | string, maxChars: number = MAX_STDERR_TAIL_CHARS): string {
+    const text = chunk.toString()
+    if (!text) {
+        return current
+    }
+    const combined = current + text
+    return combined.length > maxChars ? combined.slice(-maxChars) : combined
+}
+
+function sanitizeForSingleLine(value: string): string {
+    return value.replace(/\s+/g, ' ').trim()
+}
+
+function buildCommandDisplay(command: string, args: string[]): string {
+    return [command, ...args].join(' ')
+}
+
+function buildStderrSummary(stderrTail: string): string | null {
+    const normalized = sanitizeForSingleLine(stderrTail)
+    if (!normalized) {
+        return null
+    }
+    if (normalized.length <= MAX_USER_VISIBLE_STDERR_CHARS) {
+        return normalized
+    }
+    return `${normalized.slice(0, MAX_USER_VISIBLE_STDERR_CHARS - 3)}...`
+}
+
+function createClaudeProcessError(
+    message: string,
+    details: {
+        command: string
+        args: string[]
+        exitCode?: number | null
+        signal?: NodeJS.Signals | null
+        stderrTail?: string
+    },
+    cause?: unknown
+): Error {
+    const error = cause === undefined ? new Error(message) : new Error(message, { cause })
+    Object.assign(error, { details })
+    return error
+}
+
 /**
  * Query class manages Claude Code process interaction
  */
@@ -340,7 +387,8 @@ export function query(config: {
 
     // Spawn Claude Code process
     const spawnEnv = withBunRuntimeEnv(process.env, { allowBunBeBun: false })
-    logDebug(`Spawning Claude Code process: ${spawnCommand} ${spawnArgs.join(' ')}`)
+    const commandDisplay = buildCommandDisplay(spawnCommand, spawnArgs)
+    logDebug(`Spawning Claude Code process: ${commandDisplay}`)
 
     const child = spawn(spawnCommand, spawnArgs, {
         cwd,
@@ -352,6 +400,14 @@ export function query(config: {
         shell: false
     }) as ChildProcessWithoutNullStreams
 
+    let stderrTail = ''
+    child.stderr.on('data', (data) => {
+        stderrTail = appendTail(stderrTail, data)
+        if (process.env.DEBUG) {
+            console.error('Claude Code stderr:', data.toString())
+        }
+    })
+
     // Handle stdin
     let childStdin: Writable | null = null
     if (typeof prompt === 'string') {
@@ -359,13 +415,6 @@ export function query(config: {
     } else {
         streamToStdin(prompt, child.stdin, config.options?.abort)
         childStdin = child.stdin
-    }
-
-    // Handle stderr in debug mode
-    if (process.env.DEBUG) {
-        child.stderr.on('data', (data) => {
-            console.error('Claude Code stderr:', data.toString())
-        })
     }
 
     // Setup cleanup
@@ -380,13 +429,61 @@ export function query(config: {
 
     // Handle process exit
     const processExitPromise = new Promise<void>((resolve) => {
-        child.on('close', (code) => {
+        child.on('close', (code, signal) => {
             if (config.options?.abort?.aborted) {
                 query.setError(new AbortError('Claude Code process aborted by user'))
+                resolve()
+                return
             }
+
+            const stderrSummary = buildStderrSummary(stderrTail)
+            if (signal) {
+                const messageParts = [`Claude Code process terminated with signal ${signal}.`]
+                if (stderrSummary) {
+                    messageParts.push(`stderr: ${stderrSummary}`)
+                }
+                logger.debug('[Claude SDK] Claude process terminated by signal', {
+                    signal,
+                    stderrTail,
+                    command: spawnCommand,
+                    args: spawnArgs
+                })
+                query.setError(createClaudeProcessError(messageParts.join(' '), {
+                    command: spawnCommand,
+                    args: spawnArgs,
+                    signal,
+                    stderrTail
+                }))
+                resolve()
+                return
+            }
+
             if (code !== 0) {
-                query.setError(new Error(`Claude Code process exited with code ${code}`))
-            } else {
+                const messageParts = [`Claude Code process exited with code ${code}.`]
+                if (stderrSummary) {
+                    messageParts.push(`stderr: ${stderrSummary}`)
+                }
+                logger.debug('[Claude SDK] Claude process exited with non-zero code', {
+                    exitCode: code,
+                    stderrTail,
+                    command: spawnCommand,
+                    args: spawnArgs
+                })
+                query.setError(createClaudeProcessError(messageParts.join(' '), {
+                    command: spawnCommand,
+                    args: spawnArgs,
+                    exitCode: code,
+                    stderrTail
+                }))
+                resolve()
+                return
+            }
+
+            logger.debug('[Claude SDK] Claude process exited successfully', {
+                command: spawnCommand,
+                args: spawnArgs
+            })
+            if (code === 0) {
                 resolve()
             }
         })
@@ -401,7 +498,23 @@ export function query(config: {
         if (config.options?.abort?.aborted) {
             query.setError(new AbortError('Claude Code process aborted by user'))
         } else {
-            query.setError(new Error(`Failed to spawn Claude Code process: ${error.message}`))
+            const stderrSummary = buildStderrSummary(stderrTail)
+            const messageParts = [`Failed to spawn Claude Code process: ${error.message}.`]
+            if (stderrSummary) {
+                messageParts.push(`stderr: ${stderrSummary}`)
+            }
+            logger.debug('[Claude SDK] Failed to spawn Claude process', {
+                error,
+                stderrTail,
+                command: spawnCommand,
+                args: spawnArgs,
+                commandDisplay
+            })
+            query.setError(createClaudeProcessError(messageParts.join(' '), {
+                command: spawnCommand,
+                args: spawnArgs,
+                stderrTail
+            }, error))
         }
     })
 

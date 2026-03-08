@@ -280,6 +280,7 @@ export async function opencodeLocalLauncher(
     const launcher = new BaseLocalLauncher({
         label: 'opencode-local',
         failureLabel: 'Local OpenCode process failed',
+        logPath: session.logPath,
         queue: session.queue,
         rpcHandlerManager: session.client.rpcHandlerManager,
         startedBy: session.startedBy,

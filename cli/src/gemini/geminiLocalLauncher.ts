@@ -28,6 +28,7 @@ export async function geminiLocalLauncher(
     const launcher = new BaseLocalLauncher({
         label: 'gemini-local',
         failureLabel: 'Local Gemini process failed',
+        logPath: session.logPath,
         queue: session.queue,
         rpcHandlerManager: session.client.rpcHandlerManager,
         startedBy: session.startedBy,

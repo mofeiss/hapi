@@ -10,6 +10,7 @@ import type { PermissionMode } from './types';
 import { createOpencodeBackend } from './utils/opencodeBackend';
 import { OpencodePermissionHandler } from './utils/permissionHandler';
 import { TITLE_INSTRUCTION } from './utils/systemPrompt';
+import { formatSessionFailureMessage } from '@/utils/sessionFailure';
 
 class OpencodeRemoteLauncher extends RemoteLauncherBase {
     private readonly session: OpencodeSession;
@@ -50,8 +51,14 @@ class OpencodeRemoteLauncher extends RemoteLauncherBase {
 
         backend.onStderrError((error) => {
             logger.debug('[opencode-remote] stderr error', error);
-            session.sendSessionEvent({ type: 'message', message: error.message });
-            messageBuffer.addMessage(error.message, 'status');
+            const failureMessage = formatSessionFailureMessage({
+                headline: 'OpenCode runtime error.',
+                error,
+                fallbackReason: error.message,
+                logPath: session.logPath
+            });
+            session.sendSessionEvent({ type: 'message', message: failureMessage });
+            messageBuffer.addMessage(failureMessage, 'status');
         });
 
         await backend.initialize();
@@ -68,9 +75,15 @@ class OpencodeRemoteLauncher extends RemoteLauncherBase {
                 });
             } catch (error) {
                 logger.warn('[opencode-remote] resume failed, starting new session', error);
+                const resumeFailureMessage = formatSessionFailureMessage({
+                    headline: 'OpenCode resume failed; starting a new session.',
+                    error,
+                    fallbackReason: 'Unknown OpenCode resume error',
+                    logPath: session.logPath
+                });
                 session.sendSessionEvent({
                     type: 'message',
-                    message: 'OpenCode resume failed; starting a new session.'
+                    message: resumeFailureMessage
                 });
                 acpSessionId = await backend.newSession({
                     cwd: session.path,
@@ -134,11 +147,17 @@ class OpencodeRemoteLauncher extends RemoteLauncherBase {
                 });
             } catch (error) {
                 logger.warn('[opencode-remote] prompt failed', error);
+                const failureMessage = formatSessionFailureMessage({
+                    headline: 'OpenCode prompt failed.',
+                    error,
+                    fallbackReason: 'Unknown OpenCode prompt error',
+                    logPath: session.logPath
+                });
                 session.sendSessionEvent({
                     type: 'message',
-                    message: 'OpenCode prompt failed. Check logs for details.'
+                    message: failureMessage
                 });
-                messageBuffer.addMessage('OpenCode prompt failed', 'status');
+                messageBuffer.addMessage(failureMessage, 'status');
             } finally {
                 session.onThinkingChange(false);
                 await this.permissionHandler?.cancelAll('Prompt finished');

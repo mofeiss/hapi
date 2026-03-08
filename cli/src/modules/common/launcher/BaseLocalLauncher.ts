@@ -2,6 +2,7 @@ import { logger } from '@/ui/logger'
 import { Future } from '@/utils/future'
 import { getLocalLaunchExitReason } from '@/agent/localLaunchPolicy'
 import type { LocalLaunchExitReason, StartedBy } from '@/agent/localLaunchPolicy'
+import { formatSessionFailureMessage } from '@/utils/sessionFailure'
 
 type QueueLike = {
     size(): number
@@ -23,6 +24,7 @@ export type LocalLauncherControl = {
 export type LocalLauncherOptions = {
     label: string
     failureLabel: string
+    logPath?: string
     queue: QueueLike
     rpcHandlerManager: RpcHandlerManagerLike
     startedBy?: StartedBy
@@ -55,6 +57,7 @@ export class BaseLocalLauncher {
         const {
             label,
             failureLabel,
+            logPath,
             queue,
             rpcHandlerManager,
             startedBy,
@@ -121,7 +124,12 @@ export class BaseLocalLauncher {
                 } catch (error) {
                     logger.debug(`[${label}]: launch error`, error)
                     const message = error instanceof Error ? error.message : String(error)
-                    const failureMessage = `${failureLabel}: ${message}`
+                    const failureMessage = formatSessionFailureMessage({
+                        headline: failureLabel,
+                        error,
+                        fallbackReason: message,
+                        logPath
+                    })
                     sendFailureMessage(failureMessage)
                     const failureExitReason = this.exitReason ?? getLocalLaunchExitReason({
                         startedBy,

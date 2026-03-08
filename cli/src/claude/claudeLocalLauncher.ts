@@ -26,6 +26,7 @@ export async function claudeLocalLauncher(session: Session): Promise<'switch' | 
     const launcher = new BaseLocalLauncher({
         label: 'local',
         failureLabel: 'Local Claude process failed',
+        logPath: session.logPath,
         queue: session.queue,
         rpcHandlerManager: session.client.rpcHandlerManager,
         startedBy: session.startedBy,

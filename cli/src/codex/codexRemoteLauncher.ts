@@ -20,6 +20,7 @@ import { registerAppServerPermissionHandlers } from './utils/appServerPermission
 import { buildThreadStartParams, buildTurnStartParams } from './utils/appServerConfig';
 import { PartialCodexAssistantStreamTracker } from './utils/partialAssistantStream';
 import { parseSpecialCommand } from '@/parsers/specialCommands';
+import { formatSessionFailureMessage } from '@/utils/sessionFailure';
 import {
     RemoteLauncherBase,
     type RemoteLauncherDisplayContext,
@@ -755,8 +756,14 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                         logger.debug('[Codex] Marked session as not created after abort for proper resume');
                     }
                 } else {
-                    messageBuffer.addMessage('Process exited unexpectedly', 'status');
-                    session.sendSessionEvent({ type: 'message', message: 'Process exited unexpectedly' });
+                    const failureMessage = formatSessionFailureMessage({
+                        headline: 'Codex process exited unexpectedly.',
+                        error,
+                        fallbackReason: 'Unknown Codex runtime error',
+                        logPath: session.logPath
+                    });
+                    messageBuffer.addMessage(failureMessage, 'status');
+                    session.sendSessionEvent({ type: 'message', message: failureMessage });
                     if (useAppServer) {
                         this.currentTurnId = null;
                         this.currentThreadId = null;

@@ -30,6 +30,7 @@ export function getEnvironmentInfo(): Record<string, any> {
         DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING: process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING,
         NODE_ENV: process.env.NODE_ENV,
         DEBUG: process.env.DEBUG,
+        PATH: process.env.PATH,
         workingDirectory: process.cwd(),
         processArgv: process.argv,
         happyDir: configuration?.happyHomeDir,
@@ -43,6 +44,9 @@ export function getEnvironmentInfo(): Record<string, any> {
         home: process.env.HOME,
         shell: process.env.SHELL,
         terminal: process.env.TERM,
+        xdgConfigHome: process.env.XDG_CONFIG_HOME,
+        claudeConfigDir: process.env.CLAUDE_CONFIG_DIR,
+        hapiClaudePath: process.env.HAPI_CLAUDE_PATH,
     };
 }
 
