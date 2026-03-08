@@ -28,6 +28,7 @@ import { buildMachineMetadata } from '@/agent/sessionFactory';
 import { resolveUserPath } from '@/utils/userPath';
 import { fetchCodexModelCatalog } from '@/codex/utils/modelCatalog';
 import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
+import { createCleanRunnerEnvironment, getRunnerEnvironmentContamination } from './runnerLaunchEnv';
 
 const FALLBACK_CODEX_MODELS: AgentModel[] = [
   {
@@ -791,9 +792,16 @@ export async function startRunner(): Promise<void> {
         // 3. Next it will start a new runner with the latest version with runner-sync :D
         // Done!
         try {
+          const contamination = getRunnerEnvironmentContamination(process.env);
+          if (contamination.length > 0) {
+            logger.debug('[RUNNER RUN] Detected contaminated environment before self-restart, sanitizing new runner process', {
+              contamination
+            });
+          }
           spawnHappyCLI(['runner', 'start'], {
             detached: true,
-            stdio: 'ignore'
+            stdio: 'ignore',
+            env: createCleanRunnerEnvironment(process.env)
           });
         } catch (error) {
           logger.debug('[RUNNER RUN] Failed to spawn new runner, this is quite likely to happen during integration tests as we are cleaning out dist/ directory', error);

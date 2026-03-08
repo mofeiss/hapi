@@ -10,6 +10,11 @@ import { getLatestRunnerLog } from '@/ui/logger'
 import { spawnHappyCLI } from '@/utils/spawnHappyCLI'
 import { runDoctorCommand } from '@/ui/doctor'
 import { initializeToken } from '@/ui/tokenInit'
+import {
+    createCleanRunnerEnvironment,
+    getRunnerEnvironmentContamination,
+    shouldRelaunchRunnerWithCleanEnv
+} from '@/runner/runnerLaunchEnv'
 import type { CommandDefinition } from './types'
 
 export const runnerCommand: CommandDefinition = {
@@ -51,10 +56,15 @@ export const runnerCommand: CommandDefinition = {
         }
 
         if (runnerSubcommand === 'start') {
+            const contamination = getRunnerEnvironmentContamination()
+            if (contamination.length > 0) {
+                console.log(`Detected contaminated runner startup environment (${contamination.join(', ')}), starting runner with a clean service environment`)
+            }
+
             const child = spawnHappyCLI(['runner', 'start-sync'], {
                 detached: true,
                 stdio: 'ignore',
-                env: process.env
+                env: createCleanRunnerEnvironment(process.env)
             })
             child.unref()
 
@@ -77,6 +87,19 @@ export const runnerCommand: CommandDefinition = {
         }
 
         if (runnerSubcommand === 'start-sync') {
+            if (shouldRelaunchRunnerWithCleanEnv(process.env)) {
+                const contamination = getRunnerEnvironmentContamination(process.env)
+                console.log(`Detected contaminated runner service environment (${contamination.join(', ')}), relaunching runner with a clean service environment`)
+
+                const child = spawnHappyCLI(['runner', 'start-sync'], {
+                    detached: true,
+                    stdio: 'ignore',
+                    env: createCleanRunnerEnvironment(process.env)
+                })
+                child.unref()
+                process.exit(0)
+            }
+
             await initializeToken()
             await startRunner()
             process.exit(0)

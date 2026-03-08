@@ -8,6 +8,7 @@ import { isRunnerRunningCurrentlyInstalledHappyVersion } from '@/runner/controlC
 import { authAndSetupMachineIfNeeded } from '@/ui/auth'
 import { logger } from '@/ui/logger'
 import { initializeToken } from '@/ui/tokenInit'
+import { createCleanRunnerEnvironment, getRunnerEnvironmentContamination } from '@/runner/runnerLaunchEnv'
 import { spawnHappyCLI } from '@/utils/spawnHappyCLI'
 import { maybeAutoStartServer } from '@/utils/autoStartServer'
 import { withBunRuntimeEnv } from '@/utils/bunRuntime'
@@ -129,11 +130,15 @@ ${chalk.bold.cyan('Claude Code Options (from `claude --help`):')}
 
         if (!(await isRunnerRunningCurrentlyInstalledHappyVersion())) {
             logger.debug('Starting hapi background service...')
+            const contamination = getRunnerEnvironmentContamination(process.env)
+            if (contamination.length > 0) {
+                logger.debug(`[START] Detected contaminated runner auto-start environment: ${contamination.join(', ')}. Launching clean runner service process.`);
+            }
 
             const runnerProcess = spawnHappyCLI(['runner', 'start-sync'], {
                 detached: true,
                 stdio: 'ignore',
-                env: process.env
+                env: createCleanRunnerEnvironment(process.env)
             })
             runnerProcess.unref()
 
