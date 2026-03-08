@@ -663,10 +663,8 @@ export function SessionList(props: {
               <button
                 type="button"
                 onClick={() => toggleGroup(group.host, isCollapsed)}
-                className={`sticky top-0 z-10 flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[var(--app-secondary-bg)] ${
-                  isFirstGroup
-                    ? "rounded-t-md bg-[var(--app-secondary-bg)]"
-                    : "border-b border-[var(--app-divider)] bg-[var(--app-bg)]"
+                className={`sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-bg)] px-3 py-2 text-left ${
+                  isFirstGroup ? "rounded-t-md" : ""
                 }`}
               >
                 <svg
@@ -701,7 +699,7 @@ export function SessionList(props: {
                 </div>
               </button>
               {!isCollapsed ? (
-                <div className="flex flex-col divide-y divide-[var(--app-divider)] border-x border-b border-[var(--app-secondary-bg)]">
+                <div className="flex flex-col divide-y divide-[var(--app-divider)] border-x border-b border-[var(--app-subtle-bg)]">
                   {group.sessions.map((s) => (
                     <SessionItem
                       key={s.id}
