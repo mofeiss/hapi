@@ -3,6 +3,11 @@ import { useTranslation, type Locale } from '@/lib/use-translation'
 import { useAppGoBack } from '@/hooks/useAppGoBack'
 import { getElevenLabsSupportedLanguages, getLanguageDisplayName, type Language } from '@/lib/languages'
 import { getFontScaleOptions, useFontScale, type FontScale } from '@/hooks/useFontScale'
+import {
+    keyboardShortcutDefinitions,
+    useKeyboardShortcutSettings,
+    type KeyboardShortcutId,
+} from '@/hooks/useKeyboardShortcuts'
 import { PROTOCOL_VERSION } from '@hapi/protocol'
 
 const locales: { value: Locale; nativeLabel: string }[] = [
@@ -65,6 +70,46 @@ function ChevronDownIcon(props: { className?: string }) {
     )
 }
 
+function ShortcutCombo(props: { keys: ReadonlyArray<string> }) {
+    return (
+        <div className="inline-flex items-center gap-1 text-[11px] text-[var(--app-hint)]">
+            {props.keys.map((key, index) => (
+                <div key={`${key}-${index}`} className="inline-flex items-center gap-1">
+                    {index > 0 ? <span className="text-[var(--app-hint)] opacity-70">+</span> : null}
+                    <kbd className="min-w-[28px] rounded-md border border-[var(--app-border)] bg-[var(--app-secondary-bg)] px-2 py-1 text-center font-mono text-[11px] text-[var(--app-fg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                        {key}
+                    </kbd>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function ShortcutSwitch(props: {
+    checked: boolean
+    label: string
+    onToggle: () => void
+}) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={props.checked}
+            aria-label={props.label}
+            onClick={props.onToggle}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-button)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--app-bg)] ${
+                props.checked ? 'bg-[var(--app-button)]' : 'bg-[var(--app-secondary-bg)]'
+            }`}
+        >
+            <span
+                className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                    props.checked ? 'translate-x-[22px]' : 'translate-x-0.5'
+                }`}
+            />
+        </button>
+    )
+}
+
 export function SettingsPanel({ onClose }: { onClose?: () => void }) {
     const { t, locale, setLocale } = useTranslation()
     const goBack = useAppGoBack()
@@ -76,6 +121,7 @@ export function SettingsPanel({ onClose }: { onClose?: () => void }) {
     const fontContainerRef = useRef<HTMLDivElement>(null)
     const voiceContainerRef = useRef<HTMLDivElement>(null)
     const { fontScale, setFontScale } = useFontScale()
+    const { shortcutSettings, setShortcutEnabled } = useKeyboardShortcutSettings()
 
     // Voice language state - read from localStorage
     const [voiceLanguage, setVoiceLanguage] = useState<string | null>(() => {
@@ -105,6 +151,10 @@ export function SettingsPanel({ onClose }: { onClose?: () => void }) {
             localStorage.setItem('hapi-voice-lang', language.code)
         }
         setIsVoiceOpen(false)
+    }
+
+    const handleShortcutToggle = (shortcutId: KeyboardShortcutId) => {
+        setShortcutEnabled(shortcutId, !shortcutSettings[shortcutId])
     }
 
     // Close dropdown when clicking outside
@@ -268,6 +318,41 @@ export function SettingsPanel({ onClose }: { onClose?: () => void }) {
                                 </div>
                             )}
                         </div>
+                    </div>
+
+                    {/* Keyboard shortcuts section */}
+                    <div className="border-b border-[var(--app-divider)]">
+                        <div className="px-3 py-2 text-xs font-semibold text-[var(--app-hint)] uppercase tracking-wide">
+                            {t('settings.shortcuts.title')}
+                        </div>
+                        {keyboardShortcutDefinitions.map((shortcut, index) => (
+                            <div
+                                key={shortcut.id}
+                                className={`px-3 py-3 ${index > 0 ? 'border-t border-[var(--app-divider)]' : ''}`}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-[var(--app-fg)]">{t(shortcut.titleKey)}</div>
+                                        <div className="mt-1 text-sm leading-5 text-[var(--app-hint)]">
+                                            {t(shortcut.detailKey)}
+                                        </div>
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            {shortcut.combos.map((combo, comboIndex) => (
+                                                <ShortcutCombo
+                                                    key={`${shortcut.id}-${comboIndex}`}
+                                                    keys={combo}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <ShortcutSwitch
+                                        checked={shortcutSettings[shortcut.id]}
+                                        label={t(shortcut.titleKey)}
+                                        onToggle={() => handleShortcutToggle(shortcut.id)}
+                                    />
+                                </div>
+                            </div>
+                        ))}
                     </div>
 
                     {/* Voice Assistant section */}

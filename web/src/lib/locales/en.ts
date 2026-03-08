@@ -364,6 +364,16 @@ export default {
   "settings.language.label": "Language",
   "settings.display.title": "Display",
   "settings.display.fontSize": "Font Size",
+  "settings.shortcuts.title": "Keyboard Shortcuts",
+  "settings.shortcuts.toggleSettings.title": "Toggle Settings",
+  "settings.shortcuts.toggleSettings.detail":
+    "Open or close the Settings panel on any platform.",
+  "settings.shortcuts.adjustFontScale.title": "Adjust Font Size",
+  "settings.shortcuts.adjustFontScale.detail":
+    "Increase or decrease app text size by 10% on any platform.",
+  "settings.shortcuts.toggleSidebar.title": "Sidebar / Session List",
+  "settings.shortcuts.toggleSidebar.detail":
+    "Desktop: collapse or expand the sidebar. Mobile: switch between the current session and the session list.",
   "settings.voice.title": "Voice Assistant",
   "settings.voice.language": "Voice Language",
   "settings.voice.autoDetect": "Auto-detect",

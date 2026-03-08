@@ -22,6 +22,37 @@ vi.mock('@/hooks/useFontScale', () => ({
     ],
 }))
 
+vi.mock('@/hooks/useKeyboardShortcuts', () => ({
+    useKeyboardShortcutSettings: () => ({
+        shortcutSettings: {
+            toggleSettings: true,
+            adjustFontScale: true,
+            toggleSidebar: false,
+        },
+        setShortcutEnabled: vi.fn(),
+    }),
+    keyboardShortcutDefinitions: [
+        {
+            id: 'toggleSettings',
+            titleKey: 'settings.shortcuts.toggleSettings.title',
+            detailKey: 'settings.shortcuts.toggleSettings.detail',
+            combos: [['Cmd/Ctrl', ',']],
+        },
+        {
+            id: 'adjustFontScale',
+            titleKey: 'settings.shortcuts.adjustFontScale.title',
+            detailKey: 'settings.shortcuts.adjustFontScale.detail',
+            combos: [['Cmd/Ctrl', '='], ['Cmd/Ctrl', '-']],
+        },
+        {
+            id: 'toggleSidebar',
+            titleKey: 'settings.shortcuts.toggleSidebar.title',
+            detailKey: 'settings.shortcuts.toggleSidebar.detail',
+            combos: [['Cmd/Ctrl', 'Shift', 'D']],
+        },
+    ],
+}))
+
 // Mock languages
 vi.mock('@/lib/languages', () => ({
     getElevenLabsSupportedLanguages: () => [
@@ -88,6 +119,14 @@ describe('SettingsPage', () => {
         expect(link).toHaveAttribute('href', 'https://hapi.run')
         expect(link).toHaveAttribute('target', '_blank')
         expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    })
+
+    it('renders the keyboard shortcuts section with switches', () => {
+        renderWithProviders(<SettingsPage />)
+        expect(screen.getAllByText('Keyboard Shortcuts').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByRole('switch', { name: 'Toggle Settings' }).at(-1)).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getAllByRole('switch', { name: 'Sidebar / Session List' }).at(-1)).toHaveAttribute('aria-checked', 'false')
+        expect(screen.getAllByText('Cmd/Ctrl').length).toBeGreaterThanOrEqual(1)
     })
 
     it('uses correct i18n keys for About section', () => {

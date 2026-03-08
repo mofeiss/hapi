@@ -28,6 +28,7 @@ import { useAppGoBack } from "@/hooks/useAppGoBack";
 import { isTelegramApp } from "@/hooks/useTelegram";
 import { useWidescreen } from "@/hooks/useWidescreen";
 import { useLongPress } from "@/hooks/useLongPress";
+import { useAppKeyboardShortcuts } from "@/hooks/useAppKeyboardShortcuts";
 import { useMessages } from "@/hooks/queries/useMessages";
 import { useMachines } from "@/hooks/queries/useMachines";
 import { useSession } from "@/hooks/queries/useSession";
@@ -1143,6 +1144,12 @@ function SessionsPage() {
     }
   }, [batchMode, batchSelectedIds, executeBatchOperation]);
 
+  const toggleSettingsOverlay = useCallback(() => {
+    setSettingsOpen((prev) => !prev);
+    setNewSessionOpen(false);
+    setToolbarMenuOpen(false);
+  }, []);
+
   const isSubRoute =
     activeSessionId !== null &&
     pathname !== `/sessions/${activeSessionId}` &&
@@ -1462,6 +1469,42 @@ function SessionsPage() {
     });
   }, []);
 
+  const toggleMobileSessionPane = useCallback(() => {
+    if (!narrowViewport || hasOverlay || isSubRoute) {
+      return;
+    }
+
+    if (activeSessionRef.current) {
+      setSwipeForwardSessionId(activeSessionRef.current);
+      setActiveSessionId(null);
+      navigate({ to: "/sessions" });
+      return;
+    }
+
+    if (swipeForwardSessionId) {
+      openSession(swipeForwardSessionId, { preserveForward: true });
+    }
+  }, [
+    hasOverlay,
+    isSubRoute,
+    narrowViewport,
+    navigate,
+    openSession,
+    swipeForwardSessionId,
+  ]);
+
+  useAppKeyboardShortcuts({
+    isMobileViewport: narrowViewport,
+    canToggleMobileSessionPane:
+      narrowViewport &&
+      !hasOverlay &&
+      !isSubRoute &&
+      (activeSessionId !== null || Boolean(swipeForwardSessionId)),
+    onToggleSettings: toggleSettingsOverlay,
+    onToggleDesktopSidebar: toggleCollapsed,
+    onToggleMobileSessionPane: toggleMobileSessionPane,
+  });
+
   const leftPanelVisible = collapsed
     ? isSessionsIndex && !hasOverlay
       ? "flex lg:hidden"
@@ -1520,11 +1563,7 @@ function SessionsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setSettingsOpen((prev) => !prev);
-                  setNewSessionOpen(false);
-                  setToolbarMenuOpen(false);
-                }}
+                onClick={toggleSettingsOverlay}
                 className="inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
                 title={t("settings.title")}
               >
@@ -1848,11 +1887,7 @@ function SessionsPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setSettingsOpen((prev) => !prev);
-                setNewSessionOpen(false);
-                setToolbarMenuOpen(false);
-              }}
+              onClick={toggleSettingsOverlay}
               className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
               title={t("settings.title")}
             >
@@ -1883,9 +1918,7 @@ function SessionsPage() {
               isDark={isDark}
               onToggleTheme={toggleTheme}
               onOpenSettings={() => {
-                setSettingsOpen((prev) => !prev);
-                setNewSessionOpen(false);
-                setToolbarMenuOpen(false);
+                toggleSettingsOverlay();
               }}
               onOpenNewSession={() => {
                 setNewSessionOpen((prev) => !prev);
