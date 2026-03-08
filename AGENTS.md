@@ -244,6 +244,8 @@ Package: `cli/package.json` -> `@ofeiss/hapi` (fork of `@twsxtd/hapi`)
   - `npm login` 完成后，必须再次执行 `npm whoami`
   - 只有二次校验结果是 `ofeiss`，后续 `npm publish` 才能继续
   - 若二次校验仍不是 `ofeiss`，只输出失败提示，不要 `exit 1`，也不要关闭用户当前 shell
+- 最终给用户的命令里，禁止出现 `cli/npm/...-<ver>.tgz` 这类 `<ver>` 占位符；zsh 会把 `<` 当输入重定向
+- 必须直接替换成真实版本号，或先定义 `VERSION="0.15.18"` 这类安全变量再引用
 - 不允许只口头提醒“先执行 `npm whoami`”；必须把 guard 写进最终给用户的命令块
 
 ### 架构说明
@@ -298,6 +300,7 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
 6. 发布（先平台包，后主包）：
    最终给用户的发布命令必须是一个完整代码块，形如：
    ```bash
+   VERSION="0.15.18"
    NPM_USER="$(npm whoami 2>/dev/null || true)"
    if [ "$NPM_USER" != "ofeiss" ]; then
      echo "未登录或登录身份不正确。按 ENTER 执行 npm login，完成后会自动继续推送流程。"
@@ -307,14 +310,15 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
    fi
 
    if [ "$NPM_USER" = "ofeiss" ]; then
-     npm publish cli/npm/darwin-arm64/ofeiss-hapi-darwin-arm64-<ver>.tgz --access public --otp=
-     npm publish cli/npm/linux-x64/ofeiss-hapi-linux-x64-<ver>.tgz --access public --otp=
-     npm publish cli/npm/win32-x64/ofeiss-hapi-win32-x64-<ver>.tgz --access public --otp=
-     npm publish cli/npm/main/ofeiss-hapi-<ver>.tgz --access public --otp=
+     npm publish "cli/npm/darwin-arm64/ofeiss-hapi-darwin-arm64-${VERSION}.tgz" --access public --otp=
+     npm publish "cli/npm/linux-x64/ofeiss-hapi-linux-x64-${VERSION}.tgz" --access public --otp=
+     npm publish "cli/npm/win32-x64/ofeiss-hapi-win32-x64-${VERSION}.tgz" --access public --otp=
+     npm publish "cli/npm/main/ofeiss-hapi-${VERSION}.tgz" --access public --otp=
    else
      echo "npm 登录后身份仍不是 ofeiss，已停止推送。当前身份: ${NPM_USER:-<empty>}"
    fi
    ```
+   这里的 `VERSION` 必须替换成当前真实版本号；不要输出 `<ver>` 占位符。
    Leave `--otp=` empty -> triggers browser-based auth -> macOS biometric verification.
    示例输出也要一并给出，至少覆盖以下两种场景：
    场景 1：当前未登录或身份不对，按 ENTER 后执行 `npm login`，登录成功后继续推送：
@@ -353,3 +357,4 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
 - 优先使用 `npm login` 建立可发布的登录态；不要依赖不明来源或过期的 `~/.npmrc` `_authToken`。
 - 给用户的整段可复制发布命令里，不要使用 `exit`；交互式 shell 中会直接退出终端会话。统一使用 `if ... else ... fi`，身份不对时只提示，不执行后续 `npm publish`。
 - 给用户的整段可复制发布命令里，身份不对时要用 `read` 暂停，用户按 ENTER 后自动执行 `npm login`，登录结束后再次校验身份，再决定是否继续推包。
+- 不要在可复制执行的 shell 命令里使用 `<ver>` 这类尖括号占位符；zsh/bash 会把它解析成重定向。必须用真实版本号，或先定义 `VERSION="..."` 再拼接文件名。
