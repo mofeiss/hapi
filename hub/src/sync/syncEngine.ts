@@ -26,6 +26,7 @@ import {
     type RpcUploadFileResponse
 } from './rpcGateway'
 import { SessionCache } from './sessionCache'
+import { configuration } from '../configuration'
 
 export type { Session, SyncEvent } from '@hapi/protocol/types'
 export type { Machine } from './machineCache'
@@ -324,18 +325,20 @@ export class SyncEngine {
         resumeSessionId?: string
     ): Promise<{ type: 'success'; sessionId: string } | { type: 'error'; message: string }> {
         const startedAt = Date.now()
-        console.log('[Hub][Spawn] Request', {
-            machineId,
-            directory,
-            agent,
-            model: model ?? null,
-            reasoningEffort: reasoningEffort ?? null,
-            permissionMode: permissionMode ?? null,
-            basePermissionMode: basePermissionMode ?? null,
-            sessionType: sessionType ?? null,
-            worktreeName: worktreeName ?? null,
-            resumeSessionId: resumeSessionId ?? null
-        })
+        if (configuration.diagnosticLogging) {
+            console.log('[Hub][Spawn] Request', {
+                machineId,
+                directory,
+                agent,
+                model: model ?? null,
+                reasoningEffort: reasoningEffort ?? null,
+                permissionMode: permissionMode ?? null,
+                basePermissionMode: basePermissionMode ?? null,
+                sessionType: sessionType ?? null,
+                worktreeName: worktreeName ?? null,
+                resumeSessionId: resumeSessionId ?? null
+            })
+        }
 
         const result = await this.rpcGateway.spawnSession(
             machineId,
@@ -350,13 +353,15 @@ export class SyncEngine {
             resumeSessionId
         )
 
-        console.log('[Hub][Spawn] Result', {
-            machineId,
-            directory,
-            agent,
-            result,
-            durationMs: Date.now() - startedAt
-        })
+        if (configuration.diagnosticLogging) {
+            console.log('[Hub][Spawn] Result', {
+                machineId,
+                directory,
+                agent,
+                result,
+                durationMs: Date.now() - startedAt
+            })
+        }
 
         return result
     }
@@ -456,19 +461,23 @@ export class SyncEngine {
         while (Date.now() - start < timeoutMs) {
             const session = this.getSession(sessionId)
             if (session?.active) {
-                console.log('[Hub][Spawn] Session became active', {
-                    sessionId,
-                    durationMs: Date.now() - start,
-                    controlledByUser: session.agentState?.controlledByUser ?? null
-                })
+                if (configuration.diagnosticLogging) {
+                    console.log('[Hub][Spawn] Session became active', {
+                        sessionId,
+                        durationMs: Date.now() - start,
+                        controlledByUser: session.agentState?.controlledByUser ?? null
+                    })
+                }
                 return true
             }
             await new Promise((resolve) => setTimeout(resolve, 250))
         }
-        console.log('[Hub][Spawn] Session activation timeout', {
-            sessionId,
-            timeoutMs
-        })
+        if (configuration.diagnosticLogging) {
+            console.log('[Hub][Spawn] Session activation timeout', {
+                sessionId,
+                timeoutMs
+            })
+        }
         return false
     }
 

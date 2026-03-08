@@ -77,6 +77,7 @@ See `src/configuration.ts` for all options.
 - `HAPI_HOME` - Config/data directory (default: ~/.hapi).
 - `HAPI_EXPERIMENTAL` - Enable experimental features (true/1/yes).
 - `HAPI_CLAUDE_PATH` - Path to a specific `claude` executable.
+- `HAPI_DIAGNOSTIC_LOGGING` - Enable verbose diagnostic logs for session spawn/runtime failures (true/1/yes). Can also be set in `~/.hapi/settings.json`; env wins.
 - `HAPI_HTTP_MCP_URL` - Default MCP target for `hapi mcp`.
 
 ### Runner

@@ -12,6 +12,7 @@ export interface Settings {
     HAPI_LISTEN_HOST?: string
     HAPI_LISTEN_PORT?: number | string
     HAPI_PUBLIC_URL?: string
+    HAPI_DIAGNOSTIC_LOGGING?: boolean | string
     CORS_ORIGINS?: string[] | string
     TELEGRAM_BOT_TOKEN?: string
     TELEGRAM_NOTIFICATION?: boolean | string
@@ -32,6 +33,7 @@ export interface Settings {
     listenHost?: string
     listenPort?: number | string
     publicUrl?: string
+    diagnosticLogging?: boolean | string
     corsOrigins?: string[] | string
     apiUrl?: string
     // Legacy voice correction keys (read-only compatibility)

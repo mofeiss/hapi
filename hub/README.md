@@ -37,6 +37,7 @@ See `src/configuration.ts` for all options.
 - `HAPI_LISTEN_HOST` - HTTP bind address (default: 127.0.0.1).
 - `HAPI_LISTEN_PORT` - HTTP port (default: 3006).
 - `CORS_ORIGINS` - Comma-separated origins, or `*`.
+- `HAPI_DIAGNOSTIC_LOGGING` - Enable verbose hub spawn/activation diagnostics (true/1/yes). Can also be set in `~/.hapi/settings.json`; env wins.
 - `HAPI_HOME` - Data directory (default: ~/.hapi).
 - `DB_PATH` - SQLite database path (default: HAPI_HOME/hapi.db).
 - `TELEGRAM_NOTIFICATION` - Enable/disable Telegram notifications (default: true).

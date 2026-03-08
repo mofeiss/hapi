@@ -36,6 +36,7 @@ export interface ConfigSources {
     listenHost: ConfigSource
     listenPort: ConfigSource
     publicUrl: ConfigSource
+    diagnosticLogging: ConfigSource
     corsOrigins: ConfigSource
     cliApiToken: 'env' | 'file' | 'generated'
 }
@@ -77,6 +78,9 @@ class Configuration {
     /** Public URL for external access (e.g., Telegram Mini App) */
     public readonly publicUrl: string
 
+    /** Enable verbose diagnostic logging for spawn/error troubleshooting */
+    public readonly diagnosticLogging: boolean
+
     /** Allowed CORS origins for Mini App + Socket.IO (comma-separated env override) */
     public readonly corsOrigins: string[]
 
@@ -101,6 +105,7 @@ class Configuration {
         this.listenHost = serverSettings.listenHost
         this.listenPort = serverSettings.listenPort
         this.publicUrl = serverSettings.publicUrl
+        this.diagnosticLogging = serverSettings.diagnosticLogging
         this.corsOrigins = serverSettings.corsOrigins
 
         // CLI API token - will be set by _setCliApiToken() before create() returns

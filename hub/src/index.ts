@@ -140,6 +140,7 @@ async function main() {
     console.log(`[Hub] HAPI_LISTEN_HOST: ${config.listenHost} (${formatSource(config.sources.listenHost)})`)
     console.log(`[Hub] HAPI_LISTEN_PORT: ${config.listenPort} (${formatSource(config.sources.listenPort)})`)
     console.log(`[Hub] HAPI_PUBLIC_URL: ${config.publicUrl} (${formatSource(config.sources.publicUrl)})`)
+    console.log(`[Hub] HAPI_DIAGNOSTIC_LOGGING: ${config.diagnosticLogging ? 'enabled' : 'disabled'} (${formatSource(config.sources.diagnosticLogging)})`)
 
     if (!config.telegramEnabled) {
         console.log('[Hub] Telegram: disabled (no TELEGRAM_BOT_TOKEN)')

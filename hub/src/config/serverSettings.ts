@@ -16,6 +16,7 @@ export interface ServerSettings {
     listenHost: string
     listenPort: number
     publicUrl: string
+    diagnosticLogging: boolean
     corsOrigins: string[]
 }
 
@@ -27,6 +28,7 @@ export interface ServerSettingsResult {
         listenHost: 'env' | 'file' | 'default'
         listenPort: 'env' | 'file' | 'default'
         publicUrl: 'env' | 'file' | 'default'
+        diagnosticLogging: 'env' | 'file' | 'default'
         corsOrigins: 'env' | 'file' | 'default'
     }
     savedToFile: boolean
@@ -129,6 +131,7 @@ export async function loadServerSettings(dataDir: string): Promise<ServerSetting
         listenHost: 'default',
         listenPort: 'default',
         publicUrl: 'default',
+        diagnosticLogging: 'default',
         corsOrigins: 'default',
     }
     // telegramBotToken: env > file (unified/legacy names) > null
@@ -288,6 +291,37 @@ export async function loadServerSettings(dataDir: string): Promise<ServerSetting
         }
     }
 
+    // diagnosticLogging: env > file (unified/legacy names) > false
+    let diagnosticLogging = false
+    const envDiagnosticLogging = normalizeBoolean(process.env.HAPI_DIAGNOSTIC_LOGGING)
+    if (envDiagnosticLogging !== null) {
+        diagnosticLogging = envDiagnosticLogging
+        sources.diagnosticLogging = 'env'
+        if (settings.HAPI_DIAGNOSTIC_LOGGING === undefined) {
+            settings.HAPI_DIAGNOSTIC_LOGGING = diagnosticLogging
+            needsSave = true
+        }
+        if (settings.diagnosticLogging !== undefined) {
+            delete settings.diagnosticLogging
+            needsSave = true
+        }
+    } else {
+        const fileDiagnosticLoggingRaw = settings.HAPI_DIAGNOSTIC_LOGGING ?? settings.diagnosticLogging
+        const fileDiagnosticLogging = normalizeBoolean(fileDiagnosticLoggingRaw)
+        if (fileDiagnosticLogging !== null) {
+            diagnosticLogging = fileDiagnosticLogging
+            sources.diagnosticLogging = 'file'
+            if (
+                settings.HAPI_DIAGNOSTIC_LOGGING !== fileDiagnosticLogging
+                || settings.diagnosticLogging !== undefined
+            ) {
+                settings.HAPI_DIAGNOSTIC_LOGGING = fileDiagnosticLogging
+                delete settings.diagnosticLogging
+                needsSave = true
+            }
+        }
+    }
+
     // corsOrigins: env > file (unified/legacy names) > derived from publicUrl
     let corsOrigins: string[]
     if (process.env.CORS_ORIGINS) {
@@ -331,6 +365,7 @@ export async function loadServerSettings(dataDir: string): Promise<ServerSetting
             listenHost,
             listenPort,
             publicUrl,
+            diagnosticLogging,
             corsOrigins,
         },
         sources,

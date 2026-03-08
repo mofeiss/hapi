@@ -27,6 +27,7 @@ import { join } from 'path';
 import { buildMachineMetadata } from '@/agent/sessionFactory';
 import { resolveUserPath } from '@/utils/userPath';
 import { fetchCodexModelCatalog } from '@/codex/utils/modelCatalog';
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 
 const FALLBACK_CODEX_MODELS: AgentModel[] = [
   {
@@ -459,16 +460,21 @@ export async function startRunner(): Promise<void> {
           CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR,
           XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME
         };
-        logger.debug('[RUNNER RUN] Child spawn context', {
-          agent,
-          requestedDirectory,
-          spawnDirectory,
-          sessionType,
-          worktreePath: worktreeInfo?.worktreePath ?? null,
-          args,
-          envSummary
-        });
+        if (isDiagnosticLoggingEnabled()) {
+          logger.debug('[RUNNER RUN] Child spawn context', {
+            agent,
+            requestedDirectory,
+            spawnDirectory,
+            sessionType,
+            worktreePath: worktreeInfo?.worktreePath ?? null,
+            args,
+            envSummary
+          });
+        }
         const logChildOutputTails = (reason: string) => {
+          if (!isDiagnosticLoggingEnabled()) {
+            return;
+          }
           const stdoutTrimmed = stdoutTail.trim();
           const trimmed = stderrTail.trim();
           if (stdoutTrimmed) {
@@ -573,14 +579,16 @@ export async function startRunner(): Promise<void> {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.debug('[RUNNER RUN] Failed to spawn session:', error);
-        logger.debug('[RUNNER RUN] Spawn failure context', {
-          agent,
-          requestedDirectory,
-          spawnDirectory,
-          sessionType,
-          worktreePath: worktreeInfo?.worktreePath ?? null,
-          errorMessage
-        });
+        if (isDiagnosticLoggingEnabled()) {
+          logger.debug('[RUNNER RUN] Spawn failure context', {
+            agent,
+            requestedDirectory,
+            spawnDirectory,
+            sessionType,
+            worktreePath: worktreeInfo?.worktreePath ?? null,
+            errorMessage
+          });
+        }
         await maybeCleanupWorktree('exception');
         return {
           type: 'error',

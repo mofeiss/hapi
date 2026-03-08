@@ -20,9 +20,11 @@ interface Settings {
   CLI_API_TOKEN?: string
   // API URL for server connections (priority: env HAPI_API_URL > this > default)
   HAPI_API_URL?: string
+  HAPI_DIAGNOSTIC_LOGGING?: boolean | string
   // Legacy keys (read-only compatibility)
   cliApiToken?: string
   apiUrl?: string
+  diagnosticLogging?: boolean | string
   // Legacy field name (for migration, read-only)
   serverUrl?: string
 }

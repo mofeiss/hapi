@@ -29,6 +29,7 @@ import { stripNewlinesForWindowsShellArg } from '@/utils/shellEscape'
 import type { Writable } from 'node:stream'
 import { logger } from '@/ui/logger'
 import { appendMcpConfigArg } from '../utils/mcpConfig'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 const MAX_STDERR_TAIL_CHARS = 4000
 const MAX_USER_VISIBLE_STDERR_CHARS = 500
@@ -442,12 +443,14 @@ export function query(config: {
                 if (stderrSummary) {
                     messageParts.push(`stderr: ${stderrSummary}`)
                 }
-                logger.debug('[Claude SDK] Claude process terminated by signal', {
-                    signal,
-                    stderrTail,
-                    command: spawnCommand,
-                    args: spawnArgs
-                })
+                if (isDiagnosticLoggingEnabled()) {
+                    logger.debug('[Claude SDK] Claude process terminated by signal', {
+                        signal,
+                        stderrTail,
+                        command: spawnCommand,
+                        args: spawnArgs
+                    })
+                }
                 query.setError(createClaudeProcessError(messageParts.join(' '), {
                     command: spawnCommand,
                     args: spawnArgs,
@@ -463,12 +466,14 @@ export function query(config: {
                 if (stderrSummary) {
                     messageParts.push(`stderr: ${stderrSummary}`)
                 }
-                logger.debug('[Claude SDK] Claude process exited with non-zero code', {
-                    exitCode: code,
-                    stderrTail,
-                    command: spawnCommand,
-                    args: spawnArgs
-                })
+                if (isDiagnosticLoggingEnabled()) {
+                    logger.debug('[Claude SDK] Claude process exited with non-zero code', {
+                        exitCode: code,
+                        stderrTail,
+                        command: spawnCommand,
+                        args: spawnArgs
+                    })
+                }
                 query.setError(createClaudeProcessError(messageParts.join(' '), {
                     command: spawnCommand,
                     args: spawnArgs,
@@ -479,10 +484,12 @@ export function query(config: {
                 return
             }
 
-            logger.debug('[Claude SDK] Claude process exited successfully', {
-                command: spawnCommand,
-                args: spawnArgs
-            })
+            if (isDiagnosticLoggingEnabled()) {
+                logger.debug('[Claude SDK] Claude process exited successfully', {
+                    command: spawnCommand,
+                    args: spawnArgs
+                })
+            }
             if (code === 0) {
                 resolve()
             }
@@ -503,13 +510,15 @@ export function query(config: {
             if (stderrSummary) {
                 messageParts.push(`stderr: ${stderrSummary}`)
             }
-            logger.debug('[Claude SDK] Failed to spawn Claude process', {
-                error,
-                stderrTail,
-                command: spawnCommand,
-                args: spawnArgs,
-                commandDisplay
-            })
+            if (isDiagnosticLoggingEnabled()) {
+                logger.debug('[Claude SDK] Failed to spawn Claude process', {
+                    error,
+                    stderrTail,
+                    command: spawnCommand,
+                    args: spawnArgs,
+                    commandDisplay
+                })
+            }
             query.setError(createClaudeProcessError(messageParts.join(' '), {
                 command: spawnCommand,
                 args: spawnArgs,
