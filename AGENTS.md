@@ -232,11 +232,19 @@ Package: `cli/package.json` -> `@ofeiss/hapi` (fork of `@twsxtd/hapi`)
 - 当用户提到“构建 npm / 打 npm 包 / 准备 npm 发布”，默认进入本节完整流程
 - 默认交付物：
   - 已完成构建与 `npm pack` 产物
-  - 给出可直接执行的 `npm publish ...tgz --access public --otp=` 命令
+  - 给出一个可直接复制执行的发布命令块；命令块最前面必须内置 `npm whoami` 身份校验
 - 默认不执行 `npm publish`，除非用户明确要求“现在就发布”
 - 流程开始前必须先检查并更新版本号（至少 patch +1）：
   - npm 不允许重复发布同一版本
   - 不升版本会导致发布失败
+- 输出发布命令时，不要把身份校验和 `npm publish` 分开描述；要把它们放进同一个代码块里
+- 该代码块必须满足：
+  - 第一段先执行 `npm whoami`
+  - 若结果不是 `ofeiss`，先提示用户按 ENTER，再自动执行 `npm login`
+  - `npm login` 完成后，必须再次执行 `npm whoami`
+  - 只有二次校验结果是 `ofeiss`，后续 `npm publish` 才能继续
+  - 若二次校验仍不是 `ofeiss`，只输出失败提示，不要 `exit 1`，也不要关闭用户当前 shell
+- 不允许只口头提醒“先执行 `npm whoami`”；必须把 guard 写进最终给用户的命令块
 
 ### 架构说明
 
@@ -266,35 +274,72 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
 2. 构建 web 前端并嵌入：
    ```bash
    bun run build:web
-   cd hub && bun run generate:embedded-web-assets && cd ..
+   (cd hub && bun run generate:embedded-web-assets)
    ```
 
 3. 构建包含 web 资源的二进制（用 `allinone`，不是 `build:exe`）：
    ```bash
-   cd cli && bun run build:exe:allinone:all
+   (cd cli && bun run build:exe:allinone:all)
    ```
 
 4. 准备 npm 包：
    ```bash
-   bun run prepare-npm-packages
+   (cd cli && bun run prepare-npm-packages)
    ```
 
 5. 打包 tarball：
    ```bash
-   cd cli/npm/darwin-arm64 && npm pack
-   cd cli/npm/linux-x64 && npm pack
-   cd cli/npm/win32-x64 && npm pack
-   cd cli/npm/main && npm pack
+   (cd cli/npm/darwin-arm64 && npm pack)
+   (cd cli/npm/linux-x64 && npm pack)
+   (cd cli/npm/win32-x64 && npm pack)
+   (cd cli/npm/main && npm pack)
    ```
 
 6. 发布（先平台包，后主包）：
+   最终给用户的发布命令必须是一个完整代码块，形如：
    ```bash
-   npm publish cli/npm/darwin-arm64/ofeiss-hapi-darwin-arm64-<ver>.tgz --access public --otp=
-   npm publish cli/npm/linux-x64/ofeiss-hapi-linux-x64-<ver>.tgz --access public --otp=
-   npm publish cli/npm/win32-x64/ofeiss-hapi-win32-x64-<ver>.tgz --access public --otp=
-   npm publish cli/npm/main/ofeiss-hapi-<ver>.tgz --access public --otp=
+   NPM_USER="$(npm whoami 2>/dev/null || true)"
+   if [ "$NPM_USER" != "ofeiss" ]; then
+     echo "未登录或登录身份不正确。按 ENTER 执行 npm login，完成后会自动继续推送流程。"
+     read -r _
+     npm login
+     NPM_USER="$(npm whoami 2>/dev/null || true)"
+   fi
+
+   if [ "$NPM_USER" = "ofeiss" ]; then
+     npm publish cli/npm/darwin-arm64/ofeiss-hapi-darwin-arm64-<ver>.tgz --access public --otp=
+     npm publish cli/npm/linux-x64/ofeiss-hapi-linux-x64-<ver>.tgz --access public --otp=
+     npm publish cli/npm/win32-x64/ofeiss-hapi-win32-x64-<ver>.tgz --access public --otp=
+     npm publish cli/npm/main/ofeiss-hapi-<ver>.tgz --access public --otp=
+   else
+     echo "npm 登录后身份仍不是 ofeiss，已停止推送。当前身份: ${NPM_USER:-<empty>}"
+   fi
    ```
    Leave `--otp=` empty -> triggers browser-based auth -> macOS biometric verification.
+   示例输出也要一并给出，至少覆盖以下两种场景：
+   场景 1：当前未登录或身份不对，按 ENTER 后执行 `npm login`，登录成功后继续推送：
+   ```text
+   未登录或登录身份不正确。按 ENTER 执行 npm login，完成后会自动继续推送流程。
+   <用户按下 ENTER>
+   npm notice Log in on https://registry.npmjs.org/
+   Logged in as ofeiss on https://registry.npmjs.org/.
+   npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
+   + @ofeiss/hapi-darwin-arm64@<ver>
+   npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
+   + @ofeiss/hapi-linux-x64@<ver>
+   npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
+   + @ofeiss/hapi-win32-x64@<ver>
+   npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
+   + @ofeiss/hapi@<ver>
+   ```
+   场景 2：执行 `npm login` 后身份仍不是 `ofeiss`，停止推送：
+   ```text
+   未登录或登录身份不正确。按 ENTER 执行 npm login，完成后会自动继续推送流程。
+   <用户按下 ENTER>
+   npm notice Log in on https://registry.npmjs.org/
+   Logged in as someone-else on https://registry.npmjs.org/.
+   npm 登录后身份仍不是 ofeiss，已停止推送。当前身份: someone-else
+   ```
 
 ### Known Issues
 
@@ -304,3 +349,7 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
 - `npm publish` runs a `prepack` script (`prepare-npm-packages`) that takes several seconds, causing OTP codes to expire if passed via `--otp=<code>`. Solution: use `npm pack` first, then publish the `.tgz`.
 - The "Access token expired or revoked" notice appears even with valid tokens - it's a non-blocking npm notice, not the actual error.
 - Do NOT use granular access tokens for publishing scoped packages - they consistently return E404/E403.
+- `npm whoami` 必须在给出发布命令前立即执行一次；不是 `ofeiss` 就直接停止。对 `@ofeiss/*` scope，认证失效或权限不对时，npm 经常把真实权限问题伪装成 `E404 Not Found`。
+- 优先使用 `npm login` 建立可发布的登录态；不要依赖不明来源或过期的 `~/.npmrc` `_authToken`。
+- 给用户的整段可复制发布命令里，不要使用 `exit`；交互式 shell 中会直接退出终端会话。统一使用 `if ... else ... fi`，身份不对时只提示，不执行后续 `npm publish`。
+- 给用户的整段可复制发布命令里，身份不对时要用 `read` 暂停，用户按 ENTER 后自动执行 `npm login`，登录结束后再次校验身份，再决定是否继续推包。
