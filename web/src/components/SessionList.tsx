@@ -634,9 +634,9 @@ export function SessionList(props: {
   }, [groups]);
 
   return (
-    <div className="mx-auto w-full max-w-content flex flex-col">
+    <div className="mx-auto flex w-full max-w-content flex-col px-3">
       {renderHeader ? (
-        <div className="flex items-center justify-between px-3 py-1">
+        <div className="flex items-center justify-between py-1">
           <div className="text-xs text-[var(--app-hint)]">
             {t("sessions.count", {
               n: props.sessions.length,
@@ -655,14 +655,19 @@ export function SessionList(props: {
       ) : null}
 
       <div className="flex flex-col">
-        {groups.map((group) => {
+        {groups.map((group, index) => {
           const isCollapsed = isGroupCollapsed(group);
+          const isFirstGroup = index === 0;
           return (
             <div key={group.host}>
               <button
                 type="button"
                 onClick={() => toggleGroup(group.host, isCollapsed)}
-                className="sticky top-0 z-10 flex w-full items-center gap-2 px-3 py-2 text-left bg-[var(--app-bg)] border-b border-[var(--app-divider)] transition-colors hover:bg-[var(--app-secondary-bg)]"
+                className={`sticky top-0 z-10 flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[var(--app-secondary-bg)] ${
+                  isFirstGroup
+                    ? "rounded-t-md bg-[var(--app-secondary-bg)]"
+                    : "border-b border-[var(--app-divider)] bg-[var(--app-bg)]"
+                }`}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -696,7 +701,7 @@ export function SessionList(props: {
                 </div>
               </button>
               {!isCollapsed ? (
-                <div className="flex flex-col divide-y divide-[var(--app-divider)] border-b border-[var(--app-divider)]">
+                <div className="flex flex-col divide-y divide-[var(--app-divider)] border-x border-b border-[var(--app-secondary-bg)]">
                   {group.sessions.map((s) => (
                     <SessionItem
                       key={s.id}

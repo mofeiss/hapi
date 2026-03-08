@@ -406,6 +406,26 @@ function SearchIcon(props: { className?: string }) {
   );
 }
 
+function SearchClearIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
 function matchesSessionSearch(
   session: SessionSummary,
   search: string,
@@ -626,6 +646,7 @@ function SessionsPage() {
   }, []);
 
   const normalizedSessionSearch = sessionSearch.trim().toLowerCase();
+  const hasSessionSearch = sessionSearch.length > 0;
 
   const displaySessions = useMemo(() => {
     return sessions.filter((session) => {
@@ -1600,7 +1621,22 @@ function SessionsPage() {
           {showSidebarSearchRow ? (
             <div className="mx-auto w-full max-w-content px-3 pb-2">
               <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
-                <SearchIcon className="h-[18px] w-[18px] shrink-0 text-[var(--app-hint)]" />
+                <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+                  {hasSessionSearch ? (
+                    <button
+                      type="button"
+                      onClick={() => setSessionSearch("")}
+                      onMouseDown={(event) => event.preventDefault()}
+                      className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                      title={t("sessions.search.clear")}
+                      aria-label={t("sessions.search.clear")}
+                    >
+                      <SearchClearIcon className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    <SearchIcon className="h-[15px] w-[15px] text-[var(--app-hint)]" />
+                  )}
+                </div>
                 <input
                   value={sessionSearch}
                   onChange={(event) => setSessionSearch(event.target.value)}
