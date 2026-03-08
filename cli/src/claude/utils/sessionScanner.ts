@@ -16,6 +16,26 @@ const INTERNAL_CLAUDE_EVENT_TYPES = new Set([
     'queue-operation',
 ]);
 
+function shouldSkipInternalClaudeEvent(message: unknown): boolean {
+    if (!message || typeof message !== 'object') return false
+
+    const record = message as { type?: unknown; subtype?: unknown }
+
+    if (typeof record.type === 'string' && INTERNAL_CLAUDE_EVENT_TYPES.has(record.type)) {
+        return true
+    }
+
+    // Claude writes stop-hook summaries into the local transcript after TUI turns.
+    // They are internal hook telemetry, not user-visible conversation messages, and
+    // the remote SDK path does not emit them. Skip them here to keep local/remote
+    // session sync behavior aligned.
+    if (record.type === 'system' && record.subtype === 'stop_hook_summary') {
+        return true
+    }
+
+    return false
+}
+
 export async function createSessionScanner(opts: {
     sessionId: string | null;
     workingDirectory: string;
@@ -196,10 +216,10 @@ async function readSessionLog(filePath: string, startLine: number): Promise<{ ev
                 continue;
             }
             let message = JSON.parse(l);
-            
+
             // Silently skip known internal Claude Code events
             // These are state/tracking events, not conversation messages
-            if (message.type && INTERNAL_CLAUDE_EVENT_TYPES.has(message.type)) {
+            if (shouldSkipInternalClaudeEvent(message)) {
                 continue;
             }
             

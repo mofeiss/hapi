@@ -3,21 +3,37 @@ import { createSessionScanner } from './sessionScanner'
 import { RawJSONLines } from '../types'
 import { mkdir, writeFile, appendFile, rm, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { tmpdir, homedir } from 'node:os'
+import { tmpdir } from 'node:os'
 import { existsSync } from 'node:fs'
+import { getProjectPath } from './path'
 
 describe('sessionScanner', () => {
   let testDir: string
   let projectDir: string
   let collectedMessages: RawJSONLines[]
   let scanner: Awaited<ReturnType<typeof createSessionScanner>> | null = null
+
+  async function waitForAssertion(assertion: () => void, timeoutMs: number = 3000): Promise<void> {
+    const startedAt = Date.now()
+
+    while (true) {
+      try {
+        assertion()
+        return
+      } catch (error) {
+        if (Date.now() - startedAt >= timeoutMs) {
+          throw error
+        }
+        await new Promise(resolve => setTimeout(resolve, 25))
+      }
+    }
+  }
   
   beforeEach(async () => {
     testDir = join(tmpdir(), `scanner-test-${Date.now()}`)
     await mkdir(testDir, { recursive: true })
-    
-    const projectName = testDir.replace(/\//g, '-')
-    projectDir = join(homedir(), '.claude', 'projects', projectName)
+
+    projectDir = getProjectPath(testDir)
     await mkdir(projectDir, { recursive: true })
     
     collectedMessages = []
@@ -63,9 +79,7 @@ describe('sessionScanner', () => {
     // Write first line
     await writeFile(sessionFile1, lines1[0] + '\n')
     scanner.onNewSession(sessionId1)
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    expect(collectedMessages).toHaveLength(1)
+    await waitForAssertion(() => expect(collectedMessages).toHaveLength(1))
     expect(collectedMessages[0].type).toBe('user')
     if (collectedMessages[0].type === 'user') {
       const content = collectedMessages[0].message.content
@@ -76,9 +90,7 @@ describe('sessionScanner', () => {
     // Write second line with delay
     await new Promise(resolve => setTimeout(resolve, 50))
     await appendFile(sessionFile1, lines1[1] + '\n')
-    await new Promise(resolve => setTimeout(resolve, 200))
-    
-    expect(collectedMessages).toHaveLength(2)
+    await waitForAssertion(() => expect(collectedMessages).toHaveLength(2))
     expect(collectedMessages[1].type).toBe('assistant')
     if (collectedMessages[1].type === 'assistant' && collectedMessages[1].message) {
       expect((collectedMessages[1].message.content as any)[0].text).toBe('lol')
@@ -102,17 +114,16 @@ describe('sessionScanner', () => {
     await writeFile(sessionFile2, initialContent)
     
     scanner.onNewSession(sessionId2)
-    await new Promise(resolve => setTimeout(resolve, 100))
     
     // Should have added only 1 new message (summary) 
     // The historical user + assistant messages (lines 1-2) are deduplicated because they have same UUIDs
-    expect(collectedMessages).toHaveLength(phase1Count + 1)
+    await waitForAssertion(() => expect(collectedMessages).toHaveLength(phase1Count + 1))
     expect(collectedMessages[phase1Count].type).toBe('summary')
     
     // Write new messages (user asks for ls tool) - this is line 3
     await new Promise(resolve => setTimeout(resolve, 50))
     await appendFile(sessionFile2, lines2[3] + '\n')
-    await new Promise(resolve => setTimeout(resolve, 200))
+    await waitForAssertion(() => expect(collectedMessages.filter(m => m.type === 'user').length).toBeGreaterThanOrEqual(2))
     
     // Find the user message we just added
     const userMessages = collectedMessages.filter(m => m.type === 'user')
@@ -127,7 +138,10 @@ describe('sessionScanner', () => {
       await new Promise(resolve => setTimeout(resolve, 50))
       await appendFile(sessionFile2, lines2[i] + '\n')
     }
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await waitForAssertion(() => {
+      const lastMessage = collectedMessages[collectedMessages.length - 1]
+      expect(lastMessage?.type).toBe('assistant')
+    })
     
     // Final count check
     const finalMessages = collectedMessages.slice(phase1Count)
@@ -143,5 +157,79 @@ describe('sessionScanner', () => {
       expect(content).toContain('0-say-lol-session.jsonl')
       expect(content).toContain('readme.md')
     }
+  })
+
+  it('should skip stop_hook_summary system events from local transcript sync', async () => {
+    scanner = await createSessionScanner({
+      sessionId: null,
+      workingDirectory: testDir,
+      onMessage: (msg) => collectedMessages.push(msg)
+    })
+
+    const sessionId = 'skip-stop-hook-summary-session'
+    const sessionFile = join(projectDir, `${sessionId}.jsonl`)
+
+    const baseFields = {
+      parentUuid: null,
+      isSidechain: false,
+      userType: 'external',
+      cwd: testDir,
+      sessionId,
+      version: '2.1.71',
+      gitBranch: 'main'
+    }
+
+    const userLine = JSON.stringify({
+      ...baseFields,
+      type: 'user',
+      uuid: 'user-msg-1',
+      timestamp: '2026-03-08T12:19:33.248Z',
+      message: {
+        role: 'user',
+        content: '你好'
+      }
+    })
+
+    const assistantLine = JSON.stringify({
+      ...baseFields,
+      parentUuid: 'user-msg-1',
+      type: 'assistant',
+      uuid: 'assistant-msg-1',
+      timestamp: '2026-03-08T12:19:43.389Z',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: '你好！有什么我可以帮你的吗？' }]
+      }
+    })
+
+    const stopHookSummaryLine = JSON.stringify({
+      ...baseFields,
+      parentUuid: 'assistant-msg-1',
+      type: 'system',
+      subtype: 'stop_hook_summary',
+      uuid: 'system-msg-1',
+      timestamp: '2026-03-08T12:19:43.552Z',
+      hookCount: 3,
+      hookInfos: [],
+      hookErrors: [],
+      preventedContinuation: false,
+      hasOutput: true,
+      level: 'suggestion'
+    })
+
+    await writeFile(sessionFile, `${userLine}\n`)
+    scanner.onNewSession(sessionId)
+    await waitForAssertion(() => expect(collectedMessages).toHaveLength(1))
+    expect(collectedMessages[0]?.type).toBe('user')
+
+    await appendFile(sessionFile, `${assistantLine}\n`)
+    await waitForAssertion(() => expect(collectedMessages).toHaveLength(2))
+    expect(collectedMessages[1]?.type).toBe('assistant')
+
+    await appendFile(sessionFile, `${stopHookSummaryLine}\n`)
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    expect(collectedMessages).toHaveLength(2)
+    expect(collectedMessages.some((message) => message.type === 'system')).toBe(false)
   })
 })
