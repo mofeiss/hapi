@@ -6,10 +6,35 @@ import { groupToolBlocksIntoSteps } from '@/chat/reducerSteps'
 import { collectTitleChanges, collectToolIdsFromMessages, ensureToolBlock, getPermissions } from '@/chat/reducerTools'
 import { reduceTimeline } from '@/chat/reducerTimeline'
 import { normalizeToolNameAsSkillRead } from '@/lib/skillRead'
+import { isObject } from '@hapi/protocol'
 
 // Calculate context size from usage data
 function calculateContextSize(usage: UsageData): number {
     return (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0) + usage.input_tokens
+}
+
+function normalizeSubAgentPrompt(text: string): string {
+    return text.replace(/\r\n/g, '\n').trim()
+}
+
+function collectSubAgentPrompts(messages: NormalizedMessage[]): Set<string> {
+    const prompts = new Set<string>()
+
+    for (const message of messages) {
+        if (message.role !== 'agent') continue
+        for (const content of message.content) {
+            if (content.type !== 'tool-call') continue
+            if (content.name !== 'Task' && content.name !== 'Agent') continue
+            if (!isObject(content.input) || typeof content.input.prompt !== 'string') continue
+
+            const prompt = normalizeSubAgentPrompt(content.input.prompt)
+            if (prompt.length > 0) {
+                prompts.add(prompt)
+            }
+        }
+    }
+
+    return prompts
 }
 
 export type LatestUsage = {
@@ -28,6 +53,7 @@ export function reduceChatBlocks(
     const permissionsById = getPermissions(agentState)
     const toolIdsInMessages = collectToolIdsFromMessages(normalized)
     const titleChangesByToolUseId = collectTitleChanges(normalized)
+    const subAgentPrompts = collectSubAgentPrompts(normalized)
 
     const traced = traceMessages(normalized)
     const groups = new Map<string, TracedMessage[]>()
@@ -50,6 +76,7 @@ export function reduceChatBlocks(
         permissionsById,
         groups,
         consumedGroupIds,
+        subAgentPrompts,
         titleChangesByToolUseId,
         emittedTitleChangeToolUseIds,
         seenSkillReadContents

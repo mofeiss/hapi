@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest'
 import type { TracedMessage } from '@/chat/tracer'
 import { reduceTimeline } from '@/chat/reducerTimeline'
 
-function createReducerContext(groups: Map<string, TracedMessage[]>) {
+function createReducerContext(groups: Map<string, TracedMessage[]>, subAgentPrompts: string[] = []) {
     return {
         permissionsById: new Map(),
         groups,
         consumedGroupIds: new Set<string>(),
+        subAgentPrompts: new Set(subAgentPrompts),
         titleChangesByToolUseId: new Map<string, string>(),
         emittedTitleChangeToolUseIds: new Set<string>(),
         seenSkillReadContents: new Set<string>()
@@ -22,7 +23,7 @@ function createTaskMessage(taskMessageId: string, prompt: string): TracedMessage
         isSidechain: false,
         content: [{
             type: 'tool-call',
-            id: 'task-tool-1',
+            id: `task-tool-${taskMessageId}`,
             name: 'Task',
             input: { prompt },
             description: null,
@@ -32,27 +33,8 @@ function createTaskMessage(taskMessageId: string, prompt: string): TracedMessage
     }
 }
 
-function createAgentMessage(agentMessageId: string, prompt: string, topic = '并发查询'): TracedMessage {
-    return {
-        id: agentMessageId,
-        localId: null,
-        createdAt: 1,
-        role: 'agent',
-        isSidechain: false,
-        content: [{
-            type: 'tool-call',
-            id: 'agent-tool-1',
-            name: 'Agent',
-            input: { topic, prompt },
-            description: null,
-            uuid: 'agent-root-uuid',
-            parentUUID: null
-        }]
-    }
-}
-
 describe('reduceTimeline sidechain prompt handling', () => {
-    it('does not render sidechain prompt as duplicated user bubble inside Task details', () => {
+    it('does not render prompt echo as duplicated assistant text inside Task details', () => {
         const prompt = '分析日志并总结错误原因'
         const taskMessageId = 'task-msg-1'
         const root = [createTaskMessage(taskMessageId, prompt)]
@@ -73,11 +55,19 @@ describe('reduceTimeline sidechain prompt handling', () => {
                 role: 'agent',
                 isSidechain: true,
                 content: [{ type: 'text', text: prompt, uuid: 'reply-uuid', parentUUID: 'sidechain-uuid' }]
+            },
+            {
+                id: 'sidechain-agent-real-output',
+                localId: null,
+                createdAt: 4,
+                role: 'agent',
+                isSidechain: true,
+                content: [{ type: 'text', text: '共发现 2 个错误', uuid: 'reply-uuid-2', parentUUID: 'reply-uuid' }]
             }
         ]
 
-        const groups = new Map<string, TracedMessage[]>([['task-tool-1', sidechain]])
-        const result = reduceTimeline(root, createReducerContext(groups))
+        const groups = new Map<string, TracedMessage[]>([[taskMessageId, sidechain]])
+        const result = reduceTimeline(root, createReducerContext(groups, [prompt]))
 
         expect(result.blocks).toHaveLength(1)
         expect(result.blocks[0]?.kind).toBe('tool-call')
@@ -85,6 +75,8 @@ describe('reduceTimeline sidechain prompt handling', () => {
 
         expect(result.blocks[0].children).toHaveLength(1)
         expect(result.blocks[0].children[0]?.kind).toBe('agent-text')
+        if (result.blocks[0].children[0]?.kind !== 'agent-text') return
+        expect(result.blocks[0].children[0].text).toBe('共发现 2 个错误')
     })
 
     it('still keeps real user messages in Task sidechain details', () => {
@@ -110,8 +102,8 @@ describe('reduceTimeline sidechain prompt handling', () => {
             }
         ]
 
-        const groups = new Map<string, TracedMessage[]>([['task-tool-1', sidechain]])
-        const result = reduceTimeline(root, createReducerContext(groups))
+        const groups = new Map<string, TracedMessage[]>([[taskMessageId, sidechain]])
+        const result = reduceTimeline(root, createReducerContext(groups, ['执行任务']))
         const taskBlock = result.blocks[0]
 
         if (!taskBlock || taskBlock.kind !== 'tool-call') {
@@ -122,49 +114,106 @@ describe('reduceTimeline sidechain prompt handling', () => {
         expect(taskBlock.children[0]?.kind).toBe('user-text')
     })
 
-    it('attaches Agent sidechain prompt replies under the Agent tool instead of root timeline', () => {
-        const prompt = '请查询并告诉我现在的准确时间（包括日期和时区信息）。用中文回答。'
-        const agentMessageId = 'agent-msg-1'
-        const root = [createAgentMessage(agentMessageId, prompt, '查询当前时间')]
+    it('drops prompt echoes for parallel sidechains without affecting Task cards', () => {
+        const prompts = [
+            '请查询并告诉我现在的准确时间（包括日期和时区信息）。用中文回答。',
+            '请查询北京明天（2026年3月11日）的天气预报，包括温度、天气状况、风力等信息。用中文回答。',
+            '请查询成都明天（2026年3月11日）的天气预报，包括温度、天气状况、风力等信息。用中文回答。'
+        ]
 
-        const sidechain: TracedMessage[] = [
+        const root = prompts.map((prompt, index) => createTaskMessage(`task-msg-parallel-${index}`, prompt))
+        const groups = new Map<string, TracedMessage[]>(
+            prompts.map((prompt, index) => [
+                `task-msg-parallel-${index}`,
+                [
+                    {
+                        id: `sidechain-root-${index}`,
+                        localId: null,
+                        createdAt: index + 2,
+                        role: 'agent',
+                        isSidechain: true,
+                        content: [{ type: 'sidechain', uuid: `sidechain-uuid-${index}`, prompt }]
+                    },
+                    {
+                        id: `sidechain-echo-${index}`,
+                        localId: null,
+                        createdAt: index + 3,
+                        role: 'agent',
+                        isSidechain: true,
+                        content: [{ type: 'text', text: prompt, uuid: `reply-uuid-${index}`, parentUUID: `sidechain-uuid-${index}` }]
+                    }
+                ]
+            ])
+        )
+
+        const result = reduceTimeline(root, createReducerContext(groups, prompts))
+
+        expect(result.blocks).toHaveLength(3)
+        for (const block of result.blocks) {
+            expect(block.kind).toBe('tool-call')
+            if (block.kind !== 'tool-call') continue
+            expect(block.children).toHaveLength(0)
+        }
+    })
+
+    it('drops sidechain prompt echoes for Agent tool results rendered in the main thread', () => {
+        const prompt = '执行 pwd 命令，把结果告诉我。'
+        const root: TracedMessage[] = [
             {
-                id: 'agent-sidechain-root',
+                id: 'agent-tool-msg',
+                localId: null,
+                createdAt: 1,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-call',
+                    id: 'agent-tool-1',
+                    name: 'Agent',
+                    input: {
+                        prompt,
+                        description: '子 agent 执行 pwd',
+                        mode: 'auto'
+                    },
+                    description: '子 agent 执行 pwd',
+                    uuid: 'agent-tool-uuid',
+                    parentUUID: null
+                }]
+            },
+            {
+                id: 'sidechain-prompt-echo',
                 localId: null,
                 createdAt: 2,
                 role: 'agent',
                 isSidechain: true,
-                content: [{ type: 'sidechain', uuid: 'agent-sidechain-uuid', prompt }]
+                content: [{
+                    type: 'text',
+                    text: prompt,
+                    uuid: 'sidechain-prompt-uuid',
+                    parentUUID: null
+                }]
             },
             {
-                id: 'agent-sidechain-user-text',
+                id: 'agent-final-answer',
                 localId: null,
                 createdAt: 3,
-                role: 'user',
-                isSidechain: true,
-                content: { type: 'text', text: prompt }
-            },
-            {
-                id: 'agent-sidechain-result',
-                localId: null,
-                createdAt: 4,
                 role: 'agent',
-                isSidechain: true,
-                content: [{ type: 'text', text: '现在是 2026 年 3 月 10 日 00:31:44 CST。', uuid: 'agent-reply-uuid', parentUUID: 'agent-sidechain-uuid' }]
+                isSidechain: false,
+                content: [{
+                    type: 'text',
+                    text: '子 agent 执行 `pwd` 的结果是：\n\n```\n/Users/ofeiss/project/hapi\n```',
+                    uuid: 'agent-final-uuid',
+                    parentUUID: null
+                }]
             }
         ]
 
-        const groups = new Map<string, TracedMessage[]>([['agent-tool-1', sidechain]])
-        const result = reduceTimeline(root, createReducerContext(groups))
+        const result = reduceTimeline(root, createReducerContext(new Map(), [prompt]))
 
-        expect(result.blocks).toHaveLength(1)
+        expect(result.blocks).toHaveLength(2)
         expect(result.blocks[0]?.kind).toBe('tool-call')
-        if (result.blocks[0]?.kind !== 'tool-call') return
-
-        expect(result.blocks[0].tool.name).toBe('Agent')
-        expect(result.blocks[0].children).toHaveLength(2)
-        expect(result.blocks[0].children[0]?.kind).toBe('user-text')
-        expect(result.blocks[0].children[1]?.kind).toBe('agent-text')
+        expect(result.blocks[1]?.kind).toBe('agent-text')
+        if (result.blocks[1]?.kind !== 'agent-text') return
+        expect(result.blocks[1].text).toContain('/Users/ofeiss/project/hapi')
     })
 
     it('merges duplicate CodexBash payloads and preserves richer output', () => {

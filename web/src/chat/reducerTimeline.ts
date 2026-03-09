@@ -6,20 +6,29 @@ import { parseMessageAsEvent } from '@/chat/reducerEvents'
 import { ensureToolBlock, extractTitleFromChangeTitleInput, isChangeTitleToolName, type PermissionEntry } from '@/chat/reducerTools'
 import { extractSkillReadContent, normalizeToolNameAsSkillRead, parseSkillPayloadText } from '@/lib/skillRead'
 
+function normalizePromptEchoText(text: string): string {
+    return text.replace(/\r\n/g, '\n').trim()
+}
+
 export function reduceTimeline(
     messages: TracedMessage[],
     context: {
         permissionsById: Map<string, PermissionEntry>
         groups: Map<string, TracedMessage[]>
         consumedGroupIds: Set<string>
+        subAgentPrompts: Set<string>
         titleChangesByToolUseId: Map<string, string>
         emittedTitleChangeToolUseIds: Set<string>
         seenSkillReadContents: Set<string>
-    }
+    },
+    activeTaskPrompt: string | null = null
 ): { blocks: ChatBlock[]; toolBlocksById: Map<string, ToolCallBlock>; hasReadyEvent: boolean } {
     const blocks: ChatBlock[] = []
     const toolBlocksById = new Map<string, ToolCallBlock>()
     let hasReadyEvent = false
+    const normalizedActiveTaskPrompt = activeTaskPrompt ? normalizePromptEchoText(activeTaskPrompt) : ''
+    let sidechainRootUuid: string | null = null
+    let skippedSidechainPromptEcho = false
     const mergeToolResultPayload = (previousResult: unknown, incomingResult: unknown): unknown => {
         if (isObject(previousResult) && isObject(incomingResult)) {
             return { ...previousResult, ...incomingResult }
@@ -149,6 +158,26 @@ export function reduceTimeline(
                         continue
                     }
 
+                    const normalizedPromptEcho = normalizePromptEchoText(c.text)
+                    if (
+                        msg.isSidechain
+                        && context.subAgentPrompts.has(normalizedPromptEcho)
+                        && (sidechainRootUuid === null || c.parentUUID === sidechainRootUuid)
+                    ) {
+                        continue
+                    }
+
+                    if (
+                        normalizedActiveTaskPrompt.length > 0
+                        && !skippedSidechainPromptEcho
+                        && sidechainRootUuid !== null
+                        && c.parentUUID === sidechainRootUuid
+                        && normalizedPromptEcho === normalizedActiveTaskPrompt
+                    ) {
+                        skippedSidechainPromptEcho = true
+                        continue
+                    }
+
                     const normalizedText = c.text.trim()
                     if (normalizedText.length > 0 && context.seenSkillReadContents.has(normalizedText)) {
                         continue
@@ -235,11 +264,14 @@ export function reduceTimeline(
                         block.tool.startedAt = msg.createdAt
                     }
 
-                    if (!context.consumedGroupIds.has(c.id)) {
-                        const sidechain = context.groups.get(c.id) ?? null
+                    if (c.name === 'Task' && !context.consumedGroupIds.has(msg.id)) {
+                        const sidechain = context.groups.get(msg.id) ?? null
                         if (sidechain && sidechain.length > 0) {
-                            context.consumedGroupIds.add(c.id)
-                            const child = reduceTimeline(sidechain, context)
+                            context.consumedGroupIds.add(msg.id)
+                            const taskPrompt = isObject(c.input) && typeof c.input.prompt === 'string'
+                                ? c.input.prompt
+                                : null
+                            const child = reduceTimeline(sidechain, context, taskPrompt)
                             hasReadyEvent = hasReadyEvent || child.hasReadyEvent
                             block.children = child.blocks
                         }
@@ -329,8 +361,9 @@ export function reduceTimeline(
                 }
 
                 if (c.type === 'sidechain') {
-                    // Sidechain prompt is already represented by the parent tool input.
-                    // Rendering it as a nested user bubble duplicates content in tool details.
+                    // Sidechain prompt is already represented by Task tool input.
+                    // Keep its root uuid so we can also suppress the first direct prompt echo.
+                    sidechainRootUuid ??= c.uuid
                     continue
                 }
             }
