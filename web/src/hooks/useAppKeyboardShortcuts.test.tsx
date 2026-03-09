@@ -42,12 +42,12 @@ describe('useAppKeyboardShortcuts', () => {
         }
     })
 
-    it('opens the new session panel on Cmd/Ctrl+Alt+N when enabled', () => {
+    it('opens the new session panel on Cmd/Ctrl+Alt+, when enabled', () => {
         const onOpenNewSession = vi.fn()
         render(<Harness onOpenNewSession={onOpenNewSession} />)
 
         const event = new KeyboardEvent('keydown', {
-            code: 'KeyN',
+            code: 'Comma',
             altKey: true,
             metaKey: true,
             bubbles: true,
@@ -71,7 +71,7 @@ describe('useAppKeyboardShortcuts', () => {
         render(<Harness onOpenNewSession={onOpenNewSession} />)
 
         const event = new KeyboardEvent('keydown', {
-            code: 'KeyN',
+            code: 'Comma',
             altKey: true,
             metaKey: true,
             bubbles: true,

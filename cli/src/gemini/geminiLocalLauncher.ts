@@ -20,7 +20,6 @@ function mapApprovalMode(mode: PermissionMode | undefined): string | undefined {
 export async function geminiLocalLauncher(
     session: GeminiSession,
     opts: {
-        model?: string;
         allowedTools?: string[];
         hookSettingsPath?: string;
     }
@@ -38,7 +37,7 @@ export async function geminiLocalLauncher(
                 path: session.path,
                 sessionId: session.sessionId,
                 abort: abortSignal,
-                model: opts.model,
+                model: session.getModel(),
                 approvalMode: mapApprovalMode(session.getPermissionMode() as PermissionMode | undefined),
                 allowedTools: opts.allowedTools,
                 hookSettingsPath: opts.hookSettingsPath

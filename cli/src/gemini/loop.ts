@@ -38,7 +38,8 @@ export async function geminiLoop(opts: GeminiLoopOptions): Promise<void> {
         mode: startingMode,
         startedBy,
         startingMode,
-        permissionMode: opts.permissionMode ?? 'default'
+        permissionMode: opts.permissionMode ?? 'default',
+        model: opts.model
     });
 
     await runLocalRemoteSession({
@@ -46,12 +47,10 @@ export async function geminiLoop(opts: GeminiLoopOptions): Promise<void> {
         startingMode: opts.startingMode,
         logTag: 'gemini-loop',
         runLocal: (instance) => geminiLocalLauncher(instance, {
-            model: opts.model,
             allowedTools: opts.allowedTools,
             hookSettingsPath: opts.hookSettingsPath
         }),
         runRemote: (instance) => geminiRemoteLauncher(instance, {
-            model: opts.model,
             hookSettingsPath: opts.hookSettingsPath
         }),
         onSessionReady: opts.onSessionReady

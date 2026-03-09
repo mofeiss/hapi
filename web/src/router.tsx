@@ -42,12 +42,23 @@ import { useToast } from "@/lib/toast-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useTheme } from "@/hooks/useTheme";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
-import type { PermissionMode, SessionSummary } from "@/types/api";
+import type {
+  AttachmentMetadata,
+  PermissionMode,
+  SessionSummary,
+  UserMessageMeta,
+} from "@/types/api";
 import {
   fetchLatestMessages,
   seedMessageWindowFromSession,
   clearMessageWindow,
 } from "@/lib/message-window-store";
+import {
+  clearPendingSessionInitialMessage,
+  peekPendingSessionInitialMessage,
+  setPendingSessionInitialMessage,
+} from "@/lib/pending-session-initial-message-store";
+import { resolveDraftAttachmentMetadata } from "@/lib/draftAttachments";
 import {
   clearPendingSessionMode,
   setPendingSessionMode,
@@ -1171,6 +1182,12 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
   }, []);
 
+  const openSettingsOverlay = useCallback(() => {
+    setSettingsOpen(true);
+    setNewSessionOpen(false);
+    setToolbarMenuOpen(false);
+  }, []);
+
   const toggleNewSessionOverlay = useCallback(() => {
     setNewSessionOpen((prev) => !prev);
     setSettingsOpen(false);
@@ -1183,6 +1200,14 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
   }, []);
 
+  useEffect(() => {
+    const handleOpenSettingsOverlay = () => {
+      openSettingsOverlay();
+    };
+
+    window.addEventListener("hapi:open-settings-overlay", handleOpenSettingsOverlay);
+    return () => window.removeEventListener("hapi:open-settings-overlay", handleOpenSettingsOverlay);
+  }, [openSettingsOverlay]);
 
   const isSubRoute =
     activeSessionId !== null &&
@@ -1572,165 +1597,179 @@ function SessionsPage() {
       >
         <div className="flex h-full flex-col" style={leftPanelContentStyle}>
           <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-          <div className="mx-auto w-full max-w-full lg:max-w-content flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-1.5 min-w-0 shrink-0">
-              <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
-              <span className="text-sm font-semibold text-[var(--app-fg)] select-none shrink-0">
-                HAPI
-              </span>
-            </div>
-            <div className="flex items-center gap-0 shrink-0">
-              <button
-                type="button"
-                onClick={toggleCollapsed}
-                className="hidden lg:inline-flex -ml-[2px] mr-[2px] p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                title="Collapse sidebar"
-              >
-                <SidebarCollapseIcon className="h-[18px] w-[18px]" />
-              </button>
-              <div className="hidden lg:block mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
-              <QuickLanguageToggle className="inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]" />
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                title={
-                  isDark ? t("theme.switchToLight") : t("theme.switchToDark")
-                }
-              >
-                {isDark ? (
-                  <SunIcon className="h-[18px] w-[18px]" />
-                ) : (
-                  <MoonIcon className="h-[18px] w-[18px]" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={toggleSettingsOverlay}
-                className="inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                title={t("settings.title")}
-              >
-                <SettingsIcon className="h-[18px] w-[18px]" />
-              </button>
-              <button
-                type="button"
-                onClick={toggleNewSessionOverlay}
-                className="session-list-new-button inline-flex p-1 rounded-full text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                title={t("sessions.new")}
-              >
-                <NewChatIcon className="h-[18px] w-[18px]" />
-              </button>
-              <button
-                type="button"
-                onClick={handleQuickNewSession}
-                disabled={quickNewDisabled}
-                className={`hidden lg:inline-flex p-1 rounded-full transition-colors ${
-                  quickNewDisabled
-                    ? "cursor-not-allowed text-[var(--app-hint)] opacity-50"
-                    : "text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)]"
-                }`}
-                title={quickNewTitle}
-                aria-label={quickNewTitle}
-              >
-                <QuickCloneChatIcon className="h-[18px] w-[18px]" />
-              </button>
-            </div>
-          </div>
-          {showSidebarSearchRow ? (
-            <div className="mx-auto w-full max-w-full lg:max-w-content px-3 pb-2">
-              <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
-                <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
-                  {hasSessionSearch ? (
-                    <button
-                      type="button"
-                      onClick={() => setSessionSearch("")}
-                      onMouseDown={(event) => event.preventDefault()}
-                      className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                      title={t("sessions.search.clear")}
-                      aria-label={t("sessions.search.clear")}
-                    >
-                      <SearchClearIcon className="h-3.5 w-3.5" />
-                    </button>
+            <div className="mx-auto w-full max-w-full lg:max-w-content flex items-center justify-between px-3 py-2">
+              <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+                <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
+                <span className="text-sm font-semibold text-[var(--app-fg)] select-none shrink-0">
+                  HAPI
+                </span>
+              </div>
+              <div className="flex items-center gap-0 shrink-0">
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  className="hidden lg:inline-flex -ml-[2px] mr-[2px] p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                  title="Collapse sidebar"
+                >
+                  <SidebarCollapseIcon className="h-[18px] w-[18px]" />
+                </button>
+                <div className="hidden lg:block mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
+                <QuickLanguageToggle className="inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]" />
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                  title={
+                    isDark ? t("theme.switchToLight") : t("theme.switchToDark")
+                  }
+                >
+                  {isDark ? (
+                    <SunIcon className="h-[18px] w-[18px]" />
                   ) : (
-                    <SearchIcon className="h-[15px] w-[15px] text-[var(--app-hint)]" />
+                    <MoonIcon className="h-[18px] w-[18px]" />
                   )}
-                </div>
-                <input
-                  value={sessionSearch}
-                  onChange={(event) => setSessionSearch(event.target.value)}
-                  placeholder={t("sessions.search.placeholder")}
-                  aria-label={t("sessions.search.placeholder")}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-                <div className="flex shrink-0 items-center gap-0.5">
-                  {batchMode && showSidebarBatchActions ? (
-                    <>
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleSettingsOverlay}
+                  className="inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                  title={t("settings.title")}
+                >
+                  <SettingsIcon className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleNewSessionOverlay}
+                  className="session-list-new-button inline-flex p-1 rounded-full text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                  title={t("sessions.new")}
+                >
+                  <NewChatIcon className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleQuickNewSession}
+                  disabled={quickNewDisabled}
+                  className={`hidden lg:inline-flex p-1 rounded-full transition-colors ${
+                    quickNewDisabled
+                      ? "cursor-not-allowed text-[var(--app-hint)] opacity-50"
+                      : "text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)]"
+                  }`}
+                  title={quickNewTitle}
+                  aria-label={quickNewTitle}
+                >
+                  <QuickCloneChatIcon className="h-[18px] w-[18px]" />
+                </button>
+              </div>
+            </div>
+            {showSidebarSearchRow ? (
+              <div className="mx-auto w-full max-w-full lg:max-w-content px-3 pb-2">
+                <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
+                  <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+                    {hasSessionSearch ? (
                       <button
                         type="button"
-                        onClick={
-                          batchSelectedIds.size === batchFilteredIds.size &&
-                          batchFilteredIds.size > 0
-                            ? () => setBatchSelectedIds(new Set())
-                            : handleBatchSelectAll
-                        }
-                        disabled={batchPending || batchFilteredIds.size === 0}
-                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={
-                          batchSelectedIds.size === batchFilteredIds.size &&
-                          batchFilteredIds.size > 0
-                            ? t("batch.deselectAll")
-                            : t("batch.selectAll")
-                        }
+                        onClick={() => setSessionSearch("")}
+                        onMouseDown={(event) => event.preventDefault()}
+                        className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                        title={t("sessions.search.clear")}
+                        aria-label={t("sessions.search.clear")}
                       >
-                        {batchSelectedIds.size === batchFilteredIds.size &&
-                        batchFilteredIds.size > 0 ? (
-                          <BatchDeselectAllIcon className="h-[18px] w-[18px]" />
-                        ) : (
-                          <BatchSelectAllIcon className="h-[18px] w-[18px]" />
-                        )}
+                        <SearchClearIcon className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={handleBatchConfirmClick}
-                        disabled={batchSelectedIds.size === 0 || batchPending}
-                        className={`p-1 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
-                        title={t("batch.confirm.tooltip")}
-                      >
-                        <BatchCheckIcon className="h-[18px] w-[18px]" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleExitBatchMode}
-                        disabled={batchPending}
-                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={t("batch.cancel.tooltip")}
-                      >
-                        <BatchXIcon className="h-[18px] w-[18px]" />
-                      </button>
-                    </>
-                  ) : showSidebarBatchActions ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleEnterBatchMode("archive")}
-                        disabled={visibleArchivableCount === 0}
-                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={t("batch.archive.tooltip")}
-                      >
-                        <BatchArchiveIcon className="h-[18px] w-[18px]" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEnterBatchMode("delete")}
-                        disabled={visibleDeletableCount === 0}
-                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={t("batch.delete.tooltip")}
-                      >
-                        <BatchTrashIcon className="h-[18px] w-[18px]" />
-                      </button>
+                    ) : (
+                      <SearchIcon className="h-[15px] w-[15px] text-[var(--app-hint)]" />
+                    )}
+                  </div>
+                  <input
+                    value={sessionSearch}
+                    onChange={(event) => setSessionSearch(event.target.value)}
+                    placeholder={t("sessions.search.placeholder")}
+                    aria-label={t("sessions.search.placeholder")}
+                    className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    {batchMode && showSidebarBatchActions ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={
+                            batchSelectedIds.size === batchFilteredIds.size &&
+                            batchFilteredIds.size > 0
+                              ? () => setBatchSelectedIds(new Set())
+                              : handleBatchSelectAll
+                          }
+                          disabled={batchPending || batchFilteredIds.size === 0}
+                          className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                          title={
+                            batchSelectedIds.size === batchFilteredIds.size &&
+                            batchFilteredIds.size > 0
+                              ? t("batch.deselectAll")
+                              : t("batch.selectAll")
+                          }
+                        >
+                          {batchSelectedIds.size === batchFilteredIds.size &&
+                          batchFilteredIds.size > 0 ? (
+                            <BatchDeselectAllIcon className="h-[18px] w-[18px]" />
+                          ) : (
+                            <BatchSelectAllIcon className="h-[18px] w-[18px]" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleBatchConfirmClick}
+                          disabled={batchSelectedIds.size === 0 || batchPending}
+                          className={`p-1 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
+                          title={t("batch.confirm.tooltip")}
+                        >
+                          <BatchCheckIcon className="h-[18px] w-[18px]" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleExitBatchMode}
+                          disabled={batchPending}
+                          className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                          title={t("batch.cancel.tooltip")}
+                        >
+                          <BatchXIcon className="h-[18px] w-[18px]" />
+                        </button>
+                      </>
+                    ) : showSidebarBatchActions ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleEnterBatchMode("archive")}
+                          disabled={visibleArchivableCount === 0}
+                          className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                          title={t("batch.archive.tooltip")}
+                        >
+                          <BatchArchiveIcon className="h-[18px] w-[18px]" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEnterBatchMode("delete")}
+                          disabled={visibleDeletableCount === 0}
+                          className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                          title={t("batch.delete.tooltip")}
+                        >
+                          <BatchTrashIcon className="h-[18px] w-[18px]" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={toggleFilterOnline}
+                          className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                          title={
+                            filterOnlineOnly
+                              ? t("filter.showAll")
+                              : t("filter.onlineOnly")
+                          }
+                        >
+                          <OnlineFilterIcon className="h-[18px] w-[18px]" />
+                        </button>
+                      </>
+                    ) : (
                       <button
                         type="button"
                         onClick={toggleFilterOnline}
@@ -1743,60 +1782,46 @@ function SessionsPage() {
                       >
                         <OnlineFilterIcon className="h-[18px] w-[18px]" />
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={toggleFilterOnline}
-                      className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
-                      title={
-                        filterOnlineOnly
-                          ? t("filter.showAll")
-                          : t("filter.onlineOnly")
-                      }
-                    >
-                      <OnlineFilterIcon className="h-[18px] w-[18px]" />
-                    </button>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto desktop-scrollbar-left">
-          {error ? (
-            <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
-              <div className="text-sm text-red-600">{error}</div>
-            </div>
-          ) : null}
-          {!error &&
-          !isLoading &&
-          normalizedSessionSearch &&
-          displaySessions.length === 0 ? (
-            <div className="mx-auto flex w-full max-w-full justify-center px-3 py-4 text-center text-sm text-[var(--app-hint)] lg:max-w-content">
-              {t("sessions.search.noMatch")}
-            </div>
-          ) : (
-            <SessionList
-              sessions={displaySessions}
-              selectedSessionId={activeSessionId}
-              onSelect={handleSelectSession}
-              onNewSession={() => {
-                openNewSessionOverlay();
-              }}
-              onRefresh={handleRefresh}
-              isLoading={isLoading}
-              renderHeader={false}
-              api={api}
-              batchMode={batchMode}
-              batchSelectedIds={batchSelectedIds}
-              archivingSessionIds={batchArchivingIds}
-              deletingSessionIds={batchDeletingIds}
-              onBatchToggleSelect={handleBatchToggleSelect}
-            />
-          )}
-        </div>
+          <div className="flex-1 min-h-0 overflow-y-auto desktop-scrollbar-left">
+            {error ? (
+              <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
+                <div className="text-sm text-red-600">{error}</div>
+              </div>
+            ) : null}
+            {!error &&
+            !isLoading &&
+            normalizedSessionSearch &&
+            displaySessions.length === 0 ? (
+              <div className="mx-auto flex w-full max-w-full justify-center px-3 py-4 text-center text-sm text-[var(--app-hint)] lg:max-w-content">
+                {t("sessions.search.noMatch")}
+              </div>
+            ) : (
+              <SessionList
+                sessions={displaySessions}
+                selectedSessionId={activeSessionId}
+                onSelect={handleSelectSession}
+                onNewSession={() => {
+                  openNewSessionOverlay();
+                }}
+                onRefresh={handleRefresh}
+                isLoading={isLoading}
+                renderHeader={false}
+                api={api}
+                batchMode={batchMode}
+                batchSelectedIds={batchSelectedIds}
+                archivingSessionIds={batchArchivingIds}
+                deletingSessionIds={batchDeletingIds}
+                onBatchToggleSelect={handleBatchToggleSelect}
+              />
+            )}
+          </div>
         </div>
 
         {/* Batch operation confirm dialog */}
@@ -1986,7 +2011,10 @@ function SessionsPage() {
         <div
           className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${newSessionOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
-          <NewSessionPanel onClose={() => setNewSessionOpen(false)} />
+          <NewSessionPanel
+            onClose={() => setNewSessionOpen(false)}
+            onOpenSettings={openSettingsOverlay}
+          />
         </div>
       </div>
     </div>
@@ -2252,6 +2280,69 @@ function SessionView({
       },
     },
   );
+  const pendingInitialMessageRef = useRef<
+    ReturnType<typeof peekPendingSessionInitialMessage> | undefined
+  >(undefined);
+  const pendingInitialMessageSendingRef = useRef(false);
+
+  useEffect(() => {
+    pendingInitialMessageRef.current = undefined;
+    pendingInitialMessageSendingRef.current = false;
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (pendingInitialMessageRef.current !== undefined) {
+      return;
+    }
+
+    pendingInitialMessageRef.current = peekPendingSessionInitialMessage(sessionId);
+  }, [sessionId]);
+
+  useEffect(() => {
+    const pending = pendingInitialMessageRef.current;
+    if (!api || !session || !pending || pendingInitialMessageSendingRef.current) {
+      return;
+    }
+
+    if (permissionSyncPending || modeSyncInFlight) {
+      return;
+    }
+
+    if (!pending.text && (!pending.attachments || pending.attachments.length === 0)) {
+      pendingInitialMessageRef.current = null;
+      clearPendingSessionInitialMessage(session.id);
+      return;
+    }
+
+    pendingInitialMessageSendingRef.current = true;
+    void (async () => {
+      try {
+        const resolvedAttachments = await resolveDraftAttachmentMetadata(
+          api,
+          session.id,
+          pending.attachments,
+        );
+        clearPendingSessionInitialMessage(session.id);
+        pendingInitialMessageRef.current = null;
+        sendMessage(pending.text, resolvedAttachments, { meta: pending.meta });
+      } catch (error) {
+        clearPendingSessionInitialMessage(session.id);
+        pendingInitialMessageRef.current = null;
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : t("dialog.error.default");
+        addToast({
+          title: t("send.blocked.title"),
+          body: message,
+          sessionId: session.id,
+          url: `/sessions/${session.id}`,
+        });
+      } finally {
+        pendingInitialMessageSendingRef.current = false;
+      }
+    })();
+  }, [addToast, api, modeSyncInFlight, permissionSyncPending, sendMessage, session, t]);
 
   const agentType = session?.metadata?.flavor ?? "claude";
   const { getSuggestions: getSlashSuggestions } = useSlashCommands(
@@ -2416,9 +2507,8 @@ function SessionDetailRoute() {
   return isChat ? null : <Outlet />;
 }
 
-function NewSessionPanel({ onClose }: { onClose: () => void }) {
+function NewSessionPanel(props: { onClose: () => void; onOpenSettings?: () => void }) {
   const { api } = useAppContext();
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const {
@@ -2428,54 +2518,45 @@ function NewSessionPanel({ onClose }: { onClose: () => void }) {
   } = useMachines(api, true);
 
   const handleCancel = useCallback(() => {
-    onClose();
-  }, [onClose]);
+    props.onClose();
+  }, [props.onClose]);
 
   const handleSuccess = useCallback(
-    (sessionId: string) => {
+    (
+      sessionId: string,
+      options?: {
+        initialMessage?: string;
+        attachments?: AttachmentMetadata[];
+        meta?: UserMessageMeta;
+      },
+    ) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.sessions });
-      onClose();
+      if (options?.initialMessage || options?.attachments?.length) {
+        setPendingSessionInitialMessage(sessionId, {
+          text: options?.initialMessage ?? "",
+          attachments: options?.attachments,
+          meta: options?.meta,
+        });
+      }
+      props.onClose();
       navigate({
         to: "/sessions/$sessionId",
         params: { sessionId },
       });
     },
-    [navigate, queryClient, onClose],
+    [navigate, props.onClose, queryClient],
   );
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto w-full max-w-content flex items-center gap-2 border-b border-[var(--app-border)] p-3">
-          {!isTelegramApp() && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex lg:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
-            >
-              <BackIcon />
-            </button>
-          )}
-          <div className="flex-1 font-semibold">{t("newSession.title")}</div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-content">
-          {machinesError ? (
-            <div className="p-3 text-sm text-red-600">{machinesError}</div>
-          ) : null}
-
-          <NewSession
-            api={api}
-            machines={machines}
-            isLoading={machinesLoading}
-            onCancel={handleCancel}
-            onSuccess={handleSuccess}
-          />
-        </div>
-      </div>
-    </div>
+    <NewSession
+      api={api}
+      machines={machines}
+      isLoading={machinesLoading}
+      loadError={machinesError}
+      onCancel={handleCancel}
+      onSuccess={handleSuccess}
+      onOpenSettings={props.onOpenSettings}
+    />
   );
 }
 

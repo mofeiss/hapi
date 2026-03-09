@@ -16,6 +16,26 @@ import { PermissionModeSchema } from '@hapi/protocol/schemas';
 import { formatMessageWithAttachments } from '@/utils/attachmentFormatter';
 import { resolveTargetWorkingDirectory } from '@/utils/targetWorkingDirectory';
 
+function normalizeGeminiModel(value: unknown): string | undefined {
+    if (value === null || value === undefined) {
+        return undefined;
+    }
+    if (typeof value !== 'string') {
+        throw new Error('Invalid Gemini model');
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.toLowerCase() === 'auto') {
+        return undefined;
+    }
+
+    return trimmed;
+}
+
+function resolveRuntimeModel(model: string | undefined): string {
+    return resolveGeminiRuntimeConfig({ model }).model;
+}
+
 export async function runGemini(opts: {
     startedBy?: 'runner' | 'terminal';
     startingMode?: 'local' | 'remote';
@@ -55,7 +75,8 @@ export async function runGemini(opts: {
 
     const sessionWrapperRef: { current: GeminiSession | null } = { current: null };
     let currentPermissionMode: PermissionMode = opts.permissionMode ?? 'default';
-    const resolvedModel = resolveGeminiRuntimeConfig({ model: opts.model }).model;
+    let currentModel = normalizeGeminiModel(opts.model);
+    let lastPublishedModel: string | undefined = undefined;
 
     const hookServer = await startHookServer({
         onSessionHook: (sessionId, data) => {
@@ -98,14 +119,35 @@ export async function runGemini(opts: {
             return;
         }
         sessionInstance.setPermissionMode(currentPermissionMode);
-        logger.debug(`[gemini] Synced session permission mode for keepalive: ${currentPermissionMode}`);
+        sessionInstance.setModel(currentModel);
+        logger.debug(`[gemini] Synced session config for keepalive: permissionMode=${currentPermissionMode}, model=${currentModel ?? 'auto'}`);
     };
 
+    const publishRuntimeMetadata = () => {
+        const modelForMetadata = currentModel ?? 'auto';
+        if (lastPublishedModel === modelForMetadata) {
+            return;
+        }
+
+        lastPublishedModel = modelForMetadata;
+        session.updateMetadata((currentMetadata) => ({
+            ...currentMetadata,
+            model: modelForMetadata
+        }));
+    };
+
+    publishRuntimeMetadata();
+
     session.onUserMessage((message) => {
+        if (message.meta && Object.prototype.hasOwnProperty.call(message.meta, 'model')) {
+            currentModel = normalizeGeminiModel(message.meta.model);
+        }
+
+        publishRuntimeMetadata();
         const formattedText = formatMessageWithAttachments(message.content.text, message.content.attachments);
         const mode: GeminiMode = {
             permissionMode: currentPermissionMode,
-            model: resolvedModel
+            model: resolveRuntimeModel(currentModel)
         };
         messageQueue.push(formattedText, mode);
     });
@@ -122,14 +164,24 @@ export async function runGemini(opts: {
         if (!payload || typeof payload !== 'object') {
             throw new Error('Invalid session config payload');
         }
-        const config = payload as { permissionMode?: unknown };
+        const config = payload as { permissionMode?: unknown; model?: unknown };
 
         if (config.permissionMode !== undefined) {
             currentPermissionMode = resolvePermissionMode(config.permissionMode);
         }
 
+        if (config.model !== undefined) {
+            currentModel = normalizeGeminiModel(config.model);
+        }
+
+        publishRuntimeMetadata();
         syncSessionMode();
-        return { applied: { permissionMode: currentPermissionMode } };
+        return {
+            applied: {
+                permissionMode: currentPermissionMode,
+                model: currentModel ?? 'auto'
+            }
+        };
     });
 
     try {
@@ -141,7 +193,7 @@ export async function runGemini(opts: {
             session,
             api,
             permissionMode: currentPermissionMode,
-            model: resolvedModel,
+            model: currentModel,
             hookSettingsPath,
             onModeChange: createModeChangeHandler(session),
             onSessionReady: (instance) => {

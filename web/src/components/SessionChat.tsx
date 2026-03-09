@@ -35,7 +35,7 @@ import { makeClientSideId } from '@/lib/messages'
 import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/use-translation'
 import { useAgentModels } from '@/hooks/queries/useAgentModels'
-import { buildCodexModelOptions, type CodexModelOption } from '@/components/NewSession/types'
+import { buildCodexModelOptions, MODEL_OPTIONS, type CodexModelOption } from '@/components/NewSession/types'
 import { loadPreferredModel, savePreferredModel } from '@/components/NewSession/preferences'
 import {
     buildClaudeComposerModelOptions,
@@ -177,6 +177,7 @@ export function SessionChat(props: {
     )
     const isCodexSession = agentFlavor === 'codex'
     const isClaudeSession = agentFlavor === 'claude'
+    const isGeminiSession = agentFlavor === 'gemini'
     const preferredClaudeModel = useMemo(
         () => normalizeClaudeModelValue(loadPreferredModel()),
         []
@@ -198,6 +199,7 @@ export function SessionChat(props: {
     const [composerCodexModel, setComposerCodexModel] = useState<string | null>(null)
     const [composerCodexReasoningEffort, setComposerCodexReasoningEffort] = useState<CodexReasoningEffort | null>(null)
     const [composerClaudeModel, setComposerClaudeModel] = useState<string | null>(null)
+    const [composerGeminiModel, setComposerGeminiModel] = useState<string | null>(null)
 
     // Override context size after /clear (reset to 0 = 100% remaining)
     const [contextSizeOverride, setContextSizeOverride] = useState<number | null>(null)
@@ -368,6 +370,42 @@ export function SessionChat(props: {
         }
     }, [])
 
+    useEffect(() => {
+        if (!isGeminiSession) {
+            if (composerGeminiModel !== null) {
+                setComposerGeminiModel(null)
+            }
+            return
+        }
+
+        const geminiModelValues = new Set(MODEL_OPTIONS.gemini.map((entry) => entry.value))
+        const sessionModel = props.session.metadata?.model?.trim()
+        const preferredModel = (
+            (composerGeminiModel && geminiModelValues.has(composerGeminiModel) ? composerGeminiModel : null)
+            ?? (sessionModel && geminiModelValues.has(sessionModel) ? sessionModel : null)
+            ?? (preferredClaudeModel && geminiModelValues.has(preferredClaudeModel) ? preferredClaudeModel : null)
+            ?? 'auto'
+        )
+
+        if (preferredModel !== composerGeminiModel) {
+            setComposerGeminiModel(preferredModel)
+        }
+    }, [
+        isGeminiSession,
+        props.session.metadata?.model,
+        preferredClaudeModel,
+        composerGeminiModel
+    ])
+
+    const handleGeminiModelChange = useCallback((model: string) => {
+        if (!MODEL_OPTIONS.gemini.some((option) => option.value === model)) {
+            return
+        }
+
+        setComposerGeminiModel(model)
+        savePreferredModel(model)
+    }, [])
+
     const getMessageMeta = useCallback((): UserMessageMeta | undefined => {
         if (isCodexSession && composerCodexModel) {
             return {
@@ -382,13 +420,21 @@ export function SessionChat(props: {
             }
         }
 
+        if (isGeminiSession && composerGeminiModel) {
+            return {
+                model: composerGeminiModel === 'auto' ? null : composerGeminiModel
+            }
+        }
+
         return undefined
     }, [
         isCodexSession,
         composerCodexModel,
         composerCodexReasoningEffort,
         isClaudeSession,
-        composerClaudeModel
+        composerClaudeModel,
+        isGeminiSession,
+        composerGeminiModel
     ])
 
     // Register session store for voice client tools
@@ -1087,6 +1133,9 @@ export function SessionChat(props: {
                             claudeModel={composerClaudeModel}
                             claudeModelOptions={claudeComposerModelOptions}
                             onClaudeModelChange={handleClaudeModelChange}
+                            geminiModel={composerGeminiModel}
+                            geminiModelOptions={isGeminiSession ? MODEL_OPTIONS.gemini : []}
+                            onGeminiModelChange={isGeminiSession ? handleGeminiModelChange : undefined}
                             codexModel={composerCodexModel}
                             codexModelOptions={codexComposerModelOptions}
                             codexReasoningEffort={composerCodexReasoningEffort}

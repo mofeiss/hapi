@@ -166,7 +166,7 @@ export default {
   "newSession.title": "New Session",
   "newSession.empty.title": "Start a new session",
   "newSession.empty.subtitle":
-    "Keep the essential setup in the center, then start by sending the first message from the composer below.",
+    "Pick a workspace and environment, then tell HAPI what you want to do.",
   "newSession.machine": "Machine",
   "newSession.directory": "Directory",
   "newSession.placeholder": "/path/to/project",

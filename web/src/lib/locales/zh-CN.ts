@@ -157,7 +157,7 @@ export default {
   // New session form
   'newSession.title': '新会话',
   'newSession.empty.title': '开始新会话',
-  'newSession.empty.subtitle': '先把必要配置放在中间，底部直接输入第一条消息并开始。',
+  'newSession.empty.subtitle': '选好目录与环境，然后告诉 HAPI 你想开始做什么。',
   'newSession.machine': '机器',
   'newSession.directory': '目录',
   'newSession.placeholder': '/path/to/project',

@@ -66,7 +66,7 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
 
             if (
                 shortcutSettings.openNewSession
-                && event.code === 'KeyN'
+                && event.code === 'Comma'
                 && event.altKey
                 && !event.shiftKey
                 && !event.repeat

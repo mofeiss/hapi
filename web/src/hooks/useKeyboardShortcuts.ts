@@ -43,7 +43,7 @@ export const keyboardShortcutDefinitions: ReadonlyArray<KeyboardShortcutDefiniti
         id: 'openNewSession',
         titleKey: 'settings.shortcuts.openNewSession.title',
         detailKey: 'settings.shortcuts.openNewSession.detail',
-        combos: [['Cmd/Ctrl', 'Alt', 'N']],
+        combos: [['Cmd/Ctrl', 'Alt', ',']],
     },
 ]
 

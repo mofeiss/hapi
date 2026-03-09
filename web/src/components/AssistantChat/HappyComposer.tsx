@@ -48,6 +48,13 @@ function joinVoiceDraft(prefix: string, transcript: string): string {
 export function HappyComposer(props: {
     disabled?: boolean
     sendDisabled?: boolean
+    embedded?: boolean
+    placeholder?: string
+    showAttachmentButton?: boolean
+    showCopyButton?: boolean
+    allowAttachments?: boolean
+    agent?: string | null
+    agentOptions?: { value: string; label: string; icon?: React.ReactNode }[]
     permissionMode?: PermissionMode
     basePermissionMode?: PermissionMode
     modelMode?: ModelMode
@@ -60,10 +67,14 @@ export function HappyComposer(props: {
     agentFlavor?: string | null
     onPermissionModeChange?: (mode: PermissionMode) => void
     onModelModeChange?: (mode: ModelMode) => void
+    onAgentChange?: (agent: string) => void
     onPlanToggle?: () => void
     claudeModel?: string | null
     claudeModelOptions?: { value: string; label: string }[]
     onClaudeModelChange?: (model: string) => void
+    geminiModel?: string | null
+    geminiModelOptions?: { value: string; label: string }[]
+    onGeminiModelChange?: (model: string) => void
     codexModel?: string | null
     codexModelOptions?: { value: string; label: string }[]
     codexReasoningEffort?: CodexReasoningEffort | null
@@ -91,6 +102,13 @@ export function HappyComposer(props: {
     const {
         disabled = false,
         sendDisabled = false,
+        embedded = false,
+        placeholder,
+        showAttachmentButton = true,
+        showCopyButton,
+        allowAttachments = true,
+        agent = null,
+        agentOptions = [],
         permissionMode: rawPermissionMode,
         basePermissionMode: rawBasePermissionMode,
         modelMode: rawModelMode,
@@ -103,10 +121,14 @@ export function HappyComposer(props: {
         agentFlavor,
         onPermissionModeChange,
         onModelModeChange,
+        onAgentChange,
         onPlanToggle,
         claudeModel = null,
         claudeModelOptions = [],
         onClaudeModelChange,
+        geminiModel = null,
+        geminiModelOptions = [],
+        onGeminiModelChange,
         codexModel = null,
         codexModelOptions = [],
         codexReasoningEffort = null,
@@ -253,7 +275,7 @@ export function HappyComposer(props: {
     const { isStandalone, isIOS } = usePWAInstall()
     const isIOSPWA = isIOS && isStandalone
     const isVoiceFocusMode = voiceStatus !== 'disconnected'
-    const bottomPaddingClass = isIOSPWA ? 'pb-0' : 'pb-3'
+    const bottomPaddingClass = embedded || isIOSPWA ? 'pb-0' : 'pb-3'
     const activeWord = useActiveWord(inputState.text, inputState.selection, autocompletePrefixes)
     const [suggestions, selectedIndex, moveUp, moveDown, clearSuggestions] = useActiveSuggestions(
         activeWord,
@@ -345,15 +367,20 @@ export function HappyComposer(props: {
         () => permissionModeOptions.map((option) => ({ value: option.mode, label: option.label })),
         [permissionModeOptions]
     )
-    const claudeMessageMeta = useMemo<UserMessageMeta | undefined>(() => {
-        if (agentFlavor !== 'claude' || !claudeModel) {
+    const modelMessageMeta = useMemo<UserMessageMeta | undefined>(() => {
+        const activeModel = agentFlavor === 'claude'
+            ? claudeModel
+            : agentFlavor === 'gemini'
+                ? geminiModel
+                : null
+        if (!activeModel) {
             return undefined
         }
 
         return {
-            model: claudeModel === 'auto' ? null : claudeModel
+            model: activeModel === 'auto' ? null : activeModel
         }
-    }, [agentFlavor, claudeModel])
+    }, [agentFlavor, claudeModel, geminiModel])
     const codexMessageMeta = useMemo<UserMessageMeta | undefined>(() => {
         if (!isCodexFamilyFlavor(agentFlavor) || !codexModel) {
             return undefined
@@ -364,7 +391,7 @@ export function HappyComposer(props: {
             reasoningEffort: codexReasoningEffort
         }
     }, [agentFlavor, codexModel, codexReasoningEffort])
-    const activeMessageMeta = codexMessageMeta ?? claudeMessageMeta
+    const activeMessageMeta = codexMessageMeta ?? modelMessageMeta
 
     const handleKeyDown = useCallback((e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
         const key = e.key
@@ -533,6 +560,9 @@ export function HappyComposer(props: {
     }, [])
 
     const handlePaste = useCallback(async (e: ReactClipboardEvent<HTMLTextAreaElement>) => {
+        if (!allowAttachments) {
+            return
+        }
         const files = Array.from(e.clipboardData?.files || [])
         const imageFiles = files.filter(file => file.type.startsWith('image/'))
 
@@ -547,7 +577,7 @@ export function HappyComposer(props: {
         } catch (error) {
             console.error('Error adding pasted image:', error)
         }
-    }, [api])
+    }, [allowAttachments, api])
 
     const handleSubmit = useCallback((event?: ReactFormEvent<HTMLFormElement>) => {
         if (event && voiceStatus !== 'disconnected') {
@@ -593,6 +623,18 @@ export function HappyComposer(props: {
         haptic('light')
     }, [onClaudeModelChange, controlsDisabled, haptic])
 
+    const handleAgentChange = useCallback((value: string) => {
+        if (!onAgentChange || controlsDisabled) return
+        onAgentChange(value)
+        haptic('light')
+    }, [onAgentChange, controlsDisabled, haptic])
+
+    const handleGeminiModelChange = useCallback((model: string) => {
+        if (!onGeminiModelChange || controlsDisabled) return
+        onGeminiModelChange(model)
+        haptic('light')
+    }, [onGeminiModelChange, controlsDisabled, haptic])
+
     const handleCodexReasoningEffortChange = useCallback((effort: string) => {
         if (!onCodexReasoningEffortChange || controlsDisabled) return
         onCodexReasoningEffortChange(effort as CodexReasoningEffort)
@@ -600,8 +642,9 @@ export function HappyComposer(props: {
     }, [onCodexReasoningEffortChange, controlsDisabled, haptic])
 
     const showPermissionSettings = Boolean(onPermissionModeChange && permissionModeOptions.length > 0)
-    const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor) && agentFlavor !== 'claude')
+    const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor) && agentFlavor !== 'claude' && agentFlavor !== 'gemini')
     const showClaudeModelSettings = Boolean(agentFlavor === 'claude' && onClaudeModelChange && claudeModel && claudeModelOptions.length > 0)
+    const showGeminiModelSettings = Boolean(agentFlavor === 'gemini' && onGeminiModelChange && geminiModel && geminiModelOptions.length > 0)
     const showCodexModelSettings = Boolean(isCodexFamilyFlavor(agentFlavor) && codexModel && codexModelOptions.length > 0)
     const showCodexReasoningSettings = Boolean(showCodexModelSettings && codexReasoningEffort && codexReasoningOptions.length > 0)
     const showAbortButton = threadIsRunning && !hasText && !hasQueue
@@ -683,121 +726,153 @@ export function HappyComposer(props: {
     const voicePreviewPlaceholder = t('voice.input.recording')
     const voicePreviewInputClass = 'flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] placeholder:opacity-55 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50'
 
+    const shellContent = (
+        <>
+            {!isVoiceFocusMode && attachments.length > 0 ? (
+                <div className="flex flex-wrap gap-2 px-4 pt-3">
+                    <ComposerImagePreviewContext.Provider value={imagePreviewCtx}>
+                        <ComposerPrimitive.Attachments components={{ Attachment: AttachmentItem }} />
+                    </ComposerImagePreviewContext.Provider>
+                </div>
+            ) : null}
+
+            <div className="flex items-center px-4 py-3">
+                {isVoiceFocusMode ? (
+                    <textarea
+                        readOnly
+                        tabIndex={-1}
+                        value={correctionPreviewText}
+                        placeholder={voicePreviewPlaceholder}
+                        rows={1}
+                        className={voicePreviewInputClass}
+                    />
+                ) : (
+                    <ComposerPrimitive.Input
+                        ref={textareaRef}
+                        autoFocus={!controlsDisabled && !isTouch}
+                        placeholder={
+                            placeholder
+                                ? placeholder
+                                : controlledByUser
+                                ? t('composer.controlledByTerminal')
+                                : showContinueHint
+                                    ? t('misc.typeMessage')
+                                    : !active
+                                        ? t('composer.inactivePlaceholder')
+                                        : t('misc.typeAMessage')
+                        }
+                        disabled={controlsDisabled}
+                        maxRows={5}
+                        submitOnEnter={!isTouch}
+                        cancelOnEscape={false}
+                        onChange={handleChange}
+                        onSelect={handleSelect}
+                        onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
+                        className="flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                )}
+            </div>
+
+            {isVoiceFocusMode && voiceError ? (
+                <div className="px-4 pb-2 text-xs text-red-500">
+                    {voiceError}
+                </div>
+            ) : null}
+
+            <ComposerButtons
+                showAttachmentButton={showAttachmentButton}
+                showAgentSelect={Boolean(onAgentChange && agent && agentOptions.length > 0)}
+                agent={agent ?? ''}
+                agentOptions={agentOptions}
+                onAgentChange={handleAgentChange}
+                canSend={canSend}
+                controlsDisabled={controlsDisabled}
+                showModelSelect={showModelSettings}
+                modelMode={modelMode}
+                modelModeOptions={modelModeSelectOptions}
+                onModelModeChange={handleModelChange}
+                showClaudeModelSelect={showClaudeModelSettings}
+                claudeModel={claudeModel ?? ''}
+                claudeModelOptions={claudeModelOptions}
+                onClaudeModelChange={handleClaudeModelChange}
+                showGeminiModelSelect={showGeminiModelSettings}
+                geminiModel={geminiModel ?? ''}
+                geminiModelOptions={geminiModelOptions}
+                onGeminiModelChange={handleGeminiModelChange}
+                showCodexModelSelect={showCodexModelSettings}
+                codexModel={codexModel ?? ''}
+                codexModelOptions={codexModelOptions}
+                onCodexModelChange={handleCodexModelChange}
+                showCodexReasoningSelect={showCodexReasoningSettings}
+                codexReasoningEffort={codexReasoningEffort ?? 'medium'}
+                codexReasoningOptions={codexReasoningOptions}
+                onCodexReasoningEffortChange={handleCodexReasoningEffortChange}
+                showPermissionSelect={showPermissionSettings}
+                permissionMode={basePermissionMode}
+                permissionModeOptions={permissionSelectOptions}
+                onPermissionModeChange={handlePermissionChange}
+                showPlanToggle={showPlanToggle}
+                isPlanActive={isPlan}
+                onPlanToggle={onPlanToggle ?? (() => {})}
+                showAbortButton={showAbortButton}
+                abortDisabled={abortDisabled}
+                isAborting={isAborting}
+                onAbort={handleAbort}
+                showCopyButton={showCopyButton ?? !isTouch}
+                inputText={isVoiceFocusMode ? (correctionPreviewText || composerText) : composerText}
+                voiceEnabled={voiceEnabled}
+                voiceStatus={voiceStatus}
+                voiceMicMuted={voiceMicMuted}
+                onVoiceToggle={onVoiceToggle ?? (() => {})}
+                onVoiceMicToggle={onVoiceMicToggle}
+                canClear={hasText}
+                onClear={handleClear}
+                onSend={handleSend}
+                hasQueue={hasQueue}
+                onFlush={onFlushQueue}
+            />
+        </>
+    )
+
+    const composerRoot = (
+        <ComposerPrimitive.Root className="relative" onSubmit={handleSubmit}>
+            {overlays}
+            {embedded ? shellContent : (
+                <div className="overflow-hidden rounded-[20px] border border-[var(--app-panel-border)] bg-[var(--app-secondary-bg)]">
+                    {shellContent}
+                </div>
+            )}
+        </ComposerPrimitive.Root>
+    )
+
+    const previewModal = previewAttachmentId && previewImages.length > 0 ? (
+        <ImagePreviewModal
+            open={!!previewAttachmentId}
+            onOpenChange={(open) => { if (!open) setPreviewAttachmentId(null) }}
+            images={previewImages}
+            selectedIndex={previewSelectedIndex}
+            onSelectedIndexChange={(i) => {
+                const att = imageAttachments[i]
+                if (att) setPreviewAttachmentId((att as { id?: string }).id ?? null)
+            }}
+        />
+    ) : null
+
+    if (embedded) {
+        return (
+            <>
+                {composerRoot}
+                {previewModal}
+            </>
+        )
+    }
+
     return (
         <div className={`px-3 ${bottomPaddingClass} pt-0 bg-[var(--app-bg)]`}>
             <div className="mx-auto w-full max-w-content">
-                <ComposerPrimitive.Root className="relative" onSubmit={handleSubmit}>
-                    {overlays}
-
-                    <div className="overflow-hidden rounded-[20px] border border-[var(--app-panel-border)] bg-[var(--app-secondary-bg)]">
-                        {!isVoiceFocusMode && attachments.length > 0 ? (
-                            <div className="flex flex-wrap gap-2 px-4 pt-3">
-                                <ComposerImagePreviewContext.Provider value={imagePreviewCtx}>
-                                    <ComposerPrimitive.Attachments components={{ Attachment: AttachmentItem }} />
-                                </ComposerImagePreviewContext.Provider>
-                            </div>
-                        ) : null}
-
-                        <div className="flex items-center px-4 py-3">
-                            {isVoiceFocusMode ? (
-                                <textarea
-                                    readOnly
-                                    tabIndex={-1}
-                                    value={correctionPreviewText}
-                                    placeholder={voicePreviewPlaceholder}
-                                    rows={1}
-                                    className={voicePreviewInputClass}
-                                />
-                            ) : (
-                                <ComposerPrimitive.Input
-                                    ref={textareaRef}
-                                    autoFocus={!controlsDisabled && !isTouch}
-                                    placeholder={
-                                        controlledByUser
-                                            ? t('composer.controlledByTerminal')
-                                            : showContinueHint
-                                                ? t('misc.typeMessage')
-                                                : !active
-                                                    ? t('composer.inactivePlaceholder')
-                                                    : t('misc.typeAMessage')
-                                    }
-                                    disabled={controlsDisabled}
-                                    maxRows={5}
-                                    submitOnEnter={!isTouch}
-                                    cancelOnEscape={false}
-                                    onChange={handleChange}
-                                    onSelect={handleSelect}
-                                    onKeyDown={handleKeyDown}
-                                    onPaste={handlePaste}
-                                    className="flex-1 resize-none bg-transparent text-base leading-snug text-[var(--app-fg)] placeholder-[var(--app-hint)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                />
-                            )}
-                        </div>
-
-                        {isVoiceFocusMode && voiceError ? (
-                            <div className="px-4 pb-2 text-xs text-red-500">
-                                {voiceError}
-                            </div>
-                        ) : null}
-
-                        <ComposerButtons
-                            canSend={canSend}
-                            controlsDisabled={controlsDisabled}
-                            showModelSelect={showModelSettings}
-                            modelMode={modelMode}
-                            modelModeOptions={modelModeSelectOptions}
-                            onModelModeChange={handleModelChange}
-                            showClaudeModelSelect={showClaudeModelSettings}
-                            claudeModel={claudeModel ?? ''}
-                            claudeModelOptions={claudeModelOptions}
-                            onClaudeModelChange={handleClaudeModelChange}
-                            showCodexModelSelect={showCodexModelSettings}
-                            codexModel={codexModel ?? ''}
-                            codexModelOptions={codexModelOptions}
-                            onCodexModelChange={handleCodexModelChange}
-                            showCodexReasoningSelect={showCodexReasoningSettings}
-                            codexReasoningEffort={codexReasoningEffort ?? 'medium'}
-                            codexReasoningOptions={codexReasoningOptions}
-                            onCodexReasoningEffortChange={handleCodexReasoningEffortChange}
-                            showPermissionSelect={showPermissionSettings}
-                            permissionMode={basePermissionMode}
-                            permissionModeOptions={permissionSelectOptions}
-                            onPermissionModeChange={handlePermissionChange}
-                            showPlanToggle={showPlanToggle}
-                            isPlanActive={isPlan}
-                            onPlanToggle={onPlanToggle ?? (() => {})}
-                            showAbortButton={showAbortButton}
-                            abortDisabled={abortDisabled}
-                            isAborting={isAborting}
-                            onAbort={handleAbort}
-                            showCopyButton={!isTouch}
-                            inputText={isVoiceFocusMode ? (correctionPreviewText || composerText) : composerText}
-                            voiceEnabled={voiceEnabled}
-                            voiceStatus={voiceStatus}
-                            voiceMicMuted={voiceMicMuted}
-                            onVoiceToggle={onVoiceToggle ?? (() => {})}
-                            onVoiceMicToggle={onVoiceMicToggle}
-                            canClear={hasText}
-                            onClear={handleClear}
-                            onSend={handleSend}
-                            hasQueue={hasQueue}
-                            onFlush={onFlushQueue}
-                        />
-                    </div>
-                </ComposerPrimitive.Root>
-
-                {previewAttachmentId && previewImages.length > 0 && (
-                    <ImagePreviewModal
-                        open={!!previewAttachmentId}
-                        onOpenChange={(open) => { if (!open) setPreviewAttachmentId(null) }}
-                        images={previewImages}
-                        selectedIndex={previewSelectedIndex}
-                        onSelectedIndexChange={(i) => {
-                            const att = imageAttachments[i]
-                            if (att) setPreviewAttachmentId((att as { id?: string }).id ?? null)
-                        }}
-                    />
-                )}
+                {composerRoot}
+                {previewModal}
             </div>
         </div>
     )

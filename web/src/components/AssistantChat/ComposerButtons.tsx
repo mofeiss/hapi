@@ -226,9 +226,15 @@ function getDropdownStyle(pos: { bottom: number; left: number; minWidth: number 
     }
 }
 
+type MiniSelectOption = {
+    value: string
+    label: string
+    icon?: React.ReactNode
+}
+
 function MiniSelect(props: {
     value: string
-    options: { value: string; label: string }[]
+    options: MiniSelectOption[]
     onChange: (value: string) => void
     disabled?: boolean
     icon?: React.ReactNode
@@ -266,7 +272,9 @@ function MiniSelect(props: {
         setOpen(!open)
     }, [open])
 
-    const selectedLabel = props.options.find((o) => o.value === props.value)?.label ?? props.value
+    const selectedOption = props.options.find((option) => option.value === props.value)
+    const selectedLabel = selectedOption?.label ?? props.value
+    const selectedIcon = selectedOption?.icon ?? props.icon
 
     return (
         <>
@@ -281,7 +289,11 @@ function MiniSelect(props: {
                         : 'bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                 }`}
             >
-                {props.icon ? <span className="shrink-0">{props.icon}</span> : null}
+                {selectedIcon ? (
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                        {selectedIcon}
+                    </span>
+                ) : null}
                 <SelectButtonLabel
                     label={selectedLabel}
                     align={props.labelAlign}
@@ -309,7 +321,16 @@ function MiniSelect(props: {
                             }}
                             onMouseDown={(e) => e.preventDefault()}
                         >
-                            {option.label}
+                            <span className="flex min-w-0 items-center gap-2">
+                                {option.icon ? (
+                                    <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                                        {option.icon}
+                                    </span>
+                                ) : null}
+                                <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                                    {option.label}
+                                </span>
+                            </span>
                         </button>
                     ))}
                 </div>,
@@ -1037,6 +1058,11 @@ function PermissionPlanPill(props: {
 }
 
 export function ComposerButtons(props: {
+    showAttachmentButton?: boolean
+    showAgentSelect?: boolean
+    agent: string
+    agentOptions: MiniSelectOption[]
+    onAgentChange: (value: string) => void
     canSend: boolean
     controlsDisabled: boolean
     showModelSelect: boolean
@@ -1047,6 +1073,10 @@ export function ComposerButtons(props: {
     claudeModel: string
     claudeModelOptions: { value: string; label: string }[]
     onClaudeModelChange: (value: string) => void
+    showGeminiModelSelect: boolean
+    geminiModel: string
+    geminiModelOptions: { value: string; label: string }[]
+    onGeminiModelChange: (value: string) => void
     showCodexModelSelect: boolean
     codexModel: string
     codexModelOptions: { value: string; label: string }[]
@@ -1086,14 +1116,26 @@ export function ComposerButtons(props: {
     return (
         <div className="flex items-center justify-between gap-2 px-2 pb-2">
             <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <ComposerPrimitive.AddAttachment
-                    aria-label={t('composer.attach')}
-                    title={t('composer.attach')}
-                    disabled={props.controlsDisabled}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <AttachmentIcon />
-                </ComposerPrimitive.AddAttachment>
+                {props.showAttachmentButton !== false ? (
+                    <ComposerPrimitive.AddAttachment
+                        aria-label={t('composer.attach')}
+                        title={t('composer.attach')}
+                        disabled={props.controlsDisabled}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <AttachmentIcon />
+                    </ComposerPrimitive.AddAttachment>
+                ) : null}
+
+                {props.showAgentSelect && props.agentOptions.length > 0 ? (
+                    <MiniSelect
+                        value={props.agent}
+                        options={props.agentOptions}
+                        onChange={props.onAgentChange}
+                        disabled={props.controlsDisabled}
+                        labelAlign="left"
+                    />
+                ) : null}
 
                 {props.showModelSelect && props.modelModeOptions.length > 0 ? (
                     <MiniSelect
@@ -1111,6 +1153,23 @@ export function ComposerButtons(props: {
                         model={props.claudeModel}
                         modelOptions={props.claudeModelOptions}
                         onModelChange={props.onClaudeModelChange}
+                        showPermission={props.showPermissionSelect && props.permissionModeOptions.length > 0}
+                        permissionMode={props.permissionMode}
+                        permissionOptions={props.permissionModeOptions}
+                        onPermissionChange={props.onPermissionModeChange}
+                        showPlan={props.showPlanToggle}
+                        isPlanActive={props.isPlanActive}
+                        onPlanToggle={props.onPlanToggle}
+                        disabled={props.controlsDisabled}
+                    />
+                ) : null}
+
+                {props.showGeminiModelSelect ? (
+                    <ClaudeModelPermissionPlanPill
+                        showModel={props.geminiModelOptions.length > 0}
+                        model={props.geminiModel}
+                        modelOptions={props.geminiModelOptions}
+                        onModelChange={props.onGeminiModelChange}
                         showPermission={props.showPermissionSelect && props.permissionModeOptions.length > 0}
                         permissionMode={props.permissionMode}
                         permissionOptions={props.permissionModeOptions}
@@ -1144,7 +1203,7 @@ export function ComposerButtons(props: {
                     />
                 ) : null}
 
-                {!props.showClaudeModelSelect && !isCodexControlsVisible && ((props.showPermissionSelect && props.permissionModeOptions.length > 0) || props.showPlanToggle) ? (
+                {!props.showClaudeModelSelect && !props.showGeminiModelSelect && !isCodexControlsVisible && ((props.showPermissionSelect && props.permissionModeOptions.length > 0) || props.showPlanToggle) ? (
                     <PermissionPlanPill
                         showPermission={props.showPermissionSelect && props.permissionModeOptions.length > 0}
                         permissionMode={props.permissionMode}
@@ -1205,20 +1264,22 @@ export function ComposerButtons(props: {
                     )
                 })() : null}
 
-                {props.showCopyButton ? (
+                {props.showCopyButton && props.canClear ? (
                     <CopyInputButton inputText={props.inputText} />
                 ) : null}
 
-                <button
-                    type="button"
-                    aria-label={t('composer.clear')}
-                    title={t('composer.clear')}
-                    disabled={props.controlsDisabled || !props.canClear}
-                    onClick={props.onClear}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    <ClearInputIcon />
-                </button>
+                {props.canClear ? (
+                    <button
+                        type="button"
+                        aria-label={t('composer.clear')}
+                        title={t('composer.clear')}
+                        disabled={props.controlsDisabled}
+                        onClick={props.onClear}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <ClearInputIcon />
+                    </button>
+                ) : null}
 
                 {isVoiceConnected && props.onVoiceMicToggle ? (
                     <button
