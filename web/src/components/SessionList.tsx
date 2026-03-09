@@ -659,12 +659,14 @@ export function SessionList(props: {
       {groups.length > 0 ? (
         <div
           className={`overflow-hidden rounded-md border border-[var(--app-subtle-solid-bg)] ${
-            fillHeight ? "flex-1 min-h-0" : ""
+            fillHeight ? "max-h-full min-h-0" : ""
           }`}
         >
           <div
             className={
-              fillHeight ? "h-full overflow-y-auto desktop-scrollbar-left" : ""
+              fillHeight
+                ? "max-h-full overflow-y-auto desktop-scrollbar-left"
+                : ""
             }
           >
             {groups.map((group, index) => {
