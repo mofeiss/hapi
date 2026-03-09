@@ -20,7 +20,9 @@
     --app-divider-soft: rgba(0, 0, 0, 0.045);
     --app-panel-border: rgba(15, 23, 42, 0.032);
     --app-subtle-bg: rgba(0, 0, 0, 0.05);
-    --app-session-zebra-bg: rgba(15, 23, 42, 0.028);
+    --app-subtle-solid-bg: #f2f2f2;
+    --app-session-zebra-bg: rgba(15, 23, 42, 0.016);
+    --app-session-active-bg: rgba(15, 23, 42, 0.085);
     --app-session-subtitle-opacity: 0.4;
     --app-code-bg: #ececec;
     --app-inline-code-bg: rgba(0, 0, 0, 0.08);
@@ -76,7 +78,9 @@
     --app-divider-soft: rgba(255, 255, 255, 0.04);
     --app-panel-border: rgba(255, 255, 255, 0.035);
     --app-subtle-bg: rgba(255, 255, 255, 0.05);
-    --app-session-zebra-bg: rgba(255, 255, 255, 0.028);
+    --app-subtle-solid-bg: #272729;
+    --app-session-zebra-bg: rgba(255, 255, 255, 0.014);
+    --app-session-active-bg: rgba(255, 255, 255, 0.09);
     --app-session-subtitle-opacity: 0.2;
     --app-code-bg: #303030;
     --app-inline-code-bg: rgba(255, 255, 255, 0.1);
@@ -164,7 +168,6 @@ body {
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .session-list-item:hover,
     .session-list-new-button:hover {
         background-color: var(--app-subtle-bg);
     }
@@ -236,6 +239,10 @@ html[data-theme="dark"] .shiki span {
     font-style: var(--shiki-dark-font-style) !important;
     font-weight: var(--shiki-dark-font-weight) !important;
     text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+html[data-theme="dark"] .agent-icon-dark-invert {
+    filter: invert(1);
 }
 
 /* Ultrathink rainbow sparkle effect - per-letter wave animation */

@@ -307,18 +307,25 @@ function SessionItem(props: {
         ? "bg-[var(--app-session-zebra-bg)]"
         : ""
     : selected
-      ? "bg-[var(--app-secondary-bg)]"
+      ? "bg-[var(--app-session-active-bg)]"
       : striped
         ? "bg-[var(--app-session-zebra-bg)]"
         : "";
+  const rowStyle = selected
+    ? {
+        WebkitTouchCallout: "none" as const,
+        boxShadow:
+          "inset 3px 0 0 var(--app-orange-base), inset 0 0 0 1px var(--app-border-on-subtle)",
+      }
+    : { WebkitTouchCallout: "none" as const };
 
   return (
     <>
       <button
         type="button"
         {...(batchMode ? { onClick: onBatchToggleSelect } : longPressHandlers)}
-        className={`session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none ${rowBackgroundClass} ${!s.active ? "opacity-70" : ""}`}
-        style={{ WebkitTouchCallout: "none" }}
+        className={`session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none ${rowBackgroundClass} ${!s.active && !selected ? "opacity-70" : ""}`}
+        style={rowStyle}
         aria-current={!batchMode && selected ? "page" : undefined}
       >
         <div className="flex items-center justify-between gap-1.5">
@@ -338,7 +345,13 @@ function SessionItem(props: {
               sizeClassName="h-4 w-4"
             />
             <div
-              className={`truncate text-[14px] leading-none ${!s.active ? "font-normal text-[var(--app-hint)]" : "font-medium"}`}
+              className={`truncate text-[14px] leading-none ${
+                selected
+                  ? "font-semibold text-[var(--app-fg)]"
+                  : !s.active
+                    ? "font-normal text-[var(--app-hint)]"
+                    : "font-medium"
+              }`}
             >
               {sessionName}
             </div>
@@ -646,7 +659,7 @@ export function SessionList(props: {
               <button
                 type="button"
                 onClick={() => toggleGroup(group.host, isCollapsed)}
-                className={`sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-bg)] px-3 py-2 text-left ${
+                className={`sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 text-left ${
                   isFirstGroup ? "rounded-t-md" : ""
                 }`}
               >
@@ -682,7 +695,7 @@ export function SessionList(props: {
                 </div>
               </button>
               {!isCollapsed ? (
-                <div className="flex flex-col divide-y divide-[var(--app-divider)] border-x border-b border-[var(--app-subtle-bg)]">
+                <div className="flex flex-col divide-y divide-[var(--app-divider)] border-x border-b border-[var(--app-subtle-solid-bg)]">
                   {group.sessions.map((s) => (
                     <SessionItem
                       key={s.id}

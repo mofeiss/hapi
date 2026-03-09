@@ -25,9 +25,12 @@ export function AgentFlavorStatusIcon(props: {
   className?: string;
   sizeClassName?: string;
 }) {
-  const iconUrl = getAgentFlavorIconUrl(props.flavor);
+  const normalizedFlavor = props.flavor?.trim() ?? null;
+  const iconUrl = getAgentFlavorIconUrl(normalizedFlavor);
   const isActive = props.active ?? false;
   const isThinking = Boolean(props.thinking && isActive);
+  const needsDarkInvert =
+    normalizedFlavor === "codex" || normalizedFlavor === "opencode";
   const stateClassName = isThinking
     ? "[animation:spin_2.2s_linear_infinite]"
     : isActive
@@ -56,7 +59,7 @@ export function AgentFlavorStatusIcon(props: {
       <img
         src={iconUrl}
         alt=""
-        className="h-full w-full object-contain"
+        className={`h-full w-full object-contain ${needsDarkInvert ? "agent-icon-dark-invert" : ""}`}
         draggable={false}
       />
     </span>
