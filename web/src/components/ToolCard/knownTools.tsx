@@ -7,6 +7,7 @@ import { ChecklistIcon } from '@/components/TodoPanel'
 import { extractToolTodos, getTodoStats } from '@/lib/todos'
 import { basename, resolveDisplayPath } from '@/utils/path'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
+import { extractAgentTopic } from '@/lib/agentTool'
 import { extractSkillReadData } from '@/lib/skillRead'
 
 const DEFAULT_ICON_CLASS = 'h-3.5 w-3.5'
@@ -308,8 +309,8 @@ function getCoreToolNarrative(opts: ToolOpts): string | null {
             return zh ? '执行命令' : 'run command'
         }
         case 'Agent': {
-            const description = getInputStringAny(opts.input, ['description'])
-            if (description) return zh ? `派发子代理处理 ${truncate(description, 60)}` : `dispatch sub-agent for ${truncate(description, 60)}`
+            const topic = extractAgentTopic(opts.input)
+            if (topic) return zh ? `派发子代理处理 ${truncate(topic, 60)}` : `dispatch sub-agent for ${truncate(topic, 60)}`
             return zh ? '派发子代理' : 'dispatch sub-agent'
         }
         case 'TodoWrite': {

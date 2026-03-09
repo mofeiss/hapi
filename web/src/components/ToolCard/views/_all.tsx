@@ -5,6 +5,7 @@ import type { SessionMetadataSummary } from '@/types/api'
 import { CodexDiffCompactView, CodexDiffFullView } from '@/components/ToolCard/views/CodexDiffView'
 import { CodexPatchView } from '@/components/ToolCard/views/CodexPatchView'
 import { EditView } from '@/components/ToolCard/views/EditView'
+import { AgentView } from '@/components/ToolCard/views/AgentView'
 import { AskUserQuestionView } from '@/components/ToolCard/views/AskUserQuestionView'
 import { RequestUserInputView } from '@/components/ToolCard/views/RequestUserInputView'
 import { MultiEditFullView, MultiEditView } from '@/components/ToolCard/views/MultiEditView'
@@ -24,6 +25,7 @@ export type ToolViewProps = {
 export type ToolViewComponent = ComponentType<ToolViewProps>
 
 export const toolViewRegistry: Record<string, ToolViewComponent> = {
+    Agent: AgentView,
     Edit: EditView,
     MultiEdit: MultiEditView,
     Write: WriteView,
@@ -36,6 +38,7 @@ export const toolViewRegistry: Record<string, ToolViewComponent> = {
 }
 
 export const toolFullViewRegistry: Record<string, ToolViewComponent> = {
+    Agent: AgentView,
     Edit: EditView,
     MultiEdit: MultiEditFullView,
     Write: WriteView,

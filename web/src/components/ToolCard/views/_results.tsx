@@ -7,10 +7,12 @@ import { CopyIcon, CheckIcon } from '@/components/icons'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { TodoList } from '@/components/TodoPanel'
 import { ToolParamField } from '@/components/ToolCard/ToolParamField'
+import { MarkdownSourcePreview } from '@/components/ToolCard/views/MarkdownSourcePreview'
 import { parseAskUserQuestionInput } from '@/components/ToolCard/askUserQuestion'
 import { EyeIcon, TerminalIcon } from '@/components/ToolCard/icons'
 import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
+import { extractAgentResultMarkdown } from '@/lib/agentTool'
 import { extractSkillReadData } from '@/lib/skillRead'
 import { extractToolTodos } from '@/lib/todos'
 import { useTranslation } from '@/lib/use-translation'
@@ -998,6 +1000,40 @@ const SkillResultView: ToolViewComponent = (props: ToolViewProps) => {
     )
 }
 
+const AgentResultView: ToolViewComponent = (props: ToolViewProps) => {
+    const result = props.block.tool.result
+
+    if (result === undefined || result === null) {
+        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
+    }
+
+    const markdown = extractAgentResultMarkdown(result)
+    if (markdown !== null) {
+        if (markdown.trim().length === 0) {
+            return (
+                <>
+                    <div className="text-sm text-[var(--app-hint)]">(no output)</div>
+                    <RawJsonDevOnly value={result} />
+                </>
+            )
+        }
+
+        return (
+            <>
+                <MarkdownSourcePreview content={markdown} sourceLanguage="markdown" />
+                <RawJsonDevOnly value={result} />
+            </>
+        )
+    }
+
+    return (
+        <>
+            <CodeBlock code={safeStringify(result)} language="json" />
+            <RawJsonDevOnly value={result} />
+        </>
+    )
+}
+
 const MutationResultView: ToolViewComponent = (props: ToolViewProps) => {
     const { state, result } = props.block.tool
 
@@ -1377,7 +1413,7 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     Edit: MutationResultView,
     MultiEdit: MutationResultView,
     Write: MutationResultView,
-    Agent: RawResultView,
+    Agent: AgentResultView,
     Skill: SkillResultView,
     SkillRead: SkillResultView,
     WebFetch: WebFetchResultView,

@@ -243,4 +243,21 @@ describe('getToolPresentation', () => {
 
         expect(presentation.title).toBe('OMC: Codex Ask')
     })
+
+    it('derives Agent title from prompt when description is missing', () => {
+        const presentation = getToolPresentation({
+            toolName: 'Agent',
+            input: {
+                prompt: '# 分析日志\n\n请只输出关键结论。'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'zh-CN'
+        })
+
+        expect(presentation.title).toBe('派发子代理处理 分析日志')
+        expect(presentation.subtitle).toBeNull()
+    })
 })

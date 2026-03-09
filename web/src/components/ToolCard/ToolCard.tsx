@@ -274,7 +274,9 @@ function ToolCardInner(props: ToolCardProps) {
 
     const toolName = props.block.tool.name
     const toolTitle = presentation.title
-    const subtitle = presentation.subtitle ?? props.block.tool.description
+    const subtitle = toolName === 'Agent'
+        ? presentation.subtitle
+        : (presentation.subtitle ?? props.block.tool.description)
     const taskSummary = renderTaskSummary(props.block, props.metadata, locale)
     const runningFrom = props.block.tool.startedAt ?? props.block.tool.createdAt
     const showInline = !presentation.minimal && toolName !== 'Task'

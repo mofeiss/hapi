@@ -130,6 +130,38 @@ describe('CodexBash result rendering', () => {
     })
 })
 
+describe('Agent result rendering', () => {
+    it('renders extracted markdown content instead of raw metadata json', () => {
+        const ResultView = getToolResultViewComponent('Agent')
+
+        render(
+            createElement(
+                I18nProvider,
+                null,
+                createElement(ResultView, {
+                    block: createToolBlock('Agent', {
+                        status: 'completed',
+                        prompt: '请读取 ~/.claude/RTK.md 文件，然后总结其主要内容。',
+                        agentId: 'abfab31fa828c4cf2',
+                        content: [
+                            {
+                                type: 'text',
+                                text: '## RTK 文档总结\n\n- 自动压缩命令输出'
+                            }
+                        ],
+                        totalDurationMs: 18071
+                    }),
+                    metadata: null
+                })
+            )
+        )
+
+        expect(screen.getByText(/RTK 文档总结/)).toBeInTheDocument()
+        expect(screen.queryByText(/"agentId": "abfab31fa828c4cf2"/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/"totalDurationMs": 18071/)).not.toBeInTheDocument()
+    })
+})
+
 describe('extractPlanModeMessage', () => {
     it('extracts message from object result', () => {
         const result = {
