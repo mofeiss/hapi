@@ -163,10 +163,14 @@ export default {
   "button.paste": "Paste",
 
   // New session form
-  "newSession.title": "Create Session",
+  "newSession.title": "New Session",
+  "newSession.empty.title": "Start a new session",
+  "newSession.empty.subtitle":
+    "Keep the essential setup in the center, then start by sending the first message from the composer below.",
   "newSession.machine": "Machine",
   "newSession.directory": "Directory",
   "newSession.placeholder": "/path/to/project",
+  "newSession.prompt.placeholder": "Describe what you want HAPI to start doing…",
   "newSession.recent": "Recent paths",
   "newSession.type": "Session type",
   "newSession.type.simple": "Simple",
@@ -201,6 +205,9 @@ export default {
   "permission.mode.yolo": "Yolo",
   "newSession.create": "Create",
   "newSession.creating": "Creating…",
+  "newSession.createEmpty": "Create empty session",
+  "newSession.advanced.show": "More settings",
+  "newSession.advanced.hide": "Hide settings",
 
   // Spawn session (old component)
   "spawn.title": "Create Session",
@@ -364,14 +371,13 @@ export default {
   "settings.language.title": "Language",
   "settings.language.label": "Language",
   "settings.display.title": "Display",
-  "settings.display.fontSize": "Font Size",
+  "settings.display.zoomMode": "Zoom Mode",
+  "settings.display.zoomModeHint":
+    "App-level font scaling is temporarily disabled. Use native browser zoom, such as Cmd/Ctrl plus, minus, or trackpad/mouse zoom.",
   "settings.shortcuts.title": "Keyboard Shortcuts",
   "settings.shortcuts.toggleSettings.title": "Toggle Settings",
   "settings.shortcuts.toggleSettings.detail":
     "Open or close the Settings panel on any platform.",
-  "settings.shortcuts.adjustFontScale.title": "Adjust Font Size",
-  "settings.shortcuts.adjustFontScale.detail":
-    "Increase or decrease app text size by 10% on any platform.",
   "settings.shortcuts.toggleSidebar.title": "Sidebar / Session List",
   "settings.shortcuts.toggleSidebar.detail":
     "Desktop: collapse or expand the sidebar. Mobile: switch between the current session and the session list.",

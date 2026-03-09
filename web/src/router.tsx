@@ -1177,6 +1177,12 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
   }, []);
 
+  const openNewSessionOverlay = useCallback(() => {
+    setNewSessionOpen(true);
+    setSettingsOpen(false);
+    setToolbarMenuOpen(false);
+  }, []);
+
 
   const isSubRoute =
     activeSessionId !== null &&
@@ -1541,6 +1547,13 @@ function SessionsPage() {
     : isSessionsIndex && !hasOverlay
       ? "flex"
       : "hidden lg:flex";
+  const leftPanelContentScale = narrowViewport ? 1 : 1.08;
+  const leftPanelContentStyle = {
+    width: `${100 / leftPanelContentScale}%`,
+    height: `${100 / leftPanelContentScale}%`,
+    transform: `scale(${leftPanelContentScale})`,
+    transformOrigin: "top left",
+  };
   const showSidebarSearchRow = !collapsed;
   const showSidebarBatchActions = !collapsed;
 
@@ -1554,10 +1567,11 @@ function SessionsPage() {
     <div className="flex h-full min-h-0" onWheel={handleRootWheel}>
       {/* Left panel */}
       <div
-        className={`${leftPanelVisible} max-lg:!w-full shrink-0 flex-col bg-[var(--app-bg)] lg:border-r lg:border-[var(--app-divider)]`}
+        className={`${leftPanelVisible} max-lg:!w-full shrink-0 flex-col overflow-hidden bg-[var(--app-bg)] lg:border-r lg:border-[var(--app-divider)]`}
         style={narrowViewport ? undefined : { width: panelWidth }}
       >
-        <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
+        <div className="flex h-full flex-col" style={leftPanelContentStyle}>
+          <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
           <div className="mx-auto w-full max-w-full lg:max-w-content flex items-center justify-between px-3 py-2">
             <div className="flex items-center gap-1.5 min-w-0 shrink-0">
               <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
@@ -1769,8 +1783,7 @@ function SessionsPage() {
               selectedSessionId={activeSessionId}
               onSelect={handleSelectSession}
               onNewSession={() => {
-                setNewSessionOpen(true);
-                setSettingsOpen(false);
+                openNewSessionOverlay();
               }}
               onRefresh={handleRefresh}
               isLoading={isLoading}
@@ -1783,6 +1796,7 @@ function SessionsPage() {
               onBatchToggleSelect={handleBatchToggleSelect}
             />
           )}
+        </div>
         </div>
 
         {/* Batch operation confirm dialog */}

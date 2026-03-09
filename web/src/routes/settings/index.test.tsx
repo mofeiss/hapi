@@ -12,21 +12,10 @@ vi.mock('@tanstack/react-router', () => ({
     useLocation: () => '/settings',
 }))
 
-// Mock useFontScale hook
-vi.mock('@/hooks/useFontScale', () => ({
-    useFontScale: () => ({ fontScale: 1, setFontScale: vi.fn() }),
-    getFontScaleOptions: () => [
-        { value: 0.875, label: '87.5%' },
-        { value: 1, label: '100%' },
-        { value: 1.125, label: '112.5%' },
-    ],
-}))
-
 vi.mock('@/hooks/useKeyboardShortcuts', () => ({
     useKeyboardShortcutSettings: () => ({
         shortcutSettings: {
             toggleSettings: true,
-            adjustFontScale: true,
             toggleSidebar: false,
             openNewSession: true,
         },
@@ -38,12 +27,6 @@ vi.mock('@/hooks/useKeyboardShortcuts', () => ({
             titleKey: 'settings.shortcuts.toggleSettings.title',
             detailKey: 'settings.shortcuts.toggleSettings.detail',
             combos: [['Cmd/Ctrl', ',']],
-        },
-        {
-            id: 'adjustFontScale',
-            titleKey: 'settings.shortcuts.adjustFontScale.title',
-            detailKey: 'settings.shortcuts.adjustFontScale.detail',
-            combos: [['Cmd/Ctrl', '='], ['Cmd/Ctrl', '-']],
         },
         {
             id: 'toggleSidebar',
@@ -135,6 +118,12 @@ describe('SettingsPage', () => {
         expect(screen.getAllByRole('switch', { name: 'Sidebar / Session List' }).at(-1)).toHaveAttribute('aria-checked', 'false')
         expect(screen.getAllByRole('switch', { name: 'Open New Session' }).at(-1)).toHaveAttribute('aria-checked', 'true')
         expect(screen.getAllByText('Cmd/Ctrl').length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('shows the native browser zoom hint instead of app font size controls', () => {
+        renderWithProviders(<SettingsPage />)
+        expect(screen.getAllByText('Zoom Mode').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByText(/native browser zoom/i).length).toBeGreaterThanOrEqual(1)
     })
 
     it('uses correct i18n keys for About section', () => {

@@ -5,7 +5,6 @@ import { useAppKeyboardShortcuts } from './useAppKeyboardShortcuts'
 const shortcutSettingsMock = vi.hoisted(() => ({
     current: {
         toggleSettings: true,
-        adjustFontScale: true,
         toggleSidebar: true,
         openNewSession: true,
     },
@@ -38,7 +37,6 @@ describe('useAppKeyboardShortcuts', () => {
     beforeEach(() => {
         shortcutSettingsMock.current = {
             toggleSettings: true,
-            adjustFontScale: true,
             toggleSidebar: true,
             openNewSession: true,
         }
@@ -65,7 +63,6 @@ describe('useAppKeyboardShortcuts', () => {
     it('does not open the new session panel when the shortcut is disabled', () => {
         shortcutSettingsMock.current = {
             toggleSettings: true,
-            adjustFontScale: true,
             toggleSidebar: true,
             openNewSession: false,
         }
@@ -84,6 +81,21 @@ describe('useAppKeyboardShortcuts', () => {
         window.dispatchEvent(event)
 
         expect(onOpenNewSession).not.toHaveBeenCalled()
+        expect(event.defaultPrevented).toBe(false)
+    })
+
+    it('does not intercept Cmd/Ctrl+= so the browser can handle native zoom', () => {
+        render(<Harness onOpenNewSession={vi.fn()} />)
+
+        const event = new KeyboardEvent('keydown', {
+            code: 'Equal',
+            metaKey: true,
+            bubbles: true,
+            cancelable: true,
+        })
+
+        window.dispatchEvent(event)
+
         expect(event.defaultPrevented).toBe(false)
     })
 })

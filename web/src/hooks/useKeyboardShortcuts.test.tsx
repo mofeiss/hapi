@@ -30,7 +30,6 @@ describe('useKeyboardShortcutSettings', () => {
         expect(localStorage.getItem('hapi:keyboard-shortcuts')).toBe(
             JSON.stringify({
                 toggleSettings: false,
-                adjustFontScale: true,
                 toggleSidebar: true,
                 openNewSession: true,
             })

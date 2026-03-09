@@ -56,7 +56,6 @@
     --app-scrollbar-thumb: rgba(107, 114, 128, 0.45);
     --app-scrollbar-thumb-hover: rgba(107, 114, 128, 0.62);
 
-    --app-font-scale: 1;
 }
 
 [data-theme="dark"] {
@@ -115,17 +114,13 @@
     --app-scrollbar-thumb-hover: rgba(156, 163, 175, 0.58);
 }
 
-html {
-    font-size: calc(100% * var(--app-font-scale, 1));
-}
-
 html,
 body {
     height: 100vh;
     height: 100dvh;
     height: var(--tg-viewport-stable-height, 100dvh);
     overflow: hidden;
-    touch-action: pan-x pan-y;
+    touch-action: pan-x pan-y pinch-zoom;
     /* Disable native browser edge-swipe; navigation is handled in-app. */
     overscroll-behavior-y: none;
     overscroll-behavior-x: none;

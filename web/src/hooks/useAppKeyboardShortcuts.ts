@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { stepFontScale } from '@/hooks/useFontScale'
 import { useKeyboardShortcutSettings } from '@/hooks/useKeyboardShortcuts'
 
 type UseAppKeyboardShortcutsOptions = {
@@ -41,18 +40,6 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
             ) {
                 event.preventDefault()
                 onToggleSettings()
-                return
-            }
-
-            if (shortcutSettings.adjustFontScale && event.code === 'Equal' && !event.altKey) {
-                event.preventDefault()
-                stepFontScale(1)
-                return
-            }
-
-            if (shortcutSettings.adjustFontScale && event.code === 'Minus' && !event.altKey) {
-                event.preventDefault()
-                stepFontScale(-1)
                 return
             }
 

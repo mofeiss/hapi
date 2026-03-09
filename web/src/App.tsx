@@ -101,32 +101,6 @@ function AppInner() {
     }, [])
 
     useEffect(() => {
-        const preventDefault = (event: Event) => {
-            event.preventDefault()
-        }
-
-        const onWheel = (event: WheelEvent) => {
-            if (event.ctrlKey) {
-                event.preventDefault()
-            }
-        }
-
-        document.addEventListener('gesturestart', preventDefault as EventListener, { passive: false })
-        document.addEventListener('gesturechange', preventDefault as EventListener, { passive: false })
-        document.addEventListener('gestureend', preventDefault as EventListener, { passive: false })
-
-        window.addEventListener('wheel', onWheel, { passive: false })
-
-        return () => {
-            document.removeEventListener('gesturestart', preventDefault as EventListener)
-            document.removeEventListener('gesturechange', preventDefault as EventListener)
-            document.removeEventListener('gestureend', preventDefault as EventListener)
-
-            window.removeEventListener('wheel', onWheel)
-        }
-    }, [])
-
-    useEffect(() => {
         const tg = getTelegramWebApp()
         const backButton = tg?.BackButton
         if (!backButton) return

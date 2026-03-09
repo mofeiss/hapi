@@ -345,7 +345,7 @@ function SessionItem(props: {
               sizeClassName="h-4 w-4"
             />
             <div
-              className={`truncate text-[14px] leading-none ${
+              className={`truncate text-sm leading-none ${
                 selected
                   ? "font-semibold text-[var(--app-fg)]"
                   : !s.active
@@ -686,7 +686,7 @@ export function SessionList(props: {
                   collapsed={isCollapsed}
                 />
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span className="font-medium text-[14px] break-words">
+                  <span className="break-words text-sm font-medium">
                     {group.host}
                   </span>
                   <span className="shrink-0 text-xs text-[var(--app-hint)]">
