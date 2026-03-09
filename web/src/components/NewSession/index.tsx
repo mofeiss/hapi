@@ -141,6 +141,7 @@ function LayersIcon() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            className="translate-y-px"
         >
             <path d="m12 3-8 4 8 4 8-4-8-4Z" />
             <path d="m4 11 8 4 8-4" />
@@ -191,7 +192,7 @@ function PillSelect(props: {
         <div className={`flex h-8 min-w-0 items-center gap-2 rounded-xl border border-[var(--app-panel-border)] bg-[var(--app-bg)] px-2.5 ${props.minWidthClassName ?? 'min-w-[144px]'}`}>
             {props.icon ? (
                 <span
-                    className="shrink-0 text-[var(--app-hint)]"
+                    className="flex h-4 w-4 shrink-0 items-center justify-center text-[var(--app-hint)]"
                     title={props.label}
                     aria-label={props.label}
                 >
@@ -203,7 +204,7 @@ function PillSelect(props: {
                     value={props.value}
                     onChange={(event) => props.onChange(event.target.value)}
                     disabled={props.disabled}
-                    className="h-full w-full min-w-0 appearance-none bg-transparent pr-4 text-[13px] text-[var(--app-fg)] outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-full w-full min-w-0 appearance-none bg-transparent pr-4 text-[13px] leading-none text-[var(--app-fg)] outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {props.options.map((option) => (
                         <option key={option.value} value={option.value}>
