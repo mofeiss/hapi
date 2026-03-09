@@ -13,6 +13,7 @@ import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 import { normalizeProjectPath } from '@/utils/path'
 import { useToast } from '@/lib/toast-context'
 import { formatSessionModelLabel, ReasoningIcon } from '@/components/SessionModelBadge'
+import { AgentFlavorStatusIcon } from '@/components/AgentFlavorStatusIcon'
 
 function getSessionTitle(session: Session): string {
     if (session.metadata?.name) {
@@ -304,8 +305,16 @@ export function SessionHeader(props: {
 
                     {/* Session info - two lines: title and path */}
                     <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold">
-                            {title}
+                        <div className="flex min-w-0 items-center gap-2">
+                            <AgentFlavorStatusIcon
+                                flavor={session.metadata?.flavor}
+                                active={session.active}
+                                thinking={session.thinking}
+                                sizeClassName="h-4 w-4"
+                            />
+                            <div className="min-w-0 flex-1 truncate font-semibold">
+                                {title}
+                            </div>
                         </div>
                         <div
                             className="flex min-w-0 items-center gap-x-3 overflow-hidden whitespace-nowrap text-xs text-[var(--app-hint)]"

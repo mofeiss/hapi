@@ -14,6 +14,7 @@ import {
   formatSessionModelLabel,
   ReasoningIcon,
 } from "@/components/SessionModelBadge";
+import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 
 export type SessionGroup = {
   host: string;
@@ -330,30 +331,12 @@ function SessionItem(props: {
                 className="h-4 w-4 shrink-0 rounded accent-[var(--app-link)] pointer-events-none"
               />
             ) : null}
-            <span
-              className={`flex h-4 w-4 shrink-0 items-center justify-center ${s.active && s.thinking ? "rounded-[4px] bg-[var(--app-orange-base)]" : ""}`}
-              aria-hidden="true"
-            >
-              {s.active && s.thinking ? (
-                <span
-                  className="inline-block -translate-y-px text-[15px] leading-none text-white"
-                  style={{
-                    animation:
-                      "spin 3s linear infinite, snowflake-pulse 2s ease-in-out infinite",
-                  }}
-                >
-                  ✻
-                </span>
-              ) : s.active ? (
-                <span className="inline-block -translate-y-px text-[15px] leading-none text-emerald-500">
-                  ✻
-                </span>
-              ) : (
-                <span className="inline-block -translate-y-px text-[15px] leading-none text-[var(--app-hint)]">
-                  ✻
-                </span>
-              )}
-            </span>
+            <AgentFlavorStatusIcon
+              flavor={s.metadata?.flavor}
+              active={s.active}
+              thinking={s.thinking}
+              sizeClassName="h-4 w-4"
+            />
             <div
               className={`truncate text-[14px] leading-none ${!s.active ? "font-normal text-[var(--app-hint)]" : "font-medium"}`}
             >
