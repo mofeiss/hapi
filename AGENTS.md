@@ -238,6 +238,7 @@ Package: `cli/package.json` -> `@ofeiss/hapi` (fork of `@twsxtd/hapi`)
   - npm 不允许重复发布同一版本
   - 不升版本会导致发布失败
 - 输出发布命令时，不要把身份校验和 `npm publish` 分开描述；要把它们放进同一个代码块里
+- 默认只给一个可直接复制执行的发布命令代码块；不要再额外附带“场景 1 / 场景 2 / 示例输出”这类容易被误复制到终端的说明，除非用户明确要求看示例输出
 - 该代码块必须满足：
   - 第一段先执行 `npm whoami`
   - 若结果不是 `ofeiss`，先提示用户按 ENTER，再自动执行 `npm login`
@@ -320,30 +321,6 @@ Fork 时必须将 `@twsxtd` 全部替换为 `@ofeiss`，涉及三个文件：
    ```
    这里的 `VERSION` 必须替换成当前真实版本号；不要输出 `<ver>` 占位符。
    Leave `--otp=` empty -> triggers browser-based auth -> macOS biometric verification.
-   示例输出也要一并给出，至少覆盖以下两种场景：
-   场景 1：当前未登录或身份不对，按 ENTER 后执行 `npm login`，登录成功后继续推送：
-   ```text
-   未登录或登录身份不正确。按 ENTER 执行 npm login，完成后会自动继续推送流程。
-   <用户按下 ENTER>
-   npm notice Log in on https://registry.npmjs.org/
-   Logged in as ofeiss on https://registry.npmjs.org/.
-   npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
-   + @ofeiss/hapi-darwin-arm64@<ver>
-   npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
-   + @ofeiss/hapi-linux-x64@<ver>
-   npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
-   + @ofeiss/hapi-win32-x64@<ver>
-   npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
-   + @ofeiss/hapi@<ver>
-   ```
-   场景 2：执行 `npm login` 后身份仍不是 `ofeiss`，停止推送：
-   ```text
-   未登录或登录身份不正确。按 ENTER 执行 npm login，完成后会自动继续推送流程。
-   <用户按下 ENTER>
-   npm notice Log in on https://registry.npmjs.org/
-   Logged in as someone-else on https://registry.npmjs.org/.
-   npm 登录后身份仍不是 ofeiss，已停止推送。当前身份: someone-else
-   ```
 
 ### Known Issues
 
