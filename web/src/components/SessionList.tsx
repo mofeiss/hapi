@@ -517,6 +517,7 @@ export function SessionList(props: {
   onRefresh: () => void;
   isLoading: boolean;
   renderHeader?: boolean;
+  fillHeight?: boolean;
   api: ApiClient | null;
   selectedSessionId?: string | null;
   batchMode?: "archive" | "delete" | null;
@@ -528,6 +529,7 @@ export function SessionList(props: {
   const { t } = useTranslation();
   const {
     renderHeader = true,
+    fillHeight = false,
     api,
     selectedSessionId,
     batchMode,
@@ -630,7 +632,11 @@ export function SessionList(props: {
   }, [groups]);
 
   return (
-    <div className="mx-auto flex w-full max-w-full lg:max-w-content flex-col px-3">
+    <div
+      className={`mx-auto flex w-full max-w-full flex-col px-3 lg:max-w-content ${
+        fillHeight ? "h-full min-h-0" : ""
+      }`}
+    >
       {renderHeader ? (
         <div className="flex items-center justify-between py-1">
           <div className="text-xs text-[var(--app-hint)]">
@@ -650,77 +656,91 @@ export function SessionList(props: {
         </div>
       ) : null}
 
-      <div className="flex flex-col">
-        {groups.map((group, index) => {
-          const isCollapsed = isGroupCollapsed(group);
-          const isFirstGroup = index === 0;
-          return (
-            <div key={group.host}>
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.host, isCollapsed)}
-                className={`sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 text-left ${
-                  isFirstGroup ? "rounded-t-md" : ""
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4 shrink-0 text-[var(--app-hint)]"
-                  aria-hidden="true"
+      {groups.length > 0 ? (
+        <div
+          className={`overflow-hidden rounded-md border border-[var(--app-subtle-solid-bg)] ${
+            fillHeight ? "flex-1 min-h-0" : ""
+          }`}
+        >
+          <div
+            className={
+              fillHeight ? "h-full overflow-y-auto desktop-scrollbar-left" : ""
+            }
+          >
+            {groups.map((group, index) => {
+              const isCollapsed = isGroupCollapsed(group);
+              return (
+                <div
+                  key={group.host}
+                  className={
+                    index > 0 ? "border-t border-[var(--app-subtle-solid-bg)]" : ""
+                  }
                 >
-                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
-                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
-                  <line x1="6" y1="6" x2="6.01" y2="6" />
-                  <line x1="6" y1="18" x2="6.01" y2="18" />
-                </svg>
-                <ChevronIcon
-                  className="h-4 w-4 text-[var(--app-hint)]"
-                  collapsed={isCollapsed}
-                />
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span className="break-words text-sm font-medium">
-                    {group.host}
-                  </span>
-                  <span className="shrink-0 text-xs text-[var(--app-hint)]">
-                    ({group.sessions.length})
-                  </span>
-                </div>
-              </button>
-              {!isCollapsed ? (
-                <div className="flex flex-col divide-y divide-[var(--app-divider)] border-x border-b border-[var(--app-subtle-solid-bg)]">
-                  {group.sessions.map((s) => (
-                    <SessionItem
-                      key={s.id}
-                      session={s}
-                      onSelect={props.onSelect}
-                      api={api}
-                      selected={s.id === selectedSessionId}
-                      striped={zebraSessionIds.has(s.id)}
-                      forceArchiving={archivingSessionIds?.has(s.id) === true}
-                      forceDeleting={deletingSessionIds?.has(s.id) === true}
-                      batchMode={batchMode}
-                      batchSelected={batchSelectedIds?.has(s.id)}
-                      onBatchToggleSelect={
-                        onBatchToggleSelect
-                          ? () => onBatchToggleSelect(s.id)
-                          : undefined
-                      }
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.host, isCollapsed)}
+                    className="sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 text-left"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4 shrink-0 text-[var(--app-hint)]"
+                      aria-hidden="true"
+                    >
+                      <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                      <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                      <line x1="6" y1="6" x2="6.01" y2="6" />
+                      <line x1="6" y1="18" x2="6.01" y2="18" />
+                    </svg>
+                    <ChevronIcon
+                      className="h-4 w-4 text-[var(--app-hint)]"
+                      collapsed={isCollapsed}
                     />
-                  ))}
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="break-words text-sm font-medium">
+                        {group.host}
+                      </span>
+                      <span className="shrink-0 text-xs text-[var(--app-hint)]">
+                        ({group.sessions.length})
+                      </span>
+                    </div>
+                  </button>
+                  {!isCollapsed ? (
+                    <div className="flex flex-col divide-y divide-[var(--app-divider)]">
+                      {group.sessions.map((s) => (
+                        <SessionItem
+                          key={s.id}
+                          session={s}
+                          onSelect={props.onSelect}
+                          api={api}
+                          selected={s.id === selectedSessionId}
+                          striped={zebraSessionIds.has(s.id)}
+                          forceArchiving={archivingSessionIds?.has(s.id) === true}
+                          forceDeleting={deletingSessionIds?.has(s.id) === true}
+                          batchMode={batchMode}
+                          batchSelected={batchSelectedIds?.has(s.id)}
+                          onBatchToggleSelect={
+                            onBatchToggleSelect
+                              ? () => onBatchToggleSelect(s.id)
+                              : undefined
+                          }
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

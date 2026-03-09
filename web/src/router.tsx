@@ -1645,135 +1645,9 @@ function SessionsPage() {
                 </button>
               </div>
             </div>
-            {showSidebarSearchRow ? (
-              <div className="mx-auto w-full max-w-full lg:max-w-content px-3 pb-2">
-                <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
-                  <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
-                    {hasSessionSearch ? (
-                      <button
-                        type="button"
-                        onClick={() => setSessionSearch("")}
-                        onMouseDown={(event) => event.preventDefault()}
-                        className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                        title={t("sessions.search.clear")}
-                        aria-label={t("sessions.search.clear")}
-                      >
-                        <SearchClearIcon className="h-3.5 w-3.5" />
-                      </button>
-                    ) : (
-                      <SearchIcon className="h-[15px] w-[15px] text-[var(--app-hint)]" />
-                    )}
-                  </div>
-                  <input
-                    value={sessionSearch}
-                    onChange={(event) => setSessionSearch(event.target.value)}
-                    placeholder={t("sessions.search.placeholder")}
-                    aria-label={t("sessions.search.placeholder")}
-                    className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                  />
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    {batchMode && showSidebarBatchActions ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={
-                            batchSelectedIds.size === batchFilteredIds.size &&
-                            batchFilteredIds.size > 0
-                              ? () => setBatchSelectedIds(new Set())
-                              : handleBatchSelectAll
-                          }
-                          disabled={batchPending || batchFilteredIds.size === 0}
-                          className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                          title={
-                            batchSelectedIds.size === batchFilteredIds.size &&
-                            batchFilteredIds.size > 0
-                              ? t("batch.deselectAll")
-                              : t("batch.selectAll")
-                          }
-                        >
-                          {batchSelectedIds.size === batchFilteredIds.size &&
-                          batchFilteredIds.size > 0 ? (
-                            <BatchDeselectAllIcon className="h-[18px] w-[18px]" />
-                          ) : (
-                            <BatchSelectAllIcon className="h-[18px] w-[18px]" />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleBatchConfirmClick}
-                          disabled={batchSelectedIds.size === 0 || batchPending}
-                          className={`p-1 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
-                          title={t("batch.confirm.tooltip")}
-                        >
-                          <BatchCheckIcon className="h-[18px] w-[18px]" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleExitBatchMode}
-                          disabled={batchPending}
-                          className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                          title={t("batch.cancel.tooltip")}
-                        >
-                          <BatchXIcon className="h-[18px] w-[18px]" />
-                        </button>
-                      </>
-                    ) : showSidebarBatchActions ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleEnterBatchMode("archive")}
-                          disabled={visibleArchivableCount === 0}
-                          className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                          title={t("batch.archive.tooltip")}
-                        >
-                          <BatchArchiveIcon className="h-[18px] w-[18px]" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleEnterBatchMode("delete")}
-                          disabled={visibleDeletableCount === 0}
-                          className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                          title={t("batch.delete.tooltip")}
-                        >
-                          <BatchTrashIcon className="h-[18px] w-[18px]" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={toggleFilterOnline}
-                          className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
-                          title={
-                            filterOnlineOnly
-                              ? t("filter.showAll")
-                              : t("filter.onlineOnly")
-                          }
-                        >
-                          <OnlineFilterIcon className="h-[18px] w-[18px]" />
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={toggleFilterOnline}
-                        className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
-                        title={
-                          filterOnlineOnly
-                            ? t("filter.showAll")
-                            : t("filter.onlineOnly")
-                        }
-                      >
-                        <OnlineFilterIcon className="h-[18px] w-[18px]" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto desktop-scrollbar-left">
+          <div className={`flex-1 min-h-0 ${showSidebarSearchRow ? "mb-2" : ""}`}>
             {error ? (
               <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
                 <div className="text-sm text-red-600">{error}</div>
@@ -1797,6 +1671,7 @@ function SessionsPage() {
                 onRefresh={handleRefresh}
                 isLoading={isLoading}
                 renderHeader={false}
+                fillHeight
                 api={api}
                 batchMode={batchMode}
                 batchSelectedIds={batchSelectedIds}
@@ -1806,6 +1681,132 @@ function SessionsPage() {
               />
             )}
           </div>
+          {showSidebarSearchRow ? (
+            <div className="mx-auto w-full max-w-full px-3 pb-3 lg:max-w-content">
+              <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
+                <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+                  {hasSessionSearch ? (
+                    <button
+                      type="button"
+                      onClick={() => setSessionSearch("")}
+                      onMouseDown={(event) => event.preventDefault()}
+                      className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                      title={t("sessions.search.clear")}
+                      aria-label={t("sessions.search.clear")}
+                    >
+                      <SearchClearIcon className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    <SearchIcon className="h-[15px] w-[15px] text-[var(--app-hint)]" />
+                  )}
+                </div>
+                <input
+                  value={sessionSearch}
+                  onChange={(event) => setSessionSearch(event.target.value)}
+                  placeholder={t("sessions.search.placeholder")}
+                  aria-label={t("sessions.search.placeholder")}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+                <div className="flex shrink-0 items-center gap-0.5">
+                  {batchMode && showSidebarBatchActions ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={
+                          batchSelectedIds.size === batchFilteredIds.size &&
+                          batchFilteredIds.size > 0
+                            ? () => setBatchSelectedIds(new Set())
+                            : handleBatchSelectAll
+                        }
+                        disabled={batchPending || batchFilteredIds.size === 0}
+                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={
+                          batchSelectedIds.size === batchFilteredIds.size &&
+                          batchFilteredIds.size > 0
+                            ? t("batch.deselectAll")
+                            : t("batch.selectAll")
+                        }
+                      >
+                        {batchSelectedIds.size === batchFilteredIds.size &&
+                        batchFilteredIds.size > 0 ? (
+                          <BatchDeselectAllIcon className="h-[18px] w-[18px]" />
+                        ) : (
+                          <BatchSelectAllIcon className="h-[18px] w-[18px]" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleBatchConfirmClick}
+                        disabled={batchSelectedIds.size === 0 || batchPending}
+                        className={`p-1 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
+                        title={t("batch.confirm.tooltip")}
+                      >
+                        <BatchCheckIcon className="h-[18px] w-[18px]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExitBatchMode}
+                        disabled={batchPending}
+                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={t("batch.cancel.tooltip")}
+                      >
+                        <BatchXIcon className="h-[18px] w-[18px]" />
+                      </button>
+                    </>
+                  ) : showSidebarBatchActions ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleEnterBatchMode("archive")}
+                        disabled={visibleArchivableCount === 0}
+                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={t("batch.archive.tooltip")}
+                      >
+                        <BatchArchiveIcon className="h-[18px] w-[18px]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEnterBatchMode("delete")}
+                        disabled={visibleDeletableCount === 0}
+                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={t("batch.delete.tooltip")}
+                      >
+                        <BatchTrashIcon className="h-[18px] w-[18px]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={toggleFilterOnline}
+                        className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                        title={
+                          filterOnlineOnly
+                            ? t("filter.showAll")
+                            : t("filter.onlineOnly")
+                        }
+                      >
+                        <OnlineFilterIcon className="h-[18px] w-[18px]" />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={toggleFilterOnline}
+                      className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                      title={
+                        filterOnlineOnly
+                          ? t("filter.showAll")
+                          : t("filter.onlineOnly")
+                      }
+                    >
+                      <OnlineFilterIcon className="h-[18px] w-[18px]" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Batch operation confirm dialog */}
@@ -1892,19 +1893,6 @@ function SessionsPage() {
             </button>
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
-          <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
-            <button
-              type="button"
-              onClick={toggleFilterOnline}
-              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
-              title={
-                filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")
-              }
-            >
-              <OnlineFilterIcon className="h-[18px] w-[18px]" />
-            </button>
-          </div>
-          <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
 
           {/* Middle: scrollable session groups */}
           <div className="flex-1 min-h-0 overflow-y-auto py-1 desktop-scrollbar-left">
@@ -1926,6 +1914,19 @@ function SessionsPage() {
                 ))}
               </div>
             ))}
+          </div>
+          <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
+          <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={toggleFilterOnline}
+              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+              title={
+                filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")
+              }
+            >
+              <OnlineFilterIcon className="h-[18px] w-[18px]" />
+            </button>
           </div>
         </div>
       )}

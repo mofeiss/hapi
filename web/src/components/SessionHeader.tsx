@@ -1,17 +1,12 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useMemo } from 'react'
 import type { Session } from '@/types/api'
 import type { ApiClient } from '@/api/client'
 import { isTelegramApp } from '@/hooks/useTelegram'
-import { useSessionActions } from '@/hooks/mutations/useSessionActions'
-import { SessionActionMenu } from '@/components/SessionActionMenu'
-import { RenameSessionDialog } from '@/components/RenameSessionDialog'
 import { PageHeaderUtilityControls } from '@/components/PageHeaderUtilityControls'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { useWidescreen } from '@/hooks/useWidescreen'
 import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 import { normalizeProjectPath } from '@/utils/path'
-import { useToast } from '@/lib/toast-context'
 import { formatSessionModelLabel, ReasoningIcon } from '@/components/SessionModelBadge'
 import { AgentFlavorStatusIcon } from '@/components/AgentFlavorStatusIcon'
 
@@ -61,23 +56,6 @@ function FilesIcon(props: { className?: string }) {
             className={props.className}
         >
             <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
-        </svg>
-    )
-}
-
-function MoreVerticalIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className={props.className}
-        >
-            <circle cx="12" cy="5" r="2" />
-            <circle cx="12" cy="12" r="2" />
-            <circle cx="12" cy="19" r="2" />
         </svg>
     )
 }
@@ -176,9 +154,8 @@ export function SessionHeader(props: {
     onSessionDeleted?: () => void
 }) {
     const { t } = useTranslation()
-    const { addToast } = useToast()
     const { widescreen, toggleWidescreen } = useWidescreen()
-    const { session, api, onSessionDeleted } = props
+    const { session } = props
     const titleFromStore = useSessionTitleOverride(session.id)
     const title = useMemo(() => titleFromStore ?? getSessionTitle(session), [session, titleFromStore])
     const worktreeBranch = session.metadata?.worktree?.branch
@@ -189,47 +166,6 @@ export function SessionHeader(props: {
         }),
         [session.metadata, session.modelMode]
     )
-
-    const [menuOpen, setMenuOpen] = useState(false)
-    const [menuAnchorPoint, setMenuAnchorPoint] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
-    const menuId = useId()
-    const menuAnchorRef = useRef<HTMLButtonElement | null>(null)
-    const [renameOpen, setRenameOpen] = useState(false)
-    const [archiveOpen, setArchiveOpen] = useState(false)
-    const [deleteOpen, setDeleteOpen] = useState(false)
-
-    const { archiveSession, renameSession, deleteSession, isPending } = useSessionActions(
-        api,
-        session.id,
-        session.metadata?.flavor ?? null
-    )
-
-    const handleDelete = async () => {
-        await deleteSession()
-        onSessionDeleted?.()
-    }
-
-    const handleArchive = () => {
-        void archiveSession().catch((error) => {
-            const message = error instanceof Error && error.message
-                ? error.message
-                : t('dialog.error.default')
-            addToast({
-                title: t('dialog.archive.title'),
-                body: message,
-                sessionId: session.id,
-                url: `/sessions/${session.id}`
-            })
-        })
-    }
-
-    const handleMenuToggle = () => {
-        if (!menuOpen && menuAnchorRef.current) {
-            const rect = menuAnchorRef.current.getBoundingClientRect()
-            setMenuAnchorPoint({ x: rect.right, y: rect.bottom })
-        }
-        setMenuOpen((open) => !open)
-    }
 
     // In Telegram, don't render header (Telegram provides its own)
     if (isTelegramApp()) {
@@ -370,19 +306,6 @@ export function SessionHeader(props: {
                                 <FilesIcon />
                             </button>
                         ) : null}
-                        <button
-                            type="button"
-                            onClick={handleMenuToggle}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            ref={menuAnchorRef}
-                            aria-haspopup="menu"
-                            aria-expanded={menuOpen}
-                            aria-controls={menuOpen ? menuId : undefined}
-                            className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                            title={t('session.more')}
-                        >
-                            <MoreVerticalIcon />
-                        </button>
 
                         <button
                             type="button"
@@ -395,49 +318,6 @@ export function SessionHeader(props: {
                     </div>
                 </div>
             </div>
-
-            <SessionActionMenu
-                isOpen={menuOpen}
-                onClose={() => setMenuOpen(false)}
-                sessionActive={session.active}
-                onRename={() => setRenameOpen(true)}
-                onArchive={() => setArchiveOpen(true)}
-                onDelete={() => setDeleteOpen(true)}
-                anchorPoint={menuAnchorPoint}
-                menuId={menuId}
-            />
-
-            <RenameSessionDialog
-                isOpen={renameOpen}
-                onClose={() => setRenameOpen(false)}
-                currentName={title}
-                onRename={renameSession}
-                isPending={isPending}
-            />
-
-            <ConfirmDialog
-                isOpen={archiveOpen}
-                onClose={() => setArchiveOpen(false)}
-                title={t('dialog.archive.title')}
-                description={t('dialog.archive.description', { name: title })}
-                confirmLabel={t('dialog.archive.confirm')}
-                confirmingLabel={t('dialog.archive.confirming')}
-                onConfirm={handleArchive}
-                isPending={isPending}
-                destructive
-            />
-
-            <ConfirmDialog
-                isOpen={deleteOpen}
-                onClose={() => setDeleteOpen(false)}
-                title={t('dialog.delete.title')}
-                description={t('dialog.delete.description', { name: title })}
-                confirmLabel={t('dialog.delete.confirm')}
-                confirmingLabel={t('dialog.delete.confirming')}
-                onConfirm={handleDelete}
-                isPending={isPending}
-                destructive
-            />
         </>
     )
 }
