@@ -134,6 +134,8 @@ export function TodoPanel(props: {
     variant?: 'dock' | 'inline'
     collapsible?: boolean
     defaultExpanded?: boolean
+    expanded?: boolean
+    onExpandedChange?: (expanded: boolean) => void
     resetKey?: string
     className?: string
 }) {
@@ -143,11 +145,15 @@ export function TodoPanel(props: {
     const stats = useMemo(() => getTodoStats(props.todos), [props.todos])
     const fingerprint = useMemo(() => createTodoFingerprint(props.todos), [props.todos])
     const defaultExpanded = props.defaultExpanded ?? (stats.incomplete > 0 || !collapsible)
-    const [expanded, setExpanded] = useState(defaultExpanded)
+    const isExpandedControlled = typeof props.expanded === 'boolean'
+    const [uncontrolledExpanded, setUncontrolledExpanded] = useState(defaultExpanded)
+    const expanded = isExpandedControlled ? (props.expanded ?? defaultExpanded) : uncontrolledExpanded
 
     useEffect(() => {
-        setExpanded(defaultExpanded)
-    }, [defaultExpanded, props.resetKey, fingerprint])
+        if (!isExpandedControlled) {
+            setUncontrolledExpanded(defaultExpanded)
+        }
+    }, [defaultExpanded, fingerprint, isExpandedControlled, props.resetKey])
 
     if (props.todos.length === 0) {
         return null
@@ -157,6 +163,9 @@ export function TodoPanel(props: {
     const isExpanded = collapsible ? expanded : true
     const overallStatus = getOverallTodoStatus(props.todos, stats.completed)
     const overlapBufferClass = isDock ? 'h-7' : 'hidden'
+    const panelSurfaceClassName = isDock
+        ? 'rounded-[20px] bg-[var(--app-secondary-bg)] shadow-[0_6px_18px_rgba(15,23,42,0.045)]'
+        : 'rounded-[20px] bg-[var(--app-panel-raised-bg)]'
     const headerClassName = cn(
         'flex w-full items-center justify-between text-left',
         collapsible
@@ -168,14 +177,19 @@ export function TodoPanel(props: {
         'truncate font-medium text-[var(--app-fg)]',
         isDock ? 'text-[14px] leading-5' : 'text-[13px] leading-5'
     )
+    const toggleExpanded = () => {
+        const nextExpanded = !expanded
+        if (!isExpandedControlled) {
+            setUncontrolledExpanded(nextExpanded)
+        }
+        props.onExpandedChange?.(nextExpanded)
+    }
 
     return (
         <div
             className={cn(
                 'overflow-hidden border border-[var(--app-panel-border)]',
-                isDock
-                    ? 'rounded-[20px] bg-[var(--app-panel-raised-bg)] shadow-[0_6px_18px_rgba(15,23,42,0.045)]'
-                    : 'rounded-[20px] bg-[var(--app-panel-raised-bg)]',
+                panelSurfaceClassName,
                 props.className
             )}
         >
@@ -186,7 +200,7 @@ export function TodoPanel(props: {
                     aria-expanded={isExpanded}
                     aria-label={expanded ? t('todo.collapse') : t('todo.expand')}
                     title={expanded ? t('todo.collapse') : t('todo.expand')}
-                    onClick={() => setExpanded((value) => !value)}
+                    onClick={toggleExpanded}
                 >
                     <div className={headerContentClassName}>
                         <span className="shrink-0 text-[var(--app-fg)]">

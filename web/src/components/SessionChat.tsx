@@ -734,6 +734,15 @@ export function SessionChat(props: {
         () => `${props.session.id}:${createTodoFingerprint(composerTodos)}`,
         [props.session.id, composerTodos]
     )
+    const composerTodoDefaultExpanded = useMemo(
+        () => composerTodos.some((todo) => todo.status !== 'completed'),
+        [composerTodos]
+    )
+    const [composerTodoExpanded, setComposerTodoExpanded] = useState(composerTodoDefaultExpanded)
+
+    useEffect(() => {
+        setComposerTodoExpanded(composerTodoDefaultExpanded)
+    }, [composerTodoDefaultExpanded, composerTodoResetKey])
 
     useEffect(() => {
         blocksByIdRef.current = reconciled.byId
@@ -1025,16 +1034,30 @@ export function SessionChat(props: {
 
                                 {composerTodos.length > 0 ? (
                                     <>
-                                        <div aria-hidden="true" className="w-[70%] min-w-0 max-w-[70%] shrink-0 self-end" />
-
-                                        <div className="pointer-events-none absolute bottom-0 right-0 z-0 w-[70%] min-w-0 max-w-[70%]">
-                                            <div className="pointer-events-auto w-full pl-1 pr-4 sm:pl-2 sm:pr-5">
+                                        <div aria-hidden="true" className="min-w-0 max-w-[70%] shrink-0 self-end">
+                                            <div className="invisible h-0 w-fit max-w-full overflow-hidden pl-1 pr-4 sm:pl-2 sm:pr-5">
                                                 <TodoPanel
                                                     todos={composerTodos}
                                                     variant="dock"
                                                     collapsible
+                                                    expanded={composerTodoExpanded}
+                                                    onExpandedChange={setComposerTodoExpanded}
                                                     resetKey={composerTodoResetKey}
-                                                    className="relative z-0 -mb-7 w-full"
+                                                    className="relative z-0 w-fit max-w-full"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="pointer-events-none absolute bottom-0 right-0 z-0 min-w-0 max-w-[70%]">
+                                            <div className="pointer-events-auto w-fit max-w-full pl-1 pr-4 sm:pl-2 sm:pr-5">
+                                                <TodoPanel
+                                                    todos={composerTodos}
+                                                    variant="dock"
+                                                    collapsible
+                                                    expanded={composerTodoExpanded}
+                                                    onExpandedChange={setComposerTodoExpanded}
+                                                    resetKey={composerTodoResetKey}
+                                                    className="relative z-0 -mb-7 w-fit max-w-full"
                                                 />
                                             </div>
                                         </div>
