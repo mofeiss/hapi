@@ -32,6 +32,7 @@ describe('useKeyboardShortcutSettings', () => {
                 toggleSettings: false,
                 adjustFontScale: true,
                 toggleSidebar: true,
+                openNewSession: true,
             })
         )
     })

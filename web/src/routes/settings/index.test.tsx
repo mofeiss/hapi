@@ -28,6 +28,7 @@ vi.mock('@/hooks/useKeyboardShortcuts', () => ({
             toggleSettings: true,
             adjustFontScale: true,
             toggleSidebar: false,
+            openNewSession: true,
         },
         setShortcutEnabled: vi.fn(),
     }),
@@ -49,6 +50,12 @@ vi.mock('@/hooks/useKeyboardShortcuts', () => ({
             titleKey: 'settings.shortcuts.toggleSidebar.title',
             detailKey: 'settings.shortcuts.toggleSidebar.detail',
             combos: [['Cmd/Ctrl', 'Shift', 'D']],
+        },
+        {
+            id: 'openNewSession',
+            titleKey: 'settings.shortcuts.openNewSession.title',
+            detailKey: 'settings.shortcuts.openNewSession.detail',
+            combos: [['Cmd/Ctrl', 'Alt', 'N']],
         },
     ],
 }))
@@ -126,6 +133,7 @@ describe('SettingsPage', () => {
         expect(screen.getAllByText('Keyboard Shortcuts').length).toBeGreaterThanOrEqual(1)
         expect(screen.getAllByRole('switch', { name: 'Toggle Settings' }).at(-1)).toHaveAttribute('aria-checked', 'true')
         expect(screen.getAllByRole('switch', { name: 'Sidebar / Session List' }).at(-1)).toHaveAttribute('aria-checked', 'false')
+        expect(screen.getAllByRole('switch', { name: 'Open New Session' }).at(-1)).toHaveAttribute('aria-checked', 'true')
         expect(screen.getAllByText('Cmd/Ctrl').length).toBeGreaterThanOrEqual(1)
     })
 

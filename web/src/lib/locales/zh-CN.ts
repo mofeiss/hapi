@@ -358,6 +358,8 @@ export default {
   'settings.shortcuts.adjustFontScale.detail': '全平台可用，每次将应用文字大小增加或减少 10%。',
   'settings.shortcuts.toggleSidebar.title': '侧边栏 / 会话列表',
   'settings.shortcuts.toggleSidebar.detail': '桌面端切换侧边栏折叠状态；移动端在当前会话正文页和会话列表页之间切换。',
+  'settings.shortcuts.openNewSession.title': '打开新建会话',
+  'settings.shortcuts.openNewSession.detail': '全平台可用，打开新建会话面板。',
   'settings.voice.title': '语音助手',
   'settings.voice.language': '语音语言',
   'settings.voice.autoDetect': '自动检测',

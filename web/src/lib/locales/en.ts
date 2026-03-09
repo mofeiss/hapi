@@ -375,6 +375,9 @@ export default {
   "settings.shortcuts.toggleSidebar.title": "Sidebar / Session List",
   "settings.shortcuts.toggleSidebar.detail":
     "Desktop: collapse or expand the sidebar. Mobile: switch between the current session and the session list.",
+  "settings.shortcuts.openNewSession.title": "Open New Session",
+  "settings.shortcuts.openNewSession.detail":
+    "Open the new session panel on any platform.",
   "settings.voice.title": "Voice Assistant",
   "settings.voice.language": "Voice Language",
   "settings.voice.autoDetect": "Auto-detect",

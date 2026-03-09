@@ -1,6 +1,10 @@
 import { useSyncExternalStore } from 'react'
 
-export type KeyboardShortcutId = 'toggleSettings' | 'adjustFontScale' | 'toggleSidebar'
+export type KeyboardShortcutId =
+    | 'toggleSettings'
+    | 'adjustFontScale'
+    | 'toggleSidebar'
+    | 'openNewSession'
 
 export type KeyboardShortcutSettings = Record<KeyboardShortcutId, boolean>
 
@@ -18,6 +22,7 @@ export const defaultKeyboardShortcutSettings: KeyboardShortcutSettings = {
     toggleSettings: true,
     adjustFontScale: true,
     toggleSidebar: true,
+    openNewSession: true,
 }
 
 let cachedStoredValue: string | null | undefined
@@ -41,6 +46,12 @@ export const keyboardShortcutDefinitions: ReadonlyArray<KeyboardShortcutDefiniti
         titleKey: 'settings.shortcuts.toggleSidebar.title',
         detailKey: 'settings.shortcuts.toggleSidebar.detail',
         combos: [['Cmd/Ctrl', 'Shift', 'D']],
+    },
+    {
+        id: 'openNewSession',
+        titleKey: 'settings.shortcuts.openNewSession.title',
+        detailKey: 'settings.shortcuts.openNewSession.detail',
+        combos: [['Cmd/Ctrl', 'Alt', 'N']],
     },
 ]
 
@@ -71,6 +82,10 @@ function normalizeShortcutSettings(raw: unknown): KeyboardShortcutSettings {
             typeof data.toggleSidebar === 'boolean'
                 ? data.toggleSidebar
                 : defaultKeyboardShortcutSettings.toggleSidebar,
+        openNewSession:
+            typeof data.openNewSession === 'boolean'
+                ? data.openNewSession
+                : defaultKeyboardShortcutSettings.openNewSession,
     }
 }
 

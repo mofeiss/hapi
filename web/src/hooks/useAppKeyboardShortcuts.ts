@@ -5,6 +5,7 @@ import { useKeyboardShortcutSettings } from '@/hooks/useKeyboardShortcuts'
 type UseAppKeyboardShortcutsOptions = {
     isMobileViewport: boolean
     canToggleMobileSessionPane: boolean
+    onOpenNewSession: () => void
     onToggleSettings: () => void
     onToggleDesktopSidebar: () => void
     onToggleMobileSessionPane: () => void
@@ -19,6 +20,7 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
     const {
         canToggleMobileSessionPane,
         isMobileViewport,
+        onOpenNewSession,
         onToggleDesktopSidebar,
         onToggleMobileSessionPane,
         onToggleSettings,
@@ -26,13 +28,14 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (!hasCommandModifier(event) || event.altKey || event.isComposing) {
+            if (!hasCommandModifier(event) || event.isComposing) {
                 return
             }
 
             if (
                 shortcutSettings.toggleSettings
                 && event.code === 'Comma'
+                && !event.altKey
                 && !event.shiftKey
                 && !event.repeat
             ) {
@@ -41,13 +44,13 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
                 return
             }
 
-            if (shortcutSettings.adjustFontScale && event.code === 'Equal') {
+            if (shortcutSettings.adjustFontScale && event.code === 'Equal' && !event.altKey) {
                 event.preventDefault()
                 stepFontScale(1)
                 return
             }
 
-            if (shortcutSettings.adjustFontScale && event.code === 'Minus') {
+            if (shortcutSettings.adjustFontScale && event.code === 'Minus' && !event.altKey) {
                 event.preventDefault()
                 stepFontScale(-1)
                 return
@@ -56,6 +59,7 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
             if (
                 shortcutSettings.toggleSidebar
                 && event.code === 'KeyD'
+                && !event.altKey
                 && event.shiftKey
                 && !event.repeat
             ) {
@@ -70,6 +74,18 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
 
                 event.preventDefault()
                 onToggleDesktopSidebar()
+                return
+            }
+
+            if (
+                shortcutSettings.openNewSession
+                && event.code === 'KeyN'
+                && event.altKey
+                && !event.shiftKey
+                && !event.repeat
+            ) {
+                event.preventDefault()
+                onOpenNewSession()
             }
         }
 
@@ -78,6 +94,7 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
     }, [
         canToggleMobileSessionPane,
         isMobileViewport,
+        onOpenNewSession,
         onToggleDesktopSidebar,
         onToggleMobileSessionPane,
         onToggleSettings,

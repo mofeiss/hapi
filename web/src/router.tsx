@@ -1171,6 +1171,13 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
   }, []);
 
+  const toggleNewSessionOverlay = useCallback(() => {
+    setNewSessionOpen((prev) => !prev);
+    setSettingsOpen(false);
+    setToolbarMenuOpen(false);
+  }, []);
+
+
   const isSubRoute =
     activeSessionId !== null &&
     pathname !== `/sessions/${activeSessionId}` &&
@@ -1521,6 +1528,7 @@ function SessionsPage() {
       !hasOverlay &&
       !isSubRoute &&
       (activeSessionId !== null || Boolean(swipeForwardSessionId)),
+    onOpenNewSession: toggleNewSessionOverlay,
     onToggleSettings: toggleSettingsOverlay,
     onToggleDesktopSidebar: toggleCollapsed,
     onToggleMobileSessionPane: toggleMobileSessionPane,
@@ -1592,11 +1600,7 @@ function SessionsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setNewSessionOpen((prev) => !prev);
-                  setSettingsOpen(false);
-                  setToolbarMenuOpen(false);
-                }}
+                onClick={toggleNewSessionOverlay}
                 className="session-list-new-button inline-flex p-1 rounded-full text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)] transition-colors"
                 title={t("sessions.new")}
               >
@@ -1843,11 +1847,7 @@ function SessionsPage() {
           <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
             <button
               type="button"
-              onClick={() => {
-                setNewSessionOpen(true);
-                setSettingsOpen(false);
-                setToolbarMenuOpen(false);
-              }}
+              onClick={toggleNewSessionOverlay}
               className="session-list-new-button p-1.5 rounded-full text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)] transition-colors"
               title={t("sessions.new")}
             >
@@ -1956,11 +1956,7 @@ function SessionsPage() {
               onOpenSettings={() => {
                 toggleSettingsOverlay();
               }}
-              onOpenNewSession={() => {
-                setNewSessionOpen((prev) => !prev);
-                setSettingsOpen(false);
-                setToolbarMenuOpen(false);
-              }}
+              onOpenNewSession={toggleNewSessionOverlay}
             />
           </div>
         ))}
