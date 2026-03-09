@@ -6,7 +6,7 @@ export type TracedMessage = NormalizedMessage & {
 }
 
 type TracerState = {
-    promptToTaskId: Map<string, string>
+    promptToParentToolId: Map<string, string>
     uuidToSidechainId: Map<string, string>
     orphanMessages: Map<string, NormalizedMessage[]>
 }
@@ -51,21 +51,22 @@ function processOrphans(state: TracerState, parentUuid: string, sidechainId: str
 
 export function traceMessages(messages: NormalizedMessage[]): TracedMessage[] {
     const state: TracerState = {
-        promptToTaskId: new Map(),
+        promptToParentToolId: new Map(),
         uuidToSidechainId: new Map(),
         orphanMessages: new Map()
     }
 
     const results: TracedMessage[] = []
 
-    // Index Task prompts (including those inside sidechains).
+    // Index tool prompts (including those inside sidechains) so sidechain roots can
+    // be reattached under the originating tool call instead of leaking into root timeline.
     for (const message of messages) {
         if (message.role !== 'agent') continue
         for (const content of message.content) {
-            if (content.type !== 'tool-call' || content.name !== 'Task') continue
+            if (content.type !== 'tool-call') continue
             const input = content.input
             if (!isObject(input) || typeof input.prompt !== 'string') continue
-            state.promptToTaskId.set(input.prompt, message.id)
+            state.promptToParentToolId.set(input.prompt, content.id)
         }
     }
 
@@ -78,14 +79,14 @@ export function traceMessages(messages: NormalizedMessage[]): TracedMessage[] {
         const uuid = getMessageUuid(message)
         const parentUuid = getParentUuid(message)
 
-        // Sidechain root matching (prompt == Task.prompt).
+        // Sidechain root matching (prompt == parent tool input.prompt).
         let sidechainId: string | undefined
         if (message.role === 'agent') {
             for (const content of message.content) {
                 if (content.type !== 'sidechain') continue
-                const taskId = state.promptToTaskId.get(content.prompt)
-                if (taskId) {
-                    sidechainId = taskId
+                const parentToolId = state.promptToParentToolId.get(content.prompt)
+                if (parentToolId) {
+                    sidechainId = parentToolId
                     break
                 }
             }
