@@ -20,9 +20,9 @@ import {
 } from "@/components/SessionList";
 import { NewSession } from "@/components/NewSession";
 import { LoadingState } from "@/components/LoadingState";
+import { PageHeaderUtilityControls } from "@/components/PageHeaderUtilityControls";
 import { SessionActionMenu } from "@/components/SessionActionMenu";
 import { RenameSessionDialog } from "@/components/RenameSessionDialog";
-import { QuickLanguageToggle } from "@/components/QuickLanguageToggle";
 import { useAppContext } from "@/lib/app-context";
 import { useAppGoBack } from "@/hooks/useAppGoBack";
 import { isTelegramApp } from "@/hooks/useTelegram";
@@ -124,26 +124,6 @@ function QuickCloneChatIcon(props: { className?: string }) {
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
       <line x1="15.5" y1="14.5" x2="15.5" y2="18.5" />
       <line x1="13.5" y1="16.5" x2="17.5" y2="16.5" />
-    </svg>
-  );
-}
-
-function SettingsIcon(props: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={props.className}
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
   );
 }
@@ -324,52 +304,6 @@ function BatchDeselectAllIcon(props: { className?: string }) {
     >
       <rect width="18" height="18" x="3" y="3" rx="2" />
       <path d="M9 12h6" />
-    </svg>
-  );
-}
-
-function SunIcon(props: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={props.className}
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="m4.93 4.93 1.41 1.41" />
-      <path d="m17.66 17.66 1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
-      <path d="m6.34 17.66-1.41 1.41" />
-      <path d="m19.07 4.93-1.41 1.41" />
-    </svg>
-  );
-}
-
-function MoonIcon(props: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={props.className}
-    >
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
     </svg>
   );
 }
@@ -703,6 +637,7 @@ function SessionsPage() {
       ? window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX
       : false,
   );
+  const restoreNewSessionAfterSettingsRef = useRef(false);
   const autoOpenDesktopNewSessionStateRef = useRef<
     "idle" | "pending" | "done"
   >("idle");
@@ -1179,23 +1114,47 @@ function SessionsPage() {
     }
   }, [batchMode, batchSelectedIds, executeBatchOperation]);
 
-  const toggleSettingsOverlay = useCallback(() => {
-    setSettingsOpen((prev) => !prev);
-    setNewSessionOpen(false);
+  const shouldRestoreDesktopNewSession = useCallback(() => {
+    return !narrowViewport && isSessionsIndex && activeSessionId === null;
+  }, [activeSessionId, isSessionsIndex, narrowViewport]);
+
+  const closeSettingsOverlay = useCallback(() => {
+    const shouldRestoreNewSession = restoreNewSessionAfterSettingsRef.current;
+    restoreNewSessionAfterSettingsRef.current = false;
+    setSettingsOpen(false);
     setToolbarMenuOpen(false);
+    setNewSessionOpen(shouldRestoreNewSession);
   }, []);
 
-  const openSettingsOverlay = useCallback(() => {
+  const toggleSettingsOverlay = useCallback(() => {
+    if (settingsOpen) {
+      closeSettingsOverlay();
+      return;
+    }
+
+    restoreNewSessionAfterSettingsRef.current = shouldRestoreDesktopNewSession();
     setSettingsOpen(true);
     setNewSessionOpen(false);
     setToolbarMenuOpen(false);
-  }, []);
+  }, [closeSettingsOverlay, settingsOpen, shouldRestoreDesktopNewSession]);
+
+  const openSettingsOverlay = useCallback(() => {
+    restoreNewSessionAfterSettingsRef.current = shouldRestoreDesktopNewSession();
+    setSettingsOpen(true);
+    setNewSessionOpen(false);
+    setToolbarMenuOpen(false);
+  }, [shouldRestoreDesktopNewSession]);
 
   const toggleNewSessionOverlay = useCallback(() => {
-    setNewSessionOpen((prev) => !prev);
+    setNewSessionOpen((prev) => {
+      if (prev && shouldRestoreDesktopNewSession()) {
+        return true;
+      }
+      return !prev;
+    });
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
-  }, []);
+  }, [shouldRestoreDesktopNewSession]);
 
   const openNewSessionOverlay = useCallback(() => {
     setNewSessionOpen(true);
@@ -1656,29 +1615,12 @@ function SessionsPage() {
                   <SidebarCollapseIcon className="h-[18px] w-[18px]" />
                 </button>
                 <div className="hidden lg:block mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
-                <QuickLanguageToggle className="inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]" />
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                  title={
-                    isDark ? t("theme.switchToLight") : t("theme.switchToDark")
-                  }
-                >
-                  {isDark ? (
-                    <SunIcon className="h-[18px] w-[18px]" />
-                  ) : (
-                    <MoonIcon className="h-[18px] w-[18px]" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleSettingsOverlay}
-                  className="inline-flex p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                  title={t("settings.title")}
-                >
-                  <SettingsIcon className="h-[18px] w-[18px]" />
-                </button>
+                <PageHeaderUtilityControls
+                  isDark={isDark}
+                  onToggleTheme={toggleTheme}
+                  onOpenSettings={toggleSettingsOverlay}
+                  containerClassName="flex items-center gap-0 shrink-0 lg:hidden"
+                />
                 <button
                   type="button"
                   onClick={toggleNewSessionOverlay}
@@ -1950,6 +1892,19 @@ function SessionsPage() {
             </button>
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
+          <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={toggleFilterOnline}
+              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+              title={
+                filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")
+              }
+            >
+              <OnlineFilterIcon className="h-[18px] w-[18px]" />
+            </button>
+          </div>
+          <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
 
           {/* Middle: scrollable session groups */}
           <div className="flex-1 min-h-0 overflow-y-auto py-1 desktop-scrollbar-left">
@@ -1971,45 +1926,6 @@ function SessionsPage() {
                 ))}
               </div>
             ))}
-          </div>
-
-          {/* Bottom: toolbar buttons (vertical) */}
-          <div className="shrink-0 flex flex-col items-center py-2 gap-0.5">
-            <div className="mx-2 mb-1 h-px w-full bg-[var(--app-divider)]" />
-            <button
-              type="button"
-              onClick={toggleFilterOnline}
-              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
-              title={
-                filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")
-              }
-            >
-              <OnlineFilterIcon className="h-[18px] w-[18px]" />
-            </button>
-            <div className="mx-2 my-0.5 h-px w-full bg-[var(--app-divider)]" />
-            <QuickLanguageToggle className="inline-flex h-8 min-w-8 items-center justify-center rounded-full px-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]" />
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-              title={
-                isDark ? t("theme.switchToLight") : t("theme.switchToDark")
-              }
-            >
-              {isDark ? (
-                <SunIcon className="h-[18px] w-[18px]" />
-              ) : (
-                <MoonIcon className="h-[18px] w-[18px]" />
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={toggleSettingsOverlay}
-              className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-              title={t("settings.title")}
-            >
-              <SettingsIcon className="h-[18px] w-[18px]" />
-            </button>
           </div>
         </div>
       )}
@@ -2046,7 +1962,7 @@ function SessionsPage() {
         <div
           className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${settingsOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
-          <SettingsPanel onClose={() => setSettingsOpen(false)} />
+          <SettingsPanel onClose={closeSettingsOverlay} />
         </div>
 
         {/* New session overlay */}

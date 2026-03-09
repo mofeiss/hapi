@@ -5,7 +5,7 @@ import { isTelegramApp } from '@/hooks/useTelegram'
 import { useSessionActions } from '@/hooks/mutations/useSessionActions'
 import { SessionActionMenu } from '@/components/SessionActionMenu'
 import { RenameSessionDialog } from '@/components/RenameSessionDialog'
-import { QuickLanguageToggle } from '@/components/QuickLanguageToggle'
+import { PageHeaderUtilityControls } from '@/components/PageHeaderUtilityControls'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { useWidescreen } from '@/hooks/useWidescreen'
@@ -111,52 +111,6 @@ function WidescreenIcon(props: { className?: string; active?: boolean }) {
                     <line x1="3" y1="21" x2="10" y2="14" />
                 </>
             )}
-        </svg>
-    )
-}
-
-function SunIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2" />
-            <path d="M12 20v2" />
-            <path d="m4.93 4.93 1.41 1.41" />
-            <path d="m17.66 17.66 1.41 1.41" />
-            <path d="M2 12h2" />
-            <path d="M20 12h2" />
-            <path d="m6.34 17.66-1.41 1.41" />
-            <path d="m19.07 4.93-1.41 1.41" />
-        </svg>
-    )
-}
-
-function MoonIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
         </svg>
     )
 }
@@ -348,17 +302,8 @@ export function SessionHeader(props: {
                         </div>
                     </div>
 
-                    {props.onToggleTheme && props.onOpenNewSession ? (
+                    {props.onOpenNewSession ? (
                         <div className="flex lg:hidden items-center">
-                            <QuickLanguageToggle className="flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]" />
-                            <button
-                                type="button"
-                                onClick={props.onToggleTheme}
-                                className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                                title={props.isDark ? t('theme.switchToLight') : t('theme.switchToDark')}
-                            >
-                                {props.isDark ? <SunIcon /> : <MoonIcon />}
-                            </button>
                             <button
                                 type="button"
                                 onClick={props.onOpenNewSession}
@@ -383,13 +328,19 @@ export function SessionHeader(props: {
                                     <QuickCloneChatIcon />
                                 </button>
                             ) : null}
-                            {(props.onToggleTerminal || props.onToggleFiles) ? (
-                                <div className="mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
-                            ) : null}
+                            <div className="mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
                         </div>
                     ) : null}
 
                     <div className="flex items-center">
+                        {(props.onToggleTheme || props.onOpenSettings) ? (
+                            <PageHeaderUtilityControls
+                                isDark={Boolean(props.isDark)}
+                                onToggleTheme={props.onToggleTheme}
+                                onOpenSettings={props.onOpenSettings}
+                            />
+                        ) : null}
+
                         {props.onToggleTerminal ? (
                             <button
                                 type="button"

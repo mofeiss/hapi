@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation, type Locale } from '@/lib/use-translation'
 import { useAppGoBack } from '@/hooks/useAppGoBack'
+import { useTheme } from '@/hooks/useTheme'
+import { PageHeaderUtilityControls } from '@/components/PageHeaderUtilityControls'
+import { isTelegramApp } from '@/hooks/useTelegram'
 import { getElevenLabsSupportedLanguages, getLanguageDisplayName, type Language } from '@/lib/languages'
 import {
     keyboardShortcutDefinitions,
@@ -111,8 +114,10 @@ function ShortcutSwitch(props: {
 
 export function SettingsPanel({ onClose }: { onClose?: () => void }) {
     const { t, locale, setLocale } = useTranslation()
+    const { isDark, toggleTheme } = useTheme()
     const goBack = useAppGoBack()
     const handleBack = onClose ?? goBack
+    const shouldShowBack = !isTelegramApp()
     const [isOpen, setIsOpen] = useState(false)
     const [isVoiceOpen, setIsVoiceOpen] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -181,15 +186,22 @@ export function SettingsPanel({ onClose }: { onClose?: () => void }) {
     return (
         <div className="flex h-full flex-col">
             <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-                <div className="mx-auto w-full max-w-content flex items-center gap-2 p-3 border-b border-[var(--app-border)]">
-                    <button
-                        type="button"
-                        onClick={handleBack}
-                        className="flex lg:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
-                    >
-                        <BackIcon />
-                    </button>
-                    <div className="flex-1 font-semibold">{t('settings.title')}</div>
+                <div className="mx-auto flex h-[49px] w-full max-w-content items-center border-b border-[var(--app-border)] px-3">
+                    {shouldShowBack ? (
+                        <button
+                            type="button"
+                            onClick={handleBack}
+                            className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors lg:hidden"
+                        >
+                            <BackIcon />
+                        </button>
+                    ) : null}
+                    <div className="min-w-0 flex-1 font-semibold text-[var(--app-fg)]">{t('settings.title')}</div>
+                    <PageHeaderUtilityControls
+                        isDark={isDark}
+                        onToggleTheme={toggleTheme}
+                        onOpenSettings={handleBack}
+                    />
                 </div>
             </div>
 
