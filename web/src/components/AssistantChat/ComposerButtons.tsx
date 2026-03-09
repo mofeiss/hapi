@@ -205,6 +205,7 @@ function MiniSelect(props: {
     const buttonRef = useRef<HTMLButtonElement>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const [pos, setPos] = useState({ bottom: 0, left: 0 })
+    const [buttonWidth, setButtonWidth] = useState(0)
 
     useEffect(() => {
         if (!open) return
@@ -221,6 +222,23 @@ function MiniSelect(props: {
         return () => document.removeEventListener('mousedown', handler)
     }, [open])
 
+    useEffect(() => {
+        const button = buttonRef.current
+        if (!button || typeof ResizeObserver === 'undefined') {
+            return
+        }
+
+        const observer = new ResizeObserver((entries) => {
+            const nextWidth = entries[0]?.contentRect.width ?? button.getBoundingClientRect().width
+            setButtonWidth(nextWidth)
+        })
+
+        observer.observe(button)
+        setButtonWidth(button.getBoundingClientRect().width)
+
+        return () => observer.disconnect()
+    }, [])
+
     const handleToggle = useCallback(() => {
         if (!open && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect()
@@ -234,7 +252,8 @@ function MiniSelect(props: {
 
     const selectedLabel = props.options.find((o) => o.value === props.value)?.label ?? props.value
     const shortLabel = selectedLabel.charAt(0).toUpperCase()
-    const labelAlignClass = props.labelAlign === 'left' ? 'text-left justify-items-start' : ''
+    const labelAlignClass = props.labelAlign === 'left' ? 'text-left' : 'text-center'
+    const showCompactLabel = props.compactOnMobile && buttonWidth > 0 && buttonWidth <= 72
 
     return (
         <>
@@ -243,30 +262,25 @@ function MiniSelect(props: {
                 type="button"
                 disabled={props.disabled}
                 onClick={handleToggle}
-                className={`flex items-center gap-1 h-8 px-2 rounded-full text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`flex h-8 min-w-[3.25rem] max-w-[9.5rem] shrink items-center gap-1 overflow-hidden whitespace-nowrap rounded-full px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                     open
                         ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
                         : 'bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                 }`}
             >
                 {props.icon}
-                {props.compactOnMobile ? (
-                    <>
-                        <span className="inline-grid sm:hidden">
-                            <span className="col-start-1 row-start-1">{shortLabel}</span>
-                        </span>
-                        <span className={`hidden sm:inline-grid ${labelAlignClass}`}>
-                            {props.options.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label}</span>)}
-                            <span className="col-start-1 row-start-1">{selectedLabel}</span>
-                        </span>
-                    </>
+                {showCompactLabel ? (
+                    <span className="shrink-0">{shortLabel}</span>
                 ) : (
-                    <span className={`inline-grid ${labelAlignClass}`}>
-                        {props.options.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label}</span>)}
-                        <span className="col-start-1 row-start-1">{selectedLabel}</span>
+                    <span className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${labelAlignClass}`}>
+                        <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
+                            {selectedLabel}
+                        </span>
                     </span>
                 )}
-                <ChevronDownIcon />
+                <span className="shrink-0">
+                    <ChevronDownIcon />
+                </span>
             </button>
             {open ? createPortal(
                 <div
@@ -710,13 +724,13 @@ export function ComposerButtons(props: {
     const isVoiceConnected = props.voiceStatus === 'connected'
 
     return (
-        <div className="flex items-center justify-between px-2 pb-2">
-            <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-2 px-2 pb-2">
+            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <ComposerPrimitive.AddAttachment
                     aria-label={t('composer.attach')}
                     title={t('composer.attach')}
                     disabled={props.controlsDisabled}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     <AttachmentIcon />
                 </ComposerPrimitive.AddAttachment>
@@ -803,7 +817,7 @@ export function ComposerButtons(props: {
                             aria-label={voiceLabel}
                             title={voiceLabel}
                             disabled={props.controlsDisabled && !isVoiceActive}
-                            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                                 isVoiceActive
                                     ? 'bg-black text-white hover:bg-black/80'
                                     : 'bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
@@ -825,7 +839,7 @@ export function ComposerButtons(props: {
                     title={t('composer.clear')}
                     disabled={props.controlsDisabled || !props.canClear}
                     onClick={props.onClear}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 transition-colors hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     <ClearInputIcon />
                 </button>
@@ -835,7 +849,7 @@ export function ComposerButtons(props: {
                         type="button"
                         aria-label={props.voiceMicMuted ? t('voice.unmute') : t('voice.mute')}
                         title={props.voiceMicMuted ? t('voice.unmute') : t('voice.mute')}
-                        className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
                             props.voiceMicMuted
                                 ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                                 : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
@@ -847,7 +861,7 @@ export function ComposerButtons(props: {
                 ) : null}
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
                 <UnifiedButton
                     canSend={props.canSend}
                     controlsDisabled={props.controlsDisabled}

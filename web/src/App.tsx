@@ -31,6 +31,48 @@ import type { SyncEvent } from '@/types/api'
 type ToastEvent = Extract<SyncEvent, { type: 'toast' }>
 
 const REQUIRE_SERVER_URL = requireHubUrlForLogin()
+const READY_FOR_INPUT_TITLE = 'Ready for input'
+
+function isBrowserViewActive(): boolean {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+        return false
+    }
+    return document.visibilityState === 'visible' && document.hasFocus()
+}
+
+async function showSystemToastNotification(event: ToastEvent): Promise<boolean> {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+        return false
+    }
+    if (Notification.permission !== 'granted') {
+        return false
+    }
+
+    const url = event.data.url ?? (event.data.sessionId ? `/sessions/${event.data.sessionId}` : '/')
+    const options: NotificationOptions = {
+        body: event.data.body,
+        tag: event.data.sessionId ? `toast-${event.data.sessionId}-${event.data.title}` : `toast-${event.data.title}`,
+        data: { url }
+    }
+
+    try {
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready
+            await registration.showNotification(event.data.title, options)
+            return true
+        }
+
+        const notification = new Notification(event.data.title, options)
+        notification.onclick = () => {
+            window.focus()
+            window.location.assign(url)
+        }
+        return true
+    } catch (error) {
+        console.error('Failed to show system notification:', error)
+        return false
+    }
+}
 
 export function App() {
     return (
@@ -214,6 +256,14 @@ function AppInner() {
 
     const handleSseEvent = useCallback(() => {}, [])
     const handleToast = useCallback((event: ToastEvent) => {
+        if (event.data.title === READY_FOR_INPUT_TITLE) {
+            if (isBrowserViewActive()) {
+                return
+            }
+            void showSystemToastNotification(event)
+            return
+        }
+
         addToast({
             title: event.data.title,
             body: event.data.body,
