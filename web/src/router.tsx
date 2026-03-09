@@ -1760,7 +1760,7 @@ function SessionsPage() {
           !isLoading &&
           normalizedSessionSearch &&
           displaySessions.length === 0 ? (
-            <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-4 text-sm text-[var(--app-hint)]">
+            <div className="mx-auto flex w-full max-w-full justify-center px-3 py-4 text-center text-sm text-[var(--app-hint)] lg:max-w-content">
               {t("sessions.search.noMatch")}
             </div>
           ) : (
