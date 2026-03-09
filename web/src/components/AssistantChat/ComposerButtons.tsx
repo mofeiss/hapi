@@ -184,6 +184,17 @@ function ModelIcon() {
     )
 }
 
+function EffortIcon() {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4.5 19a9 9 0 1 1 15 0" />
+            <path d="M12 13V8" />
+            <path d="m12 13 4-2" />
+            <path d="M8 17h8" />
+        </svg>
+    )
+}
+
 function ShieldIcon() {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -192,20 +203,41 @@ function ShieldIcon() {
     )
 }
 
+function SelectButtonLabel(props: {
+    label: string
+    align?: 'center' | 'left'
+}) {
+    const labelAlignClass = props.align === 'left' ? 'text-left' : 'text-center'
+
+    return (
+        <span className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-none ${labelAlignClass}`}>
+            {props.label}
+        </span>
+    )
+}
+
+function getDropdownStyle(pos: { bottom: number; left: number; minWidth: number }) {
+    return {
+        bottom: pos.bottom,
+        left: pos.left,
+        minWidth: `${Math.max(pos.minWidth, 120)}px`,
+        width: 'max-content',
+        maxWidth: 'calc(100vw - 16px)'
+    }
+}
+
 function MiniSelect(props: {
     value: string
     options: { value: string; label: string }[]
     onChange: (value: string) => void
     disabled?: boolean
     icon?: React.ReactNode
-    compactOnMobile?: boolean
     labelAlign?: 'center' | 'left'
 }) {
     const [open, setOpen] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
-    const [pos, setPos] = useState({ bottom: 0, left: 0 })
-    const [buttonWidth, setButtonWidth] = useState(0)
+    const [pos, setPos] = useState({ bottom: 0, left: 0, minWidth: 120 })
 
     useEffect(() => {
         if (!open) return
@@ -222,38 +254,19 @@ function MiniSelect(props: {
         return () => document.removeEventListener('mousedown', handler)
     }, [open])
 
-    useEffect(() => {
-        const button = buttonRef.current
-        if (!button || typeof ResizeObserver === 'undefined') {
-            return
-        }
-
-        const observer = new ResizeObserver((entries) => {
-            const nextWidth = entries[0]?.contentRect.width ?? button.getBoundingClientRect().width
-            setButtonWidth(nextWidth)
-        })
-
-        observer.observe(button)
-        setButtonWidth(button.getBoundingClientRect().width)
-
-        return () => observer.disconnect()
-    }, [])
-
     const handleToggle = useCallback(() => {
         if (!open && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect()
             setPos({
                 bottom: window.innerHeight - rect.top + 4,
                 left: rect.left,
+                minWidth: rect.width,
             })
         }
         setOpen(!open)
     }, [open])
 
     const selectedLabel = props.options.find((o) => o.value === props.value)?.label ?? props.value
-    const shortLabel = selectedLabel.charAt(0).toUpperCase()
-    const labelAlignClass = props.labelAlign === 'left' ? 'text-left' : 'text-center'
-    const showCompactLabel = props.compactOnMobile && buttonWidth > 0 && buttonWidth <= 72
 
     return (
         <>
@@ -262,22 +275,17 @@ function MiniSelect(props: {
                 type="button"
                 disabled={props.disabled}
                 onClick={handleToggle}
-                className={`flex h-8 min-w-[3.25rem] max-w-[9.5rem] shrink items-center gap-1 overflow-hidden whitespace-nowrap rounded-full px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`flex h-8 min-w-0 max-w-full shrink items-center gap-1 overflow-hidden whitespace-nowrap rounded-full px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                     open
                         ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
                         : 'bg-[var(--app-fg)]/[0.04] text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                 }`}
             >
-                {props.icon}
-                {showCompactLabel ? (
-                    <span className="shrink-0">{shortLabel}</span>
-                ) : (
-                    <span className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${labelAlignClass}`}>
-                        <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
-                            {selectedLabel}
-                        </span>
-                    </span>
-                )}
+                {props.icon ? <span className="shrink-0">{props.icon}</span> : null}
+                <SelectButtonLabel
+                    label={selectedLabel}
+                    align={props.labelAlign}
+                />
                 <span className="shrink-0">
                     <ChevronDownIcon />
                 </span>
@@ -286,19 +294,372 @@ function MiniSelect(props: {
                 <div
                     ref={dropdownRef}
                     className="fixed min-w-[120px] rounded-lg bg-[var(--app-secondary-bg)] border border-[var(--app-divider)] shadow-lg overflow-hidden z-[9999]"
-                    style={{ bottom: pos.bottom, left: pos.left }}
+                    style={getDropdownStyle(pos)}
                 >
                     {props.options.map((option) => (
                         <button
                             key={option.value}
                             type="button"
-                            className={`w-full px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--app-bg)] ${
+                            className={`block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--app-bg)] ${
                                 option.value === props.value ? 'text-[var(--app-link)] font-medium' : 'text-[var(--app-fg)]'
                             }`}
                             onClick={() => {
                                 props.onChange(option.value)
                                 setOpen(false)
                             }}
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>,
+                document.body
+            ) : null}
+        </>
+    )
+}
+
+function CodexModelReasoningPermissionPill(props: {
+    showModel: boolean
+    model: string
+    modelOptions: { value: string; label: string }[]
+    onModelChange: (value: string) => void
+    showReasoning: boolean
+    reasoningEffort: string
+    reasoningOptions: { value: string; label: string }[]
+    onReasoningChange: (value: string) => void
+    showPermission: boolean
+    permissionMode: string
+    permissionOptions: { value: string; label: string }[]
+    onPermissionChange: (value: string) => void
+    disabled?: boolean
+}) {
+    const [openMenu, setOpenMenu] = useState<'model' | 'reasoning' | 'permission' | null>(null)
+    const modelButtonRef = useRef<HTMLButtonElement>(null)
+    const reasoningButtonRef = useRef<HTMLButtonElement>(null)
+    const permissionButtonRef = useRef<HTMLButtonElement>(null)
+    const dropdownRef = useRef<HTMLDivElement>(null)
+    const [pos, setPos] = useState({ bottom: 0, left: 0, minWidth: 120 })
+
+    useEffect(() => {
+        if (!openMenu) return
+        const handler = (e: MouseEvent) => {
+            const target = e.target as Node
+            const clickedModelButton = modelButtonRef.current?.contains(target) ?? false
+            const clickedReasoningButton = reasoningButtonRef.current?.contains(target) ?? false
+            const clickedPermissionButton = permissionButtonRef.current?.contains(target) ?? false
+            const clickedDropdown = dropdownRef.current?.contains(target) ?? false
+
+            if (!clickedModelButton && !clickedReasoningButton && !clickedPermissionButton && !clickedDropdown) {
+                setOpenMenu(null)
+            }
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [openMenu])
+
+    const openDropdown = useCallback((menu: 'model' | 'reasoning' | 'permission') => {
+        const anchor = menu === 'model'
+            ? modelButtonRef.current
+            : menu === 'reasoning'
+                ? reasoningButtonRef.current
+                : permissionButtonRef.current
+        if (!anchor) return
+        const rect = anchor.getBoundingClientRect()
+        setPos({
+            bottom: window.innerHeight - rect.top + 4,
+            left: rect.left,
+            minWidth: rect.width,
+        })
+        setOpenMenu((prev) => prev === menu ? null : menu)
+    }, [])
+
+    const modelLabel = props.modelOptions.find((option) => option.value === props.model)?.label ?? props.model
+    const reasoningLabel = props.reasoningOptions.find((option) => option.value === props.reasoningEffort)?.label ?? props.reasoningEffort
+    const permissionLabel = props.permissionOptions.find((option) => option.value === props.permissionMode)?.label ?? props.permissionMode
+    const activeOptions = openMenu === 'reasoning'
+        ? props.reasoningOptions
+        : openMenu === 'permission'
+            ? props.permissionOptions
+            : props.modelOptions
+    const activeValue = openMenu === 'reasoning'
+        ? props.reasoningEffort
+        : openMenu === 'permission'
+            ? props.permissionMode
+            : props.model
+    const handleOptionSelect = (value: string) => {
+        if (openMenu === 'reasoning') {
+            props.onReasoningChange(value)
+        } else if (openMenu === 'permission') {
+            props.onPermissionChange(value)
+        } else {
+            props.onModelChange(value)
+        }
+        setOpenMenu(null)
+    }
+    const showModelDivider = props.showModel && (props.showReasoning || props.showPermission)
+    const showReasoningDivider = props.showReasoning && props.showPermission
+
+    return (
+        <>
+            <div className="flex h-8 min-w-0 max-w-full shrink items-center overflow-hidden rounded-full bg-[var(--app-fg)]/[0.04]">
+                {props.showModel ? (
+                    <button
+                        ref={modelButtonRef}
+                        type="button"
+                        disabled={props.disabled}
+                        onClick={() => openDropdown('model')}
+                        className={`flex h-full min-w-0 shrink items-center gap-1 px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            openMenu === 'model'
+                                ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
+                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        }`}
+                    >
+                        <span className="shrink-0">
+                            <ModelIcon />
+                        </span>
+                        <SelectButtonLabel
+                            label={modelLabel}
+                            align="left"
+                        />
+                        <span className="shrink-0">
+                            <ChevronDownIcon />
+                        </span>
+                    </button>
+                ) : null}
+                {showModelDivider ? (
+                    <div className="h-3.5 w-px shrink-0 bg-[var(--app-fg)]/10" />
+                ) : null}
+                {props.showReasoning ? (
+                    <button
+                        ref={reasoningButtonRef}
+                        type="button"
+                        disabled={props.disabled}
+                        onClick={() => openDropdown('reasoning')}
+                        className={`flex h-full min-w-0 shrink items-center gap-1 px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            openMenu === 'reasoning'
+                                ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
+                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        }`}
+                    >
+                        <span className="shrink-0">
+                            <EffortIcon />
+                        </span>
+                        <SelectButtonLabel
+                            label={reasoningLabel}
+                            align="left"
+                        />
+                        <span className="shrink-0">
+                            <ChevronDownIcon />
+                        </span>
+                    </button>
+                ) : null}
+                {showReasoningDivider ? (
+                    <div className="h-3.5 w-px shrink-0 bg-[var(--app-fg)]/10" />
+                ) : null}
+                {props.showPermission ? (
+                    <button
+                        ref={permissionButtonRef}
+                        type="button"
+                        disabled={props.disabled}
+                        onClick={() => openDropdown('permission')}
+                        className={`flex h-full min-w-0 shrink items-center gap-1 px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            openMenu === 'permission'
+                                ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
+                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        }`}
+                    >
+                        <span className="shrink-0">
+                            <ShieldIcon />
+                        </span>
+                        <SelectButtonLabel
+                            label={permissionLabel}
+                            align="left"
+                        />
+                        <span className="shrink-0">
+                            <ChevronDownIcon />
+                        </span>
+                    </button>
+                ) : null}
+            </div>
+            {openMenu ? createPortal(
+                <div
+                    ref={dropdownRef}
+                    className="fixed min-w-[120px] rounded-lg border border-[var(--app-divider)] bg-[var(--app-secondary-bg)] shadow-lg overflow-hidden z-[9999]"
+                    style={getDropdownStyle(pos)}
+                >
+                    {activeOptions.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            className={`block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--app-bg)] ${
+                                option.value === activeValue ? 'text-[var(--app-link)] font-medium' : 'text-[var(--app-fg)]'
+                            }`}
+                            onClick={() => handleOptionSelect(option.value)}
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>,
+                document.body
+            ) : null}
+        </>
+    )
+}
+
+function ClaudeModelPermissionPlanPill(props: {
+    showModel: boolean
+    model: string
+    modelOptions: { value: string; label: string }[]
+    onModelChange: (value: string) => void
+    showPermission: boolean
+    permissionMode: string
+    permissionOptions: { value: string; label: string }[]
+    onPermissionChange: (value: string) => void
+    showPlan: boolean
+    isPlanActive: boolean
+    onPlanToggle: () => void
+    disabled?: boolean
+}) {
+    const [openMenu, setOpenMenu] = useState<'model' | 'permission' | null>(null)
+    const modelButtonRef = useRef<HTMLButtonElement>(null)
+    const permissionButtonRef = useRef<HTMLButtonElement>(null)
+    const dropdownRef = useRef<HTMLDivElement>(null)
+    const [pos, setPos] = useState({ bottom: 0, left: 0, minWidth: 120 })
+
+    useEffect(() => {
+        if (!openMenu) return
+        const handler = (e: MouseEvent) => {
+            const target = e.target as Node
+            const clickedModelButton = modelButtonRef.current?.contains(target) ?? false
+            const clickedPermissionButton = permissionButtonRef.current?.contains(target) ?? false
+            const clickedDropdown = dropdownRef.current?.contains(target) ?? false
+
+            if (!clickedModelButton && !clickedPermissionButton && !clickedDropdown) {
+                setOpenMenu(null)
+            }
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [openMenu])
+
+    const openDropdown = useCallback((menu: 'model' | 'permission') => {
+        const anchor = menu === 'model' ? modelButtonRef.current : permissionButtonRef.current
+        if (!anchor) return
+        const rect = anchor.getBoundingClientRect()
+        setPos({
+            bottom: window.innerHeight - rect.top + 4,
+            left: rect.left,
+            minWidth: rect.width,
+        })
+        setOpenMenu((prev) => prev === menu ? null : menu)
+    }, [])
+
+    const modelLabel = props.modelOptions.find((option) => option.value === props.model)?.label ?? props.model
+    const permissionLabel = props.permissionOptions.find((option) => option.value === props.permissionMode)?.label ?? props.permissionMode
+    const activeOptions = openMenu === 'permission' ? props.permissionOptions : props.modelOptions
+    const activeValue = openMenu === 'permission' ? props.permissionMode : props.model
+
+    const handleOptionSelect = (value: string) => {
+        if (openMenu === 'permission') {
+            props.onPermissionChange(value)
+        } else {
+            props.onModelChange(value)
+        }
+        setOpenMenu(null)
+    }
+
+    return (
+        <>
+            <div className="flex h-8 min-w-0 max-w-full shrink items-center overflow-hidden rounded-full bg-[var(--app-fg)]/[0.04]">
+                {props.showModel ? (
+                    <button
+                        ref={modelButtonRef}
+                        type="button"
+                        disabled={props.disabled}
+                        onClick={() => openDropdown('model')}
+                        className={`flex h-full min-w-0 shrink items-center gap-1 px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            openMenu === 'model'
+                                ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
+                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        }`}
+                    >
+                        <span className="shrink-0">
+                            <ModelIcon />
+                        </span>
+                        <SelectButtonLabel label={modelLabel} align="left" />
+                        <span className="shrink-0">
+                            <ChevronDownIcon />
+                        </span>
+                    </button>
+                ) : null}
+
+                {props.showModel && (props.showPermission || props.showPlan) ? (
+                    <div className="h-3.5 w-px shrink-0 bg-[var(--app-fg)]/10" />
+                ) : null}
+
+                {props.showPermission ? (
+                    <button
+                        ref={permissionButtonRef}
+                        type="button"
+                        disabled={props.disabled}
+                        onClick={() => openDropdown('permission')}
+                        className={`flex h-full min-w-0 shrink items-center gap-1 px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            openMenu === 'permission'
+                                ? 'bg-[var(--app-bg)] text-[var(--app-fg)]'
+                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        }`}
+                    >
+                        <span className="shrink-0">
+                            <ShieldIcon />
+                        </span>
+                        <SelectButtonLabel label={permissionLabel} align="left" />
+                        <span className="shrink-0">
+                            <ChevronDownIcon />
+                        </span>
+                    </button>
+                ) : null}
+
+                {props.showPermission && props.showPlan ? (
+                    <div className="h-3.5 w-px shrink-0 bg-[var(--app-fg)]/10" />
+                ) : null}
+
+                {props.showPlan ? (
+                    <button
+                        type="button"
+                        aria-label="Plan Mode"
+                        title="Plan Mode"
+                        disabled={props.disabled}
+                        onClick={props.onPlanToggle}
+                        className={`flex h-full min-w-0 shrink items-center gap-1 px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            props.isPlanActive
+                                ? 'bg-[var(--app-badge-warning-text)]/15 text-[var(--app-badge-warning-text)]'
+                                : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
+                        }`}
+                    >
+                        <span className="shrink-0">
+                            <PlanIcon />
+                        </span>
+                        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-none">Plan</span>
+                    </button>
+                ) : null}
+            </div>
+
+            {openMenu ? createPortal(
+                <div
+                    ref={dropdownRef}
+                    className="fixed min-w-[120px] rounded-lg border border-[var(--app-divider)] bg-[var(--app-secondary-bg)] shadow-lg overflow-hidden z-[9999]"
+                    style={getDropdownStyle(pos)}
+                >
+                    {activeOptions.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            className={`block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--app-bg)] ${
+                                option.value === activeValue ? 'text-[var(--app-link)] font-medium' : 'text-[var(--app-fg)]'
+                            }`}
+                            onClick={() => handleOptionSelect(option.value)}
                             onMouseDown={(e) => e.preventDefault()}
                         >
                             {option.label}
@@ -564,11 +925,10 @@ function PermissionPlanPill(props: {
     onPlanToggle: () => void
     disabled?: boolean
 }) {
-    const { t: _t } = useTranslation()
     const [open, setOpen] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
-    const [pos, setPos] = useState({ bottom: 0, left: 0 })
+    const [pos, setPos] = useState({ bottom: 0, left: 0, minWidth: 120 })
 
     useEffect(() => {
         if (!open) return
@@ -591,19 +951,18 @@ function PermissionPlanPill(props: {
             setPos({
                 bottom: window.innerHeight - rect.top + 4,
                 left: rect.left,
+                minWidth: rect.width,
             })
         }
         setOpen(!open)
     }, [open])
 
     const selectedLabel = props.permissionOptions.find(o => o.value === props.permissionMode)?.label ?? props.permissionMode
-    const shortLabel = selectedLabel.split(' ')[0]
-    const initialLabel = shortLabel.charAt(0).toUpperCase()
     const showBoth = props.showPermission && props.showPlan
 
     return (
         <>
-            <div className="flex items-center h-8 rounded-full overflow-hidden bg-[var(--app-fg)]/[0.04]">
+            <div className="flex h-8 min-w-0 max-w-full shrink items-center overflow-hidden rounded-full bg-[var(--app-fg)]/[0.04]">
                 {props.showPermission ? (
                     <button
                         ref={buttonRef}
@@ -616,15 +975,13 @@ function PermissionPlanPill(props: {
                                 : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                         }`}
                     >
-                        <ShieldIcon />
-                        <span className="inline-grid sm:hidden">
-                            <span className="col-start-1 row-start-1">{initialLabel}</span>
+                        <span className="shrink-0">
+                            <ShieldIcon />
                         </span>
-                        <span className="hidden sm:inline-grid">
-                            {props.permissionOptions.map(o => <span key={o.value} className="col-start-1 row-start-1 invisible">{o.label.split(' ')[0]}</span>)}
-                            <span className="col-start-1 row-start-1">{shortLabel}</span>
+                        <SelectButtonLabel label={selectedLabel} align="left" />
+                        <span className="shrink-0">
+                            <ChevronDownIcon />
                         </span>
-                        <ChevronDownIcon />
                     </button>
                 ) : null}
                 {showBoth ? (
@@ -643,8 +1000,10 @@ function PermissionPlanPill(props: {
                                 : 'text-[var(--app-fg)]/60 hover:bg-[var(--app-bg)] hover:text-[var(--app-fg)]'
                         }`}
                     >
-                        <PlanIcon />
-                        <span>Plan</span>
+                        <span className="shrink-0">
+                            <PlanIcon />
+                        </span>
+                        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-none">Plan</span>
                     </button>
                 ) : null}
             </div>
@@ -652,13 +1011,13 @@ function PermissionPlanPill(props: {
                 <div
                     ref={dropdownRef}
                     className="fixed min-w-[120px] rounded-lg bg-[var(--app-secondary-bg)] border border-[var(--app-divider)] shadow-lg overflow-hidden z-[9999]"
-                    style={{ bottom: pos.bottom, left: pos.left }}
+                    style={getDropdownStyle(pos)}
                 >
                     {props.permissionOptions.map((option) => (
                         <button
                             key={option.value}
                             type="button"
-                            className={`w-full px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--app-bg)] ${
+                            className={`block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-3 py-2 text-left text-xs transition-colors hover:bg-[var(--app-bg)] ${
                                 option.value === props.permissionMode ? 'text-[var(--app-link)] font-medium' : 'text-[var(--app-fg)]'
                             }`}
                             onClick={() => {
@@ -722,6 +1081,7 @@ export function ComposerButtons(props: {
 }) {
     const { t } = useTranslation()
     const isVoiceConnected = props.voiceStatus === 'connected'
+    const isCodexControlsVisible = props.showCodexModelSelect || props.showCodexReasoningSelect
 
     return (
         <div className="flex items-center justify-between gap-2 px-2 pb-2">
@@ -742,48 +1102,64 @@ export function ComposerButtons(props: {
                         onChange={props.onModelModeChange}
                         disabled={props.controlsDisabled}
                         icon={<ModelIcon />}
-                        compactOnMobile
                     />
                 ) : null}
 
-                {props.showClaudeModelSelect && props.claudeModelOptions.length > 0 ? (
-                    <MiniSelect
-                        value={props.claudeModel}
-                        options={props.claudeModelOptions}
-                        onChange={props.onClaudeModelChange}
+                {props.showClaudeModelSelect ? (
+                    <ClaudeModelPermissionPlanPill
+                        showModel={props.claudeModelOptions.length > 0}
+                        model={props.claudeModel}
+                        modelOptions={props.claudeModelOptions}
+                        onModelChange={props.onClaudeModelChange}
+                        showPermission={props.showPermissionSelect && props.permissionModeOptions.length > 0}
+                        permissionMode={props.permissionMode}
+                        permissionOptions={props.permissionModeOptions}
+                        onPermissionChange={props.onPermissionModeChange}
+                        showPlan={props.showPlanToggle}
+                        isPlanActive={props.isPlanActive}
+                        onPlanToggle={props.onPlanToggle}
                         disabled={props.controlsDisabled}
-                        icon={<ModelIcon />}
-                        compactOnMobile
-                        labelAlign="left"
                     />
                 ) : null}
 
-                {props.showCodexModelSelect && props.codexModelOptions.length > 0 ? (
-                    <MiniSelect
-                        value={props.codexModel}
-                        options={props.codexModelOptions}
-                        onChange={props.onCodexModelChange}
+                {isCodexControlsVisible && (
+                    (props.showCodexModelSelect && props.codexModelOptions.length > 0)
+                    || (props.showCodexReasoningSelect && props.codexReasoningOptions.length > 0)
+                    || (props.showPermissionSelect && props.permissionModeOptions.length > 0)
+                ) ? (
+                    <CodexModelReasoningPermissionPill
+                        showModel={props.showCodexModelSelect && props.codexModelOptions.length > 0}
+                        model={props.codexModel}
+                        modelOptions={props.codexModelOptions}
+                        onModelChange={props.onCodexModelChange}
+                        showReasoning={props.showCodexReasoningSelect && props.codexReasoningOptions.length > 0}
+                        reasoningEffort={props.codexReasoningEffort}
+                        reasoningOptions={props.codexReasoningOptions}
+                        onReasoningChange={props.onCodexReasoningEffortChange}
+                        showPermission={props.showPermissionSelect && props.permissionModeOptions.length > 0 && !props.showClaudeModelSelect}
+                        permissionMode={props.permissionMode}
+                        permissionOptions={props.permissionModeOptions}
+                        onPermissionChange={props.onPermissionModeChange}
                         disabled={props.controlsDisabled}
-                        icon={<ModelIcon />}
-                        compactOnMobile
-                        labelAlign="left"
                     />
                 ) : null}
 
-                {props.showCodexReasoningSelect && props.codexReasoningOptions.length > 0 ? (
-                    <MiniSelect
-                        value={props.codexReasoningEffort}
-                        options={props.codexReasoningOptions}
-                        onChange={props.onCodexReasoningEffortChange}
-                        disabled={props.controlsDisabled}
-                        icon={<ModelIcon />}
-                        compactOnMobile
-                    />
-                ) : null}
-
-                {(props.showPermissionSelect && props.permissionModeOptions.length > 0) || props.showPlanToggle ? (
+                {!props.showClaudeModelSelect && !isCodexControlsVisible && ((props.showPermissionSelect && props.permissionModeOptions.length > 0) || props.showPlanToggle) ? (
                     <PermissionPlanPill
                         showPermission={props.showPermissionSelect && props.permissionModeOptions.length > 0}
+                        permissionMode={props.permissionMode}
+                        permissionOptions={props.permissionModeOptions}
+                        onPermissionChange={props.onPermissionModeChange}
+                        showPlan={props.showPlanToggle}
+                        isPlanActive={props.isPlanActive}
+                        onPlanToggle={props.onPlanToggle}
+                        disabled={props.controlsDisabled}
+                    />
+                ) : null}
+
+                {isCodexControlsVisible && props.showPlanToggle ? (
+                    <PermissionPlanPill
+                        showPermission={false}
                         permissionMode={props.permissionMode}
                         permissionOptions={props.permissionModeOptions}
                         onPermissionChange={props.onPermissionModeChange}
