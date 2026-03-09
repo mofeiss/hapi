@@ -69,7 +69,7 @@ export function HappyAgentTurnGroup(props: { indices: number[] }) {
             </div>
             {shouldShowTurnActions ? (
                 <div className="ml-1 mt-0.5 flex w-fit items-center gap-1">
-                    <MessageCopyButton text={turnCopyText} />
+                    <MessageCopyButton text={turnCopyText} hideWhenEmpty={false} />
                     <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
                     <MessageTurnDurationBadge
                         startAt={turnDurationInfo.startAt}

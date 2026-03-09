@@ -188,7 +188,7 @@ export function HappyAssistantMessage() {
                 </MessagePrimitive.Root>
                 {shouldShowTurnActions ? (
                     <div className={actionsClass}>
-                        <MessageCopyButton text={cliText} />
+                        <MessageCopyButton text={cliText} hideWhenEmpty={false} />
                         <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
                         {durationBadge}
                     </div>
@@ -205,7 +205,7 @@ export function HappyAssistantMessage() {
                 </MessagePrimitive.Root>
                 {shouldShowTurnActions ? (
                     <div className={actionsClass}>
-                        <MessageCopyButton text={apiErrorText} />
+                        <MessageCopyButton text={apiErrorText} hideWhenEmpty={false} />
                         <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
                         {durationBadge}
                     </div>
@@ -221,7 +221,7 @@ export function HappyAssistantMessage() {
             </MessagePrimitive.Root>
             {shouldShowTurnActions ? (
                 <div className={actionsClass}>
-                    <MessageCopyButton text={copyText} />
+                    <MessageCopyButton text={copyText} hideWhenEmpty={false} />
                     <MessageCopyButton text={allCopyText} label={t('button.copyAll')} visibleLabel="Copy ALL" />
                     {durationBadge}
                 </div>

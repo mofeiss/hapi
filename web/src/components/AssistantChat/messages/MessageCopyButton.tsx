@@ -9,28 +9,35 @@ export function MessageCopyButton(props: {
     label?: string
     icon?: 'copy' | 'copy-all'
     visibleLabel?: string
+    hideWhenEmpty?: boolean
 }) {
     const { t } = useTranslation()
     const { copied, copy } = useCopyToClipboard()
     const text = props.text.trim()
+    const hideWhenEmpty = props.hideWhenEmpty ?? true
+    const isDisabled = text.length === 0
 
-    if (!text) return null
+    if (hideWhenEmpty && isDisabled) return null
 
     const alignClass = props.align === 'right' ? 'self-end' : 'self-start'
     const label = props.label ?? t('button.copy')
     const IdleIcon = props.icon === 'copy-all' ? CopyAllIcon : CopyIcon
     const hasVisibleLabel = Boolean(props.visibleLabel && props.visibleLabel.trim().length > 0)
     const buttonClass = hasVisibleLabel
-        ? `inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)] transition-colors ${alignClass} ${props.className ?? ''}`
-        : `rounded p-1 text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)] transition-colors ${alignClass} ${props.className ?? ''}`
+        ? `inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--app-hint)] transition-colors enabled:hover:bg-[var(--app-subtle-bg)] enabled:hover:text-[var(--app-fg)] disabled:cursor-default disabled:opacity-50 ${alignClass} ${props.className ?? ''}`
+        : `rounded p-1 text-[var(--app-hint)] transition-colors enabled:hover:bg-[var(--app-subtle-bg)] enabled:hover:text-[var(--app-fg)] disabled:cursor-default disabled:opacity-50 ${alignClass} ${props.className ?? ''}`
 
     return (
         <button
             type="button"
-            onClick={() => copy(text)}
+            onClick={() => {
+                if (isDisabled) return
+                void copy(text)
+            }}
             title={label}
             aria-label={label}
             className={buttonClass}
+            disabled={isDisabled}
         >
             {copied ? <CheckIcon className="h-3.5 w-3.5" /> : <IdleIcon className="h-3.5 w-3.5" />}
             {hasVisibleLabel ? (
