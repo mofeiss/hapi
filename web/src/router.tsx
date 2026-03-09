@@ -703,6 +703,9 @@ function SessionsPage() {
       ? window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX
       : false,
   );
+  const autoOpenDesktopNewSessionStateRef = useRef<
+    "idle" | "pending" | "done"
+  >("idle");
   const [swipeForwardSessionId, setSwipeForwardSessionId] = useState<
     string | null
   >(null);
@@ -1199,6 +1202,45 @@ function SessionsPage() {
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
   }, []);
+
+  useEffect(() => {
+    if (!isSessionsIndex || activeSessionId !== null || narrowViewport) {
+      autoOpenDesktopNewSessionStateRef.current = "idle";
+    }
+  }, [activeSessionId, isSessionsIndex, narrowViewport]);
+
+  useEffect(() => {
+    if (
+      narrowViewport ||
+      !isSessionsIndex ||
+      activeSessionId !== null ||
+      hasOverlay ||
+      autoOpenDesktopNewSessionStateRef.current !== "idle"
+    ) {
+      return;
+    }
+
+    autoOpenDesktopNewSessionStateRef.current = "pending";
+
+    let frameId = 0;
+    frameId = window.requestAnimationFrame(() => {
+      autoOpenDesktopNewSessionStateRef.current = "done";
+      openNewSessionOverlay();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (autoOpenDesktopNewSessionStateRef.current === "pending") {
+        autoOpenDesktopNewSessionStateRef.current = "idle";
+      }
+    };
+  }, [
+    activeSessionId,
+    hasOverlay,
+    isSessionsIndex,
+    narrowViewport,
+    openNewSessionOverlay,
+  ]);
 
   useEffect(() => {
     const handleOpenSettingsOverlay = () => {
