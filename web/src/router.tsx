@@ -1547,10 +1547,10 @@ function SessionsPage() {
       {/* Left panel */}
       <div
         className={`${leftPanelVisible} max-lg:!w-full shrink-0 flex-col bg-[var(--app-bg)] lg:border-r lg:border-[var(--app-divider)]`}
-        style={{ width: panelWidth }}
+        style={narrowViewport ? undefined : { width: panelWidth }}
       >
         <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-          <div className="mx-auto w-full max-w-content flex items-center justify-between px-3 py-2">
+          <div className="mx-auto w-full max-w-full lg:max-w-content flex items-center justify-between px-3 py-2">
             <div className="flex items-center gap-1.5 min-w-0 shrink-0">
               <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
               <span className="text-sm font-semibold text-[var(--app-fg)] select-none shrink-0">
@@ -1619,7 +1619,7 @@ function SessionsPage() {
             </div>
           </div>
           {showSidebarSearchRow ? (
-            <div className="mx-auto w-full max-w-content px-3 pb-2">
+            <div className="mx-auto w-full max-w-full lg:max-w-content px-3 pb-2">
               <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
                 <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
                   {hasSessionSearch ? (
@@ -1748,7 +1748,7 @@ function SessionsPage() {
 
         <div className="flex-1 min-h-0 overflow-y-auto desktop-scrollbar-left">
           {error ? (
-            <div className="mx-auto w-full max-w-content px-3 py-2">
+            <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
               <div className="text-sm text-red-600">{error}</div>
             </div>
           ) : null}
@@ -1756,7 +1756,7 @@ function SessionsPage() {
           !isLoading &&
           normalizedSessionSearch &&
           displaySessions.length === 0 ? (
-            <div className="mx-auto w-full max-w-content px-3 py-4 text-sm text-[var(--app-hint)]">
+            <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-4 text-sm text-[var(--app-hint)]">
               {t("sessions.search.noMatch")}
             </div>
           ) : (
