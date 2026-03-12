@@ -10,11 +10,8 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useTranslation } from "@/lib/use-translation";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import { useToast } from "@/lib/toast-context";
-import {
-  formatSessionModelLabel,
-  ReasoningIcon,
-} from "@/components/SessionModelBadge";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
+import { formatTimestamp } from "@/lib/dateTime";
 
 export type SessionGroup = {
   host: string;
@@ -28,6 +25,23 @@ function getPathDisplayName(path: string): string {
   if (parts.length === 0) return path;
   if (parts.length === 1) return parts[0];
   return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+}
+
+function formatRelativeTime(
+  value: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string | null {
+  const ms = value < 1_000_000_000_000 ? value * 1000 : value;
+  if (!Number.isFinite(ms)) return null;
+  const delta = Date.now() - ms;
+  if (delta < 60_000) return t("session.time.justNow");
+  const minutes = Math.floor(delta / 60_000);
+  if (minutes < 60) return t("session.time.minutesAgo", { n: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t("session.time.hoursAgo", { n: hours });
+  const days = Math.floor(hours / 24);
+  if (days < 7) return t("session.time.daysAgo", { n: days });
+  return new Date(ms).toLocaleDateString();
 }
 
 export function groupSessionsByHost(
@@ -148,29 +162,6 @@ function getTodoProgress(
   if (session.todoProgress.completed === session.todoProgress.total)
     return null;
   return session.todoProgress;
-}
-
-function getAgentLabel(session: SessionSummary): string {
-  const flavor = session.metadata?.flavor?.trim();
-  if (flavor) return flavor;
-  return "unknown";
-}
-
-function formatRelativeTime(
-  value: number,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string | null {
-  const ms = value < 1_000_000_000_000 ? value * 1000 : value;
-  if (!Number.isFinite(ms)) return null;
-  const delta = Date.now() - ms;
-  if (delta < 60_000) return t("session.time.justNow");
-  const minutes = Math.floor(delta / 60_000);
-  if (minutes < 60) return t("session.time.minutesAgo", { n: minutes });
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t("session.time.hoursAgo", { n: hours });
-  const days = Math.floor(hours / 24);
-  if (days < 7) return t("session.time.daysAgo", { n: days });
-  return new Date(ms).toLocaleDateString();
 }
 
 function SessionItem(props: {
@@ -295,9 +286,7 @@ function SessionItem(props: {
   });
 
   const sessionName = useSessionTitleOverride(s.id) ?? getSessionTitle(s);
-  const modelLabel = formatSessionModelLabel(s.metadata, {
-    fallbackModel: s.metadata?.flavor === "claude" ? s.modelMode : undefined,
-  });
+  const createdAtLabel = formatTimestamp(s.createdAt);
   const showArchiving = isArchiving || forceArchiving;
   const showDeleting = isDeleting || forceDeleting;
   const rowBackgroundClass = batchMode
@@ -414,34 +403,6 @@ function SessionItem(props: {
           className="flex items-center gap-x-2 text-xs text-[var(--app-hint)]"
           style={{ opacity: "var(--app-session-subtitle-opacity)" }}
         >
-          <span className="inline-flex items-center gap-1 shrink-0">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="shrink-0 ml-1"
-              aria-hidden="true"
-            >
-              <polyline points="4 17 10 11 4 5" />
-              <line x1="12" y1="19" x2="20" y2="19" />
-            </svg>
-            {getAgentLabel(s)}
-          </span>
-          {modelLabel ? (
-            <span
-              className="inline-flex items-center gap-1 truncate"
-              title={modelLabel}
-            >
-              <ReasoningIcon className="shrink-0" />
-              <span className="truncate">{modelLabel}</span>
-            </span>
-          ) : null}
           <span className="inline-flex items-center gap-1 truncate">
             <span className="shrink-0 text-[10px]" aria-hidden="true">
               📂
@@ -452,6 +413,26 @@ function SessionItem(props: {
                 : s.id.slice(0, 8)}
             </span>
           </span>
+          {createdAtLabel ? (
+            <span className="inline-flex shrink-0 items-center gap-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{createdAtLabel}</span>
+            </span>
+          ) : null}
         </div>
       </button>
 

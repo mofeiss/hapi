@@ -60,11 +60,6 @@ vi.mock('@/components/ui/ConfirmDialog', () => ({
     ConfirmDialog: () => null,
 }))
 
-vi.mock('@/components/SessionModelBadge', () => ({
-    formatSessionModelLabel: () => null,
-    ReasoningIcon: () => null,
-}))
-
 vi.mock('@/components/AgentFlavorStatusIcon', () => ({
     AgentFlavorStatusIcon: () => <span data-testid="agent-status-icon" />,
 }))
@@ -74,6 +69,7 @@ describe('SessionList', () => {
         const sessions: SessionSummary[] = [
             {
                 id: 'session-1',
+                createdAt: new Date('2026-05-30T21:29:32').getTime(),
                 active: true,
                 thinking: false,
                 activeAt: Date.now(),
@@ -105,5 +101,8 @@ describe('SessionList', () => {
         expect(screen.getByText('Alpha session').className).not.toContain('text-[14px]')
         expect(screen.getByText('MacBook-Pro')).toHaveClass('text-sm')
         expect(screen.getByText('MacBook-Pro').className).not.toContain('text-[14px]')
+        expect(screen.getByText('2026-05-30 21:29:32')).toBeInTheDocument()
+        expect(screen.queryByText('codex')).not.toBeInTheDocument()
+        expect(screen.getByText('project/hapi')).toBeInTheDocument()
     })
 })
