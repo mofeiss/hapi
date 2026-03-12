@@ -109,7 +109,7 @@ export async function startHappyServer(client: ApiSessionClient) {
 
     return {
         url: baseUrl.toString(),
-        toolNames: ['change_title', 'schedule_create', 'schedule_list', 'schedule_cancel'],
+        toolNames: ['change_title', 'schedule_create', 'schedule_update', 'schedule_pause', 'schedule_resume', 'schedule_list', 'schedule_cancel', 'schedule_delete'],
         stop: () => {
             logger.debug('[hapiMCP] Stopping server');
             mcp.close();
