@@ -1,5 +1,13 @@
 import { z } from 'zod'
 import { MODEL_MODES, PERMISSION_MODES } from './modes'
+import {
+    ScheduledAgentFlavorSchema,
+    ScheduledCatchUpPolicySchema,
+    ScheduledRunStrategySchema,
+    ScheduledTaskRunStatusSchema,
+    ScheduledTaskStatusSchema,
+    ScheduledTaskTypeSchema
+} from './scheduler'
 
 export const PermissionModeSchema = z.enum(PERMISSION_MODES)
 export const ModelModeSchema = z.enum(MODEL_MODES)
@@ -122,6 +130,58 @@ export const DecryptedMessageSchema = z.object({
 })
 
 export type DecryptedMessage = z.infer<typeof DecryptedMessageSchema>
+
+export const ScheduledTaskSchema = z.object({
+    id: z.string(),
+    namespace: z.string(),
+    machineId: z.string(),
+    createdBySessionId: z.string().optional(),
+    title: z.string(),
+    prompt: z.string(),
+    agentFlavor: ScheduledAgentFlavorSchema,
+    targetDirectory: z.string(),
+    permissionMode: z.string().optional(),
+    basePermissionMode: z.string().optional(),
+    model: z.string().optional(),
+    reasoningEffort: ReasoningEffortSchema.optional(),
+    runStrategy: ScheduledRunStrategySchema,
+    scheduleType: ScheduledTaskTypeSchema,
+    scheduleSpec: z.object({
+        runAt: z.number().optional(),
+        cron: z.string().optional()
+    }),
+    timezone: z.string(),
+    nextRunAt: z.number().optional(),
+    lastRunAt: z.number().optional(),
+    status: ScheduledTaskStatusSchema,
+    paused: z.boolean(),
+    allowOverlap: z.boolean(),
+    catchUpPolicy: ScheduledCatchUpPolicySchema,
+    maxSkewMs: z.number().int().nonnegative(),
+    lastError: z.string().optional(),
+    createdAt: z.number(),
+    updatedAt: z.number()
+})
+
+export type ScheduledTask = z.infer<typeof ScheduledTaskSchema>
+
+export const ScheduledTaskRunSchema = z.object({
+    id: z.string(),
+    taskId: z.string(),
+    machineId: z.string(),
+    scheduledFor: z.number(),
+    triggeredAt: z.number(),
+    startedAt: z.number().optional(),
+    finishedAt: z.number().optional(),
+    status: ScheduledTaskRunStatusSchema,
+    sessionId: z.string().optional(),
+    error: z.string().optional(),
+    resultSummary: z.string().optional(),
+    createdAt: z.number(),
+    updatedAt: z.number()
+})
+
+export type ScheduledTaskRun = z.infer<typeof ScheduledTaskRunSchema>
 
 export const SessionSchema = z.object({
     id: z.string(),

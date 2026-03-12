@@ -68,6 +68,7 @@ import FilesPage from "@/routes/sessions/files";
 import FilePage from "@/routes/sessions/file";
 import TerminalPage from "@/routes/sessions/terminal";
 import { SettingsPanel } from "@/routes/settings";
+import ScheduledPage from "@/routes/scheduled";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 function BackIcon(props: { className?: string }) {
@@ -1631,6 +1632,14 @@ function SessionsPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => navigate({ to: "/scheduled" })}
+                  className="hidden lg:inline-flex rounded-full px-2 py-1 text-xs font-medium text-[var(--app-link)] transition-colors hover:bg-[var(--app-subtle-bg)]"
+                  title="Scheduled Tasks"
+                >
+                  Scheduled
+                </button>
+                <button
+                  type="button"
                   onClick={handleQuickNewSession}
                   disabled={quickNewDisabled}
                   className={`hidden lg:inline-flex p-1 rounded-full transition-colors ${
@@ -2004,13 +2013,8 @@ function shouldRetryPermissionSync(error: unknown): boolean {
 
 function resolveSpawnAgent(
   flavor?: string | null,
-): "claude" | "codex" | "gemini" | "opencode" | undefined {
-  if (
-    flavor === "claude" ||
-    flavor === "codex" ||
-    flavor === "gemini" ||
-    flavor === "opencode"
-  ) {
+): "claude" | "codex" | undefined {
+  if (flavor === "claude" || flavor === "codex") {
     return flavor;
   }
   return undefined;
@@ -2524,6 +2528,11 @@ function NewSessionPage() {
   return <NewSessionPanel onClose={goBack} />;
 }
 
+function ScheduledTasksPage() {
+  const { api } = useAppContext();
+  return <ScheduledPage api={api} />;
+}
+
 const rootRoute = createRootRoute({
   component: App,
 });
@@ -2621,8 +2630,15 @@ const newSessionRoute = createRoute({
   component: NewSessionPage,
 });
 
+const scheduledRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/scheduled",
+  component: ScheduledTasksPage,
+});
+
 export const routeTree = rootRoute.addChildren([
   indexRoute,
+  scheduledRoute,
   sessionsRoute.addChildren([
     sessionsIndexRoute,
     newSessionRoute,

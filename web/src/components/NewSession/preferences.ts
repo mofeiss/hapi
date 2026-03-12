@@ -12,7 +12,7 @@ const DIRECTORY_STORAGE_KEY = 'hapi:newSession:directory'
 const SESSION_TYPE_STORAGE_KEY = 'hapi:newSession:sessionType'
 const WORKTREE_NAME_STORAGE_KEY = 'hapi:newSession:worktreeName'
 
-const VALID_AGENTS: AgentType[] = ['claude', 'codex', 'gemini', 'opencode']
+const VALID_AGENTS: AgentType[] = ['claude', 'codex']
 const VALID_REASONING_EFFORTS = ['auto', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const
 
 export function loadPreferredAgent(): AgentType {

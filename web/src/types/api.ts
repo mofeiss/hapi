@@ -1,5 +1,7 @@
 import type {
     DecryptedMessage as ProtocolDecryptedMessage,
+    ScheduledTask,
+    ScheduledTaskRun,
     Session,
     SessionSummary,
     SyncEvent as ProtocolSyncEvent,
@@ -11,6 +13,8 @@ export type {
     AttachmentMetadata,
     ModelMode,
     PermissionMode,
+    ScheduledTask,
+    ScheduledTaskRun,
     Session,
     SessionSummary,
     SessionSummaryMetadata,
@@ -75,6 +79,7 @@ export type MessagesResponse = {
 
 export type MachinesResponse = { machines: Machine[] }
 export type MachinePathsExistsResponse = { exists: Record<string, boolean> }
+export type ScheduledTasksResponse = { tasks: ScheduledTask[]; runs: ScheduledTaskRun[] }
 
 export type SpawnResponse =
     | { type: 'success'; sessionId: string }

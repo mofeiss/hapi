@@ -1,5 +1,6 @@
 export * from './messages'
 export * from './modes'
+export * from './scheduler'
 export * from './socket'
 export * from './sessionSummary'
 export * from './utils'

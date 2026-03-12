@@ -6,6 +6,7 @@
 import { logger } from '@/ui/logger';
 import { clearRunnerState, readRunnerState } from '@/persistence';
 import { Metadata } from '@/api/types';
+import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol';
 import packageJson from '../../package.json';
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -106,6 +107,41 @@ export async function spawnRunnerSession(directory: string, sessionId?: string):
 
 export async function stopRunnerHttp(): Promise<void> {
   await runnerPost('/stop');
+}
+
+export async function createRunnerScheduledTask(input: {
+  machineId: string;
+  namespace?: string;
+  createdBySessionId?: string;
+  title: string;
+  prompt: string;
+  agentFlavor?: 'claude' | 'codex';
+  targetDirectory: string;
+  permissionMode?: string;
+  basePermissionMode?: string;
+  model?: string;
+  reasoningEffort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+  runAt: number;
+  timezone?: string;
+  maxSkewMs?: number;
+}): Promise<ScheduledTask | null> {
+  const result = await runnerPost('/scheduler/tasks/create', input);
+  return result.task ?? null;
+}
+
+export async function listRunnerScheduledTasks(): Promise<ScheduledTask[]> {
+  const result = await runnerPost('/scheduler/tasks/list');
+  return result.tasks || [];
+}
+
+export async function listRunnerScheduledTaskRuns(): Promise<ScheduledTaskRun[]> {
+  const result = await runnerPost('/scheduler/runs/list');
+  return result.runs || [];
+}
+
+export async function cancelRunnerScheduledTask(taskId: string): Promise<ScheduledTask | null> {
+  const result = await runnerPost('/scheduler/tasks/cancel', { taskId });
+  return result.task ?? null;
 }
 
 /**

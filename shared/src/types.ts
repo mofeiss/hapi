@@ -5,6 +5,8 @@ export type {
     AttachmentMetadata,
     DecryptedMessage,
     Metadata,
+    ScheduledTask,
+    ScheduledTaskRun,
     Session,
     SyncEvent,
     TodoItem,
@@ -24,3 +26,12 @@ export type {
     PermissionModeOption,
     PermissionModeTone
 } from './modes'
+
+export type {
+    ScheduledAgentFlavor,
+    ScheduledCatchUpPolicy,
+    ScheduledRunStrategy,
+    ScheduledTaskRunStatus,
+    ScheduledTaskStatus,
+    ScheduledTaskType
+} from './scheduler'

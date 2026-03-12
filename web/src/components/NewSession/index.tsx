@@ -647,7 +647,7 @@ export function NewSession(props: {
             }
         }
 
-        if (agent === 'claude' || agent === 'gemini') {
+        if (agent === 'claude') {
             return {
                 model: model === 'auto' ? null : model
             }
@@ -671,7 +671,7 @@ export function NewSession(props: {
         try {
             const resolvedModel = agent === 'codex'
                 ? (composerCodexModel ?? undefined)
-                : model !== 'auto' && agent !== 'opencode'
+                : model !== 'auto'
                     ? model
                     : undefined
             const resolvedReasoningEffort = agent === 'codex'
@@ -920,16 +920,6 @@ export function NewSession(props: {
                                                     label: 'Codex',
                                                     icon: <AgentFlavorStatusIcon flavor="codex" active sizeClassName="h-3.5 w-3.5" />
                                                 },
-                                                {
-                                                    value: 'gemini',
-                                                    label: 'Gemini',
-                                                    icon: <AgentFlavorStatusIcon flavor="gemini" active sizeClassName="h-3.5 w-3.5" />
-                                                },
-                                                {
-                                                    value: 'opencode',
-                                                    label: 'OpenCode',
-                                                    icon: <AgentFlavorStatusIcon flavor="opencode" active sizeClassName="h-3.5 w-3.5" />
-                                                },
                                             ]}
                                             onAgentChange={(value) => setAgent(value as AgentType)}
                                             onPermissionModeChange={setBasePermissionMode}
@@ -937,9 +927,6 @@ export function NewSession(props: {
                                             claudeModel={agent === 'claude' ? model : null}
                                             claudeModelOptions={agent === 'claude' ? claudeComposerModelOptions : []}
                                             onClaudeModelChange={agent === 'claude' ? setModel : undefined}
-                                            geminiModel={agent === 'gemini' ? model : null}
-                                            geminiModelOptions={agent === 'gemini' ? MODEL_OPTIONS.gemini : []}
-                                            onGeminiModelChange={agent === 'gemini' ? setModel : undefined}
                                             codexModel={agent === 'codex' ? composerCodexModel : null}
                                             codexModelOptions={agent === 'codex' ? codexComposerModelOptions : []}
                                             codexReasoningEffort={agent === 'codex' ? composerCodexReasoningEffort : null}

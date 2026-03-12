@@ -127,6 +127,24 @@ Notes:
 - never store real tokens in repo docs/logs; placeholders only
 - avoid impacting stable services/processes during debug; if conflict risk, ask user first
 
+## Local debug aliases (must use for isolated dev env)
+
+When debugging locally on this machine, do **not** reuse the default `~/.hapi` environment.
+Stable local config may silently point to the online stable hub.
+
+Use these isolated aliases instead:
+
+```bash
+alias hapidev='cd /Users/ofeiss/project/hapi && HAPI_HOME=~/.hapidev HAPI_DIAGNOSTIC_LOGGING=true bun run dev'
+alias hapidevcli='cd /Users/ofeiss/project/hapi/cli && HAPI_HOME=~/.hapidev HAPI_DIAGNOSTIC_LOGGING=true bun src/index.ts'
+```
+
+Rules:
+- local debug for this repo should default to `HAPI_HOME=~/.hapidev`
+- do not read/write stable runner state under `~/.hapi` unless user explicitly asks
+- do not verify new scheduler/runner behavior against the online stable hub
+- prefer `hapidev` for hub+web and `hapidevcli` for CLI/runner/session testing
+
 ## Key source dirs
 
 ### CLI (`cli/src/`)

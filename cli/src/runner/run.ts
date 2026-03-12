@@ -29,6 +29,12 @@ import { resolveUserPath } from '@/utils/userPath';
 import { fetchCodexModelCatalog } from '@/codex/utils/modelCatalog';
 import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 import { createCleanRunnerEnvironment, getRunnerEnvironmentContamination } from './runnerLaunchEnv';
+import { RunnerSchedulerStore } from './scheduler/store';
+import { RunnerSchedulerService } from './scheduler/service';
+import { buildScheduledPrompt } from './scheduler/buildScheduledPrompt';
+import type { SchedulerTriggerContext, CreateScheduledTaskInput } from './scheduler/types';
+import { configuration } from '@/configuration';
+import { getAuthToken } from '@/api/auth';
 
 const FALLBACK_CODEX_MODELS: AgentModel[] = [
   {
@@ -640,6 +646,73 @@ export async function startRunner(): Promise<void> {
       }
     };
 
+    const schedulerStore = new RunnerSchedulerStore();
+    const scheduler = new RunnerSchedulerService(
+      schedulerStore,
+      async ({ task, run }: SchedulerTriggerContext) => {
+        const spawnResult = await spawnSession({
+          directory: task.targetDirectory,
+          agent: task.agentFlavor,
+          model: task.model,
+          reasoningEffort: task.reasoningEffort,
+          permissionMode: task.permissionMode,
+          basePermissionMode: task.basePermissionMode
+        });
+
+        if (spawnResult.type !== 'success') {
+          throw new Error(
+            spawnResult.type === 'error'
+              ? spawnResult.errorMessage
+              : `Scheduled task requires directory approval: ${spawnResult.directory}`
+          );
+        }
+
+        const apiToken = getAuthToken();
+
+        const response = await fetch(
+          `${configuration.apiUrl}/cli/sessions/${encodeURIComponent(spawnResult.sessionId)}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              text: buildScheduledPrompt(task, run),
+              meta: {
+                sentFrom: 'runner-scheduler'
+              }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to deliver scheduled prompt: HTTP ${response.status}`);
+        }
+
+        return {
+          sessionId: spawnResult.sessionId,
+          resultSummary: 'Scheduled prompt delivered to new session'
+        };
+      }
+    );
+
+    const createScheduledTask = async (input: CreateScheduledTaskInput) => {
+      return await scheduler.createTask(input);
+    };
+
+    const listScheduledTasks = async () => {
+      return await scheduler.listTasks({ machineId });
+    };
+
+    const listScheduledTaskRuns = async () => {
+      return await scheduler.listRuns({ machineId });
+    };
+
+    const cancelScheduledTask = async (taskId: string) => {
+      return await scheduler.cancelTask(taskId);
+    };
+
     // Stop a session by sessionId or PID fallback
     const stopSession = (sessionId: string): boolean => {
       logger.debug(`[RUNNER RUN] Attempting to stop session ${sessionId}`);
@@ -687,6 +760,10 @@ export async function startRunner(): Promise<void> {
       getChildren: getCurrentChildren,
       stopSession,
       spawnSession,
+      createScheduledTask,
+      listScheduledTasks,
+      listScheduledTaskRuns,
+      cancelScheduledTask,
       requestShutdown: () => requestShutdown('hapi-cli'),
       onHappySessionWebhook
     });
@@ -749,6 +826,8 @@ export async function startRunner(): Promise<void> {
 
     // Connect to server
     apiMachine.connect();
+
+    await scheduler.start();
 
     // Every 60 seconds:
     // 1. Prune stale sessions
@@ -846,6 +925,8 @@ export async function startRunner(): Promise<void> {
     // Setup signal handlers
     const cleanupAndShutdown = async (source: 'hapi-app' | 'hapi-cli' | 'os-signal' | 'exception', errorMessage?: string) => {
       logger.debug(`[RUNNER RUN] Starting proper cleanup (source: ${source}, errorMessage: ${errorMessage})...`);
+
+      scheduler.stop();
 
       // Clear health check interval
       if (restartOnStaleVersionAndHeartbeat) {

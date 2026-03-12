@@ -14,6 +14,7 @@ import type {
     ModelMode,
     PermissionMode,
     PushSubscriptionPayload,
+    ScheduledTasksResponse,
     PushUnsubscribePayload,
     PushVapidPublicKeyResponse,
     SlashCommandsResponse,
@@ -366,6 +367,17 @@ export class ApiClient {
         return await this.request<MachinesResponse>('/api/machines')
     }
 
+    async getScheduledTasks(): Promise<ScheduledTasksResponse> {
+        return await this.request<ScheduledTasksResponse>('/api/scheduled-tasks')
+    }
+
+    async cancelScheduledTask(taskId: string): Promise<void> {
+        await this.request('/api/scheduled-tasks/cancel', {
+            method: 'POST',
+            body: JSON.stringify({ taskId })
+        })
+    }
+
     async checkMachinePathsExists(
         machineId: string,
         paths: string[]
@@ -382,7 +394,7 @@ export class ApiClient {
     async spawnSession(
         machineId: string,
         directory: string,
-        agent?: 'claude' | 'codex' | 'gemini' | 'opencode',
+        agent?: 'claude' | 'codex',
         model?: string,
         reasoningEffort?: CodexReasoningEffort,
         permissionMode?: string,
@@ -398,7 +410,7 @@ export class ApiClient {
 
     async getAgentModels(
         machineId: string,
-        agent: 'claude' | 'codex' | 'gemini' | 'opencode' = 'codex'
+        agent: 'claude' | 'codex' = 'codex'
     ): Promise<AgentModelsResponse> {
         const query = new URLSearchParams({ agent })
         return await this.request<AgentModelsResponse>(`/api/machines/${encodeURIComponent(machineId)}/agent-models?${query.toString()}`)

@@ -1,6 +1,6 @@
 import type { AgentModel, CodexReasoningEffort } from '@/types/api'
 
-export type AgentType = 'claude' | 'codex' | 'gemini' | 'opencode'
+export type AgentType = 'claude' | 'codex'
 export type SessionType = 'simple' | 'worktree'
 
 export type ModelOption = { value: string; label: string }
@@ -18,15 +18,15 @@ export const MODEL_OPTIONS: Record<Exclude<AgentType, 'codex'>, ModelOption[]> =
         { value: 'opus', label: 'Opus' },
         { value: 'sonnet', label: 'Sonnet' },
         { value: 'custom', label: 'Custom' },
-    ],
-    gemini: [
-        { value: 'auto', label: 'Auto' },
-        { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' },
-        { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-        { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    ],
-    opencode: [],
+    ]
 }
+
+export const LEGACY_GEMINI_MODEL_OPTIONS: ModelOption[] = [
+    { value: 'auto', label: 'Auto' },
+    { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+]
 
 export const FALLBACK_CODEX_MODELS: CodexModelOption[] = [
     {

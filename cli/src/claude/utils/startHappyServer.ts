@@ -11,6 +11,7 @@ import { z } from "zod";
 import { logger } from "@/ui/logger";
 import { ApiSessionClient } from "@/api/apiSession";
 import { randomUUID } from "node:crypto";
+import { registerScheduleTools } from '@/mcp/tools/scheduleTools';
 
 export async function startHappyServer(client: ApiSessionClient) {
     // Handler that sends title updates via the client
@@ -75,6 +76,8 @@ export async function startHappyServer(client: ApiSessionClient) {
         }
     });
 
+    await registerScheduleTools(mcp, client);
+
     const transport = new StreamableHTTPServerTransport({
         // NOTE: Returning session id here will result in claude
         // sdk spawn to fail with `Invalid Request: Server already initialized`
@@ -106,7 +109,7 @@ export async function startHappyServer(client: ApiSessionClient) {
 
     return {
         url: baseUrl.toString(),
-        toolNames: ['change_title'],
+        toolNames: ['change_title', 'schedule_create', 'schedule_list', 'schedule_cancel'],
         stop: () => {
             logger.debug('[hapiMCP] Stopping server');
             mcp.close();

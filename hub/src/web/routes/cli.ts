@@ -25,6 +25,29 @@ const getMessagesQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(200).optional()
 })
 
+const cliSendMessageBodySchema = z.object({
+    text: z.string(),
+    localId: z.string().min(1).optional(),
+    attachments: z.array(z.object({
+        id: z.string(),
+        filename: z.string(),
+        mimeType: z.string(),
+        size: z.number(),
+        path: z.string(),
+        previewUrl: z.string().optional()
+    })).optional(),
+    meta: z.object({
+        sentFrom: z.string().optional(),
+        fallbackModel: z.string().nullable().optional(),
+        customSystemPrompt: z.string().nullable().optional(),
+        appendSystemPrompt: z.string().nullable().optional(),
+        allowedTools: z.array(z.string()).nullable().optional(),
+        disallowedTools: z.array(z.string()).nullable().optional(),
+        model: z.string().nullable().optional(),
+        reasoningEffort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']).nullable().optional()
+    }).optional()
+})
+
 type CliEnv = {
     Variables: {
         namespace: string
@@ -138,6 +161,40 @@ export function createCliRoutes(getSyncEngine: () => SyncEngine | null): Hono<Cl
         const limit = parsed.data.limit ?? 200
         const messages = engine.getMessagesAfter(resolved.sessionId, { afterSeq: parsed.data.afterSeq, limit })
         return c.json({ messages })
+    })
+
+    app.post('/sessions/:id/messages', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ error: 'Not ready' }, 503)
+        }
+
+        const sessionId = c.req.param('id')
+        const namespace = c.get('namespace')
+        const resolved = resolveSessionForNamespace(engine, sessionId, namespace)
+        if (!resolved.ok) {
+            return c.json({ error: resolved.error }, resolved.status)
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = cliSendMessageBodySchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ error: 'Invalid body' }, 400)
+        }
+
+        if (!parsed.data.text && (!parsed.data.attachments || parsed.data.attachments.length === 0)) {
+            return c.json({ error: 'Message requires text or attachments' }, 400)
+        }
+
+        await engine.sendMessage(resolved.sessionId, {
+            text: parsed.data.text,
+            localId: parsed.data.localId,
+            attachments: parsed.data.attachments,
+            meta: parsed.data.meta,
+            sentFrom: 'webapp'
+        })
+
+        return c.json({ ok: true })
     })
 
     app.post('/machines', async (c) => {

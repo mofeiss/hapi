@@ -72,7 +72,7 @@ describe('NewSession preferences', () => {
     })
 
     it('persists new values to storage', () => {
-        savePreferredAgent('gemini')
+        savePreferredAgent('codex')
         savePreferredPermissionMode('bypassPermissions')
         savePreferredPlanActive(true)
         savePreferredDirectory('/tmp')
@@ -81,7 +81,7 @@ describe('NewSession preferences', () => {
         savePreferredSessionType('worktree')
         savePreferredWorktreeName('feature/remember-me')
 
-        expect(localStorage.getItem('hapi:newSession:agent')).toBe('gemini')
+        expect(localStorage.getItem('hapi:newSession:agent')).toBe('codex')
         expect(localStorage.getItem('hapi:newSession:permissionMode:v2')).toBe('bypassPermissions')
         expect(localStorage.getItem('hapi:newSession:planActive')).toBe('true')
         expect(localStorage.getItem('hapi:newSession:directory')).toBe('/tmp')

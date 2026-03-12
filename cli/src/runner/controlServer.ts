@@ -10,17 +10,27 @@ import { logger } from '@/ui/logger';
 import { Metadata } from '@/api/types';
 import { TrackedSession } from './types';
 import { SpawnSessionOptions, SpawnSessionResult } from '@/modules/common/rpcTypes';
+import type { CreateScheduledTaskInput } from './scheduler/types';
+import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol';
 
 export function startRunnerControlServer({
   getChildren,
   stopSession,
   spawnSession,
+  createScheduledTask,
+  listScheduledTasks,
+  listScheduledTaskRuns,
+  cancelScheduledTask,
   requestShutdown,
   onHappySessionWebhook
 }: {
   getChildren: () => TrackedSession[];
   stopSession: (sessionId: string) => boolean;
   spawnSession: (options: SpawnSessionOptions) => Promise<SpawnSessionResult>;
+  createScheduledTask: (input: CreateScheduledTaskInput) => Promise<ScheduledTask>;
+  listScheduledTasks: () => Promise<ScheduledTask[]>;
+  listScheduledTaskRuns: () => Promise<ScheduledTaskRun[]>;
+  cancelScheduledTask: (taskId: string) => Promise<ScheduledTask | null>;
   requestShutdown: () => void;
   onHappySessionWebhook: (sessionId: string, metadata: Metadata) => void;
 }): Promise<{ port: number; stop: () => Promise<void> }> {
@@ -168,6 +178,67 @@ export function startRunnerControlServer({
             error: result.errorMessage
           };
       }
+    });
+
+    typed.post('/scheduler/tasks/create', {
+      schema: {
+        body: z.object({
+          machineId: z.string(),
+          namespace: z.string().optional(),
+          createdBySessionId: z.string().optional(),
+          title: z.string().min(1),
+          prompt: z.string().min(1),
+          agentFlavor: z.enum(['claude', 'codex']).optional(),
+          targetDirectory: z.string().min(1),
+          permissionMode: z.string().optional(),
+          basePermissionMode: z.string().optional(),
+          model: z.string().optional(),
+          reasoningEffort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']).optional(),
+          runAt: z.number(),
+          timezone: z.string().optional(),
+          maxSkewMs: z.number().int().nonnegative().optional()
+        }),
+        response: {
+          200: z.object({ task: z.unknown() })
+        }
+      }
+    }, async (request) => {
+      const task = await createScheduledTask(request.body)
+      return { task }
+    });
+
+    typed.post('/scheduler/tasks/list', {
+      schema: {
+        response: {
+          200: z.object({ tasks: z.array(z.unknown()) })
+        }
+      }
+    }, async () => {
+      const tasks = await listScheduledTasks()
+      return { tasks }
+    });
+
+    typed.post('/scheduler/runs/list', {
+      schema: {
+        response: {
+          200: z.object({ runs: z.array(z.unknown()) })
+        }
+      }
+    }, async () => {
+      const runs = await listScheduledTaskRuns()
+      return { runs }
+    });
+
+    typed.post('/scheduler/tasks/cancel', {
+      schema: {
+        body: z.object({ taskId: z.string() }),
+        response: {
+          200: z.object({ task: z.unknown().nullable() })
+        }
+      }
+    }, async (request) => {
+      const task = await cancelScheduledTask(request.body.taskId)
+      return { task }
     });
 
     // Stop runner

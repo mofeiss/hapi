@@ -6,7 +6,7 @@ import { queryKeys } from '@/lib/query-keys'
 export function useAgentModels(
     api: ApiClient | null,
     machineId: string | null,
-    agent: 'claude' | 'codex' | 'gemini' | 'opencode'
+    agent: 'claude' | 'codex'
 ): {
     data: AgentModelsResponse | null
     isLoading: boolean

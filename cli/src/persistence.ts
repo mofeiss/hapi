@@ -9,6 +9,8 @@ import { readFile, writeFile, mkdir, open, unlink, rename, stat } from 'node:fs/
 import { existsSync, writeFileSync, readFileSync, unlinkSync } from 'node:fs'
 import { configuration } from '@/configuration'
 import { isProcessAlive } from '@/utils/process';
+import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol'
+import { ScheduledTaskRunSchema, ScheduledTaskSchema } from '@hapi/protocol/schemas'
 
 interface Settings {
   // This ID is used as the actual database ID on the server
@@ -43,6 +45,20 @@ export interface RunnerLocallyPersistedState {
   startedWithCliMtimeMs?: number;
   lastHeartbeat?: string;
   runnerLogPath?: string;
+}
+
+export interface RunnerSchedulerPersistedState {
+  tasks: ScheduledTask[];
+  runs: ScheduledTaskRun[];
+}
+
+const defaultRunnerSchedulerState: RunnerSchedulerPersistedState = {
+  tasks: [],
+  runs: []
+}
+
+function getRunnerSchedulerStateFile(): string {
+  return configuration.runnerStateFile.replace(/\.json$/, '.scheduler.json')
 }
 
 export async function readSettings(): Promise<Settings> {
@@ -202,6 +218,46 @@ export async function clearRunnerState(): Promise<void> {
       // Lock file might be held by running runner, ignore error
     }
   }
+}
+
+export async function readRunnerSchedulerState(): Promise<RunnerSchedulerPersistedState> {
+  const file = getRunnerSchedulerStateFile()
+  if (!existsSync(file)) {
+    return { ...defaultRunnerSchedulerState }
+  }
+
+  try {
+    const content = await readFile(file, 'utf8')
+    const parsed = JSON.parse(content) as Partial<RunnerSchedulerPersistedState>
+    return {
+      tasks: Array.isArray(parsed.tasks)
+        ? parsed.tasks
+            .map((task) => ScheduledTaskSchema.safeParse(task))
+            .filter((result) => result.success)
+            .map((result) => result.data)
+        : [],
+      runs: Array.isArray(parsed.runs)
+        ? parsed.runs
+            .map((run) => ScheduledTaskRunSchema.safeParse(run))
+            .filter((result) => result.success)
+            .map((result) => result.data)
+        : []
+    }
+  } catch (error) {
+    console.error(`[PERSISTENCE] Runner scheduler state file corrupted: ${file}`, error)
+    return { ...defaultRunnerSchedulerState }
+  }
+}
+
+export async function writeRunnerSchedulerState(state: RunnerSchedulerPersistedState): Promise<void> {
+  if (!existsSync(configuration.happyHomeDir)) {
+    await mkdir(configuration.happyHomeDir, { recursive: true })
+  }
+
+  const file = getRunnerSchedulerStateFile()
+  const tmpFile = `${file}.tmp`
+  await writeFile(tmpFile, JSON.stringify(state, null, 2), 'utf8')
+  await rename(tmpFile, file)
 }
 
 /**
