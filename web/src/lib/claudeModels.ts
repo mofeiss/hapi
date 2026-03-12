@@ -7,7 +7,6 @@ export const CLAUDE_CUSTOM_MODEL_OPTION_VALUE = 'custom'
 const CLAUDE_CUSTOM_MODEL_VALUE_STORAGE_KEY = 'hapi:claude:customModelValue'
 
 const CLAUDE_BASE_MODEL_OPTIONS: ClaudeModelOption[] = [
-    { value: 'auto', label: 'Default' },
     { value: 'opus', label: 'Opus' },
     { value: 'sonnet', label: 'Sonnet' }
 ]
@@ -49,7 +48,7 @@ export function buildClaudeComposerModelOptions(
         return options
     }
 
-    if (normalized.toLowerCase() === 'auto' || isClaudePresetModel(normalized)) {
+    if (isClaudePresetModel(normalized)) {
         return options
     }
 

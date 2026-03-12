@@ -9,6 +9,30 @@ const cancelBodySchema = z.object({
     taskId: z.string().min(1)
 })
 
+const updateBodySchema = z.object({
+    taskId: z.string().min(1),
+    title: z.string().min(1).optional(),
+    prompt: z.string().min(1).optional(),
+    agentFlavor: z.enum(['claude', 'codex']).optional(),
+    targetDirectory: z.string().min(1).optional(),
+    permissionMode: z.string().optional(),
+    basePermissionMode: z.string().optional(),
+    model: z.string().optional(),
+    reasoningEffort: z.union([z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']), z.null()]).optional(),
+    scheduleType: z.enum(['once', 'cron']).optional(),
+    runAt: z.number().optional(),
+    cron: z.string().optional(),
+    timezone: z.string().optional(),
+    paused: z.boolean().optional(),
+    allowOverlap: z.boolean().optional(),
+    catchUpPolicy: z.enum(['once_within_window', 'skip']).optional(),
+    maxSkewMs: z.number().int().nonnegative().optional()
+})
+
+const deleteBodySchema = z.object({
+    taskId: z.string().min(1)
+})
+
 async function runnerPost<T>(path: string, body: unknown): Promise<T> {
     const runnerStatePath = `${process.env.HAPI_HOME?.replace(/^~/, process.env.HOME || '') || `${process.env.HOME || ''}/.hapi`}/runner.state.json`
     const stateFile = Bun.file(runnerStatePath)
@@ -96,6 +120,38 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
         }
 
         const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/cancel', parsed.data)
+        return c.json(result)
+    })
+
+    app.post('/scheduled-tasks/update', async (c) => {
+        const engine = requireSyncEngine(c, getSyncEngine)
+        if (engine instanceof Response) {
+            return engine
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = updateBodySchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ error: 'Invalid body' }, 400)
+        }
+
+        const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/update', parsed.data)
+        return c.json(result)
+    })
+
+    app.post('/scheduled-tasks/delete', async (c) => {
+        const engine = requireSyncEngine(c, getSyncEngine)
+        if (engine instanceof Response) {
+            return engine
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = deleteBodySchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ error: 'Invalid body' }, 400)
+        }
+
+        const result = await runnerPost<{ deleted: unknown | null }>('/scheduler/tasks/delete', parsed.data)
         return c.json(result)
     })
 

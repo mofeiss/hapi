@@ -378,6 +378,20 @@ export class ApiClient {
         })
     }
 
+    async updateScheduledTask(body: Record<string, unknown>): Promise<void> {
+        await this.request('/api/scheduled-tasks/update', {
+            method: 'POST',
+            body: JSON.stringify(body)
+        })
+    }
+
+    async deleteScheduledTask(taskId: string): Promise<void> {
+        await this.request('/api/scheduled-tasks/delete', {
+            method: 'POST',
+            body: JSON.stringify({ taskId })
+        })
+    }
+
     async checkMachinePathsExists(
         machineId: string,
         paths: string[]

@@ -117,15 +117,37 @@ export async function createRunnerScheduledTask(input: {
   prompt: string;
   agentFlavor?: 'claude' | 'codex';
   targetDirectory: string;
-  permissionMode?: string;
-  basePermissionMode?: string;
   model?: string;
-  reasoningEffort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
-  runAt: number;
+  scheduleType?: 'once' | 'cron';
+  runAt?: number;
+  cron?: string;
   timezone?: string;
+  paused?: boolean;
+  allowOverlap?: boolean;
+  catchUpPolicy?: 'once_within_window' | 'skip';
   maxSkewMs?: number;
 }): Promise<ScheduledTask | null> {
   const result = await runnerPost('/scheduler/tasks/create', input);
+  return result.task ?? null;
+}
+
+export async function updateRunnerScheduledTask(input: {
+  taskId: string;
+  title?: string;
+  prompt?: string;
+  agentFlavor?: 'claude' | 'codex';
+  targetDirectory?: string;
+  model?: string;
+  scheduleType?: 'once' | 'cron';
+  runAt?: number;
+  cron?: string;
+  timezone?: string;
+  paused?: boolean;
+  allowOverlap?: boolean;
+  catchUpPolicy?: 'once_within_window' | 'skip';
+  maxSkewMs?: number;
+}): Promise<ScheduledTask | null> {
+  const result = await runnerPost('/scheduler/tasks/update', input);
   return result.task ?? null;
 }
 
@@ -142,6 +164,11 @@ export async function listRunnerScheduledTaskRuns(): Promise<ScheduledTaskRun[]>
 export async function cancelRunnerScheduledTask(taskId: string): Promise<ScheduledTask | null> {
   const result = await runnerPost('/scheduler/tasks/cancel', { taskId });
   return result.task ?? null;
+}
+
+export async function deleteRunnerScheduledTask(taskId: string): Promise<{ taskId: string; machineId: string; namespace: string } | null> {
+  const result = await runnerPost('/scheduler/tasks/delete', { taskId });
+  return result.deleted ?? null;
 }
 
 /**

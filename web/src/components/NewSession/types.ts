@@ -14,7 +14,6 @@ export type CodexModelOption = ModelOption & {
 
 export const MODEL_OPTIONS: Record<Exclude<AgentType, 'codex'>, ModelOption[]> = {
     claude: [
-        { value: 'auto', label: 'Default' },
         { value: 'opus', label: 'Opus' },
         { value: 'sonnet', label: 'Sonnet' },
         { value: 'custom', label: 'Custom' },
@@ -30,44 +29,12 @@ export const LEGACY_GEMINI_MODEL_OPTIONS: ModelOption[] = [
 
 export const FALLBACK_CODEX_MODELS: CodexModelOption[] = [
     {
-        value: 'gpt-5.3-codex',
-        label: 'GPT-5.3 Codex',
-        description: 'Latest frontier agentic coding model.',
+        value: 'gpt-5.4',
+        label: 'GPT-5.4',
+        description: 'Current default codex model for new scheduled and manual sessions.',
         isDefault: true,
-        defaultReasoningEffort: 'medium',
-        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh']
-    },
-    {
-        value: 'gpt-5.2-codex',
-        label: 'GPT-5.2 Codex',
-        description: 'Frontier agentic coding model.',
-        isDefault: false,
-        defaultReasoningEffort: 'medium',
-        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh']
-    },
-    {
-        value: 'gpt-5.1-codex-max',
-        label: 'GPT-5.1 Codex Max',
-        description: 'Codex-optimized flagship for deep and fast reasoning.',
-        isDefault: false,
-        defaultReasoningEffort: 'medium',
-        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh']
-    },
-    {
-        value: 'gpt-5.2',
-        label: 'GPT-5.2',
-        description: 'Latest frontier model with improvements across knowledge, reasoning and coding.',
-        isDefault: false,
-        defaultReasoningEffort: 'medium',
-        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh']
-    },
-    {
-        value: 'gpt-5.1-codex-mini',
-        label: 'GPT-5.1 Codex Mini',
-        description: 'Optimized for codex. Cheaper, faster, but less capable.',
-        isDefault: false,
-        defaultReasoningEffort: 'medium',
-        supportedReasoningEfforts: ['medium', 'high']
+        defaultReasoningEffort: 'xhigh',
+        supportedReasoningEfforts: ['xhigh']
     }
 ]
 
@@ -78,6 +45,7 @@ export function buildCodexModelOptions(models: AgentModel[] | undefined): CodexM
 
     const visible = models
         .filter((model) => !model.hidden)
+        .filter((model) => model.model === 'gpt-5.4')
         .map((model) => ({
             value: model.model,
             label: model.displayName || model.model,
@@ -98,4 +66,12 @@ export function buildCodexModelOptions(models: AgentModel[] | undefined): CodexM
         return left.label.localeCompare(right.label)
     })
     return visible
+}
+
+const REASONING_EFFORT_PRIORITY: CodexReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh']
+
+export function getHighestCodexReasoningEffort(efforts: CodexReasoningEffort[]): CodexReasoningEffort {
+    return efforts
+        .slice()
+        .sort((left, right) => REASONING_EFFORT_PRIORITY.indexOf(right) - REASONING_EFFORT_PRIORITY.indexOf(left))[0] ?? 'xhigh'
 }

@@ -35,7 +35,7 @@ import { makeClientSideId } from '@/lib/messages'
 import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/use-translation'
 import { useAgentModels } from '@/hooks/queries/useAgentModels'
-import { buildCodexModelOptions, LEGACY_GEMINI_MODEL_OPTIONS, MODEL_OPTIONS, type CodexModelOption } from '@/components/NewSession/types'
+import { buildCodexModelOptions, getHighestCodexReasoningEffort, LEGACY_GEMINI_MODEL_OPTIONS, MODEL_OPTIONS, type CodexModelOption } from '@/components/NewSession/types'
 import { loadPreferredModel, savePreferredModel } from '@/components/NewSession/preferences'
 import {
     buildClaudeComposerModelOptions,
@@ -108,27 +108,6 @@ function isContextResetCommand(text: string, flavor: string | null): boolean {
     return /^\/new(?:\s+[\s\S]+)?$/.test(trimmed)
 }
 
-function getReasoningLabel(
-    value: CodexReasoningEffort,
-    t: (key: string) => string
-): string {
-    switch (value) {
-        case 'none':
-            return t('newSession.reasoning.none')
-        case 'minimal':
-            return t('newSession.reasoning.minimal')
-        case 'low':
-            return t('newSession.reasoning.low')
-        case 'medium':
-            return t('newSession.reasoning.medium')
-        case 'high':
-            return t('newSession.reasoning.high')
-        case 'xhigh':
-            return t('newSession.reasoning.xhigh')
-        default:
-            return value
-    }
-}
 
 export function SessionChat(props: {
     api: ApiClient
@@ -250,17 +229,7 @@ export function SessionChat(props: {
             return
         }
 
-        const supportedEfforts = new Set(selectedModel.supportedReasoningEfforts)
-        const sessionReasoning = props.session.metadata?.reasoningEffort
-        const preferredReasoning = (
-            (composerCodexReasoningEffort && supportedEfforts.has(composerCodexReasoningEffort)
-                ? composerCodexReasoningEffort
-                : null)
-            ?? (sessionReasoning && supportedEfforts.has(sessionReasoning)
-                ? sessionReasoning
-                : null)
-            ?? selectedModel.defaultReasoningEffort
-        )
+        const preferredReasoning = getHighestCodexReasoningEffort(selectedModel.supportedReasoningEfforts)
 
         if (preferredReasoning !== composerCodexReasoningEffort) {
             setComposerCodexReasoningEffort(preferredReasoning)
@@ -269,7 +238,6 @@ export function SessionChat(props: {
         isCodexSession,
         codexModelOptions,
         props.session.metadata?.model,
-        props.session.metadata?.reasoningEffort,
         composerCodexModel,
         composerCodexReasoningEffort
     ])
@@ -312,20 +280,6 @@ export function SessionChat(props: {
         () => buildClaudeComposerModelOptions(activeClaudeCustomModel),
         [activeClaudeCustomModel]
     )
-
-    const codexComposerReasoningOptions = useMemo(() => {
-        if (!composerCodexModel) {
-            return []
-        }
-        const selectedModel = codexModelOptions.find((option) => option.value === composerCodexModel)
-        if (!selectedModel) {
-            return []
-        }
-        return selectedModel.supportedReasoningEfforts.map((value) => ({
-            value,
-            label: getReasoningLabel(value, t)
-        }))
-    }, [composerCodexModel, codexModelOptions, t])
 
     useEffect(() => {
         if (!isClaudeSession || claudeComposerModelOptions.length === 0) {
@@ -1139,7 +1093,7 @@ export function SessionChat(props: {
                             codexModel={composerCodexModel}
                             codexModelOptions={codexComposerModelOptions}
                             codexReasoningEffort={composerCodexReasoningEffort}
-                            codexReasoningOptions={codexComposerReasoningOptions}
+                            codexReasoningOptions={[]}
                             onCodexModelChange={setComposerCodexModel}
                             onCodexReasoningEffortChange={setComposerCodexReasoningEffort}
                             autocompleteSuggestions={props.autocompleteSuggestions}

@@ -641,12 +641,12 @@ export function HappyComposer(props: {
         haptic('light')
     }, [onCodexReasoningEffortChange, controlsDisabled, haptic])
 
-    const showPermissionSettings = Boolean(onPermissionModeChange && permissionModeOptions.length > 0)
+    const showPermissionSettings = false
     const showModelSettings = Boolean(onModelModeChange && !isCodexFamilyFlavor(agentFlavor) && agentFlavor !== 'claude' && agentFlavor !== 'gemini')
     const showClaudeModelSettings = Boolean(agentFlavor === 'claude' && onClaudeModelChange && claudeModel && claudeModelOptions.length > 0)
     const showGeminiModelSettings = Boolean(agentFlavor === 'gemini' && onGeminiModelChange && geminiModel && geminiModelOptions.length > 0)
     const showCodexModelSettings = Boolean(isCodexFamilyFlavor(agentFlavor) && codexModel && codexModelOptions.length > 0)
-    const showCodexReasoningSettings = Boolean(showCodexModelSettings && codexReasoningEffort && codexReasoningOptions.length > 0)
+    const showCodexReasoningSettings = false
     const showAbortButton = threadIsRunning && !hasText && !hasQueue
     const voiceEnabled = Boolean(onVoiceToggle)
 

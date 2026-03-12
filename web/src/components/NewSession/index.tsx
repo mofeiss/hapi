@@ -6,10 +6,6 @@ import {
     useState,
     type KeyboardEvent as ReactKeyboardEvent
 } from 'react'
-import {
-    getBasePermissionModesForFlavor,
-    supportsPlanToggle
-} from '@hapi/protocol'
 import type { ApiClient } from '@/api/client'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { AgentFlavorStatusIcon } from '@/components/AgentFlavorStatusIcon'
@@ -28,26 +24,24 @@ import { useHappyRuntime } from '@/lib/assistant-runtime'
 import { createDraftAttachmentAdapter } from '@/lib/draftAttachments'
 import { useTheme } from '@/hooks/useTheme'
 import { useTranslation } from '@/lib/use-translation'
-import type { AttachmentMetadata, CodexReasoningEffort, Machine, PermissionMode, Session, UserMessageMeta } from '@/types/api'
+import type { AttachmentMetadata, Machine, PermissionMode, Session, UserMessageMeta } from '@/types/api'
 import { FloatingOverlay } from '@/components/ChatInput/FloatingOverlay'
 import { Autocomplete } from '@/components/ChatInput/Autocomplete'
 import { isTelegramApp } from '@/hooks/useTelegram'
 import type { AgentType, SessionType } from './types'
-import { buildCodexModelOptions, MODEL_OPTIONS } from './types'
+import { buildCodexModelOptions, getHighestCodexReasoningEffort } from './types'
 import {
     loadPreferredAgent,
     loadPreferredDirectory,
     loadPreferredModel,
     loadPreferredPermissionMode,
     loadPreferredPlanActive,
-    loadPreferredReasoningEffort,
     loadPreferredSessionType,
     savePreferredAgent,
     savePreferredDirectory,
     savePreferredModel,
     savePreferredPermissionMode,
     savePreferredPlanActive,
-    savePreferredReasoningEffort,
     savePreferredSessionType,
 } from './preferences'
 import { setPendingSessionMode } from '@/lib/pending-session-mode-store'
@@ -157,27 +151,6 @@ function getMachineTitle(machine: Machine | null | undefined): string {
     return ''
 }
 
-function getReasoningLabel(
-    value: CodexReasoningEffort,
-    t: (key: string) => string
-): string {
-    switch (value) {
-        case 'none':
-            return t('newSession.reasoning.none')
-        case 'minimal':
-            return t('newSession.reasoning.minimal')
-        case 'low':
-            return t('newSession.reasoning.low')
-        case 'medium':
-            return t('newSession.reasoning.medium')
-        case 'high':
-            return t('newSession.reasoning.high')
-        case 'xhigh':
-            return t('newSession.reasoning.xhigh')
-        default:
-            return value
-    }
-}
 
 function PillSelect(props: {
     label: string
@@ -287,24 +260,15 @@ export function NewSession(props: {
     const [isDirectoryFocused, setIsDirectoryFocused] = useState(false)
     const [pathExistence, setPathExistence] = useState<Record<string, boolean>>({})
     const [agent, setAgent] = useState<AgentType>(preferredAgent)
-    const [model, setModel] = useState(() => preferredModel ?? 'auto')
-    const [reasoningEffort, setReasoningEffort] = useState<CodexReasoningEffort | 'auto'>(loadPreferredReasoningEffort)
+    const [model, setModel] = useState(() => preferredModel ?? 'opus')
     const [basePermissionMode, setBasePermissionMode] = useState<PermissionMode>(() => loadPreferredPermissionMode(preferredAgent))
     const [isPlanActive, setIsPlanActive] = useState<boolean>(loadPreferredPlanActive)
     const [sessionType, setSessionType] = useState<SessionType>(loadPreferredSessionType)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (!getBasePermissionModesForFlavor(agent).includes(basePermissionMode)) {
-            setBasePermissionMode(loadPreferredPermissionMode(agent))
-        }
-    }, [agent, basePermissionMode])
-
-    useEffect(() => {
-        if (!supportsPlanToggle(agent) && isPlanActive) {
-            setIsPlanActive(false)
-        }
-    }, [agent, isPlanActive])
+        setBasePermissionMode(agent === 'codex' ? 'yolo' : 'bypassPermissions')
+    }, [agent])
 
     useEffect(() => {
         savePreferredAgent(agent)
@@ -325,10 +289,6 @@ export function NewSession(props: {
     useEffect(() => {
         savePreferredModel(model)
     }, [model])
-
-    useEffect(() => {
-        savePreferredReasoningEffort(reasoningEffort)
-    }, [reasoningEffort])
 
     useEffect(() => {
         savePreferredSessionType(sessionType)
@@ -360,75 +320,37 @@ export function NewSession(props: {
     )
     const activeClaudeCustomModel = useMemo(() => {
         if (
+            agent === 'claude' &&
             preferredModel
             && !isClaudePresetModel(preferredModel)
-            && preferredModel !== 'auto'
             && preferredModel !== 'custom'
+            && !preferredModel.startsWith('gpt-')
         ) {
             return preferredModel
         }
         return preferredClaudeCustomModel
-    }, [preferredClaudeCustomModel, preferredModel])
+    }, [agent, preferredClaudeCustomModel, preferredModel])
 
     const modelOptions = useMemo(
-        () => {
-            if (agent === 'codex') {
-                return [
-                    { value: 'auto', label: 'Auto' },
-                    ...codexModelOptions.map((entry) => ({ value: entry.value, label: entry.label }))
-                ]
-            }
-            if (agent === 'claude') {
-                return buildClaudeComposerModelOptions(activeClaudeCustomModel)
-            }
-            return MODEL_OPTIONS[agent]
-        },
+        () => agent === 'codex'
+            ? codexModelOptions.map((entry) => ({ value: entry.value, label: entry.label }))
+            : buildClaudeComposerModelOptions(activeClaudeCustomModel),
         [agent, codexModelOptions, activeClaudeCustomModel]
     )
 
     useEffect(() => {
         if (modelOptions.length === 0) {
-            if (model !== 'auto') {
-                setModel('auto')
+            if (model !== (agent === 'codex' ? 'gpt-5.4' : 'opus')) {
+                setModel(agent === 'codex' ? 'gpt-5.4' : 'opus')
             }
             return
         }
 
         const exists = modelOptions.some((option) => option.value === model)
         if (!exists) {
-            setModel('auto')
+            setModel(agent === 'codex' ? 'gpt-5.4' : 'opus')
         }
-    }, [model, modelOptions])
-
-    const selectedCodexModel = useMemo(
-        () => {
-            if (agent !== 'codex') {
-                return null
-            }
-            return codexModelOptions.find((entry) => entry.value === model) ?? null
-        },
-        [agent, codexModelOptions, model]
-    )
-
-    useEffect(() => {
-        if (agent !== 'codex' || model === 'auto') {
-            if (reasoningEffort !== 'auto') {
-                setReasoningEffort('auto')
-            }
-            return
-        }
-
-        if (!selectedCodexModel) {
-            if (reasoningEffort !== 'auto') {
-                setReasoningEffort('auto')
-            }
-            return
-        }
-
-        if (reasoningEffort !== 'auto' && !selectedCodexModel.supportedReasoningEfforts.includes(reasoningEffort)) {
-            setReasoningEffort('auto')
-        }
-    }, [agent, model, reasoningEffort, selectedCodexModel])
+    }, [agent, model, modelOptions])
 
     const recentPaths = useMemo(
         () => getRecentPaths(machineId),
@@ -567,8 +489,8 @@ export function NewSession(props: {
         return await getSlashSuggestions(query)
     }, [getSkillSuggestions, getSlashSuggestions])
     const effectivePermissionMode = useMemo<PermissionMode>(
-        () => (supportsPlanToggle(agent) && isPlanActive ? 'plan' : basePermissionMode),
-        [agent, basePermissionMode, isPlanActive]
+        () => isPlanActive ? 'plan' : basePermissionMode,
+        [basePermissionMode, isPlanActive]
     )
     const claudeComposerModelOptions = useMemo(
         () => buildClaudeComposerModelOptions(activeClaudeCustomModel),
@@ -580,7 +502,7 @@ export function NewSession(props: {
                 return null
             }
 
-            if (model !== 'auto') {
+            if (model) {
                 return model
             }
 
@@ -594,22 +516,15 @@ export function NewSession(props: {
         () => codexModelOptions.find((entry) => entry.value === composerCodexModel) ?? null,
         [codexModelOptions, composerCodexModel]
     )
-    const composerCodexReasoningEffort = useMemo<CodexReasoningEffort | null>(
+    const composerCodexReasoningEffort = useMemo(
         () => {
             if (agent !== 'codex' || !selectedComposerCodexModel) {
                 return null
             }
 
-            if (
-                reasoningEffort !== 'auto'
-                && selectedComposerCodexModel.supportedReasoningEfforts.includes(reasoningEffort)
-            ) {
-                return reasoningEffort
-            }
-
-            return selectedComposerCodexModel.defaultReasoningEffort
+            return getHighestCodexReasoningEffort(selectedComposerCodexModel.supportedReasoningEfforts)
         },
-        [agent, reasoningEffort, selectedComposerCodexModel]
+        [agent, selectedComposerCodexModel]
     )
     const codexComposerModelOptions = useMemo(
         () => codexModelOptions.map((option) => ({
@@ -617,13 +532,6 @@ export function NewSession(props: {
             label: option.label
         })),
         [codexModelOptions]
-    )
-    const codexComposerReasoningOptions = useMemo(
-        () => selectedComposerCodexModel?.supportedReasoningEfforts.map((value) => ({
-            value,
-            label: getReasoningLabel(value, t)
-        })) ?? [],
-        [selectedComposerCodexModel, t]
     )
     const canCreateBase = Boolean(machineId && directory.trim() && !props.loadError)
     const draftAttachmentAdapter = useMemo(
@@ -635,7 +543,7 @@ export function NewSession(props: {
             if (agent === 'codex') {
                 return composerCodexModel ?? undefined
             }
-            return model !== 'auto' ? model : undefined
+            return model || undefined
         },
         [agent, composerCodexModel, model]
     )
@@ -649,7 +557,7 @@ export function NewSession(props: {
 
         if (agent === 'claude') {
             return {
-                model: model === 'auto' ? null : model
+                model: model || null
             }
         }
 
@@ -677,8 +585,9 @@ export function NewSession(props: {
             const resolvedReasoningEffort = agent === 'codex'
                 ? (composerCodexReasoningEffort ?? undefined)
                 : undefined
-            const shouldUsePlanMode = supportsPlanToggle(agent) && isPlanActive
-            const requestedPermissionMode = shouldUsePlanMode ? 'plan' : basePermissionMode
+            const requestedPermissionMode = isPlanActive
+                ? 'plan'
+                : (agent === 'codex' ? 'yolo' : 'bypassPermissions')
 
             const result = await spawnSession({
                 machineId,
@@ -700,12 +609,10 @@ export function NewSession(props: {
             haptic.notification('success')
             setLastUsedMachineId(machineId)
             addRecentPath(machineId, directory.trim())
-            if (requestedPermissionMode !== 'default') {
-                setPendingSessionMode(result.sessionId, {
-                    permissionMode: requestedPermissionMode,
-                    basePermissionMode
-                })
-            }
+            setPendingSessionMode(result.sessionId, {
+                permissionMode: requestedPermissionMode,
+                basePermissionMode
+            })
             props.onSuccess(
                 result.sessionId,
                 trimmedInitialMessage || payload?.attachments?.length
@@ -770,7 +677,6 @@ export function NewSession(props: {
         draftModelValue,
         machineId,
         selectedMachine?.metadata?.host,
-        sessionType,
     ])
 
     const runtime = useHappyRuntime({
@@ -922,22 +828,21 @@ export function NewSession(props: {
                                                 },
                                             ]}
                                             onAgentChange={(value) => setAgent(value as AgentType)}
-                                            onPermissionModeChange={setBasePermissionMode}
-                                            onPlanToggle={supportsPlanToggle(agent) ? () => setIsPlanActive((current) => !current) : undefined}
+                                            onPermissionModeChange={undefined}
+                                            onPlanToggle={() => setIsPlanActive((current) => !current)}
                                             claudeModel={agent === 'claude' ? model : null}
                                             claudeModelOptions={agent === 'claude' ? claudeComposerModelOptions : []}
                                             onClaudeModelChange={agent === 'claude' ? setModel : undefined}
                                             codexModel={agent === 'codex' ? composerCodexModel : null}
                                             codexModelOptions={agent === 'codex' ? codexComposerModelOptions : []}
                                             codexReasoningEffort={agent === 'codex' ? composerCodexReasoningEffort : null}
-                                            codexReasoningOptions={agent === 'codex' ? codexComposerReasoningOptions : []}
+                                            codexReasoningOptions={[]}
                                             onCodexModelChange={agent === 'codex'
                                                 ? (nextModel) => {
                                                     setModel(nextModel)
-                                                    setReasoningEffort('auto')
                                                 }
                                                 : undefined}
-                                            onCodexReasoningEffortChange={agent === 'codex' ? setReasoningEffort : undefined}
+                                            onCodexReasoningEffortChange={undefined}
                                             autocompleteSuggestions={getAutocompleteSuggestions}
                                             voiceStatus={sttVoiceStatus}
                                             voiceRawText={stt.rawText}

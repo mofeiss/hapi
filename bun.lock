@@ -12,7 +12,7 @@
     },
     "cli": {
       "name": "@ofeiss/hapi",
-      "version": "0.15.7",
+      "version": "0.15.21",
       "bin": {
         "hapi": "bin/hapi.cjs",
       },
@@ -23,6 +23,7 @@
         "@types/react": "^19.2.7",
         "axios": "^1.13.2",
         "chalk": "^5.6.2",
+        "cron-parser": "^5.5.0",
         "cross-spawn": "^7.0.6",
         "fastify": "^5.6.2",
         "fastify-type-provider-zod": "6.1.0",
@@ -43,11 +44,11 @@
         "vitest": "^4.0.16",
       },
       "optionalDependencies": {
-        "@ofeiss/hapi-darwin-arm64": "0.15.7",
-        "@ofeiss/hapi-darwin-x64": "0.15.7",
-        "@ofeiss/hapi-linux-arm64": "0.15.7",
-        "@ofeiss/hapi-linux-x64": "0.15.7",
-        "@ofeiss/hapi-win32-x64": "0.15.7",
+        "@ofeiss/hapi-darwin-arm64": "0.15.21",
+        "@ofeiss/hapi-darwin-x64": "0.15.21",
+        "@ofeiss/hapi-linux-arm64": "0.15.21",
+        "@ofeiss/hapi-linux-x64": "0.15.21",
+        "@ofeiss/hapi-win32-x64": "0.15.21",
       },
     },
     "docs": {
@@ -623,6 +624,12 @@
     "@modelcontextprotocol/sdk": ["@modelcontextprotocol/sdk@1.25.1", "", { "dependencies": { "@hono/node-server": "^1.19.7", "ajv": "^8.17.1", "ajv-formats": "^3.0.1", "content-type": "^1.0.5", "cors": "^2.8.5", "cross-spawn": "^7.0.5", "eventsource": "^3.0.2", "eventsource-parser": "^3.0.0", "express": "^5.0.1", "express-rate-limit": "^7.5.0", "jose": "^6.1.1", "json-schema-typed": "^8.0.2", "pkce-challenge": "^5.0.0", "raw-body": "^3.0.0", "zod": "^3.25 || ^4.0", "zod-to-json-schema": "^3.25.0" }, "peerDependencies": { "@cfworker/json-schema": "^4.1.1" }, "optionalPeers": ["@cfworker/json-schema"] }, "sha512-yO28oVFFC7EBoiKdAn+VqRm+plcfv4v0xp6osG/VsCB0NlPZWi87ajbCZZ8f/RvOFLEu7//rSRmuZZ7lMoe3gQ=="],
 
     "@ofeiss/hapi": ["@ofeiss/hapi@workspace:cli"],
+
+    "@ofeiss/hapi-darwin-arm64": ["@ofeiss/hapi-darwin-arm64@0.15.21", "", { "os": "darwin", "cpu": "arm64", "bin": { "hapi": "bin/hapi" } }, "sha512-tAo0h9n5ZmwAshFn/0oFrUDa/yAwc6c1JAQuRu9eeM06ANGmi5Vo9ebQ9xdqXpBKt7hgRZvLAPM4dUTHlhxwZA=="],
+
+    "@ofeiss/hapi-linux-x64": ["@ofeiss/hapi-linux-x64@0.15.21", "", { "os": "linux", "cpu": "x64", "bin": { "hapi": "bin/hapi" } }, "sha512-Zd7VjtG7PB1okJxeAVihARnWIRlTwrvwtUijA9qvphywXB7thiHt6ruOjGIcb0bHdzzOa4d/gRroPd+AIZmq5Q=="],
+
+    "@ofeiss/hapi-win32-x64": ["@ofeiss/hapi-win32-x64@0.15.21", "", { "os": "win32", "cpu": "x64", "bin": { "hapi": "bin/hapi.exe" } }, "sha512-kAuR1yukBwXU2KDqcoUa24bOvdEP6jc/ISIqL7Ylg7EuShD7hQZ67+vgfcPQ9NUMcXJPY4qK3vAxCW7GRCBepQ=="],
 
     "@pinojs/redact": ["@pinojs/redact@0.4.0", "", {}, "sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg=="],
 
@@ -1258,6 +1265,8 @@
 
     "cose-base": ["cose-base@1.0.3", "", { "dependencies": { "layout-base": "^1.0.0" } }, "sha512-s9whTXInMSgAp/NVXVNuVxVKzGH2qck3aQlVHxDCdAEPgtMKwc4Wq6/QKhgdEdgbLSi9rBTAcPoRa6JpiG4ksg=="],
 
+    "cron-parser": ["cron-parser@5.5.0", "", { "dependencies": { "luxon": "^3.7.1" } }, "sha512-oML4lKUXxizYswqmxuOCpgFS8BNUJpIu6k/2HVHyaL8Ynnf3wdf9tkns0yRdJLSIjkJ+b0DXHMZEHGpMwjnPww=="],
+
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA=="],
 
     "crypto-random-string": ["crypto-random-string@2.0.0", "", {}, "sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA=="],
@@ -1847,6 +1856,8 @@
     "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
     "lucide-react": ["lucide-react@0.453.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc" } }, "sha512-kL+RGZCcJi9BvJtzg2kshO192Ddy9hv3ij+cPrVPWSRzgCWCVazoQJxOjAwgK53NomL07HB7GPHW120FimjNhQ=="],
+
+    "luxon": ["luxon@3.7.2", "", {}, "sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew=="],
 
     "lz-string": ["lz-string@1.5.0", "", { "bin": { "lz-string": "bin/bin.js" } }, "sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ=="],
 

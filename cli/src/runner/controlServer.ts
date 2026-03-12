@@ -10,7 +10,7 @@ import { logger } from '@/ui/logger';
 import { Metadata } from '@/api/types';
 import { TrackedSession } from './types';
 import { SpawnSessionOptions, SpawnSessionResult } from '@/modules/common/rpcTypes';
-import type { CreateScheduledTaskInput } from './scheduler/types';
+import type { CreateScheduledTaskInput, UpdateScheduledTaskInput } from './scheduler/types';
 import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol';
 
 export function startRunnerControlServer({
@@ -18,9 +18,11 @@ export function startRunnerControlServer({
   stopSession,
   spawnSession,
   createScheduledTask,
+  updateScheduledTask,
   listScheduledTasks,
   listScheduledTaskRuns,
   cancelScheduledTask,
+  deleteScheduledTask,
   requestShutdown,
   onHappySessionWebhook
 }: {
@@ -28,9 +30,11 @@ export function startRunnerControlServer({
   stopSession: (sessionId: string) => boolean;
   spawnSession: (options: SpawnSessionOptions) => Promise<SpawnSessionResult>;
   createScheduledTask: (input: CreateScheduledTaskInput) => Promise<ScheduledTask>;
+  updateScheduledTask: (input: UpdateScheduledTaskInput) => Promise<ScheduledTask | null>;
   listScheduledTasks: () => Promise<ScheduledTask[]>;
   listScheduledTaskRuns: () => Promise<ScheduledTaskRun[]>;
   cancelScheduledTask: (taskId: string) => Promise<ScheduledTask | null>;
+  deleteScheduledTask: (taskId: string) => Promise<{ taskId: string; machineId: string; namespace: string } | null>;
   requestShutdown: () => void;
   onHappySessionWebhook: (sessionId: string, metadata: Metadata) => void;
 }): Promise<{ port: number; stop: () => Promise<void> }> {
@@ -190,12 +194,14 @@ export function startRunnerControlServer({
           prompt: z.string().min(1),
           agentFlavor: z.enum(['claude', 'codex']).optional(),
           targetDirectory: z.string().min(1),
-          permissionMode: z.string().optional(),
-          basePermissionMode: z.string().optional(),
           model: z.string().optional(),
-          reasoningEffort: z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']).optional(),
-          runAt: z.number(),
+          scheduleType: z.enum(['once', 'cron']).optional(),
+          runAt: z.number().optional(),
+          cron: z.string().optional(),
           timezone: z.string().optional(),
+          paused: z.boolean().optional(),
+          allowOverlap: z.boolean().optional(),
+          catchUpPolicy: z.enum(['once_within_window', 'skip']).optional(),
           maxSkewMs: z.number().int().nonnegative().optional()
         }),
         response: {
@@ -204,6 +210,33 @@ export function startRunnerControlServer({
       }
     }, async (request) => {
       const task = await createScheduledTask(request.body)
+      return { task }
+    });
+
+    typed.post('/scheduler/tasks/update', {
+      schema: {
+        body: z.object({
+          taskId: z.string(),
+          title: z.string().min(1).optional(),
+          prompt: z.string().min(1).optional(),
+          agentFlavor: z.enum(['claude', 'codex']).optional(),
+          targetDirectory: z.string().min(1).optional(),
+          model: z.string().optional(),
+          scheduleType: z.enum(['once', 'cron']).optional(),
+          runAt: z.number().optional(),
+          cron: z.string().optional(),
+          timezone: z.string().optional(),
+          paused: z.boolean().optional(),
+          allowOverlap: z.boolean().optional(),
+          catchUpPolicy: z.enum(['once_within_window', 'skip']).optional(),
+          maxSkewMs: z.number().int().nonnegative().optional()
+        }),
+        response: {
+          200: z.object({ task: z.unknown().nullable() })
+        }
+      }
+    }, async (request) => {
+      const task = await updateScheduledTask(request.body)
       return { task }
     });
 
@@ -239,6 +272,18 @@ export function startRunnerControlServer({
     }, async (request) => {
       const task = await cancelScheduledTask(request.body.taskId)
       return { task }
+    });
+
+    typed.post('/scheduler/tasks/delete', {
+      schema: {
+        body: z.object({ taskId: z.string() }),
+        response: {
+          200: z.object({ deleted: z.object({ taskId: z.string(), machineId: z.string(), namespace: z.string() }).nullable() })
+        }
+      }
+    }, async (request) => {
+      const deleted = await deleteScheduledTask(request.body.taskId)
+      return { deleted }
     });
 
     // Stop runner

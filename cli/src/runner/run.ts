@@ -32,7 +32,7 @@ import { createCleanRunnerEnvironment, getRunnerEnvironmentContamination } from 
 import { RunnerSchedulerStore } from './scheduler/store';
 import { RunnerSchedulerService } from './scheduler/service';
 import { buildScheduledPrompt } from './scheduler/buildScheduledPrompt';
-import type { SchedulerTriggerContext, CreateScheduledTaskInput } from './scheduler/types';
+import type { SchedulerTriggerContext, CreateScheduledTaskInput, UpdateScheduledTaskInput } from './scheduler/types';
 import { configuration } from '@/configuration';
 import { getAuthToken } from '@/api/auth';
 
@@ -647,6 +647,22 @@ export async function startRunner(): Promise<void> {
     };
 
     const schedulerStore = new RunnerSchedulerStore();
+    const emitSchedulerEvent = async (event: Record<string, unknown>) => {
+      try {
+        const apiToken = await getAuthToken();
+        await fetch(`${configuration.apiUrl}/cli/scheduler/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiToken}`
+          },
+          body: JSON.stringify(event)
+        });
+      } catch (error) {
+        logger.debug('[RUNNER RUN] Failed to emit scheduler event', error);
+      }
+    };
+
     const scheduler = new RunnerSchedulerService(
       schedulerStore,
       async ({ task, run }: SchedulerTriggerContext) => {
@@ -694,11 +710,46 @@ export async function startRunner(): Promise<void> {
           sessionId: spawnResult.sessionId,
           resultSummary: 'Scheduled prompt delivered to new session'
         };
+      },
+      async (event) => {
+        if (event.type === 'task-updated') {
+          await emitSchedulerEvent({
+            type: 'scheduled-task-updated',
+            taskId: event.task.id,
+            machineId: event.task.machineId,
+            namespace: event.task.namespace,
+            data: event.task
+          });
+          return;
+        }
+
+        if (event.type === 'task-removed') {
+          await emitSchedulerEvent({
+            type: 'scheduled-task-removed',
+            taskId: event.taskId,
+            machineId: event.machineId,
+            namespace: event.namespace
+          });
+          return;
+        }
+
+        await emitSchedulerEvent({
+          type: 'scheduled-run-updated',
+          taskId: event.task.id,
+          runId: event.run.id,
+          machineId: event.run.machineId,
+          namespace: event.task.namespace,
+          data: event.run
+        });
       }
     );
 
     const createScheduledTask = async (input: CreateScheduledTaskInput) => {
       return await scheduler.createTask(input);
+    };
+
+    const updateScheduledTask = async (input: UpdateScheduledTaskInput) => {
+      return await scheduler.updateTask(input);
     };
 
     const listScheduledTasks = async () => {
@@ -711,6 +762,10 @@ export async function startRunner(): Promise<void> {
 
     const cancelScheduledTask = async (taskId: string) => {
       return await scheduler.cancelTask(taskId);
+    };
+
+    const deleteScheduledTask = async (taskId: string) => {
+      return await scheduler.deleteTask(taskId);
     };
 
     // Stop a session by sessionId or PID fallback
@@ -761,9 +816,11 @@ export async function startRunner(): Promise<void> {
       stopSession,
       spawnSession,
       createScheduledTask,
+      updateScheduledTask,
       listScheduledTasks,
       listScheduledTaskRuns,
       cancelScheduledTask,
+      deleteScheduledTask,
       requestShutdown: () => requestShutdown('hapi-cli'),
       onHappySessionWebhook
     });

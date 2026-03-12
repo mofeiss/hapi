@@ -147,6 +147,14 @@ export function useSSE(options: {
                 void queryClient.invalidateQueries({ queryKey: queryKeys.machines })
             }
 
+            if (
+                event.type === 'scheduled-task-updated'
+                || event.type === 'scheduled-task-removed'
+                || event.type === 'scheduled-run-updated'
+            ) {
+                void queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks })
+            }
+
             onEventRef.current(event)
         }
 

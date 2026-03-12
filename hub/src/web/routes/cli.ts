@@ -48,6 +48,30 @@ const cliSendMessageBodySchema = z.object({
     }).optional()
 })
 
+const cliScheduledEventSchema = z.discriminatedUnion('type', [
+    z.object({
+        type: z.literal('scheduled-task-updated'),
+        taskId: z.string().min(1),
+        machineId: z.string().min(1),
+        namespace: z.string().min(1).optional(),
+        data: z.unknown().optional()
+    }),
+    z.object({
+        type: z.literal('scheduled-task-removed'),
+        taskId: z.string().min(1),
+        machineId: z.string().min(1),
+        namespace: z.string().min(1).optional()
+    }),
+    z.object({
+        type: z.literal('scheduled-run-updated'),
+        taskId: z.string().min(1),
+        runId: z.string().min(1),
+        machineId: z.string().min(1),
+        namespace: z.string().min(1).optional(),
+        data: z.unknown().optional()
+    })
+])
+
 type CliEnv = {
     Variables: {
         namespace: string
@@ -194,6 +218,22 @@ export function createCliRoutes(getSyncEngine: () => SyncEngine | null): Hono<Cl
             sentFrom: 'webapp'
         })
 
+        return c.json({ ok: true })
+    })
+
+    app.post('/scheduler/events', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ error: 'Not ready' }, 503)
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = cliScheduledEventSchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ error: 'Invalid body' }, 400)
+        }
+
+        engine.handleRealtimeEvent(parsed.data)
         return c.json({ ok: true })
     })
 

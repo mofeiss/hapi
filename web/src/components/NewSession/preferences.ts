@@ -44,7 +44,7 @@ export function loadPreferredModel(): string {
     } catch {
         // Ignore storage errors
     }
-    return 'auto'
+    return 'opus'
 }
 
 export function savePreferredModel(model: string): void {
@@ -80,13 +80,7 @@ export function savePreferredReasoningEffort(value: (typeof VALID_REASONING_EFFO
 }
 
 function getDefaultPermissionModeForAgent(agent: AgentType): PermissionMode {
-    const allowed = getBasePermissionModesForFlavor(agent)
-    if (allowed.includes('yolo')) return 'yolo'
-    if (allowed.includes('bypassPermissions')) return 'bypassPermissions'
-    if (allowed.includes('safe-yolo')) return 'safe-yolo'
-    if (allowed.includes('acceptEdits')) return 'acceptEdits'
-    if (allowed.includes('default')) return 'default'
-    return (allowed[allowed.length - 1] ?? 'default') as PermissionMode
+    return agent === 'codex' ? 'yolo' : 'bypassPermissions'
 }
 
 function isAllowedPermissionModeForAgent(mode: PermissionMode, agent: AgentType): boolean {

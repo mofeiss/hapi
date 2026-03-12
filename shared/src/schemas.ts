@@ -217,6 +217,14 @@ const MachineChangedSchema = SessionEventBaseSchema.extend({
     machineId: z.string()
 })
 
+const ScheduledTaskChangedSchema = MachineChangedSchema.extend({
+    taskId: z.string()
+})
+
+const ScheduledRunChangedSchema = ScheduledTaskChangedSchema.extend({
+    runId: z.string()
+})
+
 export const SyncEventSchema = z.discriminatedUnion('type', [
     SessionChangedSchema.extend({
         type: z.literal('session-added'),
@@ -236,6 +244,17 @@ export const SyncEventSchema = z.discriminatedUnion('type', [
     }),
     MachineChangedSchema.extend({
         type: z.literal('machine-updated'),
+        data: z.unknown().optional()
+    }),
+    ScheduledTaskChangedSchema.extend({
+        type: z.literal('scheduled-task-updated'),
+        data: z.unknown().optional()
+    }),
+    ScheduledTaskChangedSchema.extend({
+        type: z.literal('scheduled-task-removed')
+    }),
+    ScheduledRunChangedSchema.extend({
+        type: z.literal('scheduled-run-updated'),
         data: z.unknown().optional()
     }),
     SessionEventBaseSchema.extend({
