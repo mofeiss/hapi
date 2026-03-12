@@ -3,6 +3,8 @@ import type { ApiClient } from '@/api/client'
 import type { Machine } from '@/types/api'
 import { queryKeys } from '@/lib/query-keys'
 
+const EMPTY_MACHINES: Machine[] = []
+
 export function useMachines(api: ApiClient | null, enabled: boolean): {
     machines: Machine[]
     isLoading: boolean
@@ -21,7 +23,7 @@ export function useMachines(api: ApiClient | null, enabled: boolean): {
     })
 
     return {
-        machines: query.data?.machines ?? [],
+        machines: query.data?.machines ?? EMPTY_MACHINES,
         isLoading: query.isLoading,
         error: query.error instanceof Error ? query.error.message : query.error ? 'Failed to load machines' : null,
         refetch: query.refetch,

@@ -154,6 +154,7 @@ function getMachineTitle(machine: Machine | null | undefined): string {
 
 const EMPTY_AGENT_STATE = null
 const EMPTY_CODEX_REASONING_OPTIONS: [] = []
+const EMPTY_DRAFT_BLOCKS: [] = []
 
 
 function PillSelect(props: {
@@ -372,7 +373,7 @@ export function NewSession(props: {
         let cancelled = false
 
         if (!machineId || pathsToCheck.length === 0) {
-            setPathExistence({})
+            setPathExistence((current) => Object.keys(current).length === 0 ? current : {})
             return () => {
                 cancelled = true
             }
@@ -706,7 +707,7 @@ export function NewSession(props: {
 
     const runtime = useHappyRuntime({
         session: draftSession,
-        blocks: [],
+        blocks: EMPTY_DRAFT_BLOCKS,
         isSending: isPending,
         onSendMessage: useEffectEvent((text, attachments, meta) => {
             if (!canCreateBase || isPending) {

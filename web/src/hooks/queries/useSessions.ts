@@ -3,6 +3,8 @@ import type { ApiClient } from '@/api/client'
 import type { SessionSummary } from '@/types/api'
 import { queryKeys } from '@/lib/query-keys'
 
+const EMPTY_SESSIONS: SessionSummary[] = []
+
 export function useSessions(api: ApiClient | null): {
     sessions: SessionSummary[]
     isLoading: boolean
@@ -21,7 +23,7 @@ export function useSessions(api: ApiClient | null): {
     })
 
     return {
-        sessions: query.data?.sessions ?? [],
+        sessions: query.data?.sessions ?? EMPTY_SESSIONS,
         isLoading: query.isLoading,
         error: query.error instanceof Error ? query.error.message : query.error ? 'Failed to load sessions' : null,
         refetch: query.refetch,

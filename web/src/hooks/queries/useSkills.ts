@@ -6,6 +6,8 @@ import type { Suggestion } from '@/hooks/useActiveSuggestions'
 import { queryKeys } from '@/lib/query-keys'
 import { getRecentSkills } from '@/lib/recent-skills'
 
+const EMPTY_SKILLS: SkillSummary[] = []
+
 function levenshteinDistance(a: string, b: string): number {
     if (a.length === 0) return b.length
     if (b.length === 0) return a.length
@@ -51,7 +53,7 @@ export function useSkills(
         if (query.data?.success && query.data.skills) {
             return query.data.skills
         }
-        return []
+        return EMPTY_SKILLS
     }, [query.data])
 
     const getSuggestions = useCallback(async (queryText: string): Promise<Suggestion[]> => {
