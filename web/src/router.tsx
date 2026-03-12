@@ -1140,16 +1140,32 @@ function SessionsPage() {
   }, [newSessionOpen]);
 
   const toggleNewSessionOverlay = useCallback(() => {
-    setNewSessionOpen((prev) => !prev);
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
-  }, []);
+
+    if (!narrowViewport) {
+      setNewSessionOpen(false);
+      setActiveSessionId(null);
+      navigate({ to: "/sessions" });
+      return;
+    }
+
+    setNewSessionOpen((prev) => !prev);
+  }, [narrowViewport, navigate]);
 
   const openNewSessionOverlay = useCallback(() => {
-    setNewSessionOpen(true);
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
-  }, []);
+
+    if (!narrowViewport) {
+      setNewSessionOpen(false);
+      setActiveSessionId(null);
+      navigate({ to: "/sessions" });
+      return;
+    }
+
+    setNewSessionOpen(true);
+  }, [narrowViewport, navigate]);
 
   useEffect(() => {
     const handleOpenSettingsOverlay = () => {
@@ -1523,6 +1539,8 @@ function SessionsPage() {
     : isSessionsIndex && !hasOverlay
       ? "flex"
       : "hidden lg:flex";
+  const showDesktopNewSessionPane =
+    !narrowViewport && isSessionsIndex && !hasOverlay;
   const leftPanelContentScale = narrowViewport ? 1 : 1.08;
   const leftPanelContentStyle = {
     width: `${100 / leftPanelContentScale}%`,
@@ -1894,7 +1912,11 @@ function SessionsPage() {
         className={`${isSessionsIndex && !hasOverlay ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!collapsed ? "lg:pr-[7px]" : ""}` : ""}`}
       >
         <div className="flex-1 min-h-0">
-          <Outlet />
+          {showDesktopNewSessionPane ? (
+            <NewSessionPanel onClose={() => {}} onOpenSettings={openSettingsOverlay} />
+          ) : (
+            <Outlet />
+          )}
         </div>
 
         {/* Session views (keep-alive) */}
@@ -1925,7 +1947,7 @@ function SessionsPage() {
         </div>
 
         {/* New session overlay */}
-        {newSessionOpen ? (
+        {narrowViewport && newSessionOpen ? (
           <div className="absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 opacity-100">
             <NewSessionPanel
               onClose={() => setNewSessionOpen(false)}
