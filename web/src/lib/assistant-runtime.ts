@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffectEvent, useMemo } from 'react'
 import type { AppendMessage, AttachmentAdapter, ThreadMessageLike } from '@assistant-ui/react'
 import { useExternalMessageConverter, useExternalStoreRuntime } from '@assistant-ui/react'
 import { safeStringify } from '@hapi/protocol'
@@ -186,19 +186,27 @@ export function useHappyRuntime(props: {
         isRunning: props.session.thinking,
     })
 
+    const handleSendMessage = useEffectEvent((text: string, attachments?: AttachmentMetadata[]) => {
+        props.onSendMessage(
+            text,
+            attachments,
+            props.getMessageMeta?.()
+        )
+    })
+
+    const handleAbort = useEffectEvent(async () => {
+        await props.onAbort()
+    })
+
     const onNew = useCallback(async (message: AppendMessage) => {
         const { text, attachments } = extractMessageContent(message)
         if (!text && attachments.length === 0) return
-        props.onSendMessage(
-            text,
-            attachments.length > 0 ? attachments : undefined,
-            props.getMessageMeta?.()
-        )
-    }, [props.onSendMessage, props.getMessageMeta])
+        handleSendMessage(text, attachments.length > 0 ? attachments : undefined)
+    }, [handleSendMessage])
 
     const onCancel = useCallback(async () => {
-        await props.onAbort()
-    }, [props.onAbort])
+        await handleAbort()
+    }, [handleAbort])
 
     // Memoize the adapter to avoid recreating on every render
     // useExternalStoreRuntime may use adapter identity for subscriptions

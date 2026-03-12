@@ -37,6 +37,10 @@ function pruneExpired(now: number = Date.now()): void {
     }
 }
 
+function isExpired(entry: PendingSessionMode, now: number = Date.now()): boolean {
+    return now - entry.createdAt > TTL_MS
+}
+
 export function setPendingSessionMode(
     sessionId: string,
     payload: { permissionMode: PermissionMode; basePermissionMode?: PermissionMode }
@@ -57,8 +61,11 @@ export function clearPendingSessionMode(sessionId: string): void {
 }
 
 export function getPendingSessionMode(sessionId: string): PendingSessionMode | null {
-    pruneExpired()
-    return pendingBySessionId.get(sessionId) ?? null
+    const entry = pendingBySessionId.get(sessionId)
+    if (!entry) {
+        return null
+    }
+    return isExpired(entry) ? null : entry
 }
 
 export function usePendingSessionMode(sessionId: string): PendingSessionMode | null {

@@ -31,7 +31,6 @@ import { isImageMimeType } from '@/lib/fileAttachments'
 import { useTranslation } from '@/lib/use-translation'
 
 export interface TextInputState {
-    text: string
     selection: { start: number; end: number }
 }
 
@@ -181,7 +180,6 @@ export function HappyComposer(props: {
     const canSend = (hasText || hasAttachments) && attachmentsReady && !controlsDisabled && !sendDisabled
 
     const [inputState, setInputState] = useState<TextInputState>({
-        text: '',
         selection: { start: 0, end: 0 }
     })
     const [isAborting, setIsAborting] = useState(false)
@@ -217,16 +215,6 @@ export function HappyComposer(props: {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const prevControlledByUser = useRef(controlledByUser)
     const pendingSendAfterVoiceRef = useRef(false)
-
-    useEffect(() => {
-        setInputState((prev) => {
-            if (prev.text === composerText) return prev
-            // When syncing from composerText, update selection to end of text
-            // This ensures activeWord detection works correctly
-            const newPos = composerText.length
-            return { text: composerText, selection: { start: newPos, end: newPos } }
-        })
-    }, [composerText])
 
     // Register STT transcript callback — sets final transcribed text in composer
     const composerTextRef = useRef(composerText)
@@ -276,7 +264,7 @@ export function HappyComposer(props: {
     const isIOSPWA = isIOS && isStandalone
     const isVoiceFocusMode = voiceStatus !== 'disconnected'
     const bottomPaddingClass = embedded || isIOSPWA ? 'pb-0' : 'pb-3'
-    const activeWord = useActiveWord(inputState.text, inputState.selection, autocompletePrefixes)
+    const activeWord = useActiveWord(composerText, inputState.selection, autocompletePrefixes)
     const [suggestions, selectedIndex, moveUp, moveDown, clearSuggestions] = useActiveSuggestions(
         activeWord,
         autocompleteSuggestions,
@@ -309,7 +297,7 @@ export function HappyComposer(props: {
         }
 
         const result = applySuggestion(
-            inputState.text,
+            composerText,
             inputState.selection,
             textToInsert,
             autocompletePrefixes,
@@ -318,7 +306,6 @@ export function HappyComposer(props: {
 
         api.composer().setText(result.text)
         setInputState({
-            text: result.text,
             selection: { start: result.cursorPosition, end: result.cursorPosition }
         })
 
@@ -334,7 +321,7 @@ export function HappyComposer(props: {
         }, 0)
 
         haptic('light')
-    }, [api, suggestions, inputState, autocompletePrefixes, haptic, agentFlavor])
+    }, [api, suggestions, composerText, inputState, autocompletePrefixes, haptic, agentFlavor])
 
     const abortDisabled = controlsDisabled || isAborting || !threadIsRunning
 
@@ -548,7 +535,7 @@ export function HappyComposer(props: {
             start: e.target.selectionStart,
             end: e.target.selectionEnd
         }
-        setInputState({ text: e.target.value, selection })
+        setInputState({ selection })
     }, [voiceStatus, onVoiceToggle])
 
     const handleSelect = useCallback((e: ReactSyntheticEvent<HTMLTextAreaElement>) => {

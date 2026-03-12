@@ -639,9 +639,6 @@ function SessionsPage() {
       : false,
   );
   const restoreNewSessionAfterSettingsRef = useRef(false);
-  const autoOpenDesktopNewSessionStateRef = useRef<
-    "idle" | "pending" | "done"
-  >("idle");
   const [swipeForwardSessionId, setSwipeForwardSessionId] = useState<
     string | null
   >(null);
@@ -1115,10 +1112,6 @@ function SessionsPage() {
     }
   }, [batchMode, batchSelectedIds, executeBatchOperation]);
 
-  const shouldRestoreDesktopNewSession = useCallback(() => {
-    return !narrowViewport && isSessionsIndex && activeSessionId === null;
-  }, [activeSessionId, isSessionsIndex, narrowViewport]);
-
   const closeSettingsOverlay = useCallback(() => {
     const shouldRestoreNewSession = restoreNewSessionAfterSettingsRef.current;
     restoreNewSessionAfterSettingsRef.current = false;
@@ -1133,74 +1126,30 @@ function SessionsPage() {
       return;
     }
 
-    restoreNewSessionAfterSettingsRef.current = shouldRestoreDesktopNewSession();
+    restoreNewSessionAfterSettingsRef.current = newSessionOpen;
     setSettingsOpen(true);
     setNewSessionOpen(false);
     setToolbarMenuOpen(false);
-  }, [closeSettingsOverlay, settingsOpen, shouldRestoreDesktopNewSession]);
+  }, [closeSettingsOverlay, newSessionOpen, settingsOpen]);
 
   const openSettingsOverlay = useCallback(() => {
-    restoreNewSessionAfterSettingsRef.current = shouldRestoreDesktopNewSession();
+    restoreNewSessionAfterSettingsRef.current = newSessionOpen;
     setSettingsOpen(true);
     setNewSessionOpen(false);
     setToolbarMenuOpen(false);
-  }, [shouldRestoreDesktopNewSession]);
+  }, [newSessionOpen]);
 
   const toggleNewSessionOverlay = useCallback(() => {
-    setNewSessionOpen((prev) => {
-      if (prev && shouldRestoreDesktopNewSession()) {
-        return true;
-      }
-      return !prev;
-    });
+    setNewSessionOpen((prev) => !prev);
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
-  }, [shouldRestoreDesktopNewSession]);
+  }, []);
 
   const openNewSessionOverlay = useCallback(() => {
     setNewSessionOpen(true);
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
   }, []);
-
-  useEffect(() => {
-    if (!isSessionsIndex || activeSessionId !== null || narrowViewport) {
-      autoOpenDesktopNewSessionStateRef.current = "idle";
-    }
-  }, [activeSessionId, isSessionsIndex, narrowViewport]);
-
-  useEffect(() => {
-    if (
-      narrowViewport ||
-      !isSessionsIndex ||
-      activeSessionId !== null ||
-      hasOverlay ||
-      autoOpenDesktopNewSessionStateRef.current !== "idle"
-    ) {
-      return;
-    }
-
-    autoOpenDesktopNewSessionStateRef.current = "pending";
-
-    let frameId = 0;
-    frameId = window.requestAnimationFrame(() => {
-      autoOpenDesktopNewSessionStateRef.current = "done";
-      openNewSessionOverlay();
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      if (autoOpenDesktopNewSessionStateRef.current === "pending") {
-        autoOpenDesktopNewSessionStateRef.current = "idle";
-      }
-    };
-  }, [
-    activeSessionId,
-    hasOverlay,
-    isSessionsIndex,
-    narrowViewport,
-    openNewSessionOverlay,
-  ]);
 
   useEffect(() => {
     const handleOpenSettingsOverlay = () => {
@@ -1976,14 +1925,14 @@ function SessionsPage() {
         </div>
 
         {/* New session overlay */}
-        <div
-          className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${newSessionOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        >
-          <NewSessionPanel
-            onClose={() => setNewSessionOpen(false)}
-            onOpenSettings={openSettingsOverlay}
-          />
-        </div>
+        {newSessionOpen ? (
+          <div className="absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 opacity-100">
+            <NewSessionPanel
+              onClose={() => setNewSessionOpen(false)}
+              onOpenSettings={openSettingsOverlay}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

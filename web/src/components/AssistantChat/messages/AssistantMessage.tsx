@@ -18,6 +18,8 @@ const TOOL_COMPONENTS = {
     Fallback: HappyToolMessage
 } as const
 
+const EMPTY_CONTENT: readonly never[] = []
+
 export const MESSAGE_PART_COMPONENTS = {
     Text: MarkdownText,
     Reasoning: Reasoning,
@@ -93,7 +95,7 @@ function useAssistantMessageViewModel() {
         return message.content.find((part) => part.type === 'text')?.text ?? ''
     })
     const assistantContent = useAssistantState(({ message }) => (
-        message.role === 'assistant' ? message.content : []
+        message.role === 'assistant' ? message.content : EMPTY_CONTENT
     ))
     const apiErrorText = (() => {
         if (assistantContent.length !== 1) return null

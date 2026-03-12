@@ -1,6 +1,7 @@
 import { AssistantRuntimeProvider } from '@assistant-ui/react'
 import {
     useCallback,
+    useEffectEvent,
     useEffect,
     useMemo,
     useState,
@@ -150,6 +151,9 @@ function getMachineTitle(machine: Machine | null | undefined): string {
     if (machine?.id) return machine.id.slice(0, 8)
     return ''
 }
+
+const EMPTY_AGENT_STATE = null
+const EMPTY_CODEX_REASONING_OPTIONS: [] = []
 
 
 function PillSelect(props: {
@@ -456,6 +460,18 @@ export function NewSession(props: {
         () => props.machines.find((machine) => machine.id === machineId) ?? null,
         [machineId, props.machines]
     )
+    const agentOptions = useMemo(() => ([
+        {
+            value: 'claude',
+            label: 'Claude',
+            icon: <AgentFlavorStatusIcon flavor="claude" active sizeClassName="h-3.5 w-3.5" />
+        },
+        {
+            value: 'codex',
+            label: 'Codex',
+            icon: <AgentFlavorStatusIcon flavor="codex" active sizeClassName="h-3.5 w-3.5" />
+        },
+    ]), [])
 
     const machineOptions = useMemo(
         () => {
@@ -563,6 +579,15 @@ export function NewSession(props: {
 
         return undefined
     }, [agent, composerCodexModel, composerCodexReasoningEffort, model])
+    const handleAgentChange = useCallback((value: string) => {
+        setAgent(value as AgentType)
+    }, [])
+    const handlePlanToggle = useCallback(() => {
+        setIsPlanActive((current) => !current)
+    }, [])
+    const handleCodexModelChange = useCallback((nextModel: string) => {
+        setModel(nextModel)
+    }, [])
 
     const handleCreate = useCallback(async (payload?: {
         text?: string
@@ -683,13 +708,13 @@ export function NewSession(props: {
         session: draftSession,
         blocks: [],
         isSending: isPending,
-        onSendMessage: (text, attachments, meta) => {
+        onSendMessage: useEffectEvent((text, attachments, meta) => {
             if (!canCreateBase || isPending) {
                 return
             }
             void handleCreate({ text, attachments, meta })
-        },
-        onAbort: async () => {},
+        }),
+        onAbort: useEffectEvent(async () => {}),
         attachmentAdapter: draftAttachmentAdapter,
         allowSendWhenInactive: true,
         getMessageMeta: getInitialMessageMeta
@@ -812,36 +837,21 @@ export function NewSession(props: {
                                             modelMode="default"
                                             active
                                             allowSendWhenInactive
-                                            agentState={null}
+                                            agentState={EMPTY_AGENT_STATE}
                                             agentFlavor={agent}
                                             agent={agent}
-                                            agentOptions={[
-                                                {
-                                                    value: 'claude',
-                                                    label: 'Claude',
-                                                    icon: <AgentFlavorStatusIcon flavor="claude" active sizeClassName="h-3.5 w-3.5" />
-                                                },
-                                                {
-                                                    value: 'codex',
-                                                    label: 'Codex',
-                                                    icon: <AgentFlavorStatusIcon flavor="codex" active sizeClassName="h-3.5 w-3.5" />
-                                                },
-                                            ]}
-                                            onAgentChange={(value) => setAgent(value as AgentType)}
+                                            agentOptions={agentOptions}
+                                            onAgentChange={handleAgentChange}
                                             onPermissionModeChange={undefined}
-                                            onPlanToggle={() => setIsPlanActive((current) => !current)}
+                                            onPlanToggle={handlePlanToggle}
                                             claudeModel={agent === 'claude' ? model : null}
                                             claudeModelOptions={agent === 'claude' ? claudeComposerModelOptions : []}
                                             onClaudeModelChange={agent === 'claude' ? setModel : undefined}
                                             codexModel={agent === 'codex' ? composerCodexModel : null}
                                             codexModelOptions={agent === 'codex' ? codexComposerModelOptions : []}
                                             codexReasoningEffort={agent === 'codex' ? composerCodexReasoningEffort : null}
-                                            codexReasoningOptions={[]}
-                                            onCodexModelChange={agent === 'codex'
-                                                ? (nextModel) => {
-                                                    setModel(nextModel)
-                                                }
-                                                : undefined}
+                                            codexReasoningOptions={EMPTY_CODEX_REASONING_OPTIONS}
+                                            onCodexModelChange={agent === 'codex' ? handleCodexModelChange : undefined}
                                             onCodexReasoningEffortChange={undefined}
                                             autocompleteSuggestions={getAutocompleteSuggestions}
                                             voiceStatus={sttVoiceStatus}
