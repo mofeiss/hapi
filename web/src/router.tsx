@@ -1961,7 +1961,7 @@ function SessionsPage() {
 
   const isScheduledTab = workspace.tab === "scheduled";
   const isSessionsTab = workspace.tab === "sessions";
-  const effectiveCollapsed = isSessionsTab ? collapsed : false;
+  const effectiveCollapsed = collapsed;
   const scheduledIndexVisible = !selectedScheduledTaskId;
   const leftPanelVisible = effectiveCollapsed
     ? isSessionsIndex && !hasOverlay
@@ -2582,7 +2582,7 @@ function SessionsPage() {
       )}
 
       {/* Expand sidebar strip (PC only, when collapsed) */}
-      {effectiveCollapsed && isSessionsTab && (
+      {effectiveCollapsed && (
         <div className="hidden lg:flex flex-col h-[100dvh] shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
           {/* Top: expand button */}
           <div className="flex shrink-0 justify-center px-2 py-2">
@@ -2604,14 +2604,6 @@ function SessionsPage() {
               title={t("sessions.new")}
             >
               <NewChatIcon className="h-[14px] w-[14px]" />
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenScheduledTab}
-              className="inline-flex rounded-full p-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
-              title={t("scheduled.tab")}
-            >
-              <BulbIcon className="h-[14px] w-[14px]" />
             </button>
             <button
               type="button"
