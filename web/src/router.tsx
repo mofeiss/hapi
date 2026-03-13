@@ -1868,7 +1868,7 @@ function SessionsPage() {
                     className="hidden lg:inline-flex -ml-[2px] mr-[2px] p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
                     title="Collapse sidebar"
                   >
-                    <SidebarCollapseIcon className="h-[18px] w-[18px]" />
+                    <SidebarCollapseIcon className="h-[14px] w-[14px]" />
                   </button>
                   <div className="hidden lg:block mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
                   <PageHeaderUtilityControls
@@ -1883,7 +1883,7 @@ function SessionsPage() {
                     className="session-list-new-button inline-flex p-1 rounded-full text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)] transition-colors"
                     title={t("sessions.new")}
                   >
-                    <NewChatIcon className="h-[18px] w-[18px]" />
+                    <NewChatIcon className="h-[14px] w-[14px]" />
                   </button>
                   <button
                     type="button"
@@ -1897,7 +1897,7 @@ function SessionsPage() {
                     title={quickNewTitle}
                     aria-label={quickNewTitle}
                   >
-                    <QuickCloneChatIcon className="h-[18px] w-[18px]" />
+                    <QuickCloneChatIcon className="h-[14px] w-[14px]" />
                   </button>
                 </div>
               </div>
@@ -2039,8 +2039,8 @@ function SessionsPage() {
           </div>
           {showSidebarSearchRow ? (
             <div className="mx-auto w-full max-w-full px-3 pb-3 lg:max-w-content">
-              <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
-                <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+              <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-2">
+                <div className="flex h-4 w-4 shrink-0 items-center justify-center">
                   {(isScheduledTab ? scheduledSearch.length > 0 : hasSessionSearch) ? (
                     <button
                       type="button"
@@ -2052,14 +2052,14 @@ function SessionsPage() {
                         }
                       }}
                       onMouseDown={(event) => event.preventDefault()}
-                      className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                      className="flex h-4 w-4 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
                       title={isScheduledTab ? "Clear scheduled search" : t("sessions.search.clear")}
                       aria-label={isScheduledTab ? "Clear scheduled search" : t("sessions.search.clear")}
                     >
-                      <SearchClearIcon className="h-3.5 w-3.5" />
+                      <SearchClearIcon className="h-3 w-3" />
                     </button>
                   ) : (
-                    <SearchIcon className="h-[15px] w-[15px] text-[var(--app-hint)]" />
+                    <SearchIcon className="h-[14px] w-[14px] text-[var(--app-hint)]" />
                   )}
                 </div>
                 <input
@@ -2090,7 +2090,7 @@ function SessionsPage() {
                             : handleBatchSelectAll
                         }
                         disabled={batchPending || batchFilteredIds.size === 0}
-                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
                         title={
                           batchSelectedIds.size === batchFilteredIds.size &&
                           batchFilteredIds.size > 0
@@ -2100,28 +2100,28 @@ function SessionsPage() {
                       >
                         {batchSelectedIds.size === batchFilteredIds.size &&
                         batchFilteredIds.size > 0 ? (
-                          <BatchDeselectAllIcon className="h-[18px] w-[18px]" />
+                          <BatchDeselectAllIcon className="h-[14px] w-[14px]" />
                         ) : (
-                          <BatchSelectAllIcon className="h-[18px] w-[18px]" />
+                          <BatchSelectAllIcon className="h-[14px] w-[14px]" />
                         )}
                       </button>
                       <button
                         type="button"
                         onClick={handleBatchConfirmClick}
                         disabled={batchSelectedIds.size === 0 || batchPending}
-                        className={`p-1 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
+                        className={`p-0.5 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
                         title={t("batch.confirm.tooltip")}
                       >
-                        <BatchCheckIcon className="h-[18px] w-[18px]" />
+                        <BatchCheckIcon className="h-[14px] w-[14px]" />
                       </button>
                       <button
                         type="button"
                         onClick={handleExitBatchMode}
                         disabled={batchPending}
-                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
                         title={t("batch.cancel.tooltip")}
                       >
-                        <BatchXIcon className="h-[18px] w-[18px]" />
+                        <BatchXIcon className="h-[14px] w-[14px]" />
                       </button>
                     </>
                   ) : showSidebarBatchActions ? (
@@ -2130,45 +2130,45 @@ function SessionsPage() {
                         type="button"
                         onClick={() => handleEnterBatchMode("archive")}
                         disabled={visibleArchivableCount === 0}
-                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
                         title={t("batch.archive.tooltip")}
                       >
-                        <BatchArchiveIcon className="h-[18px] w-[18px]" />
+                        <BatchArchiveIcon className="h-[14px] w-[14px]" />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleEnterBatchMode("delete")}
                         disabled={visibleDeletableCount === 0}
-                        className="p-1 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
                         title={t("batch.delete.tooltip")}
                       >
-                        <BatchTrashIcon className="h-[18px] w-[18px]" />
+                        <BatchTrashIcon className="h-[14px] w-[14px]" />
                       </button>
                       <button
                         type="button"
                         onClick={toggleFilterOnline}
-                        className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                        className={`p-0.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
                         title={
                           filterOnlineOnly
                             ? t("filter.showAll")
                             : t("filter.onlineOnly")
                         }
                       >
-                        <OnlineFilterIcon className="h-[18px] w-[18px]" />
+                        <OnlineFilterIcon className="h-[14px] w-[14px]" />
                       </button>
                     </>
                   ) : (
                     <button
                       type="button"
                       onClick={toggleFilterOnline}
-                      className={`p-1 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                      className={`p-0.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
                       title={
                         filterOnlineOnly
                           ? t("filter.showAll")
                           : t("filter.onlineOnly")
                       }
                     >
-                      <OnlineFilterIcon className="h-[18px] w-[18px]" />
+                      <OnlineFilterIcon className="h-[14px] w-[14px]" />
                     </button>
                   )}
                 </div>
@@ -2232,7 +2232,7 @@ function SessionsPage() {
               className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
               title="Expand sidebar"
             >
-              <SidebarExpandIcon className="h-[18px] w-[18px]" />
+              <SidebarExpandIcon className="h-[14px] w-[14px]" />
             </button>
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
@@ -2243,7 +2243,7 @@ function SessionsPage() {
               className="session-list-new-button p-1.5 rounded-full text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)] transition-colors"
               title={t("sessions.new")}
             >
-              <NewChatIcon className="h-[18px] w-[18px]" />
+              <NewChatIcon className="h-[14px] w-[14px]" />
             </button>
             <button
               type="button"
@@ -2251,7 +2251,7 @@ function SessionsPage() {
               className="inline-flex rounded-full p-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
               title="Scheduled"
             >
-              <BulbIcon className="h-[18px] w-[18px]" />
+              <BulbIcon className="h-[14px] w-[14px]" />
             </button>
             <button
               type="button"
@@ -2265,7 +2265,7 @@ function SessionsPage() {
               title={quickNewTitle}
               aria-label={quickNewTitle}
             >
-              <QuickCloneChatIcon className="h-[18px] w-[18px]" />
+              <QuickCloneChatIcon className="h-[14px] w-[14px]" />
             </button>
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
@@ -2301,7 +2301,7 @@ function SessionsPage() {
                 filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")
               }
             >
-              <OnlineFilterIcon className="h-[18px] w-[18px]" />
+              <OnlineFilterIcon className="h-[14px] w-[14px]" />
             </button>
           </div>
         </div>
