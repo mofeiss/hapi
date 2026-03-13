@@ -76,6 +76,7 @@ import TerminalPage, { TerminalPanel } from "@/routes/sessions/terminal";
 import { SettingsPanel } from "@/routes/settings";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
+  clearWorkspaceScheduledSelection,
   openWorkspaceScheduledTask,
   openWorkspaceSession,
   selectWorkspaceScheduledRun,
@@ -845,25 +846,6 @@ function SessionsPage() {
     return map;
   }, [scheduledRuns]);
 
-  useEffect(() => {
-    if (scheduledGroups.length === 0) {
-      setSelectedScheduledTaskId(null);
-      return;
-    }
-    const exists = scheduledGroups.some((group) =>
-      group.tasks.some((task) => task.id === selectedScheduledTaskId),
-    );
-    if (!exists) {
-      const fallbackTaskId =
-        workspace.selectedScheduledTaskId &&
-        scheduledGroups.some((group) =>
-          group.tasks.some((task) => task.id === workspace.selectedScheduledTaskId),
-        )
-          ? workspace.selectedScheduledTaskId
-          : (scheduledGroups[0]?.tasks[0]?.id ?? null);
-      setSelectedScheduledTaskId(fallbackTaskId);
-    }
-  }, [scheduledGroups, selectedScheduledTaskId, workspace.selectedScheduledTaskId]);
 
   useEffect(() => {
     if (selectedScheduledTaskRuns.length === 0) {
@@ -1108,6 +1090,33 @@ function SessionsPage() {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
+  useEffect(() => {
+    if (scheduledGroups.length === 0) {
+      setSelectedScheduledTaskId(null);
+      return;
+    }
+    const exists = scheduledGroups.some((group) =>
+      group.tasks.some((task) => task.id === selectedScheduledTaskId),
+    );
+    if (!exists) {
+      const fallbackTaskId =
+        workspace.selectedScheduledTaskId &&
+        scheduledGroups.some((group) =>
+          group.tasks.some((task) => task.id === workspace.selectedScheduledTaskId),
+        )
+          ? workspace.selectedScheduledTaskId
+          : narrowViewport
+            ? null
+            : (scheduledGroups[0]?.tasks[0]?.id ?? null);
+      setSelectedScheduledTaskId(fallbackTaskId);
+    }
+  }, [
+    narrowViewport,
+    scheduledGroups,
+    selectedScheduledTaskId,
+    workspace.selectedScheduledTaskId,
+  ]);
 
   // Close toolbar menu on Escape
   useEffect(() => {
@@ -1811,6 +1820,15 @@ function SessionsPage() {
     onToggleMobileSessionPane: toggleMobileSessionPane,
   });
 
+  const handleOpenScheduledTab = useCallback(() => {
+    selectWorkspaceTab("scheduled");
+    if (narrowViewport) {
+      setSelectedScheduledTaskId(null);
+      setSelectedScheduledRunId(null);
+      clearWorkspaceScheduledSelection();
+    }
+  }, [narrowViewport]);
+
   const isScheduledTab = workspace.tab === "scheduled";
   const isSessionsTab = workspace.tab === "sessions";
   const effectiveCollapsed = isSessionsTab ? collapsed : false;
@@ -1911,7 +1929,7 @@ function SessionsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => selectWorkspaceTab("scheduled")}
+                  onClick={handleOpenScheduledTab}
                   className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${workspace.tab === "scheduled" ? "bg-[var(--app-fg)] text-[var(--app-bg)]" : "text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"}`}
                 >
                   Scheduled
@@ -2247,7 +2265,7 @@ function SessionsPage() {
             </button>
             <button
               type="button"
-              onClick={() => selectWorkspaceTab("scheduled")}
+              onClick={handleOpenScheduledTab}
               className="inline-flex rounded-full p-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
               title="Scheduled"
             >
