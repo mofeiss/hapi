@@ -76,6 +76,7 @@ import FilePage from "@/routes/sessions/file";
 import TerminalPage, { TerminalPanel } from "@/routes/sessions/terminal";
 import { SettingsPanel } from "@/routes/settings";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   clearWorkspaceScheduledSelection,
   openWorkspaceScheduledTask,
@@ -100,7 +101,7 @@ function BackIcon(props: { className?: string }) {
   );
 }
 
-function BulbIcon(props: { className?: string }) {
+function ScheduledTaskIcon(props: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -114,9 +115,8 @@ function BulbIcon(props: { className?: string }) {
       strokeLinejoin="round"
       className={props.className}
     >
-      <path d="M9 18h6" />
-      <path d="M10 22h4" />
-      <path d="M12 2a7 7 0 0 0-4 12c.6.6 1 1.2 1 2h6c0-.8.4-1.4 1-2a7 7 0 0 0-4-12Z" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5v5l3.5 2.25" />
     </svg>
   );
 }
@@ -745,6 +745,40 @@ function CollapsedSessionItem({
         dontAskAgainKey="hapi:skip-confirm:delete"
       />
     </>
+  );
+}
+
+function CollapsedScheduledItem(props: {
+  task: ScheduledTask;
+  selected: boolean;
+  latestRun: ScheduledTaskRun | undefined;
+  onSelect: (taskId: string, runId?: string | null) => void;
+}) {
+  const title = props.task.title.trim();
+  const initial = getSessionInitial(title || "S");
+  const toneClass = props.task.paused
+    ? "bg-amber-500/15 text-amber-600"
+    : props.latestRun?.status === "running"
+      ? "bg-sky-500/15 text-sky-600"
+      : props.latestRun?.status === "failed"
+        ? "bg-red-500/15 text-red-600"
+        : props.latestRun?.status === "succeeded"
+          ? "bg-emerald-500/15 text-emerald-600"
+          : "bg-[var(--app-subtle-bg)] text-[var(--app-hint)]";
+
+  return (
+    <button
+      type="button"
+      onClick={() => props.onSelect(props.task.id, props.latestRun?.id ?? null)}
+      className={`flex items-center justify-center w-full py-1 px-1 transition-colors hover:bg-[var(--app-subtle-bg)] ${props.selected ? "bg-[var(--app-secondary-bg)]" : ""}`}
+      title={title}
+    >
+      <span
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[14px] font-medium leading-none select-none ${toneClass}`}
+      >
+        {initial}
+      </span>
+    </button>
   );
 }
 
@@ -2061,7 +2095,24 @@ function SessionsPage() {
                   className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold ${isSessionsTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
                   aria-pressed={isSessionsTab}
                 >
-                  <span className="relative z-[1]">{t("sessions.tab")}</span>
+                  <span className="relative z-[1] inline-flex items-center gap-1.5">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                    >
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span>{t("sessions.tab")}</span>
+                  </span>
                   {isSessionsTab ? (
                     <span
                       aria-hidden="true"
@@ -2075,7 +2126,10 @@ function SessionsPage() {
                   className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold ${isScheduledTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
                   aria-pressed={isScheduledTab}
                 >
-                  <span className="relative z-[1]">{t("scheduled.tab")}</span>
+                  <span className="relative z-[1] inline-flex items-center gap-1.5">
+                    <ScheduledTaskIcon className="h-4 w-4" />
+                    <span>{t("scheduled.tab")}</span>
+                  </span>
                   {isScheduledTab ? (
                     <span
                       aria-hidden="true"
@@ -2251,12 +2305,11 @@ function SessionsPage() {
                                                 )}
                                               </span>
                                               <div
-                                                className={
-                                                  "truncate text-sm leading-none " +
-                                                  (selected
+                                                className={`truncate text-sm leading-none ${
+                                                  selected
                                                     ? "font-semibold text-[var(--app-fg)]"
-                                                    : "font-medium text-[var(--app-fg)]")
-                                                }
+                                                    : "font-medium text-[var(--app-fg)]"
+                                                }`}
                                               >
                                                 {task.title}
                                               </div>
@@ -2596,7 +2649,41 @@ function SessionsPage() {
             </button>
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
-          <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
+          <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1.5">
+            <ToggleGroup
+              value={workspace.tab}
+              onValueChange={(value) => {
+                if (value === "scheduled") {
+                  handleOpenScheduledTab();
+                  return;
+                }
+                selectWorkspaceTab("sessions");
+              }}
+              aria-label="Collapsed sidebar tab switcher"
+              className="flex-col rounded-2xl p-1"
+            >
+              <ToggleGroupItem value="sessions" className="h-7 w-7 rounded-xl px-0">
+                <span className="sr-only">{t("sessions.tab")}</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </ToggleGroupItem>
+              <ToggleGroupItem value="scheduled" className="h-7 w-7 rounded-xl px-0">
+                <span className="sr-only">{t("scheduled.tab")}</span>
+                <ScheduledTaskIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
             <button
               type="button"
               onClick={toggleNewSessionOverlay}
@@ -2624,24 +2711,44 @@ function SessionsPage() {
 
           {/* Middle: scrollable session groups */}
           <div className="flex-1 min-h-0 overflow-y-auto py-1 desktop-scrollbar-left">
-            {collapsedGroups.map((group, gi) => (
-              <div key={group.host}>
-                {gi > 0 && (
-                  <div className="mx-2 my-1 h-px bg-[var(--app-divider)]" />
-                )}
-                {/* Session icons */}
-                {group.sessions.map((s) => (
-                  <CollapsedSessionItem
-                    key={s.id}
-                    session={s}
-                    selected={s.id === activeSessionId}
-                    api={api}
-                    onSelect={handleSelectSession}
-                    menuEnabled={!batchMode}
-                  />
+            {isScheduledTab
+              ? scheduledGroups.map((group, gi) => (
+                  <div key={group.machineId}>
+                    {gi > 0 && (
+                      <div className="mx-2 my-1 h-px bg-[var(--app-divider)]" />
+                    )}
+                    {group.tasks.map((task) => (
+                      <CollapsedScheduledItem
+                        key={task.id}
+                        task={task}
+                        selected={task.id === selectedScheduledTaskId}
+                        latestRun={latestScheduledRunByTaskId.get(task.id)}
+                        onSelect={(taskId, runId) => {
+                          setSelectedScheduledTaskId(taskId);
+                          setSelectedScheduledRunId(runId ?? null);
+                          openWorkspaceScheduledTask(taskId, runId ?? null);
+                        }}
+                      />
+                    ))}
+                  </div>
+                ))
+              : collapsedGroups.map((group, gi) => (
+                  <div key={group.host}>
+                    {gi > 0 && (
+                      <div className="mx-2 my-1 h-px bg-[var(--app-divider)]" />
+                    )}
+                    {group.sessions.map((s) => (
+                      <CollapsedSessionItem
+                        key={s.id}
+                        session={s}
+                        selected={s.id === activeSessionId}
+                        api={api}
+                        onSelect={handleSelectSession}
+                        menuEnabled={!batchMode}
+                      />
+                    ))}
+                  </div>
                 ))}
-              </div>
-            ))}
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
           <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
