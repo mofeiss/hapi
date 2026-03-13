@@ -248,6 +248,7 @@ export function NewSession(props: {
     ) => void
     onCancel: () => void
     onOpenSettings?: () => void
+    initialMachineId?: string | null
 }) {
     const { t } = useTranslation()
     const { haptic } = usePlatform()
@@ -301,6 +302,15 @@ export function NewSession(props: {
 
     useEffect(() => {
         if (props.machines.length === 0) return
+        const presetMachine = props.initialMachineId
+            ? props.machines.find((machine) => machine.id === props.initialMachineId)
+            : null
+
+        if (presetMachine && machineId !== presetMachine.id) {
+            setMachineId(presetMachine.id)
+            return
+        }
+
         if (machineId && props.machines.find((machine) => machine.id === machineId)) return
 
         const lastUsed = getLastUsedMachineId()
@@ -311,7 +321,7 @@ export function NewSession(props: {
         } else if (props.machines[0]) {
             setMachineId(props.machines[0].id)
         }
-    }, [getLastUsedMachineId, machineId, props.machines])
+    }, [getLastUsedMachineId, machineId, props.initialMachineId, props.machines])
 
     const { data: agentModelsData } = useAgentModels(props.api, machineId, agent)
 

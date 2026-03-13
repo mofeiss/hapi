@@ -495,6 +495,7 @@ export function SessionList(props: {
   sessions: SessionSummary[];
   onSelect: (sessionId: string) => void;
   onNewSession: () => void;
+  onNewSessionForHost?: (host: string) => void;
   onRefresh: () => void;
   isLoading: boolean;
   renderHeader?: boolean;
@@ -694,6 +695,20 @@ export function SessionList(props: {
                         ({group.sessions.length})
                       </span>
                     </div>
+                    {props.onNewSessionForHost ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          props.onNewSessionForHost?.(group.host);
+                        }}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--app-link)] transition-colors hover:bg-[var(--app-secondary-bg)]"
+                        title={t("sessions.new")}
+                        aria-label={`${t("sessions.new")} ${group.host}`}
+                      >
+                        <NewChatIcon className="h-4 w-4" />
+                      </button>
+                    ) : null}
                   </button>
                   {!isCollapsed ? (
                     <div className="flex flex-col divide-y divide-[var(--app-divider)]">

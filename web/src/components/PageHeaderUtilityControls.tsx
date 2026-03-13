@@ -73,12 +73,13 @@ export function PageHeaderUtilityControls(props: {
     buttonClassName?: string
     languageClassName?: string
     useFallbackSettingsEvent?: boolean
+    hideSettingsButton?: boolean
 }) {
     const { t } = useTranslation()
     const buttonClassName = props.buttonClassName
-        ?? 'flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
+        ?? 'flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
     const languageClassName = props.languageClassName
-        ?? 'flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
+        ?? 'flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
 
     const handleOpenSettings = useCallback(() => {
         if (props.onOpenSettings) {
@@ -104,7 +105,7 @@ export function PageHeaderUtilityControls(props: {
                     {props.isDark ? <SunIcon /> : <MoonIcon />}
                 </button>
             ) : null}
-            {(props.onOpenSettings || props.useFallbackSettingsEvent) ? (
+            {!props.hideSettingsButton && (props.onOpenSettings || props.useFallbackSettingsEvent) ? (
                 <button
                     type="button"
                     onClick={handleOpenSettings}

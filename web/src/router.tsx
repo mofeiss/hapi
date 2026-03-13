@@ -774,6 +774,7 @@ function SessionsPage() {
   const [selectedScheduledRunId, setSelectedScheduledRunId] = useState<string | null>(null);
   const [scheduledEditing, setScheduledEditing] = useState(false);
   const [scheduledEditState, setScheduledEditState] = useState<ScheduledEditState | null>(null);
+  const [newSessionMachineId, setNewSessionMachineId] = useState<string | null>(null);
   const [scheduledGroupCollapseOverrides, setScheduledGroupCollapseOverrides] =
     useState<Map<string, boolean>>(() => {
       try {
@@ -1553,6 +1554,7 @@ function SessionsPage() {
   const toggleNewSessionOverlay = useCallback(() => {
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
+    setNewSessionMachineId(null);
 
     if (!narrowViewport) {
       setNewSessionOpen((prev) => !prev);
@@ -1567,6 +1569,7 @@ function SessionsPage() {
   const openNewSessionOverlay = useCallback(() => {
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
+    setNewSessionMachineId(null);
 
     if (!narrowViewport) {
       setNewSessionOpen(true);
@@ -1577,6 +1580,29 @@ function SessionsPage() {
 
     setNewSessionOpen(true);
   }, [narrowViewport, navigate]);
+
+  const openNewSessionForHost = useCallback(
+    (host: string) => {
+      const matchedMachine = machines.find((machine) => {
+        const machineHost = machine.metadata?.displayName ?? machine.metadata?.host ?? "";
+        return machineHost === host;
+      });
+
+      setSettingsOpen(false);
+      setToolbarMenuOpen(false);
+      setNewSessionMachineId(matchedMachine?.id ?? null);
+
+      if (!narrowViewport) {
+        setNewSessionOpen(true);
+        setActiveSessionId(null);
+        navigate({ to: "/" });
+        return;
+      }
+
+      setNewSessionOpen(true);
+    },
+    [machines, narrowViewport, navigate],
+  );
 
   useEffect(() => {
     const handleOpenSettingsOverlay = () => {
@@ -1965,7 +1991,8 @@ function SessionsPage() {
       : isSessionsIndex && !hasOverlay
         ? "flex"
         : "hidden lg:flex";
-  const showDesktopNewSessionPane = !narrowViewport && newSessionOpen;
+  const showDesktopNewSessionPane =
+    !narrowViewport && isSessionsTab && activeSessionId === null && !hasOverlay;
   const leftPanelContentScale = narrowViewport ? 1 : 1.08;
   const leftPanelContentStyle = {
     width: `${100 / leftPanelContentScale}%`,
@@ -1996,7 +2023,6 @@ function SessionsPage() {
                 <div className="flex min-w-0 shrink-0 items-center gap-1.5 pr-1 pb-2">
                   <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
                   <span className="shrink-0 select-none text-sm font-semibold text-[var(--app-fg)]">
-                    HAPI
                   </span>
                 </div>
 
@@ -2057,10 +2083,10 @@ function SessionsPage() {
                   <button
                     type="button"
                     onClick={toggleCollapsed}
-                    className="hidden lg:inline-flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                    className="hidden lg:inline-flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
                     title="Collapse sidebar"
                   >
-                    <SidebarCollapseIcon className="h-[14px] w-[14px]" />
+                    <SidebarCollapseIcon className="h-4 w-4" />
                   </button>
                   <HeaderActionGroup
                     isDark={isDark}
@@ -2071,6 +2097,9 @@ function SessionsPage() {
                     quickNewSessionDisabled={quickNewDisabled}
                     quickNewSessionTitle={quickNewTitle}
                     className="flex items-center gap-0.5"
+                    hideNewSessionButton
+                    hideQuickNewButton
+                    hideSettingsButton
                   />
                 </div>
               </div>
@@ -2377,6 +2406,7 @@ function SessionsPage() {
                         renderHeader={false}
                         fillHeight
                         api={api}
+                        onNewSessionForHost={openNewSessionForHost}
                         batchMode={batchMode}
                         batchSelectedIds={batchSelectedIds}
                         archivingSessionIds={batchArchivingIds}
@@ -2578,14 +2608,15 @@ function SessionsPage() {
       {effectiveCollapsed && (
         <div className="hidden lg:flex flex-col h-[100dvh] shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
           {/* Top: expand button */}
-          <div className="flex shrink-0 justify-center px-2 py-2">
+          <div className="flex shrink-0 flex-col items-center gap-2 px-2 py-2">
+            <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
             <button
               type="button"
               onClick={toggleCollapsed}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
               title="Expand sidebar"
             >
-              <SidebarExpandIcon className="h-[14px] w-[14px]" />
+              <SidebarExpandIcon className="h-4 w-4" />
             </button>
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
@@ -2626,14 +2657,32 @@ function SessionsPage() {
             </ToggleGroup>
             <HeaderActionGroup
               onOpenNewSession={toggleNewSessionOverlay}
-              onQuickNewSession={handleQuickNewSession}
-              quickNewSessionDisabled={quickNewDisabled}
-              quickNewSessionTitle={quickNewTitle}
               className="flex flex-col items-center gap-1"
               compactIcons
+              hideQuickNewButton
+              hideThemeControls
+              hideSettingsButton
             />
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
+
+          {isSessionsTab ? (
+            <>
+              <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={toggleFilterOnline}
+                  className={`p-1.5 rounded-full ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+                  title={
+                    filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")
+                  }
+                >
+                  <OnlineFilterIcon className="h-[14px] w-[14px]" />
+                </button>
+              </div>
+              <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
+            </>
+          ) : null}
 
           {/* Middle: scrollable session groups */}
           <div className="flex-1 min-h-0 overflow-y-auto py-1 desktop-scrollbar-left">
@@ -2678,16 +2727,18 @@ function SessionsPage() {
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
           <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
-            <button
-              type="button"
-              onClick={toggleFilterOnline}
-              className={`p-1.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
-              title={
-                filterOnlineOnly ? t("filter.showAll") : t("filter.onlineOnly")
-              }
-            >
-              <OnlineFilterIcon className="h-[14px] w-[14px]" />
-            </button>
+            <HeaderActionGroup
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
+              className="flex flex-col items-center gap-1"
+              compactIcons
+              hideNewSessionButton
+              hideQuickNewButton
+              hideSettingsButton
+              utilityContainerClassName="flex flex-col items-center gap-1"
+              utilityButtonClassName="flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+              utilityLanguageClassName="flex h-8 w-8 items-center justify-center rounded-full px-0 text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+            />
           </div>
         </div>
       )}
@@ -2698,7 +2749,7 @@ function SessionsPage() {
       >
         {showDesktopNewSessionPane ? (
           <div className="flex-1 min-h-0">
-            <NewSessionPanel onClose={() => setNewSessionOpen(false)} onOpenSettings={openSettingsOverlay} />
+            <NewSessionPanel onClose={() => setNewSessionOpen(false)} onOpenSettings={openSettingsOverlay} initialMachineId={newSessionMachineId} />
           </div>
         ) : isScheduledTab ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
@@ -2928,7 +2979,7 @@ function SessionsPage() {
         </div>
         {narrowViewport && newSessionOpen ? (
           <div className="absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 opacity-100">
-            <NewSessionPanel onClose={() => setNewSessionOpen(false)} onOpenSettings={openSettingsOverlay} />
+            <NewSessionPanel onClose={() => setNewSessionOpen(false)} onOpenSettings={openSettingsOverlay} initialMachineId={newSessionMachineId} />
           </div>
         ) : null}
       </div>
@@ -3061,7 +3112,7 @@ function SessionDetailRoute() {
   return isChat ? null : <Outlet />;
 }
 
-function NewSessionPanel(props: { onClose: () => void; onOpenSettings?: () => void }) {
+function NewSessionPanel(props: { onClose: () => void; onOpenSettings?: () => void; initialMachineId?: string | null }) {
   const { api } = useAppContext();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -3109,6 +3160,7 @@ function NewSessionPanel(props: { onClose: () => void; onOpenSettings?: () => vo
       onCancel={handleCancel}
       onSuccess={handleSuccess}
       onOpenSettings={props.onOpenSettings}
+      initialMachineId={props.initialMachineId}
     />
   );
 }

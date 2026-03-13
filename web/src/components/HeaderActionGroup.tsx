@@ -117,7 +117,7 @@ function QuickCloneChatIcon(props: { className?: string }) {
     )
 }
 
-const iconButtonClassName = 'flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
+const iconButtonClassName = 'flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
 
 type HeaderActionGroupProps = {
     isDark?: boolean
@@ -137,20 +137,27 @@ type HeaderActionGroupProps = {
     widescreenClassName?: string
     className?: string
     compactIcons?: boolean
+    hideNewSessionButton?: boolean
+    hideQuickNewButton?: boolean
+    hideThemeControls?: boolean
+    hideSettingsButton?: boolean
+    utilityContainerClassName?: string
+    utilityButtonClassName?: string
+    utilityLanguageClassName?: string
 }
 
 export function HeaderActionGroup(props: HeaderActionGroupProps) {
     const { t } = useTranslation()
     const newSessionButtonClassName = props.compactIcons
-        ? 'session-list-new-button flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-link)] transition-colors hover:bg-[var(--app-secondary-bg)]'
-        : 'session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-link)] transition-colors hover:bg-[var(--app-secondary-bg)]'
+        ? 'session-list-new-button flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]'
+        : 'session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]'
     const actionButtonClassName = props.compactIcons
-        ? 'flex h-8 w-8 items-center justify-center rounded-full transition-colors'
-        : 'flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors'
+        ? 'flex h-8 w-8 items-center justify-center rounded-full'
+        : 'flex h-[30px] w-[30px] items-center justify-center rounded-full'
 
     return (
         <div className={props.className ?? 'flex items-center gap-0.5'}>
-            {props.onOpenNewSession ? (
+            {!props.hideNewSessionButton && props.onOpenNewSession ? (
                 <button
                     type="button"
                     onClick={props.onOpenNewSession}
@@ -162,7 +169,7 @@ export function HeaderActionGroup(props: HeaderActionGroupProps) {
                 </button>
             ) : null}
 
-            {props.onQuickNewSession ? (
+            {!props.hideQuickNewButton && props.onQuickNewSession ? (
                 <button
                     type="button"
                     onClick={props.onQuickNewSession}
@@ -179,18 +186,19 @@ export function HeaderActionGroup(props: HeaderActionGroupProps) {
                 </button>
             ) : null}
 
-            {(props.onOpenNewSession || props.onQuickNewSession) && (props.onToggleTheme || props.onOpenSettings || props.onToggleTerminal || props.onToggleFiles || props.onToggleWidescreen) ? (
+            {(!props.hideNewSessionButton && props.onOpenNewSession || !props.hideQuickNewButton && props.onQuickNewSession) && ((!props.hideThemeControls && props.onToggleTheme) || (!props.hideSettingsButton && props.onOpenSettings) || props.onToggleTerminal || props.onToggleFiles || props.onToggleWidescreen) ? (
                 <div className="mx-0.5 h-4 w-px bg-[var(--app-divider)]" />
             ) : null}
 
-            {(props.onToggleTheme || props.onOpenSettings) ? (
+            {(!props.hideThemeControls && props.onToggleTheme) || (!props.hideSettingsButton && props.onOpenSettings) ? (
                 <PageHeaderUtilityControls
                     isDark={Boolean(props.isDark)}
-                    onToggleTheme={props.onToggleTheme}
-                    onOpenSettings={props.onOpenSettings}
-                    containerClassName="flex items-center gap-0.5"
-                    buttonClassName={iconButtonClassName}
-                    languageClassName="flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                    onToggleTheme={props.hideThemeControls ? undefined : props.onToggleTheme}
+                    onOpenSettings={props.hideSettingsButton ? undefined : props.onOpenSettings}
+                    containerClassName={props.utilityContainerClassName ?? 'flex items-center gap-0.5'}
+                    buttonClassName={props.utilityButtonClassName ?? iconButtonClassName}
+                    languageClassName={props.utilityLanguageClassName ?? 'flex h-[30px] min-w-[30px] items-center justify-center rounded-full px-1 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'}
+                    hideSettingsButton={props.hideSettingsButton}
                 />
             ) : null}
 
@@ -230,7 +238,7 @@ export function HeaderActionGroup(props: HeaderActionGroupProps) {
                 <button
                     type="button"
                     onClick={props.onToggleWidescreen}
-                    className={props.widescreenClassName ?? `flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${props.widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
+                    className={props.widescreenClassName ?? `flex h-[30px] w-[30px] items-center justify-center rounded-full hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${props.widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
                     title={props.widescreen ? 'Exit widescreen' : 'Widescreen'}
                     aria-label={props.widescreen ? 'Exit widescreen' : 'Widescreen'}
                 >
