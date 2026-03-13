@@ -1598,7 +1598,7 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
 
     if (!narrowViewport) {
-      setNewSessionOpen(false);
+      setNewSessionOpen((prev) => !prev);
       setActiveSessionId(null);
       navigate({ to: "/" });
       return;
@@ -1612,7 +1612,7 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
 
     if (!narrowViewport) {
-      setNewSessionOpen(false);
+      setNewSessionOpen(true);
       setActiveSessionId(null);
       navigate({ to: "/" });
       return;
@@ -2008,8 +2008,7 @@ function SessionsPage() {
       : isSessionsIndex && !hasOverlay
         ? "flex"
         : "hidden lg:flex";
-  const showDesktopNewSessionPane =
-    !narrowViewport && isSessionsTab && activeSessionId === null && !hasOverlay;
+  const showDesktopNewSessionPane = !narrowViewport && newSessionOpen;
   const leftPanelContentScale = narrowViewport ? 1 : 1.08;
   const leftPanelContentStyle = {
     width: `${100 / leftPanelContentScale}%`,
@@ -2770,7 +2769,11 @@ function SessionsPage() {
       <div
         className={`${((isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay) ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}` : ""}`}
       >
-        {isScheduledTab ? (
+        {showDesktopNewSessionPane ? (
+          <div className="flex-1 min-h-0">
+            <NewSessionPanel onClose={() => setNewSessionOpen(false)} onOpenSettings={openSettingsOverlay} />
+          </div>
+        ) : isScheduledTab ? (
           <div className="flex-1 min-h-0 overflow-y-auto">
             {!selectedScheduledTask ? (
               <div className="flex h-full items-center justify-center px-6 text-sm text-[var(--app-hint)]">
@@ -2978,11 +2981,7 @@ function SessionsPage() {
         ) : (
           <>
             <div className="flex-1 min-h-0">
-              {showDesktopNewSessionPane ? (
-                <NewSessionPanel onClose={() => {}} onOpenSettings={openSettingsOverlay} />
-              ) : (
-                <Outlet />
-              )}
+              <Outlet />
             </div>
             {mountedSessions.map((sid) => (
               <div key={sid} className={`absolute inset-0 z-30 bg-[var(--app-bg)] transition-opacity duration-200 ${sid === activeSessionId && !isSubRoute ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
@@ -3166,6 +3165,7 @@ function NewSessionPanel(props: { onClose: () => void; onOpenSettings?: () => vo
           meta: options?.meta,
         });
       }
+      selectWorkspaceTab("sessions");
       props.onClose();
       openWorkspaceSession(sessionId, "chat");
       navigate({ to: "/" });
