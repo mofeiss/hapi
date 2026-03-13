@@ -45,6 +45,7 @@ import { useToast } from "@/lib/toast-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useTheme } from "@/hooks/useTheme";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
+import { formatTimestamp } from "@/lib/dateTime";
 import type {
   AttachmentMetadata,
   Machine,
@@ -406,6 +407,29 @@ function SearchClearIcon(props: { className?: string }) {
   );
 }
 
+function ChevronIcon(props: { className?: string; collapsed?: boolean }) {
+  const className =
+    (props.className ?? "") +
+    " transition-transform duration-200 " +
+    (props.collapsed ? "" : "rotate-90");
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 type ScheduledEditState = {
   title: string;
   prompt: string;
@@ -416,6 +440,27 @@ type ScheduledEditState = {
   cron: string;
   paused: boolean;
 };
+
+function getScheduledPathDisplayName(path: string): string {
+  const parts = path.split(/[\/]+/).filter(Boolean);
+  if (parts.length === 0) return path;
+  if (parts.length === 1) return parts[0];
+  return parts[parts.length - 2] + "/" + parts[parts.length - 1];
+}
+
+function formatScheduledRelativeTime(value: number): string {
+  const ms = value < 1_000_000_000_000 ? value * 1000 : value;
+  if (!Number.isFinite(ms)) return "";
+  const delta = Date.now() - ms;
+  if (delta < 60_000) return "just now";
+  const minutes = Math.floor(delta / 60_000);
+  if (minutes < 60) return minutes + "m ago";
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours + "h ago";
+  const days = Math.floor(hours / 24);
+  if (days < 7) return days + "d ago";
+  return new Date(ms).toLocaleDateString();
+}
 
 function getMachineTitle(machine: Machine | null | undefined): string {
   if (machine?.metadata?.displayName) return machine.metadata.displayName;
@@ -738,6 +783,18 @@ function SessionsPage() {
   const [selectedScheduledRunId, setSelectedScheduledRunId] = useState<string | null>(null);
   const [scheduledEditing, setScheduledEditing] = useState(false);
   const [scheduledEditState, setScheduledEditState] = useState<ScheduledEditState | null>(null);
+  const [scheduledGroupCollapseOverrides, setScheduledGroupCollapseOverrides] =
+    useState<Map<string, boolean>>(() => {
+      try {
+        const stored = localStorage.getItem(
+          "hapi:panel:scheduled-group-collapsed",
+        );
+        if (stored) return new Map(JSON.parse(stored) as [string, boolean][]);
+      } catch {
+        /* ignore */
+      }
+      return new Map();
+    });
 
   const toggleFilterOnline = useCallback(() => {
     setFilterOnlineOnly((prev) => {
@@ -845,6 +902,79 @@ function SessionsPage() {
     }
     return map;
   }, [scheduledRuns]);
+
+  const isScheduledGroupCollapsed = (group: MachineTaskGroup): boolean => {
+    const override = scheduledGroupCollapseOverrides.get(group.machineId);
+    if (override !== undefined) return override;
+    return false;
+  };
+
+  const toggleScheduledGroup = useCallback(
+    (machineId: string, isCollapsed: boolean) => {
+      setScheduledGroupCollapseOverrides((prev) => {
+        const next = new Map(prev);
+        next.set(machineId, !isCollapsed);
+        try {
+          localStorage.setItem(
+            "hapi:panel:scheduled-group-collapsed",
+            JSON.stringify([...next.entries()]),
+          );
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const scheduledZebraTaskIds = useMemo(() => {
+    const ids = new Set<string>();
+    let visibleIndex = 0;
+
+    for (const group of scheduledGroups) {
+      const collapsed = isScheduledGroupCollapsed(group);
+      if (collapsed) continue;
+
+      for (const task of group.tasks) {
+        if (visibleIndex % 2 === 1) {
+          ids.add(task.id);
+        }
+        visibleIndex += 1;
+      }
+    }
+
+    return ids;
+  }, [scheduledGroupCollapseOverrides, scheduledGroups]);
+
+  useEffect(() => {
+    if (scheduledGroups.length === 0) return;
+    setScheduledGroupCollapseOverrides((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Map(prev);
+      const knownGroups = new Set(
+        scheduledGroups.map((group) => group.machineId),
+      );
+      let changed = false;
+      for (const machineId of next.keys()) {
+        if (!knownGroups.has(machineId)) {
+          next.delete(machineId);
+          changed = true;
+        }
+      }
+      if (changed) {
+        try {
+          localStorage.setItem(
+            "hapi:panel:scheduled-group-collapsed",
+            JSON.stringify([...next.entries()]),
+          );
+        } catch {
+          /* ignore */
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [scheduledGroups]);
 
 
   useEffect(() => {
@@ -1925,14 +2055,14 @@ function SessionsPage() {
                   onClick={() => selectWorkspaceTab("sessions")}
                   className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${workspace.tab === "sessions" ? "bg-[var(--app-fg)] text-[var(--app-bg)]" : "text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"}`}
                 >
-                  Sessions
+                  {t("sessions.tab")}
                 </button>
                 <button
                   type="button"
                   onClick={handleOpenScheduledTab}
                   className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${workspace.tab === "scheduled" ? "bg-[var(--app-fg)] text-[var(--app-bg)]" : "text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"}`}
                 >
-                  Scheduled
+                  {t("scheduled.tab")}
                 </button>
               </div>
             </div>
@@ -1946,81 +2076,267 @@ function SessionsPage() {
                     <div className="text-sm text-red-600">{scheduledError}</div>
                   </div>
                 ) : null}
-                <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
-                  {scheduledLoading ? (
-                    <div className="px-2 py-3 text-sm text-[var(--app-hint)]">
-                      Loading scheduled tasks...
-                    </div>
-                  ) : null}
-                  {!scheduledLoading && !scheduledError && scheduledGroups.length === 0 ? (
-                    <div className="px-2 py-3 text-sm text-[var(--app-hint)]">
-                      No scheduled tasks yet.
-                    </div>
-                  ) : null}
-                  {scheduledGroups.map((group) => (
-                    <div key={group.machineId} className="mb-4">
-                      <div className="px-2 pb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--app-hint)]">
-                        {group.title}
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className="mx-auto flex w-full max-w-full flex-col px-3 lg:max-w-content h-full min-h-0">
+                    {scheduledLoading ? (
+                      <div className="px-0 py-3 text-sm text-[var(--app-hint)]">
+                        Loading scheduled tasks...
                       </div>
-                      <div className="space-y-1">
-                        {group.tasks.map((task) => {
-                          const latestRun = latestScheduledRunByTaskId.get(task.id);
-                          const selected = task.id === selectedScheduledTaskId;
-                          return (
-                            <button
-                              key={task.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedScheduledTaskId(task.id);
-                                setSelectedScheduledRunId(latestRun?.id ?? null);
-                                openWorkspaceScheduledTask(task.id, latestRun?.id ?? null);
-                              }}
-                              className={
-                                "w-full rounded-2xl border px-3 py-3 text-left transition-colors " +
-                                (selected
-                                  ? "border-[var(--app-fg)] bg-[var(--app-secondary-bg)]"
-                                  : "border-transparent hover:border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]")
-                              }
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-medium text-[var(--app-fg)]">
-                                    {task.title}
-                                  </div>
-                                  <div className="mt-1 truncate text-xs text-[var(--app-hint)]">
-                                    {task.targetDirectory}
-                                  </div>
-                                </div>
-                                <span
-                                  className={
-                                    "rounded-full px-2 py-0.5 text-[11px] font-medium " +
-                                    (task.paused
-                                      ? "bg-amber-500/10 text-amber-600"
-                                      : "bg-emerald-500/10 text-emerald-600")
+                    ) : null}
+                    {!scheduledLoading && !scheduledError && scheduledGroups.length === 0 ? (
+                      <div className="px-0 py-3 text-sm text-[var(--app-hint)]">
+                        No scheduled tasks yet.
+                      </div>
+                    ) : null}
+                    {scheduledGroups.length > 0 ? (
+                      <div className="max-h-full min-h-0 overflow-hidden rounded-md border border-[var(--app-subtle-solid-bg)]">
+                        <div className="max-h-full overflow-y-auto desktop-scrollbar-left">
+                          {scheduledGroups.map((group, index) => {
+                            const isCollapsed = isScheduledGroupCollapsed(group);
+                            return (
+                              <div
+                                key={group.machineId}
+                                className={
+                                  index > 0
+                                    ? "border-t border-[var(--app-subtle-solid-bg)]"
+                                    : ""
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    toggleScheduledGroup(group.machineId, isCollapsed)
                                   }
+                                  className="sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 text-left"
                                 >
-                                  {task.paused ? "paused" : task.status}
-                                </span>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="h-4 w-4 shrink-0 text-[var(--app-hint)]"
+                                    aria-hidden="true"
+                                  >
+                                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                                    <line x1="6" y1="6" x2="6.01" y2="6" />
+                                    <line x1="6" y1="18" x2="6.01" y2="18" />
+                                  </svg>
+                                  <ChevronIcon
+                                    className="h-4 w-4 text-[var(--app-hint)]"
+                                    collapsed={isCollapsed}
+                                  />
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className="break-words text-sm font-medium">
+                                      {group.title}
+                                    </span>
+                                    <span className="shrink-0 text-xs text-[var(--app-hint)]">
+                                      ({group.tasks.length})
+                                    </span>
+                                  </div>
+                                </button>
+                                {!isCollapsed ? (
+                                  <div className="flex flex-col divide-y divide-[var(--app-divider)]">
+                                    {group.tasks.map((task) => {
+                                      const latestRun = latestScheduledRunByTaskId.get(task.id);
+                                      const selected = task.id === selectedScheduledTaskId;
+                                      const rowBackgroundClass = selected
+                                        ? "bg-[var(--app-session-active-bg)]"
+                                        : scheduledZebraTaskIds.has(task.id)
+                                          ? "bg-[var(--app-session-zebra-bg)]"
+                                          : "";
+                                      const rowStyle = selected
+                                        ? {
+                                            WebkitTouchCallout: "none" as const,
+                                            boxShadow:
+                                              "inset 3px 0 0 var(--app-orange-base), inset 0 0 0 1px var(--app-border-on-subtle)",
+                                          }
+                                        : { WebkitTouchCallout: "none" as const };
+                                      const typeText =
+                                        task.scheduleType === "cron"
+                                          ? t("scheduled.list.kind.cron")
+                                          : t("scheduled.list.kind.once");
+                                      const statusText = task.paused
+                                        ? t("scheduled.list.status.paused")
+                                        : latestRun?.status === "running"
+                                          ? t("scheduled.list.status.running")
+                                          : latestRun?.status === "failed"
+                                            ? t("scheduled.list.status.failed")
+                                            : latestRun?.status === "succeeded"
+                                              ? t("scheduled.list.status.succeeded")
+                                              : task.status === "active"
+                                                ? t("scheduled.list.status.active")
+                                                : t("scheduled.list.status.idle");
+                                      const createdAtLabel = formatTimestamp(task.createdAt);
+                                      const iconToneClass = task.paused
+                                        ? "text-amber-600"
+                                        : latestRun?.status === "running"
+                                          ? "text-sky-600"
+                                          : latestRun?.status === "failed"
+                                            ? "text-red-600"
+                                            : latestRun?.status === "succeeded"
+                                              ? "text-emerald-600"
+                                              : "text-[var(--app-hint)]";
+                                      return (
+                                        <button
+                                          key={task.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setSelectedScheduledTaskId(task.id);
+                                            setSelectedScheduledRunId(latestRun?.id ?? null);
+                                            openWorkspaceScheduledTask(task.id, latestRun?.id ?? null);
+                                          }}
+                                          className={
+                                            "session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none " +
+                                            rowBackgroundClass
+                                          }
+                                          style={rowStyle}
+                                          aria-current={selected ? "page" : undefined}
+                                        >
+                                          <div className="flex items-center justify-between gap-1.5">
+                                            <div className="flex min-w-0 items-center gap-1">
+                                              <span
+                                                className={
+                                                  "inline-flex h-4 w-4 shrink-0 items-center justify-center " +
+                                                  iconToneClass
+                                                }
+                                                aria-label={t("scheduled.list.iconLabel")}
+                                              >
+                                                {latestRun?.status === "running" ? (
+                                                  <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                                  </svg>
+                                                ) : latestRun?.status === "failed" ? (
+                                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <path d="m15 9-6 6" />
+                                                    <path d="m9 9 6 6" />
+                                                  </svg>
+                                                ) : latestRun?.status === "succeeded" ? (
+                                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                    <path d="M20 6 9 17l-5-5" />
+                                                  </svg>
+                                                ) : task.paused ? (
+                                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                    <rect x="6" y="5" width="4" height="14" rx="1" />
+                                                    <rect x="14" y="5" width="4" height="14" rx="1" />
+                                                  </svg>
+                                                ) : (
+                                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                    <circle cx="12" cy="12" r="4" />
+                                                  </svg>
+                                                )}
+                                              </span>
+                                              <div
+                                                className={
+                                                  "truncate text-sm leading-none " +
+                                                  (selected
+                                                    ? "font-semibold text-[var(--app-fg)]"
+                                                    : "font-medium text-[var(--app-fg)]")
+                                                }
+                                              >
+                                                {task.title}
+                                              </div>
+                                            </div>
+                                            <div className="flex shrink-0 items-center gap-1 text-xs">
+                                              <span
+                                                className={
+                                                  task.paused
+                                                    ? "text-amber-600"
+                                                    : latestRun?.status === "failed"
+                                                      ? "text-red-600"
+                                                      : latestRun?.status === "running"
+                                                        ? "text-sky-600"
+                                                        : latestRun?.status === "succeeded"
+                                                          ? "text-emerald-600"
+                                                          : "text-[var(--app-hint)]"
+                                                }
+                                              >
+                                                {statusText}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-x-2 text-xs text-[var(--app-hint)] overflow-hidden whitespace-nowrap" style={{ opacity: "var(--app-session-subtitle-opacity)" }}>
+                                            <span className="inline-flex shrink-0 items-center gap-1">
+                                              <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="12"
+                                                height="12"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                aria-hidden="true"
+                                              >
+                                                <path d="M12 8V4H8" />
+                                                <rect x="4" y="8" width="16" height="12" rx="2" />
+                                                <path d="M2 14h2" />
+                                                <path d="M20 14h2" />
+                                                <path d="M15 13v2" />
+                                                <path d="M9 13v2" />
+                                              </svg>
+                                              <span>{task.agentFlavor}</span>
+                                            </span>
+                                            <span className="inline-flex shrink-0 items-center gap-1">
+                                              <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="12"
+                                                height="12"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                aria-hidden="true"
+                                              >
+                                                <path d="M4 7h16" />
+                                                <path d="M7 3v8" />
+                                                <path d="M17 3v8" />
+                                                <rect x="4" y="7" width="16" height="13" rx="2" />
+                                              </svg>
+                                              <span>{typeText}</span>
+                                            </span>
+                                            {createdAtLabel ? (
+                                              <span className="inline-flex shrink-0 items-center gap-1">
+                                                <svg
+                                                  xmlns="http://www.w3.org/2000/svg"
+                                                  width="12"
+                                                  height="12"
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth="2"
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  aria-hidden="true"
+                                                >
+                                                  <circle cx="12" cy="12" r="10" />
+                                                  <polyline points="12 6 12 12 16 14" />
+                                                </svg>
+                                                <span>{createdAtLabel}</span>
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                ) : null}
                               </div>
-                              <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
-                                <span>{task.scheduleType}</span>
-                                <span>·</span>
-                                <span>{task.agentFlavor}</span>
-                                <span>·</span>
-                                <span>next {formatScheduledDateTime(task.nextRunAt)}</span>
-                              </div>
-                              {latestRun ? (
-                                <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
-                                  <ScheduledRunStatusBadge status={latestRun.status} />
-                                  <span>{formatScheduledDateTime(latestRun.triggeredAt)}</span>
-                                </div>
-                              ) : null}
-                            </button>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ) : error ? (
@@ -2071,8 +2387,8 @@ function SessionsPage() {
                       }}
                       onMouseDown={(event) => event.preventDefault()}
                       className="flex h-4 w-4 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                      title={isScheduledTab ? "Clear scheduled search" : t("sessions.search.clear")}
-                      aria-label={isScheduledTab ? "Clear scheduled search" : t("sessions.search.clear")}
+                      title={isScheduledTab ? t("scheduled.search.clear") : t("sessions.search.clear")}
+                      aria-label={isScheduledTab ? t("scheduled.search.clear") : t("sessions.search.clear")}
                     >
                       <SearchClearIcon className="h-3 w-3" />
                     </button>
@@ -2089,8 +2405,8 @@ function SessionsPage() {
                       setSessionSearch(event.target.value);
                     }
                   }}
-                  placeholder={isScheduledTab ? "Search scheduled tasks" : t("sessions.search.placeholder")}
-                  aria-label={isScheduledTab ? "Search scheduled tasks" : t("sessions.search.placeholder")}
+                  placeholder={isScheduledTab ? t("scheduled.search.placeholder") : t("sessions.search.placeholder")}
+                  aria-label={isScheduledTab ? t("scheduled.search.placeholder") : t("sessions.search.placeholder")}
                   className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none"
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -2267,7 +2583,7 @@ function SessionsPage() {
               type="button"
               onClick={handleOpenScheduledTab}
               className="inline-flex rounded-full p-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
-              title="Scheduled"
+              title={t("scheduled.tab")}
             >
               <BulbIcon className="h-[14px] w-[14px]" />
             </button>
@@ -2356,16 +2672,16 @@ function SessionsPage() {
                         </h1>
                       )}
                       <p className="mt-1 text-sm text-[var(--app-hint)]">
-                        Task overview and management. Session details only appear after you pick a run below.
+                        {t("scheduled.detail.summary")}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {!scheduledEditing ? (
                         <>
-                          <button type="button" disabled={scheduledPending} onClick={() => setScheduledEditing(true)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Edit</button>
-                          <button type="button" disabled={scheduledPending} onClick={() => { if (!selectedScheduledTask) return; void updateScheduledTask({ taskId: selectedScheduledTask.id, paused: !selectedScheduledTask.paused }); }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{selectedScheduledTask.paused ? "Resume" : "Pause"}</button>
-                          <button type="button" disabled={scheduledPending || selectedScheduledTask.status !== "active" || selectedScheduledTask.paused} onClick={() => void cancelScheduledTask(selectedScheduledTask.id)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Cancel</button>
-                          <button type="button" disabled={scheduledPending} onClick={() => void deleteScheduledTask(selectedScheduledTask.id)} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50">Delete</button>
+                          <button type="button" disabled={scheduledPending} onClick={() => setScheduledEditing(true)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{t("scheduled.action.edit")}</button>
+                          <button type="button" disabled={scheduledPending} onClick={() => { if (!selectedScheduledTask) return; void updateScheduledTask({ taskId: selectedScheduledTask.id, paused: !selectedScheduledTask.paused }); }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{selectedScheduledTask.paused ? t("scheduled.action.resume") : t("scheduled.action.pause")}</button>
+                          <button type="button" disabled={scheduledPending || selectedScheduledTask.status !== "active" || selectedScheduledTask.paused} onClick={() => void cancelScheduledTask(selectedScheduledTask.id)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{t("scheduled.action.cancel")}</button>
+                          <button type="button" disabled={scheduledPending} onClick={() => void deleteScheduledTask(selectedScheduledTask.id)} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50">{t("scheduled.action.delete")}</button>
                         </>
                       ) : (
                         <>
@@ -2397,25 +2713,25 @@ function SessionsPage() {
                             }}
                             className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
                           >
-                            Save
+                            {t("scheduled.action.save")}
                           </button>
-                          <button type="button" disabled={scheduledPending} onClick={() => { setScheduledEditState(buildScheduledEditState(selectedScheduledTask)); setScheduledEditing(false); }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Cancel Edit</button>
+                          <button type="button" disabled={scheduledPending} onClick={() => { setScheduledEditState(buildScheduledEditState(selectedScheduledTask)); setScheduledEditing(false); }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{t("scheduled.action.cancelEdit")}</button>
                         </>
                       )}
                     </div>
                   </div>
                   <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Status</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.status}{selectedScheduledTask.paused ? " / paused" : ""}</div></div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Schedule</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.scheduleType}</div></div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Agent</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.agentFlavor}</div></div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Created</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.createdAt)}</div></div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Next Run</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.nextRunAt)}</div></div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Last Run</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.lastRunAt)}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.status")}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.status}{selectedScheduledTask.paused ? " / paused" : ""}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.schedule")}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.scheduleType}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.agent")}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.agentFlavor}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.created")}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.createdAt)}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.nextRun")}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.nextRunAt)}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.lastRun")}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.lastRunAt)}</div></div>
                   </div>
 
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Prompt</div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.prompt")}</div>
                       {scheduledEditing && scheduledEditState ? (
                         <textarea value={scheduledEditState.prompt} onChange={(event) => setScheduledEditState((current) => current ? { ...current, prompt: event.target.value } : current)} rows={6} className="mt-2 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" />
                       ) : (
@@ -2423,16 +2739,16 @@ function SessionsPage() {
                       )}
                     </div>
                     <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Config</div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.config")}</div>
                       <div className="mt-2 space-y-2 text-sm text-[var(--app-fg)]">
-                        <div><span className="text-[var(--app-hint)]">Directory:</span> {scheduledEditing && scheduledEditState ? <input value={scheduledEditState.targetDirectory} onChange={(event) => setScheduledEditState((current) => current ? { ...current, targetDirectory: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" /> : <span className="break-all"> {selectedScheduledTask.targetDirectory}</span>}</div>
-                        <div><span className="text-[var(--app-hint)]">Model:</span> {scheduledEditing && scheduledEditState ? <input value={scheduledEditState.model} onChange={(event) => setScheduledEditState((current) => current ? { ...current, model: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" /> : <span> {selectedScheduledTask.model ?? "-"}</span>}</div>
-                        <div><span className="text-[var(--app-hint)]">Timezone:</span> <span> {selectedScheduledTask.timezone}</span></div>
-                        <div><span className="text-[var(--app-hint)]">Task ID:</span> <span className="break-all"> {selectedScheduledTask.id}</span></div>
+                        <div><span className="text-[var(--app-hint)]">{t("scheduled.detail.directory")}:</span> {scheduledEditing && scheduledEditState ? <input value={scheduledEditState.targetDirectory} onChange={(event) => setScheduledEditState((current) => current ? { ...current, targetDirectory: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" /> : <span className="break-all"> {selectedScheduledTask.targetDirectory}</span>}</div>
+                        <div><span className="text-[var(--app-hint)]">{t("scheduled.detail.model")}:</span> {scheduledEditing && scheduledEditState ? <input value={scheduledEditState.model} onChange={(event) => setScheduledEditState((current) => current ? { ...current, model: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" /> : <span> {selectedScheduledTask.model ?? "-"}</span>}</div>
+                        <div><span className="text-[var(--app-hint)]">{t("scheduled.detail.timezone")}:</span> <span> {selectedScheduledTask.timezone}</span></div>
+                        <div><span className="text-[var(--app-hint)]">{t("scheduled.detail.taskId")}:</span> <span className="break-all"> {selectedScheduledTask.id}</span></div>
                         {scheduledEditing && scheduledEditState ? (
                           <>
                             <label className="block">
-                              <span className="text-[var(--app-hint)]">Schedule Type</span>
+                              <span className="text-[var(--app-hint)]">{t("scheduled.detail.scheduleType")}</span>
                               <select value={scheduledEditState.scheduleType} onChange={(event) => setScheduledEditState((current) => current ? { ...current, scheduleType: event.target.value as "once" | "cron" } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]">
                                 <option value="once">once</option>
                                 <option value="cron">cron</option>
@@ -2440,18 +2756,18 @@ function SessionsPage() {
                             </label>
                             {scheduledEditState.scheduleType === "once" ? (
                               <label className="block">
-                                <span className="text-[var(--app-hint)]">Run At</span>
+                                <span className="text-[var(--app-hint)]">{t("scheduled.detail.runAt")}</span>
                                 <input type="datetime-local" step={1} value={scheduledEditState.runAt} onChange={(event) => setScheduledEditState((current) => current ? { ...current, runAt: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" />
                               </label>
                             ) : (
                               <label className="block">
-                                <span className="text-[var(--app-hint)]">Cron</span>
+                                <span className="text-[var(--app-hint)]">{t("scheduled.detail.cron")}</span>
                                 <input value={scheduledEditState.cron} onChange={(event) => setScheduledEditState((current) => current ? { ...current, cron: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" />
                               </label>
                             )}
                           </>
                         ) : (
-                          <div><span className="text-[var(--app-hint)]">Expression:</span> <span> {selectedScheduledTask.scheduleSpec.cron ?? formatScheduledDateTime(selectedScheduledTask.scheduleSpec.runAt)}</span></div>
+                          <div><span className="text-[var(--app-hint)]">{t("scheduled.detail.expression")}:</span> <span> {selectedScheduledTask.scheduleSpec.cron ?? formatScheduledDateTime(selectedScheduledTask.scheduleSpec.runAt)}</span></div>
                         )}
                       </div>
                     </div>
@@ -2460,7 +2776,7 @@ function SessionsPage() {
                   <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <h2 className="text-base font-semibold text-[var(--app-fg)]">Runs</h2>
+                        <h2 className="text-base font-semibold text-[var(--app-fg)]">{t("scheduled.detail.runs")}</h2>
                         <p className="text-sm text-[var(--app-hint)]">Each execution stays attached to this task. Pick one to inspect its result.</p>
                       </div>
                       <div className="text-sm text-[var(--app-hint)]">{selectedScheduledTaskRuns.length} runs</div>
@@ -2494,16 +2810,16 @@ function SessionsPage() {
                             <div className="space-y-4">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <h3 className="text-base font-semibold text-[var(--app-fg)]">Selected Run</h3>
+                                  <h3 className="text-base font-semibold text-[var(--app-fg)]">{t("scheduled.detail.selectedRun")}</h3>
                                   <ScheduledRunStatusBadge status={selectedScheduledRun.status} />
                                 </div>
                                 <p className="mt-1 text-sm text-[var(--app-hint)]">The selected run owns the session detail below.</p>
                               </div>
                               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Triggered</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledRun.triggeredAt)}</div></div>
-                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Finished</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledRun.finishedAt)}</div></div>
-                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Run ID</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedScheduledRun.id}</div></div>
-                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Session</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedScheduledRun.sessionId ?? "-"}</div></div>
+                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.triggered")}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledRun.triggeredAt)}</div></div>
+                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.finished")}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledRun.finishedAt)}</div></div>
+                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.runId")}</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedScheduledRun.id}</div></div>
+                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t("scheduled.detail.session")}</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedScheduledRun.sessionId ?? "-"}</div></div>
                               </div>
                               {selectedScheduledRun.error ? <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">{selectedScheduledRun.error}</div> : null}
                               {selectedScheduledRun.resultSummary ? <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">{selectedScheduledRun.resultSummary}</div> : null}
@@ -2511,12 +2827,12 @@ function SessionsPage() {
                                 <div className="rounded-2xl border border-[var(--app-border)] px-0 py-0 overflow-hidden">
                                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
                                     <div>
-                                      <div className="text-sm font-medium text-[var(--app-fg)]">Session Detail</div>
+                                      <div className="text-sm font-medium text-[var(--app-fg)]">{t("scheduled.detail.sessionView")}</div>
                                       <div className="mt-1 text-sm text-[var(--app-hint)]">Embedded session view for the selected run.</div>
                                     </div>
                                     <div className="flex gap-2">
-                                      <button type="button" onClick={() => openWorkspaceSession(selectedScheduledRun.sessionId as string, "chat")} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open Fullscreen</button>
-                                      <Link to="/sessions/$sessionId" params={{ sessionId: selectedScheduledRun.sessionId as string }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open via Deep Link</Link>
+                                      <button type="button" onClick={() => openWorkspaceSession(selectedScheduledRun.sessionId as string, "chat")} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">{t("scheduled.detail.openFullscreen")}</button>
+                                      <Link to="/sessions/$sessionId" params={{ sessionId: selectedScheduledRun.sessionId as string }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">{t("scheduled.detail.openDeepLink")}</Link>
                                     </div>
                                   </div>
                                   <div className="h-[760px] bg-[var(--app-bg)]">
