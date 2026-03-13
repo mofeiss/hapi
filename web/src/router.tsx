@@ -2049,66 +2049,84 @@ function SessionsPage() {
                   </button>
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] p-1">
+            </div>
+          </div>
+
+          <div className="mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col px-3 pb-3 lg:max-w-content">
+            <div className="flex min-h-0 flex-1 flex-col pt-2">
+              <div className="flex items-end gap-1 pl-6 pr-1.5">
                 <button
                   type="button"
                   onClick={() => selectWorkspaceTab("sessions")}
-                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${workspace.tab === "sessions" ? "bg-[var(--app-fg)] text-[var(--app-bg)]" : "text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"}`}
+                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isSessionsTab ? "z-10 -mb-px bg-[var(--app-panel-raised-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                  aria-pressed={isSessionsTab}
                 >
-                  {t("sessions.tab")}
+                  <span className="relative z-[1]">{t("sessions.tab")}</span>
+                  {isSessionsTab ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute bottom-[-1px] left-[1px] right-[1px] h-[2px] bg-[var(--app-panel-raised-bg)]"
+                    />
+                  ) : null}
                 </button>
                 <button
                   type="button"
                   onClick={handleOpenScheduledTab}
-                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${workspace.tab === "scheduled" ? "bg-[var(--app-fg)] text-[var(--app-bg)]" : "text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"}`}
+                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isScheduledTab ? "z-10 -mb-px bg-[var(--app-panel-raised-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                  aria-pressed={isScheduledTab}
                 >
-                  {t("scheduled.tab")}
+                  <span className="relative z-[1]">{t("scheduled.tab")}</span>
+                  {isScheduledTab ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute bottom-[-1px] left-[1px] right-[1px] h-[2px] bg-[var(--app-panel-raised-bg)]"
+                    />
+                  ) : null}
                 </button>
               </div>
-            </div>
-          </div>
 
-          <div className={`flex-1 min-h-0 ${showSidebarSearchRow ? "mb-2" : ""}`}>
-            {isScheduledTab ? (
-              <div className="flex h-full min-h-0 flex-col">
-                {scheduledError ? (
-                  <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
-                    <div className="text-sm text-red-600">{scheduledError}</div>
-                  </div>
-                ) : null}
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                  <div className="mx-auto flex w-full max-w-full flex-col px-3 lg:max-w-content h-full min-h-0">
-                    {scheduledLoading ? (
-                      <div className="px-0 py-3 text-sm text-[var(--app-hint)]">
-                        Loading scheduled tasks...
-                      </div>
-                    ) : null}
-                    {!scheduledLoading && !scheduledError && scheduledGroups.length === 0 ? (
-                      <div className="px-0 py-3 text-sm text-[var(--app-hint)]">
-                        No scheduled tasks yet.
-                      </div>
-                    ) : null}
-                    {scheduledGroups.length > 0 ? (
-                      <div className="max-h-full min-h-0 overflow-hidden rounded-md border border-[var(--app-subtle-solid-bg)]">
-                        <div className="max-h-full overflow-y-auto desktop-scrollbar-left">
-                          {scheduledGroups.map((group, index) => {
-                            const isCollapsed = isScheduledGroupCollapsed(group);
-                            return (
-                              <div
-                                key={group.machineId}
-                                className={
-                                  index > 0
-                                    ? "border-t border-[var(--app-subtle-solid-bg)]"
-                                    : ""
-                                }
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    toggleScheduledGroup(group.machineId, isCollapsed)
-                                  }
-                                  className="sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 text-left"
-                                >
+              <div className="relative -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[var(--app-border)] bg-[var(--app-panel-raised-bg)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                <div className={`min-h-0 flex-1 ${showSidebarSearchRow ? "" : "rounded-b-[14px]"}`}>
+                  {isScheduledTab ? (
+                    <div className="flex h-full min-h-0 flex-col">
+                      {scheduledError ? (
+                        <div className="px-3 py-3">
+                          <div className="text-sm text-red-600">{scheduledError}</div>
+                        </div>
+                      ) : null}
+                      <div className="min-h-0 flex-1 overflow-y-auto">
+                        <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-3 py-3">
+                          {scheduledLoading ? (
+                            <div className="px-0 py-3 text-sm text-[var(--app-hint)]">
+                              Loading scheduled tasks...
+                            </div>
+                          ) : null}
+                          {!scheduledLoading && !scheduledError && scheduledGroups.length === 0 ? (
+                            <div className="px-0 py-3 text-sm text-[var(--app-hint)]">
+                              No scheduled tasks yet.
+                            </div>
+                          ) : null}
+                          {scheduledGroups.length > 0 ? (
+                            <div className="max-h-full min-h-0 overflow-hidden rounded-md border border-[var(--app-subtle-solid-bg)]">
+                              <div className="max-h-full overflow-y-auto desktop-scrollbar-left">
+                                {scheduledGroups.map((group, index) => {
+                                  const isCollapsed = isScheduledGroupCollapsed(group);
+                                  return (
+                                    <div
+                                      key={group.machineId}
+                                      className={
+                                        index > 0
+                                          ? "border-t border-[var(--app-subtle-solid-bg)]"
+                                          : ""
+                                      }
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          toggleScheduledGroup(group.machineId, isCollapsed)
+                                        }
+                                        className="sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 text-left"
+                                      >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     width="16"
@@ -2139,65 +2157,65 @@ function SessionsPage() {
                                       ({group.tasks.length})
                                     </span>
                                   </div>
-                                </button>
-                                {!isCollapsed ? (
-                                  <div className="flex flex-col divide-y divide-[var(--app-divider)]">
-                                    {group.tasks.map((task) => {
-                                      const latestRun = latestScheduledRunByTaskId.get(task.id);
-                                      const selected = task.id === selectedScheduledTaskId;
-                                      const rowBackgroundClass = selected
-                                        ? "bg-[var(--app-session-active-bg)]"
-                                        : scheduledZebraTaskIds.has(task.id)
-                                          ? "bg-[var(--app-session-zebra-bg)]"
-                                          : "";
-                                      const rowStyle = selected
-                                        ? {
-                                            WebkitTouchCallout: "none" as const,
-                                            boxShadow:
-                                              "inset 3px 0 0 var(--app-orange-base), inset 0 0 0 1px var(--app-border-on-subtle)",
-                                          }
-                                        : { WebkitTouchCallout: "none" as const };
-                                      const typeText =
-                                        task.scheduleType === "cron"
-                                          ? t("scheduled.list.kind.cron")
-                                          : t("scheduled.list.kind.once");
-                                      const statusText = task.paused
-                                        ? t("scheduled.list.status.paused")
-                                        : latestRun?.status === "running"
-                                          ? t("scheduled.list.status.running")
-                                          : latestRun?.status === "failed"
-                                            ? t("scheduled.list.status.failed")
-                                            : latestRun?.status === "succeeded"
-                                              ? t("scheduled.list.status.succeeded")
-                                              : task.status === "active"
-                                                ? t("scheduled.list.status.active")
-                                                : t("scheduled.list.status.idle");
-                                      const createdAtLabel = formatTimestamp(task.createdAt);
-                                      const iconToneClass = task.paused
-                                        ? "text-amber-600"
-                                        : latestRun?.status === "running"
-                                          ? "text-sky-600"
-                                          : latestRun?.status === "failed"
-                                            ? "text-red-600"
-                                            : latestRun?.status === "succeeded"
-                                              ? "text-emerald-600"
-                                              : "text-[var(--app-hint)]";
-                                      return (
-                                        <button
-                                          key={task.id}
-                                          type="button"
-                                          onClick={() => {
-                                            setSelectedScheduledTaskId(task.id);
-                                            setSelectedScheduledRunId(latestRun?.id ?? null);
-                                            openWorkspaceScheduledTask(task.id, latestRun?.id ?? null);
-                                          }}
-                                          className={
-                                            "session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none " +
-                                            rowBackgroundClass
-                                          }
-                                          style={rowStyle}
-                                          aria-current={selected ? "page" : undefined}
-                                        >
+                                      </button>
+                                      {!isCollapsed ? (
+                                        <div className="flex flex-col divide-y divide-[var(--app-divider)]">
+                                          {group.tasks.map((task) => {
+                                            const latestRun = latestScheduledRunByTaskId.get(task.id);
+                                            const selected = task.id === selectedScheduledTaskId;
+                                            const rowBackgroundClass = selected
+                                              ? "bg-[var(--app-session-active-bg)]"
+                                              : scheduledZebraTaskIds.has(task.id)
+                                                ? "bg-[var(--app-session-zebra-bg)]"
+                                                : "";
+                                            const rowStyle = selected
+                                              ? {
+                                                  WebkitTouchCallout: "none" as const,
+                                                  boxShadow:
+                                                    "inset 3px 0 0 var(--app-orange-base), inset 0 0 0 1px var(--app-border-on-subtle)",
+                                                }
+                                              : { WebkitTouchCallout: "none" as const };
+                                            const typeText =
+                                              task.scheduleType === "cron"
+                                                ? t("scheduled.list.kind.cron")
+                                                : t("scheduled.list.kind.once");
+                                            const statusText = task.paused
+                                              ? t("scheduled.list.status.paused")
+                                              : latestRun?.status === "running"
+                                                ? t("scheduled.list.status.running")
+                                                : latestRun?.status === "failed"
+                                                  ? t("scheduled.list.status.failed")
+                                                  : latestRun?.status === "succeeded"
+                                                    ? t("scheduled.list.status.succeeded")
+                                                    : task.status === "active"
+                                                      ? t("scheduled.list.status.active")
+                                                      : t("scheduled.list.status.idle");
+                                            const createdAtLabel = formatTimestamp(task.createdAt);
+                                            const iconToneClass = task.paused
+                                              ? "text-amber-600"
+                                              : latestRun?.status === "running"
+                                                ? "text-sky-600"
+                                                : latestRun?.status === "failed"
+                                                  ? "text-red-600"
+                                                  : latestRun?.status === "succeeded"
+                                                    ? "text-emerald-600"
+                                                    : "text-[var(--app-hint)]";
+                                            return (
+                                              <button
+                                                key={task.id}
+                                                type="button"
+                                                onClick={() => {
+                                                  setSelectedScheduledTaskId(task.id);
+                                                  setSelectedScheduledRunId(latestRun?.id ?? null);
+                                                  openWorkspaceScheduledTask(task.id, latestRun?.id ?? null);
+                                                }}
+                                                className={
+                                                  "session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none " +
+                                                  rowBackgroundClass
+                                                }
+                                                style={rowStyle}
+                                                aria-current={selected ? "page" : undefined}
+                                              >
                                           <div className="flex items-center justify-between gap-1.5">
                                             <div className="flex min-w-0 items-center gap-1">
                                               <span
@@ -2325,55 +2343,60 @@ function SessionsPage() {
                                               </span>
                                             ) : null}
                                           </div>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                ) : null}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : error ? (
+                    <div className="px-3 py-3">
+                      <div className="text-sm text-red-600">{error}</div>
+                    </div>
+                  ) : !error &&
+                    !isLoading &&
+                    normalizedSessionSearch &&
+                    displaySessions.length === 0 ? (
+                    <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-3 py-3">
+                      <div className="flex w-full items-start justify-center py-1 text-center text-sm text-[var(--app-hint)]">
+                        {t("sessions.search.noMatch")}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full min-h-0 flex-col py-3">
+                      <SessionList
+                        sessions={displaySessions}
+                        selectedSessionId={activeSessionId}
+                        onSelect={handleSelectSession}
+                        onNewSession={() => {
+                          openNewSessionOverlay();
+                        }}
+                        onRefresh={handleRefresh}
+                        isLoading={isLoading}
+                        renderHeader={false}
+                        fillHeight
+                        api={api}
+                        batchMode={batchMode}
+                        batchSelectedIds={batchSelectedIds}
+                        archivingSessionIds={batchArchivingIds}
+                        deletingSessionIds={batchDeletingIds}
+                        onBatchToggleSelect={handleBatchToggleSelect}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-            ) : error ? (
-              <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
-                <div className="text-sm text-red-600">{error}</div>
-              </div>
-            ) : !error &&
-              !isLoading &&
-              normalizedSessionSearch &&
-              displaySessions.length === 0 ? (
-              <div className="mx-auto flex w-full max-w-full justify-center px-3 py-4 text-center text-sm text-[var(--app-hint)] lg:max-w-content">
-                {t("sessions.search.noMatch")}
-              </div>
-            ) : (
-              <SessionList
-                sessions={displaySessions}
-                selectedSessionId={activeSessionId}
-                onSelect={handleSelectSession}
-                onNewSession={() => {
-                  openNewSessionOverlay();
-                }}
-                onRefresh={handleRefresh}
-                isLoading={isLoading}
-                renderHeader={false}
-                fillHeight
-                api={api}
-                batchMode={batchMode}
-                batchSelectedIds={batchSelectedIds}
-                archivingSessionIds={batchArchivingIds}
-                deletingSessionIds={batchDeletingIds}
-                onBatchToggleSelect={handleBatchToggleSelect}
-              />
-            )}
-          </div>
-          {showSidebarSearchRow ? (
-            <div className="mx-auto w-full max-w-full px-3 pb-3 lg:max-w-content">
-              <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-2">
+
+                {showSidebarSearchRow ? (
+                  <div className="border-t border-[var(--app-divider)] bg-[var(--app-panel-raised-bg)] px-4 py-3">
+                    <div className="flex items-center gap-2 rounded-[14px] border border-[var(--app-divider)] bg-[var(--app-bg)] px-3 py-2 shadow-[0_1px_0_rgba(255,255,255,0.35)_inset]">
                 <div className="flex h-4 w-4 shrink-0 items-center justify-center">
                   {(isScheduledTab ? scheduledSearch.length > 0 : hasSessionSearch) ? (
                     <button
@@ -2412,103 +2435,106 @@ function SessionsPage() {
                   autoCorrect="off"
                   spellCheck={false}
                 />
-                <div className="flex shrink-0 items-center gap-0.5">
-                  {isScheduledTab ? null : batchMode && showSidebarBatchActions ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={
-                          batchSelectedIds.size === batchFilteredIds.size &&
-                          batchFilteredIds.size > 0
-                            ? () => setBatchSelectedIds(new Set())
-                            : handleBatchSelectAll
-                        }
-                        disabled={batchPending || batchFilteredIds.size === 0}
-                        className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={
-                          batchSelectedIds.size === batchFilteredIds.size &&
-                          batchFilteredIds.size > 0
-                            ? t("batch.deselectAll")
-                            : t("batch.selectAll")
-                        }
-                      >
-                        {batchSelectedIds.size === batchFilteredIds.size &&
-                        batchFilteredIds.size > 0 ? (
-                          <BatchDeselectAllIcon className="h-[14px] w-[14px]" />
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        {isScheduledTab ? null : batchMode && showSidebarBatchActions ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={
+                                batchSelectedIds.size === batchFilteredIds.size &&
+                                batchFilteredIds.size > 0
+                                  ? () => setBatchSelectedIds(new Set())
+                                  : handleBatchSelectAll
+                              }
+                              disabled={batchPending || batchFilteredIds.size === 0}
+                              className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                              title={
+                                batchSelectedIds.size === batchFilteredIds.size &&
+                                batchFilteredIds.size > 0
+                                  ? t("batch.deselectAll")
+                                  : t("batch.selectAll")
+                              }
+                            >
+                              {batchSelectedIds.size === batchFilteredIds.size &&
+                              batchFilteredIds.size > 0 ? (
+                                <BatchDeselectAllIcon className="h-[14px] w-[14px]" />
+                              ) : (
+                                <BatchSelectAllIcon className="h-[14px] w-[14px]" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleBatchConfirmClick}
+                              disabled={batchSelectedIds.size === 0 || batchPending}
+                              className={`p-0.5 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
+                              title={t("batch.confirm.tooltip")}
+                            >
+                              <BatchCheckIcon className="h-[14px] w-[14px]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleExitBatchMode}
+                              disabled={batchPending}
+                              className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                              title={t("batch.cancel.tooltip")}
+                            >
+                              <BatchXIcon className="h-[14px] w-[14px]" />
+                            </button>
+                          </>
+                        ) : showSidebarBatchActions ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleEnterBatchMode("archive")}
+                              disabled={visibleArchivableCount === 0}
+                              className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                              title={t("batch.archive.tooltip")}
+                            >
+                              <BatchArchiveIcon className="h-[14px] w-[14px]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEnterBatchMode("delete")}
+                              disabled={visibleDeletableCount === 0}
+                              className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                              title={t("batch.delete.tooltip")}
+                            >
+                              <BatchTrashIcon className="h-[14px] w-[14px]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={toggleFilterOnline}
+                              className={`p-0.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                              title={
+                                filterOnlineOnly
+                                  ? t("filter.showAll")
+                                  : t("filter.onlineOnly")
+                              }
+                            >
+                              <OnlineFilterIcon className="h-[14px] w-[14px]" />
+                            </button>
+                          </>
                         ) : (
-                          <BatchSelectAllIcon className="h-[14px] w-[14px]" />
+                          <button
+                            type="button"
+                            onClick={toggleFilterOnline}
+                            className={`p-0.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                            title={
+                              filterOnlineOnly
+                                ? t("filter.showAll")
+                                : t("filter.onlineOnly")
+                            }
+                          >
+                            <OnlineFilterIcon className="h-[14px] w-[14px]" />
+                          </button>
                         )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleBatchConfirmClick}
-                        disabled={batchSelectedIds.size === 0 || batchPending}
-                        className={`p-0.5 rounded-full transition-colors ${batchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
-                        title={t("batch.confirm.tooltip")}
-                      >
-                        <BatchCheckIcon className="h-[14px] w-[14px]" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleExitBatchMode}
-                        disabled={batchPending}
-                        className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={t("batch.cancel.tooltip")}
-                      >
-                        <BatchXIcon className="h-[14px] w-[14px]" />
-                      </button>
-                    </>
-                  ) : showSidebarBatchActions ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleEnterBatchMode("archive")}
-                        disabled={visibleArchivableCount === 0}
-                        className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={t("batch.archive.tooltip")}
-                      >
-                        <BatchArchiveIcon className="h-[14px] w-[14px]" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEnterBatchMode("delete")}
-                        disabled={visibleDeletableCount === 0}
-                        className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                        title={t("batch.delete.tooltip")}
-                      >
-                        <BatchTrashIcon className="h-[14px] w-[14px]" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={toggleFilterOnline}
-                        className={`p-0.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
-                        title={
-                          filterOnlineOnly
-                            ? t("filter.showAll")
-                            : t("filter.onlineOnly")
-                        }
-                      >
-                        <OnlineFilterIcon className="h-[14px] w-[14px]" />
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={toggleFilterOnline}
-                      className={`p-0.5 rounded-full transition-colors ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
-                      title={
-                        filterOnlineOnly
-                          ? t("filter.showAll")
-                          : t("filter.onlineOnly")
-                      }
-                    >
-                      <OnlineFilterIcon className="h-[14px] w-[14px]" />
-                    </button>
-                  )}
-                </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
-          ) : null}
+          </div>
         </div>
 
         {/* Batch operation confirm dialog */}
