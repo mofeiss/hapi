@@ -2058,34 +2058,34 @@ function SessionsPage() {
                 <button
                   type="button"
                   onClick={() => selectWorkspaceTab("sessions")}
-                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isSessionsTab ? "z-10 bg-[var(--app-panel-raised-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isSessionsTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
                   aria-pressed={isSessionsTab}
                 >
                   <span className="relative z-[1]">{t("sessions.tab")}</span>
                   {isSessionsTab ? (
                     <span
                       aria-hidden="true"
-                      className="absolute bottom-0 left-[1px] right-[1px] h-[2px] bg-[var(--app-panel-raised-bg)]"
+                      className="absolute bottom-0 left-[1px] right-[1px] h-[2px] bg-[var(--app-bg)]"
                     />
                   ) : null}
                 </button>
                 <button
                   type="button"
                   onClick={handleOpenScheduledTab}
-                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isScheduledTab ? "z-10 bg-[var(--app-panel-raised-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isScheduledTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
                   aria-pressed={isScheduledTab}
                 >
                   <span className="relative z-[1]">{t("scheduled.tab")}</span>
                   {isScheduledTab ? (
                     <span
                       aria-hidden="true"
-                      className="absolute bottom-0 left-[1px] right-[1px] h-[2px] bg-[var(--app-panel-raised-bg)]"
+                      className="absolute bottom-0 left-[1px] right-[1px] h-[2px] bg-[var(--app-bg)]"
                     />
                   ) : null}
                 </button>
               </div>
 
-              <div className="relative -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[var(--app-border)] bg-[var(--app-panel-raised-bg)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <div className="relative -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                 <div className={`min-h-0 flex-1 ${showSidebarSearchRow ? "" : "rounded-b-[14px]"}`}>
                   {isScheduledTab ? (
                     <div className="flex h-full min-h-0 flex-col">
@@ -2395,7 +2395,7 @@ function SessionsPage() {
                 </div>
 
                 {showSidebarSearchRow ? (
-                  <div className="border-t border-[var(--app-divider)] bg-[var(--app-panel-raised-bg)] px-4 py-3">
+                  <div className="border-t border-[var(--app-divider)] bg-[var(--app-bg)] px-4 py-3">
                     <div className="flex items-center gap-2 rounded-[14px] border border-[var(--app-divider)] bg-[var(--app-bg)] px-3 py-2 shadow-[0_1px_0_rgba(255,255,255,0.35)_inset]">
                 <div className="flex h-4 w-4 shrink-0 items-center justify-center">
                   {(isScheduledTab ? scheduledSearch.length > 0 : hasSessionSearch) ? (
