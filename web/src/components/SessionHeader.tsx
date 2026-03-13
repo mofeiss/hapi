@@ -2,8 +2,7 @@ import { useMemo } from 'react'
 import type { Session } from '@/types/api'
 import type { ApiClient } from '@/api/client'
 import { isTelegramApp } from '@/hooks/useTelegram'
-import { PageHeaderUtilityControls } from '@/components/PageHeaderUtilityControls'
-import { useTranslation } from '@/lib/use-translation'
+import { HeaderActionGroup } from '@/components/HeaderActionGroup'
 import { useWidescreen } from '@/hooks/useWidescreen'
 import { useSessionTitleOverride } from '@/lib/session-title-override-store'
 import { normalizeProjectPath } from '@/utils/path'
@@ -18,122 +17,6 @@ function getSessionTitle(session: Session): string {
         return session.metadata.summary.text
     }
     return 'New Chat'
-}
-
-function TerminalIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
-            <polyline points="7 9 10 12 7 15" />
-            <line x1="12" y1="15" x2="17" y2="15" />
-        </svg>
-    )
-}
-
-function FilesIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
-        </svg>
-    )
-}
-
-function WidescreenIcon(props: { className?: string; active?: boolean }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            {props.active ? (
-                <>
-                    <polyline points="4 14 10 14 10 20" />
-                    <polyline points="20 10 14 10 14 4" />
-                    <line x1="14" y1="10" x2="21" y2="3" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                </>
-            ) : (
-                <>
-                    <polyline points="15 3 21 3 21 9" />
-                    <polyline points="9 21 3 21 3 15" />
-                    <line x1="21" y1="3" x2="14" y2="10" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                </>
-            )}
-        </svg>
-    )
-}
-
-function NewChatIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            <line x1="12" y1="7" x2="12" y2="13" />
-            <line x1="9" y1="10" x2="15" y2="10" />
-        </svg>
-    )
-}
-
-function QuickCloneChatIcon(props: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            <line x1="15.5" y1="14.5" x2="15.5" y2="18.5" />
-            <line x1="13.5" y1="16.5" x2="17.5" y2="16.5" />
-        </svg>
-    )
 }
 
 export function SessionHeader(props: {
@@ -153,7 +36,6 @@ export function SessionHeader(props: {
     api: ApiClient | null
     onSessionDeleted?: () => void
 }) {
-    const { t } = useTranslation()
     const { widescreen, toggleWidescreen } = useWidescreen()
     const { session } = props
     const titleFromStore = useSessionTitleOverride(session.id)
@@ -225,84 +107,22 @@ export function SessionHeader(props: {
                         </div>
                     </div>
 
-                    {props.onOpenNewSession ? (
-                        <div className="flex lg:hidden items-center">
-                            <button
-                                type="button"
-                                onClick={props.onOpenNewSession}
-                                className="session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-link)] transition-colors hover:bg-[var(--app-secondary-bg)]"
-                                title={t('sessions.new')}
-                            >
-                                <NewChatIcon />
-                            </button>
-                            {props.onQuickNewSession ? (
-                                <button
-                                    type="button"
-                                    onClick={props.onQuickNewSession}
-                                    disabled={props.quickNewSessionPending}
-                                    className={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors ${
-                                        props.quickNewSessionPending
-                                            ? 'cursor-not-allowed text-[var(--app-hint)] opacity-50'
-                                            : 'text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]'
-                                    }`}
-                                    title={props.quickNewSessionPending ? t('sessions.quickNew.creating') : t('sessions.quickNew')}
-                                    aria-label={props.quickNewSessionPending ? t('sessions.quickNew.creating') : t('sessions.quickNew')}
-                                >
-                                    <QuickCloneChatIcon />
-                                </button>
-                            ) : null}
-                            <div className="mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
-                        </div>
-                    ) : null}
-
-                    <div className="flex items-center">
-                        {(props.onToggleTheme || props.onOpenSettings) ? (
-                            <PageHeaderUtilityControls
-                                isDark={Boolean(props.isDark)}
-                                onToggleTheme={props.onToggleTheme}
-                                onOpenSettings={props.onOpenSettings}
-                            />
-                        ) : null}
-
-                        {props.onToggleTerminal ? (
-                            <button
-                                type="button"
-                                onClick={props.onToggleTerminal}
-                                className={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors ${
-                                    props.terminalOpen
-                                        ? 'bg-[var(--app-secondary-bg)] text-[var(--app-fg)]'
-                                        : 'text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
-                                }`}
-                                title={t('composer.terminal')}
-                            >
-                                <TerminalIcon />
-                            </button>
-                        ) : null}
-
-                        {props.onToggleFiles ? (
-                            <button
-                                type="button"
-                                onClick={props.onToggleFiles}
-                                className={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors ${
-                                    props.filesOpen
-                                        ? 'bg-[var(--app-secondary-bg)] text-[var(--app-fg)]'
-                                        : 'text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
-                                }`}
-                                title={t('session.title')}
-                            >
-                                <FilesIcon />
-                            </button>
-                        ) : null}
-
-                        <button
-                            type="button"
-                            onClick={toggleWidescreen}
-                            className={`hidden lg:flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
-                            title={widescreen ? 'Exit widescreen' : 'Widescreen'}
-                        >
-                            <WidescreenIcon active={widescreen} />
-                        </button>
-                    </div>
+                    <HeaderActionGroup
+                        isDark={props.isDark}
+                        onToggleTheme={props.onToggleTheme}
+                        onOpenSettings={props.onOpenSettings}
+                        onOpenNewSession={props.onOpenNewSession}
+                        onQuickNewSession={props.onQuickNewSession}
+                        quickNewSessionPending={props.quickNewSessionPending}
+                        onToggleTerminal={props.onToggleTerminal}
+                        terminalOpen={props.terminalOpen}
+                        onToggleFiles={props.onToggleFiles}
+                        filesOpen={props.filesOpen}
+                        onToggleWidescreen={toggleWidescreen}
+                        widescreen={widescreen}
+                        widescreenClassName={`hidden lg:flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
+                        className="flex items-center gap-0.5"
+                    />
                 </div>
             </div>
         </>

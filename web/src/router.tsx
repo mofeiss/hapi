@@ -14,6 +14,7 @@ import {
 import { App } from "@/App";
 import { SessionChat } from "@/components/SessionChat";
 import { EmbeddedSessionView } from "@/components/EmbeddedSessionView";
+import { HeaderActionGroup } from "@/components/HeaderActionGroup";
 import {
   SessionList,
   groupSessionsByHost,
@@ -21,7 +22,6 @@ import {
 } from "@/components/SessionList";
 import { NewSession } from "@/components/NewSession";
 import { LoadingState } from "@/components/LoadingState";
-import { PageHeaderUtilityControls } from "@/components/PageHeaderUtilityControls";
 import { SessionActionMenu } from "@/components/SessionActionMenu";
 import { RenameSessionDialog } from "@/components/RenameSessionDialog";
 import { useAppContext } from "@/lib/app-context";
@@ -117,49 +117,6 @@ function ScheduledTaskIcon(props: { className?: string }) {
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7.5v5l3.5 2.25" />
-    </svg>
-  );
-}
-
-function NewChatIcon(props: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={props.className}
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      <line x1="12" y1="7" x2="12" y2="13" />
-      <line x1="9" y1="10" x2="15" y2="10" />
-    </svg>
-  );
-}
-
-function QuickCloneChatIcon(props: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={props.className}
-    >
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-      <line x1="15.5" y1="14.5" x2="15.5" y2="18.5" />
-      <line x1="13.5" y1="16.5" x2="17.5" y2="16.5" />
     </svg>
   );
 }
@@ -2034,110 +1991,94 @@ function SessionsPage() {
       >
         <div className="flex h-full flex-col" style={leftPanelContentStyle}>
           <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-            <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 min-w-0 shrink-0">
+            <div className="mx-auto w-full max-w-full lg:max-w-content px-3 pb-0 pt-2">
+              <div className="flex items-end gap-2">
+                <div className="flex min-w-0 shrink-0 items-center gap-1.5 pr-1 pb-2">
                   <img src="/icon.svg" alt="HAPI" className="h-5 w-5 shrink-0" />
-                  <span className="text-sm font-semibold text-[var(--app-fg)] select-none shrink-0">
+                  <span className="shrink-0 select-none text-sm font-semibold text-[var(--app-fg)]">
                     HAPI
                   </span>
                 </div>
-                <div className="flex items-center gap-0 shrink-0">
+
+                <div className="min-w-0 flex-1 overflow-hidden pt-1">
+                  <div className="flex min-w-0 items-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => selectWorkspaceTab("sessions")}
+                      className={`relative inline-flex shrink-0 items-center rounded-t-[12px] border border-b-0 px-3 py-2 text-xs font-semibold ${isSessionsTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                      aria-pressed={isSessionsTab}
+                    >
+                      <span className="relative z-[1] inline-flex items-center gap-1.5">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                        >
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                        <span>{t("sessions.tab")}</span>
+                      </span>
+                      {isSessionsTab ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -bottom-px left-0 right-0 h-[3px] bg-[var(--app-bg)]"
+                        />
+                      ) : null}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenScheduledTab}
+                      className={`relative inline-flex shrink-0 items-center rounded-t-[12px] border border-b-0 px-3 py-2 text-xs font-semibold ${isScheduledTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                      aria-pressed={isScheduledTab}
+                    >
+                      <span className="relative z-[1] inline-flex items-center gap-1.5">
+                        <ScheduledTaskIcon className="h-4 w-4" />
+                        <span>{t("scheduled.tab")}</span>
+                      </span>
+                      {isScheduledTab ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -bottom-px left-0 right-0 h-[3px] bg-[var(--app-bg)]"
+                        />
+                      ) : null}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-0.5 self-center pl-1">
                   <button
                     type="button"
                     onClick={toggleCollapsed}
-                    className="hidden lg:inline-flex -ml-[2px] mr-[2px] p-1 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] transition-colors"
+                    className="hidden lg:inline-flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
                     title="Collapse sidebar"
                   >
                     <SidebarCollapseIcon className="h-[14px] w-[14px]" />
                   </button>
-                  <div className="hidden lg:block mx-0.5 h-4 w-0.5 bg-[var(--app-divider)]" />
-                  <PageHeaderUtilityControls
+                  <HeaderActionGroup
                     isDark={isDark}
                     onToggleTheme={toggleTheme}
                     onOpenSettings={toggleSettingsOverlay}
-                    containerClassName="flex items-center gap-0 shrink-0 lg:hidden"
+                    onOpenNewSession={toggleNewSessionOverlay}
+                    onQuickNewSession={handleQuickNewSession}
+                    quickNewSessionDisabled={quickNewDisabled}
+                    quickNewSessionTitle={quickNewTitle}
+                    className="flex items-center gap-0.5"
                   />
-                  <button
-                    type="button"
-                    onClick={toggleNewSessionOverlay}
-                    className="session-list-new-button inline-flex p-1 rounded-full text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-                    title={t("sessions.new")}
-                  >
-                    <NewChatIcon className="h-[14px] w-[14px]" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleQuickNewSession}
-                    disabled={quickNewDisabled}
-                    className={`hidden lg:inline-flex p-1 rounded-full transition-colors ${
-                      quickNewDisabled
-                        ? "cursor-not-allowed text-[var(--app-hint)] opacity-50"
-                        : "text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)]"
-                    }`}
-                    title={quickNewTitle}
-                    aria-label={quickNewTitle}
-                  >
-                    <QuickCloneChatIcon className="h-[14px] w-[14px]" />
-                  </button>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col px-3 pb-3 lg:max-w-content">
-            <div className="flex min-h-0 flex-1 flex-col pt-2">
-              <div className="flex items-end gap-1 pl-6 pr-1.5">
-                <button
-                  type="button"
-                  onClick={() => selectWorkspaceTab("sessions")}
-                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold ${isSessionsTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
-                  aria-pressed={isSessionsTab}
-                >
-                  <span className="relative z-[1] inline-flex items-center gap-1.5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                    >
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    <span>{t("sessions.tab")}</span>
-                  </span>
-                  {isSessionsTab ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -bottom-px left-0 right-0 h-[3px] bg-[var(--app-bg)]"
-                    />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleOpenScheduledTab}
-                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold ${isScheduledTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
-                  aria-pressed={isScheduledTab}
-                >
-                  <span className="relative z-[1] inline-flex items-center gap-1.5">
-                    <ScheduledTaskIcon className="h-4 w-4" />
-                    <span>{t("scheduled.tab")}</span>
-                  </span>
-                  {isScheduledTab ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -bottom-px left-0 right-0 h-[3px] bg-[var(--app-bg)]"
-                    />
-                  ) : null}
-                </button>
-              </div>
-
+            <div className="flex min-h-0 flex-1 flex-col pt-0">
               <div className="relative -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                 <div className={`min-h-0 flex-1 ${showSidebarSearchRow ? "" : "rounded-b-[14px]"}`}>
                   {isScheduledTab ? (
@@ -2683,28 +2624,14 @@ function SessionsPage() {
                 <ScheduledTaskIcon className="h-4 w-4" />
               </ToggleGroupItem>
             </ToggleGroup>
-            <button
-              type="button"
-              onClick={toggleNewSessionOverlay}
-              className="session-list-new-button p-1.5 rounded-full text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)] transition-colors"
-              title={t("sessions.new")}
-            >
-              <NewChatIcon className="h-[14px] w-[14px]" />
-            </button>
-            <button
-              type="button"
-              onClick={handleQuickNewSession}
-              disabled={quickNewDisabled}
-              className={`p-1.5 rounded-full transition-colors ${
-                quickNewDisabled
-                  ? "cursor-not-allowed text-[var(--app-hint)] opacity-50"
-                  : "text-[var(--app-link)] hover:bg-[var(--app-subtle-bg)]"
-              }`}
-              title={quickNewTitle}
-              aria-label={quickNewTitle}
-            >
-              <QuickCloneChatIcon className="h-[14px] w-[14px]" />
-            </button>
+            <HeaderActionGroup
+              onOpenNewSession={toggleNewSessionOverlay}
+              onQuickNewSession={handleQuickNewSession}
+              quickNewSessionDisabled={quickNewDisabled}
+              quickNewSessionTitle={quickNewTitle}
+              className="flex flex-col items-center gap-1"
+              compactIcons
+            />
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
 
