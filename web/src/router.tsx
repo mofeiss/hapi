@@ -8,7 +8,6 @@ import {
   createRoute,
   createRouter,
   useLocation,
-  useMatchRoute,
   useNavigate,
   useParams,
 } from "@tanstack/react-router";
@@ -35,9 +34,11 @@ import { useMessages } from "@/hooks/queries/useMessages";
 import { useMachines } from "@/hooks/queries/useMachines";
 import { useSession } from "@/hooks/queries/useSession";
 import { useSessions } from "@/hooks/queries/useSessions";
+import { useScheduledTasks } from "@/hooks/queries/useScheduledTasks";
 import { useSlashCommands } from "@/hooks/queries/useSlashCommands";
 import { useSkills } from "@/hooks/queries/useSkills";
 import { useSendMessage } from "@/hooks/mutations/useSendMessage";
+import { useScheduledTaskActions } from "@/hooks/mutations/useScheduledTaskActions";
 import { useSessionActions } from "@/hooks/mutations/useSessionActions";
 import { queryKeys } from "@/lib/query-keys";
 import { useToast } from "@/lib/toast-context";
@@ -46,7 +47,10 @@ import { useTheme } from "@/hooks/useTheme";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import type {
   AttachmentMetadata,
+  Machine,
   PermissionMode,
+  ScheduledTask,
+  ScheduledTaskRun,
   SessionSummary,
   UserMessageMeta,
 } from "@/types/api";
@@ -66,12 +70,18 @@ import {
   setPendingSessionMode,
   usePendingSessionMode,
 } from "@/lib/pending-session-mode-store";
-import FilesPage from "@/routes/sessions/files";
+import FilesPage, { FilesPanel } from "@/routes/sessions/files";
 import FilePage from "@/routes/sessions/file";
-import TerminalPage from "@/routes/sessions/terminal";
+import TerminalPage, { TerminalPanel } from "@/routes/sessions/terminal";
 import { SettingsPanel } from "@/routes/settings";
-import ScheduledPage from "@/routes/scheduled";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import {
+  openWorkspaceScheduledTask,
+  openWorkspaceSession,
+  selectWorkspaceScheduledRun,
+  selectWorkspaceTab,
+  useWorkspaceState,
+} from "@/lib/workspace-store";
 
 function BackIcon(props: { className?: string }) {
   return (
@@ -395,6 +405,115 @@ function SearchClearIcon(props: { className?: string }) {
   );
 }
 
+type ScheduledEditState = {
+  title: string;
+  prompt: string;
+  targetDirectory: string;
+  model: string;
+  scheduleType: "once" | "cron";
+  runAt: string;
+  cron: string;
+  paused: boolean;
+};
+
+function getMachineTitle(machine: Machine | null | undefined): string {
+  if (machine?.metadata?.displayName) return machine.metadata.displayName;
+  if (machine?.metadata?.host) return machine.metadata.host;
+  if (machine?.id) return machine.id.slice(0, 8);
+  return "Unknown machine";
+}
+
+function formatScheduledDateTime(value: number | undefined): string {
+  if (!value) return "-";
+  return new Date(value).toLocaleString();
+}
+
+function formatScheduledDateTimeLocalInput(value: number | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const second = String(date.getSeconds()).padStart(2, "0");
+  return year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":" + second;
+}
+
+function buildScheduledEditState(task: ScheduledTask): ScheduledEditState {
+  return {
+    title: task.title,
+    prompt: task.prompt,
+    targetDirectory: task.targetDirectory,
+    model: task.model ?? "",
+    scheduleType: task.scheduleType,
+    runAt: formatScheduledDateTimeLocalInput(
+      task.scheduleSpec.runAt ?? task.nextRunAt,
+    ),
+    cron: task.scheduleSpec.cron ?? "",
+    paused: task.paused,
+  };
+}
+
+type MachineTaskGroup = {
+  machineId: string;
+  title: string;
+  tasks: ScheduledTask[];
+  latestAt: number;
+};
+
+function groupTasksByMachine(
+  tasks: ScheduledTask[],
+  machines: Machine[],
+): MachineTaskGroup[] {
+  const machineMap = new Map(machines.map((machine) => [machine.id, machine]));
+  const groups = new Map<string, ScheduledTask[]>();
+
+  for (const task of tasks) {
+    if (!groups.has(task.machineId)) {
+      groups.set(task.machineId, []);
+    }
+    groups.get(task.machineId)?.push(task);
+  }
+
+  return Array.from(groups.entries())
+    .map(([machineId, machineTasks]) => {
+      const sortedTasks = [...machineTasks].sort((left, right) => {
+        const leftTime = left.nextRunAt ?? left.lastRunAt ?? left.createdAt;
+        const rightTime = right.nextRunAt ?? right.lastRunAt ?? right.createdAt;
+        return rightTime - leftTime;
+      });
+      const latestAt = sortedTasks.reduce(
+        (max, task) =>
+          Math.max(max, task.nextRunAt ?? task.lastRunAt ?? task.createdAt),
+        0,
+      );
+      return {
+        machineId,
+        title: getMachineTitle(machineMap.get(machineId) ?? null),
+        tasks: sortedTasks,
+        latestAt,
+      };
+    })
+    .sort((left, right) => right.latestAt - left.latestAt);
+}
+
+function ScheduledRunStatusBadge(props: { status: ScheduledTaskRun["status"] }) {
+  const className =
+    props.status === "succeeded"
+      ? "bg-emerald-500/10 text-emerald-600"
+      : props.status === "failed"
+        ? "bg-red-500/10 text-red-600"
+        : props.status === "running"
+          ? "bg-blue-500/10 text-blue-600"
+          : "bg-[var(--app-subtle-bg)] text-[var(--app-hint)]";
+
+  return (
+    <span className={"rounded-full px-2 py-0.5 text-[11px] font-medium " + className}>
+      {props.status}
+    </span>
+  );
+}
 function matchesSessionSearch(
   session: SessionSummary,
   search: string,
@@ -586,12 +705,24 @@ function CollapsedSessionItem({
 function SessionsPage() {
   const { api } = useAppContext();
   const navigate = useNavigate();
-  const pathname = useLocation({ select: (location) => location.pathname });
-  const matchRoute = useMatchRoute();
+  const workspace = useWorkspaceState();
   const { t } = useTranslation();
   const { addToast } = useToast();
   const { isDark, toggleTheme } = useTheme();
   const { sessions, isLoading, error, refetch } = useSessions(api);
+  const { machines } = useMachines(api, true);
+  const {
+    tasks: scheduledTasks,
+    runs: scheduledRuns,
+    isLoading: scheduledLoading,
+    error: scheduledError,
+  } = useScheduledTasks(api);
+  const {
+    cancelScheduledTask,
+    deleteScheduledTask,
+    updateScheduledTask,
+    isPending: scheduledPending,
+  } = useScheduledTaskActions(api);
 
   const [filterOnlineOnly, setFilterOnlineOnly] = useState(() => {
     try {
@@ -601,6 +732,11 @@ function SessionsPage() {
     }
   });
   const [sessionSearch, setSessionSearch] = useState("");
+  const [scheduledSearch, setScheduledSearch] = useState("");
+  const [selectedScheduledTaskId, setSelectedScheduledTaskId] = useState<string | null>(null);
+  const [selectedScheduledRunId, setSelectedScheduledRunId] = useState<string | null>(null);
+  const [scheduledEditing, setScheduledEditing] = useState(false);
+  const [scheduledEditState, setScheduledEditState] = useState<ScheduledEditState | null>(null);
 
   const toggleFilterOnline = useCallback(() => {
     setFilterOnlineOnly((prev) => {
@@ -635,12 +771,131 @@ function SessionsPage() {
     void refetch();
   }, [refetch]);
 
-  const sessionMatch = matchRoute({ to: "/sessions/$sessionId", fuzzy: true });
-  const selectedSessionId =
-    sessionMatch && sessionMatch.sessionId !== "new"
-      ? sessionMatch.sessionId
-      : null;
-  const isSessionsIndex = pathname === "/sessions" || pathname === "/sessions/";
+  const normalizedScheduledSearch = scheduledSearch.trim().toLowerCase();
+  const filteredScheduledTasks = useMemo(() => {
+    if (!normalizedScheduledSearch) {
+      return scheduledTasks;
+    }
+    return scheduledTasks.filter((task) => {
+      const haystack = [
+        task.title,
+        task.prompt,
+        task.targetDirectory,
+        task.agentFlavor,
+        task.model,
+        task.scheduleSpec.cron,
+        task.machineId,
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .toLowerCase();
+      return haystack.includes(normalizedScheduledSearch);
+    });
+  }, [normalizedScheduledSearch, scheduledTasks]);
+
+  const scheduledGroups = useMemo(
+    () => groupTasksByMachine(filteredScheduledTasks, machines),
+    [filteredScheduledTasks, machines],
+  );
+
+  const selectedScheduledTask = useMemo(
+    () =>
+      filteredScheduledTasks.find((task) => task.id === selectedScheduledTaskId) ??
+      null,
+    [filteredScheduledTasks, selectedScheduledTaskId],
+  );
+
+  const scheduledRunsByTaskId = useMemo(() => {
+    const map = new Map<string, ScheduledTaskRun[]>();
+    for (const run of scheduledRuns) {
+      if (!map.has(run.taskId)) {
+        map.set(run.taskId, []);
+      }
+      map.get(run.taskId)?.push(run);
+    }
+    for (const taskRuns of map.values()) {
+      taskRuns.sort((left, right) => right.triggeredAt - left.triggeredAt);
+    }
+    return map;
+  }, [scheduledRuns]);
+
+  const selectedScheduledTaskRuns = useMemo(
+    () =>
+      selectedScheduledTask
+        ? (scheduledRunsByTaskId.get(selectedScheduledTask.id) ?? [])
+        : [],
+    [scheduledRunsByTaskId, selectedScheduledTask],
+  );
+
+  const selectedScheduledRun = useMemo(
+    () =>
+      selectedScheduledTaskRuns.find((run) => run.id === selectedScheduledRunId) ??
+      null,
+    [selectedScheduledRunId, selectedScheduledTaskRuns],
+  );
+
+  const latestScheduledRunByTaskId = useMemo(() => {
+    const map = new Map<string, ScheduledTaskRun>();
+    for (const run of scheduledRuns) {
+      const existing = map.get(run.taskId);
+      if (!existing || run.triggeredAt > existing.triggeredAt) {
+        map.set(run.taskId, run);
+      }
+    }
+    return map;
+  }, [scheduledRuns]);
+
+  useEffect(() => {
+    if (scheduledGroups.length === 0) {
+      setSelectedScheduledTaskId(null);
+      return;
+    }
+    const exists = scheduledGroups.some((group) =>
+      group.tasks.some((task) => task.id === selectedScheduledTaskId),
+    );
+    if (!exists) {
+      const fallbackTaskId =
+        workspace.selectedScheduledTaskId &&
+        scheduledGroups.some((group) =>
+          group.tasks.some((task) => task.id === workspace.selectedScheduledTaskId),
+        )
+          ? workspace.selectedScheduledTaskId
+          : (scheduledGroups[0]?.tasks[0]?.id ?? null);
+      setSelectedScheduledTaskId(fallbackTaskId);
+    }
+  }, [scheduledGroups, selectedScheduledTaskId, workspace.selectedScheduledTaskId]);
+
+  useEffect(() => {
+    if (selectedScheduledTaskRuns.length === 0) {
+      setSelectedScheduledRunId(null);
+      return;
+    }
+    const exists = selectedScheduledTaskRuns.some(
+      (run) => run.id === selectedScheduledRunId,
+    );
+    if (!exists) {
+      setSelectedScheduledRunId(selectedScheduledTaskRuns[0]?.id ?? null);
+    }
+  }, [selectedScheduledRunId, selectedScheduledTaskRuns]);
+
+  useEffect(() => {
+    if (selectedScheduledTaskId && workspace.tab === "scheduled") {
+      openWorkspaceScheduledTask(selectedScheduledTaskId, selectedScheduledRunId);
+    }
+  }, [selectedScheduledRunId, selectedScheduledTaskId, workspace.tab]);
+
+  useEffect(() => {
+    if (!selectedScheduledTask) {
+      setScheduledEditState(null);
+      setScheduledEditing(false);
+      return;
+    }
+    if (!scheduledEditing) {
+      setScheduledEditState(buildScheduledEditState(selectedScheduledTask));
+    }
+  }, [scheduledEditing, selectedScheduledTask]);
+
+  const selectedSessionId = workspace.selectedSessionId;
 
   // Panel resize state (persisted to localStorage)
   const [panelWidth, setPanelWidth] = useState(() => {
@@ -870,6 +1125,7 @@ function SessionsPage() {
   useEffect(() => {
     if (selectedSessionId !== activeSessionRef.current) {
       if (selectedSessionId) {
+        openWorkspaceSession(selectedSessionId, workspace.sessionSubview);
         setActiveSessionId(selectedSessionId);
         setMountedSessions((prev) => {
           const filtered = prev.filter((id) => id !== selectedSessionId);
@@ -882,7 +1138,7 @@ function SessionsPage() {
         setActiveSessionId(null);
       }
     }
-  }, [selectedSessionId]);
+  }, [selectedSessionId, workspace.sessionSubview]);
 
   useEffect(() => {
     if (!swipeForwardSessionId) return;
@@ -899,6 +1155,7 @@ function SessionsPage() {
       if (!options?.preserveForward) {
         setSwipeForwardSessionId(null);
       }
+      openWorkspaceSession(sessionId, "chat");
       setActiveSessionId(sessionId);
       setMountedSessions((prev) => {
         const filtered = prev.filter((id) => id !== sessionId);
@@ -909,13 +1166,13 @@ function SessionsPage() {
       });
       setSettingsOpen(false);
       setNewSessionOpen(false);
-      navigate({ to: "/sessions/$sessionId", params: { sessionId } });
     },
     [navigate],
   );
 
   const handleSelectSession = useCallback(
     (sessionId: string) => {
+      openWorkspaceSession(sessionId, "chat");
       openSession(sessionId);
     },
     [openSession],
@@ -925,8 +1182,9 @@ function SessionsPage() {
     if (activeSessionRef.current) {
       setSwipeForwardSessionId(activeSessionRef.current);
     }
+    selectWorkspaceTab("sessions");
     setActiveSessionId(null);
-    navigate({ to: "/sessions" });
+    navigate({ to: "/" });
   }, [navigate]);
 
   const handleSessionDeleted = useCallback(
@@ -935,7 +1193,7 @@ function SessionsPage() {
       setSwipeForwardSessionId((prev) => (prev === deletedId ? null : prev));
       if (activeSessionRef.current === deletedId) {
         setActiveSessionId(null);
-        navigate({ to: "/sessions" });
+        navigate({ to: "/" });
       }
     },
     [navigate],
@@ -1056,7 +1314,7 @@ function SessionsPage() {
       setMountedSessions((prev) => prev.filter((sid) => !idSet.has(sid)));
       if (activeSessionId && idSet.has(activeSessionId)) {
         setActiveSessionId(null);
-        navigate({ to: "/sessions" });
+        navigate({ to: "/" });
       }
     }
     handleExitBatchMode();
@@ -1169,7 +1427,7 @@ function SessionsPage() {
     if (!narrowViewport) {
       setNewSessionOpen(false);
       setActiveSessionId(null);
-      navigate({ to: "/sessions" });
+      navigate({ to: "/" });
       return;
     }
 
@@ -1183,7 +1441,7 @@ function SessionsPage() {
     if (!narrowViewport) {
       setNewSessionOpen(false);
       setActiveSessionId(null);
-      navigate({ to: "/sessions" });
+      navigate({ to: "/" });
       return;
     }
 
@@ -1200,10 +1458,8 @@ function SessionsPage() {
   }, [openSettingsOverlay]);
 
   const isSubRoute =
-    activeSessionId !== null &&
-    pathname !== `/sessions/${activeSessionId}` &&
-    pathname !== `/sessions/${activeSessionId}/` &&
-    pathname.startsWith(`/sessions/${activeSessionId}/`);
+    activeSessionId !== null && workspace.sessionSubview !== "chat";
+  const isSessionsIndex = activeSessionId === null && !hasOverlay;
 
   const swipeNavEnabled = narrowViewport;
   const canSwipeBackToList =
@@ -1279,7 +1535,7 @@ function SessionsPage() {
         }
         setSwipeForwardSessionId(capability.activeSessionId);
         setActiveSessionId(null);
-        navigate({ to: "/sessions" });
+        navigate({ to: "/" });
         return true;
       }
       if (!capability.canForward || !capability.forwardSessionId) {
@@ -1526,7 +1782,7 @@ function SessionsPage() {
     if (activeSessionRef.current) {
       setSwipeForwardSessionId(activeSessionRef.current);
       setActiveSessionId(null);
-      navigate({ to: "/sessions" });
+      navigate({ to: "/" });
       return;
     }
 
@@ -1555,15 +1811,23 @@ function SessionsPage() {
     onToggleMobileSessionPane: toggleMobileSessionPane,
   });
 
-  const leftPanelVisible = collapsed
+  const isScheduledTab = workspace.tab === "scheduled";
+  const isSessionsTab = workspace.tab === "sessions";
+  const effectiveCollapsed = isSessionsTab ? collapsed : false;
+  const scheduledIndexVisible = !selectedScheduledTaskId;
+  const leftPanelVisible = effectiveCollapsed
     ? isSessionsIndex && !hasOverlay
       ? "flex lg:hidden"
       : "hidden"
-    : isSessionsIndex && !hasOverlay
-      ? "flex"
-      : "hidden lg:flex";
+    : isScheduledTab
+      ? scheduledIndexVisible && !hasOverlay
+        ? "flex"
+        : "hidden lg:flex"
+      : isSessionsIndex && !hasOverlay
+        ? "flex"
+        : "hidden lg:flex";
   const showDesktopNewSessionPane =
-    !narrowViewport && isSessionsIndex && !hasOverlay;
+    !narrowViewport && isSessionsTab && activeSessionId === null && !hasOverlay;
   const leftPanelContentScale = narrowViewport ? 1 : 1.08;
   const leftPanelContentStyle = {
     width: `${100 / leftPanelContentScale}%`,
@@ -1571,8 +1835,8 @@ function SessionsPage() {
     transform: `scale(${leftPanelContentScale})`,
     transformOrigin: "top left",
   };
-  const showSidebarSearchRow = !collapsed;
-  const showSidebarBatchActions = !collapsed;
+  const showSidebarSearchRow = !effectiveCollapsed;
+  const showSidebarBatchActions = !effectiveCollapsed && isSessionsTab;
 
   useEffect(() => {
     if (batchMode && !showSidebarBatchActions) {
@@ -1638,32 +1902,117 @@ function SessionsPage() {
                 </div>
               </div>
               <div className="mt-2 flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] p-1">
-                <Link
-                  to="/sessions"
-                  className="inline-flex items-center rounded-full bg-[var(--app-fg)] px-3 py-1.5 text-xs font-medium text-[var(--app-bg)] transition-colors"
+                <button
+                  type="button"
+                  onClick={() => selectWorkspaceTab("sessions")}
+                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${workspace.tab === "sessions" ? "bg-[var(--app-fg)] text-[var(--app-bg)]" : "text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"}`}
                 >
                   Sessions
-                </Link>
-                <Link
-                  to="/scheduled"
-                  className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectWorkspaceTab("scheduled")}
+                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${workspace.tab === "scheduled" ? "bg-[var(--app-fg)] text-[var(--app-bg)]" : "text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"}`}
                 >
                   Scheduled
-                </Link>
+                </button>
               </div>
             </div>
           </div>
 
           <div className={`flex-1 min-h-0 ${showSidebarSearchRow ? "mb-2" : ""}`}>
-            {error ? (
+            {isScheduledTab ? (
+              <div className="flex h-full min-h-0 flex-col">
+                {scheduledError ? (
+                  <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
+                    <div className="text-sm text-red-600">{scheduledError}</div>
+                  </div>
+                ) : null}
+                <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+                  {scheduledLoading ? (
+                    <div className="px-2 py-3 text-sm text-[var(--app-hint)]">
+                      Loading scheduled tasks...
+                    </div>
+                  ) : null}
+                  {!scheduledLoading && !scheduledError && scheduledGroups.length === 0 ? (
+                    <div className="px-2 py-3 text-sm text-[var(--app-hint)]">
+                      No scheduled tasks yet.
+                    </div>
+                  ) : null}
+                  {scheduledGroups.map((group) => (
+                    <div key={group.machineId} className="mb-4">
+                      <div className="px-2 pb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--app-hint)]">
+                        {group.title}
+                      </div>
+                      <div className="space-y-1">
+                        {group.tasks.map((task) => {
+                          const latestRun = latestScheduledRunByTaskId.get(task.id);
+                          const selected = task.id === selectedScheduledTaskId;
+                          return (
+                            <button
+                              key={task.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedScheduledTaskId(task.id);
+                                setSelectedScheduledRunId(latestRun?.id ?? null);
+                                openWorkspaceScheduledTask(task.id, latestRun?.id ?? null);
+                              }}
+                              className={
+                                "w-full rounded-2xl border px-3 py-3 text-left transition-colors " +
+                                (selected
+                                  ? "border-[var(--app-fg)] bg-[var(--app-secondary-bg)]"
+                                  : "border-transparent hover:border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]")
+                              }
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-sm font-medium text-[var(--app-fg)]">
+                                    {task.title}
+                                  </div>
+                                  <div className="mt-1 truncate text-xs text-[var(--app-hint)]">
+                                    {task.targetDirectory}
+                                  </div>
+                                </div>
+                                <span
+                                  className={
+                                    "rounded-full px-2 py-0.5 text-[11px] font-medium " +
+                                    (task.paused
+                                      ? "bg-amber-500/10 text-amber-600"
+                                      : "bg-emerald-500/10 text-emerald-600")
+                                  }
+                                >
+                                  {task.paused ? "paused" : task.status}
+                                </span>
+                              </div>
+                              <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
+                                <span>{task.scheduleType}</span>
+                                <span>·</span>
+                                <span>{task.agentFlavor}</span>
+                                <span>·</span>
+                                <span>next {formatScheduledDateTime(task.nextRunAt)}</span>
+                              </div>
+                              {latestRun ? (
+                                <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
+                                  <ScheduledRunStatusBadge status={latestRun.status} />
+                                  <span>{formatScheduledDateTime(latestRun.triggeredAt)}</span>
+                                </div>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : error ? (
               <div className="mx-auto w-full max-w-full lg:max-w-content px-3 py-2">
                 <div className="text-sm text-red-600">{error}</div>
               </div>
-            ) : null}
-            {!error &&
-            !isLoading &&
-            normalizedSessionSearch &&
-            displaySessions.length === 0 ? (
+            ) : !error &&
+              !isLoading &&
+              normalizedSessionSearch &&
+              displaySessions.length === 0 ? (
               <div className="mx-auto flex w-full max-w-full justify-center px-3 py-4 text-center text-sm text-[var(--app-hint)] lg:max-w-content">
                 {t("sessions.search.noMatch")}
               </div>
@@ -1692,14 +2041,20 @@ function SessionsPage() {
             <div className="mx-auto w-full max-w-full px-3 pb-3 lg:max-w-content">
               <div className="flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-1.5">
                 <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center">
-                  {hasSessionSearch ? (
+                  {(isScheduledTab ? scheduledSearch.length > 0 : hasSessionSearch) ? (
                     <button
                       type="button"
-                      onClick={() => setSessionSearch("")}
+                      onClick={() => {
+                        if (isScheduledTab) {
+                          setScheduledSearch("");
+                        } else {
+                          setSessionSearch("");
+                        }
+                      }}
                       onMouseDown={(event) => event.preventDefault()}
                       className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                      title={t("sessions.search.clear")}
-                      aria-label={t("sessions.search.clear")}
+                      title={isScheduledTab ? "Clear scheduled search" : t("sessions.search.clear")}
+                      aria-label={isScheduledTab ? "Clear scheduled search" : t("sessions.search.clear")}
                     >
                       <SearchClearIcon className="h-3.5 w-3.5" />
                     </button>
@@ -1708,17 +2063,23 @@ function SessionsPage() {
                   )}
                 </div>
                 <input
-                  value={sessionSearch}
-                  onChange={(event) => setSessionSearch(event.target.value)}
-                  placeholder={t("sessions.search.placeholder")}
-                  aria-label={t("sessions.search.placeholder")}
+                  value={isScheduledTab ? scheduledSearch : sessionSearch}
+                  onChange={(event) => {
+                    if (isScheduledTab) {
+                      setScheduledSearch(event.target.value);
+                    } else {
+                      setSessionSearch(event.target.value);
+                    }
+                  }}
+                  placeholder={isScheduledTab ? "Search scheduled tasks" : t("sessions.search.placeholder")}
+                  aria-label={isScheduledTab ? "Search scheduled tasks" : t("sessions.search.placeholder")}
                   className="min-w-0 flex-1 bg-transparent text-sm text-[var(--app-fg)] placeholder:text-[var(--app-hint)] focus:outline-none"
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
                 />
                 <div className="flex shrink-0 items-center gap-0.5">
-                  {batchMode && showSidebarBatchActions ? (
+                  {isScheduledTab ? null : batchMode && showSidebarBatchActions ? (
                     <>
                       <button
                         type="button"
@@ -1853,7 +2214,7 @@ function SessionsPage() {
       </div>
 
       {/* Drag handle (PC only, when not collapsed) */}
-      {!collapsed && (
+      {!effectiveCollapsed && (
         <div
           className="hidden lg:flex items-center w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-[var(--app-link)]/20 active:bg-[var(--app-link)]/40 transition-colors"
           onPointerDown={handleDragStart}
@@ -1861,7 +2222,7 @@ function SessionsPage() {
       )}
 
       {/* Expand sidebar strip (PC only, when collapsed) */}
-      {collapsed && (
+      {effectiveCollapsed && isSessionsTab && (
         <div className="hidden lg:flex flex-col h-[100dvh] shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
           {/* Top: expand button */}
           <div className="flex shrink-0 justify-center px-2 py-2">
@@ -1884,13 +2245,14 @@ function SessionsPage() {
             >
               <NewChatIcon className="h-[18px] w-[18px]" />
             </button>
-            <Link
-              to="/scheduled"
+            <button
+              type="button"
+              onClick={() => selectWorkspaceTab("scheduled")}
               className="inline-flex rounded-full p-1.5 text-[var(--app-hint)] transition-colors hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
               title="Scheduled"
             >
               <BulbIcon className="h-[18px] w-[18px]" />
-            </Link>
+            </button>
             <button
               type="button"
               onClick={handleQuickNewSession}
@@ -1947,55 +2309,278 @@ function SessionsPage() {
 
       {/* Right panel */}
       <div
-        className={`${isSessionsIndex && !hasOverlay ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!collapsed ? "lg:pr-[7px]" : ""}` : ""}`}
+        className={`${((isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay) ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}` : ""}`}
       >
-        <div className="flex-1 min-h-0">
-          {showDesktopNewSessionPane ? (
-            <NewSessionPanel onClose={() => {}} onOpenSettings={openSettingsOverlay} />
-          ) : (
-            <Outlet />
-          )}
-        </div>
+        {isScheduledTab ? (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {!selectedScheduledTask ? (
+              <div className="flex h-full items-center justify-center px-6 text-sm text-[var(--app-hint)]">
+                Select a scheduled task to manage it.
+              </div>
+            ) : (
+              <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 py-4">
+                <div className="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-panel-bg)] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {scheduledEditing && scheduledEditState ? (
+                        <input
+                          value={scheduledEditState.title}
+                          onChange={(event) =>
+                            setScheduledEditState((current) =>
+                              current ? { ...current, title: event.target.value } : current,
+                            )
+                          }
+                          className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-base font-semibold text-[var(--app-fg)]"
+                        />
+                      ) : (
+                        <h1 className="truncate text-xl font-semibold text-[var(--app-fg)]">
+                          {selectedScheduledTask.title}
+                        </h1>
+                      )}
+                      <p className="mt-1 text-sm text-[var(--app-hint)]">
+                        Task overview and management. Session details only appear after you pick a run below.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {!scheduledEditing ? (
+                        <>
+                          <button type="button" disabled={scheduledPending} onClick={() => setScheduledEditing(true)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Edit</button>
+                          <button type="button" disabled={scheduledPending} onClick={() => { if (!selectedScheduledTask) return; void updateScheduledTask({ taskId: selectedScheduledTask.id, paused: !selectedScheduledTask.paused }); }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{selectedScheduledTask.paused ? "Resume" : "Pause"}</button>
+                          <button type="button" disabled={scheduledPending || selectedScheduledTask.status !== "active" || selectedScheduledTask.paused} onClick={() => void cancelScheduledTask(selectedScheduledTask.id)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Cancel</button>
+                          <button type="button" disabled={scheduledPending} onClick={() => void deleteScheduledTask(selectedScheduledTask.id)} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50">Delete</button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            disabled={scheduledPending || !scheduledEditState}
+                            onClick={() => {
+                              if (!selectedScheduledTask || !scheduledEditState) return;
+                              const parsedRunAt = Date.parse(scheduledEditState.runAt);
+                              const body: Record<string, unknown> = {
+                                taskId: selectedScheduledTask.id,
+                                title: scheduledEditState.title,
+                                prompt: scheduledEditState.prompt,
+                                targetDirectory: scheduledEditState.targetDirectory,
+                                model: scheduledEditState.model.trim() || undefined,
+                                scheduleType: scheduledEditState.scheduleType,
+                                paused: scheduledEditState.paused,
+                              };
+                              if (scheduledEditState.scheduleType === "once") {
+                                if (Number.isFinite(parsedRunAt)) {
+                                  body.runAt = parsedRunAt;
+                                }
+                              } else {
+                                body.cron = scheduledEditState.cron.trim();
+                              }
+                              void updateScheduledTask(body).then(() => {
+                                setScheduledEditing(false);
+                              });
+                            }}
+                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                          >
+                            Save
+                          </button>
+                          <button type="button" disabled={scheduledPending} onClick={() => { setScheduledEditState(buildScheduledEditState(selectedScheduledTask)); setScheduledEditing(false); }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Cancel Edit</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Status</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.status}{selectedScheduledTask.paused ? " / paused" : ""}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Schedule</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.scheduleType}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Agent</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedScheduledTask.agentFlavor}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Created</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.createdAt)}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Next Run</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.nextRunAt)}</div></div>
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Last Run</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledTask.lastRunAt)}</div></div>
+                  </div>
 
-        {/* Session views (keep-alive) */}
-        {mountedSessions.map((sid) => (
-          <div
-            key={sid}
-            className={`absolute inset-0 z-30 bg-[var(--app-bg)] transition-opacity duration-200 ${sid === activeSessionId && !isSubRoute ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-          >
-            <SessionView
-              sessionId={sid}
-              onBack={handleSessionBack}
-              onSessionDeleted={() => handleSessionDeleted(sid)}
-              isDark={isDark}
-              onToggleTheme={toggleTheme}
-              onOpenSettings={() => {
-                toggleSettingsOverlay();
-              }}
-              onOpenNewSession={toggleNewSessionOverlay}
-            />
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Prompt</div>
+                      {scheduledEditing && scheduledEditState ? (
+                        <textarea value={scheduledEditState.prompt} onChange={(event) => setScheduledEditState((current) => current ? { ...current, prompt: event.target.value } : current)} rows={6} className="mt-2 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" />
+                      ) : (
+                        <div className="mt-2 whitespace-pre-wrap text-sm text-[var(--app-fg)]">{selectedScheduledTask.prompt}</div>
+                      )}
+                    </div>
+                    <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Config</div>
+                      <div className="mt-2 space-y-2 text-sm text-[var(--app-fg)]">
+                        <div><span className="text-[var(--app-hint)]">Directory:</span> {scheduledEditing && scheduledEditState ? <input value={scheduledEditState.targetDirectory} onChange={(event) => setScheduledEditState((current) => current ? { ...current, targetDirectory: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" /> : <span className="break-all"> {selectedScheduledTask.targetDirectory}</span>}</div>
+                        <div><span className="text-[var(--app-hint)]">Model:</span> {scheduledEditing && scheduledEditState ? <input value={scheduledEditState.model} onChange={(event) => setScheduledEditState((current) => current ? { ...current, model: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" /> : <span> {selectedScheduledTask.model ?? "-"}</span>}</div>
+                        <div><span className="text-[var(--app-hint)]">Timezone:</span> <span> {selectedScheduledTask.timezone}</span></div>
+                        <div><span className="text-[var(--app-hint)]">Task ID:</span> <span className="break-all"> {selectedScheduledTask.id}</span></div>
+                        {scheduledEditing && scheduledEditState ? (
+                          <>
+                            <label className="block">
+                              <span className="text-[var(--app-hint)]">Schedule Type</span>
+                              <select value={scheduledEditState.scheduleType} onChange={(event) => setScheduledEditState((current) => current ? { ...current, scheduleType: event.target.value as "once" | "cron" } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]">
+                                <option value="once">once</option>
+                                <option value="cron">cron</option>
+                              </select>
+                            </label>
+                            {scheduledEditState.scheduleType === "once" ? (
+                              <label className="block">
+                                <span className="text-[var(--app-hint)]">Run At</span>
+                                <input type="datetime-local" step={1} value={scheduledEditState.runAt} onChange={(event) => setScheduledEditState((current) => current ? { ...current, runAt: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" />
+                              </label>
+                            ) : (
+                              <label className="block">
+                                <span className="text-[var(--app-hint)]">Cron</span>
+                                <input value={scheduledEditState.cron} onChange={(event) => setScheduledEditState((current) => current ? { ...current, cron: event.target.value } : current)} className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]" />
+                              </label>
+                            )}
+                          </>
+                        ) : (
+                          <div><span className="text-[var(--app-hint)]">Expression:</span> <span> {selectedScheduledTask.scheduleSpec.cron ?? formatScheduledDateTime(selectedScheduledTask.scheduleSpec.runAt)}</span></div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h2 className="text-base font-semibold text-[var(--app-fg)]">Runs</h2>
+                        <p className="text-sm text-[var(--app-hint)]">Each execution stays attached to this task. Pick one to inspect its result.</p>
+                      </div>
+                      <div className="text-sm text-[var(--app-hint)]">{selectedScheduledTaskRuns.length} runs</div>
+                    </div>
+                    {selectedScheduledTaskRuns.length === 0 ? (
+                      <div className="mt-4 rounded-2xl border border-dashed border-[var(--app-border)] px-4 py-6 text-sm text-[var(--app-hint)]">This task has not produced any runs yet.</div>
+                    ) : (
+                      <div className="mt-4 space-y-4">
+                        <div className="overflow-x-auto pb-1">
+                          <div className="flex min-w-max gap-3">
+                            {selectedScheduledTaskRuns.map((run) => (
+                              <button key={run.id} type="button" onClick={() => { setSelectedScheduledRunId(run.id); selectWorkspaceScheduledRun(run.id); }} className={"min-w-[280px] rounded-2xl border px-4 py-3 text-left transition-colors " + (run.id === selectedScheduledRunId ? "border-[var(--app-fg)] bg-[var(--app-secondary-bg)]" : "border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]")}>
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <ScheduledRunStatusBadge status={run.status} />
+                                      <span className="text-[11px] text-[var(--app-hint)]">{formatScheduledDateTime(run.triggeredAt)}</span>
+                                    </div>
+                                    <div className="mt-2 text-xs text-[var(--app-hint)]">scheduled {formatScheduledDateTime(run.scheduledFor)}</div>
+                                    {run.sessionId ? <div className="mt-1 truncate text-xs text-[var(--app-fg)]">session {run.sessionId}</div> : null}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
+                          {!selectedScheduledRun ? (
+                            <div className="text-sm text-[var(--app-hint)]">Pick a run to inspect it.</div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-base font-semibold text-[var(--app-fg)]">Selected Run</h3>
+                                  <ScheduledRunStatusBadge status={selectedScheduledRun.status} />
+                                </div>
+                                <p className="mt-1 text-sm text-[var(--app-hint)]">The selected run owns the session detail below.</p>
+                              </div>
+                              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Triggered</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledRun.triggeredAt)}</div></div>
+                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Finished</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatScheduledDateTime(selectedScheduledRun.finishedAt)}</div></div>
+                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Run ID</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedScheduledRun.id}</div></div>
+                                <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Session</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedScheduledRun.sessionId ?? "-"}</div></div>
+                              </div>
+                              {selectedScheduledRun.error ? <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">{selectedScheduledRun.error}</div> : null}
+                              {selectedScheduledRun.resultSummary ? <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">{selectedScheduledRun.resultSummary}</div> : null}
+                              {selectedScheduledRun.sessionId ? (
+                                <div className="rounded-2xl border border-[var(--app-border)] px-0 py-0 overflow-hidden">
+                                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
+                                    <div>
+                                      <div className="text-sm font-medium text-[var(--app-fg)]">Session Detail</div>
+                                      <div className="mt-1 text-sm text-[var(--app-hint)]">Embedded session view for the selected run.</div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button type="button" onClick={() => openWorkspaceSession(selectedScheduledRun.sessionId as string, "chat")} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open Fullscreen</button>
+                                      <Link to="/sessions/$sessionId" params={{ sessionId: selectedScheduledRun.sessionId as string }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open via Deep Link</Link>
+                                    </div>
+                                  </div>
+                                  <div className="h-[760px] bg-[var(--app-bg)]">
+                                    <EmbeddedSessionView sessionId={selectedScheduledRun.sessionId as string} onBack={() => setSelectedScheduledRunId(null)} />
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        ))}
-
-        {/* Settings overlay */}
-        <div
-          className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${settingsOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        >
+        ) : (
+          <>
+            <div className="flex-1 min-h-0">
+              {showDesktopNewSessionPane ? (
+                <NewSessionPanel onClose={() => {}} onOpenSettings={openSettingsOverlay} />
+              ) : (
+                <Outlet />
+              )}
+            </div>
+            {mountedSessions.map((sid) => (
+              <div key={sid} className={`absolute inset-0 z-30 bg-[var(--app-bg)] transition-opacity duration-200 ${sid === activeSessionId && !isSubRoute ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                {workspace.sessionSubview === "files" ? (
+                  <FilesPanel sessionId={sid} />
+                ) : workspace.sessionSubview === "terminal" ? (
+                  <TerminalPanel sessionId={sid} />
+                ) : (
+                  <SessionView sessionId={sid} onBack={handleSessionBack} onSessionDeleted={() => handleSessionDeleted(sid)} isDark={isDark} onToggleTheme={toggleTheme} onOpenSettings={() => { toggleSettingsOverlay(); }} onOpenNewSession={toggleNewSessionOverlay} />
+                )}
+              </div>
+            ))}
+          </>
+        )}
+        <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${settingsOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
           <SettingsPanel onClose={closeSettingsOverlay} />
         </div>
-
-        {/* New session overlay */}
         {narrowViewport && newSessionOpen ? (
           <div className="absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 opacity-100">
-            <NewSessionPanel
-              onClose={() => setNewSessionOpen(false)}
-              onOpenSettings={openSettingsOverlay}
-            />
+            <NewSessionPanel onClose={() => setNewSessionOpen(false)} onOpenSettings={openSettingsOverlay} />
           </div>
         ) : null}
       </div>
     </div>
   );
+}
+
+function WorkspaceRootPage() {
+  return <SessionsPage />;
+}
+
+function SessionsCompatIndexPage() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    selectWorkspaceTab("sessions");
+    void navigate({ to: "/", replace: true });
+  }, [navigate]);
+  return null;
+}
+
+function ScheduledCompatPage() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    selectWorkspaceTab("scheduled");
+    void navigate({ to: "/", replace: true });
+  }, [navigate]);
+  return null;
+}
+
+function SessionCompatPage(props: { subview: "chat" | "files" | "terminal" }) {
+  const navigate = useNavigate();
+  const { sessionId } = useParams({ from: "/sessions/$sessionId" });
+  useEffect(() => {
+    openWorkspaceSession(sessionId, props.subview);
+    void navigate({ to: "/", replace: true });
+  }, [navigate, props.subview, sessionId]);
+  return null;
 }
 
 function SessionsIndexPage() {
@@ -2123,10 +2708,8 @@ function NewSessionPanel(props: { onClose: () => void; onOpenSettings?: () => vo
         });
       }
       props.onClose();
-      navigate({
-        to: "/sessions/$sessionId",
-        params: { sessionId },
-      });
+      openWorkspaceSession(sessionId, "chat");
+      navigate({ to: "/" });
     },
     [navigate, props.onClose, queryClient],
   );
@@ -2145,13 +2728,13 @@ function NewSessionPanel(props: { onClose: () => void; onOpenSettings?: () => vo
 }
 
 function NewSessionPage() {
-  const goBack = useAppGoBack();
+  const navigate = useNavigate();
+  const goBack = useCallback(() => {
+    void navigate({ to: "/", replace: true });
+  }, [navigate]);
   return <NewSessionPanel onClose={goBack} />;
 }
 
-function ScheduledTasksPage() {
-  return <ScheduledPage />;
-}
 
 const rootRoute = createRootRoute({
   component: App,
@@ -2160,25 +2743,31 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: () => <Navigate to="/sessions" replace />,
+  component: WorkspaceRootPage,
 });
 
 const sessionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/sessions",
-  component: SessionsPage,
+  component: Outlet,
 });
 
 const sessionsIndexRoute = createRoute({
   getParentRoute: () => sessionsRoute,
   path: "/",
-  component: SessionsIndexPage,
+  component: SessionsCompatIndexPage,
 });
 
 const sessionDetailRoute = createRoute({
   getParentRoute: () => sessionsRoute,
   path: "$sessionId",
-  component: SessionDetailRoute,
+  component: Outlet,
+});
+
+const sessionChatCompatRoute = createRoute({
+  getParentRoute: () => sessionDetailRoute,
+  path: "/",
+  component: () => <SessionCompatPage subview="chat" />,
 });
 
 const sessionFilesRoute = createRoute({
@@ -2197,13 +2786,13 @@ const sessionFilesRoute = createRoute({
 
     return tab ? { tab } : {};
   },
-  component: FilesPage,
+  component: () => <SessionCompatPage subview="files" />,
 });
 
 const sessionTerminalRoute = createRoute({
   getParentRoute: () => sessionDetailRoute,
   path: "terminal",
-  component: TerminalPage,
+  component: () => <SessionCompatPage subview="terminal" />,
 });
 
 type SessionFileSearch = {
@@ -2253,7 +2842,7 @@ const newSessionRoute = createRoute({
 const scheduledRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/scheduled",
-  component: ScheduledTasksPage,
+  component: ScheduledCompatPage,
 });
 
 export const routeTree = rootRoute.addChildren([
@@ -2263,6 +2852,7 @@ export const routeTree = rootRoute.addChildren([
     sessionsIndexRoute,
     newSessionRoute,
     sessionDetailRoute.addChildren([
+      sessionChatCompatRoute,
       sessionTerminalRoute,
       sessionFilesRoute,
       sessionFileRoute,

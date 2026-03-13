@@ -6,6 +6,12 @@ import type { Machine, ScheduledTask, ScheduledTaskRun } from '@/types/api'
 import { useScheduledTasks } from '@/hooks/queries/useScheduledTasks'
 import { useScheduledTaskActions } from '@/hooks/mutations/useScheduledTaskActions'
 import { EmbeddedSessionView } from '@/components/EmbeddedSessionView'
+import {
+    openWorkspaceScheduledTask,
+    selectWorkspaceScheduledRun,
+    selectWorkspaceTab,
+    useWorkspaceState,
+} from '@/lib/workspace-store'
 
 function getMachineTitle(machine: Machine | null | undefined): string {
     if (machine?.metadata?.displayName) return machine.metadata.displayName
@@ -91,10 +97,11 @@ function groupTasksByMachine(tasks: ScheduledTask[], machines: Machine[]): Machi
         .sort((left, right) => right.latestAt - left.latestAt)
 }
 
-function SidebarTab(props: { active: boolean; label: string; href: '/sessions' | '/scheduled' }) {
+function SidebarTab(props: { active: boolean; label: string; onClick: () => void }) {
     return (
-        <Link
-            to={props.href}
+        <button
+            type="button"
+            onClick={props.onClick}
             className={
                 'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ' +
                 (props.active
@@ -103,7 +110,7 @@ function SidebarTab(props: { active: boolean; label: string; href: '/sessions' |
             }
         >
             {props.label}
-        </Link>
+        </button>
     )
 }
 
@@ -126,6 +133,7 @@ export function ScheduledWorkspace(props: {
 }) {
     const { tasks, runs, isLoading, error } = useScheduledTasks(props.api)
     const { cancelScheduledTask, deleteScheduledTask, updateScheduledTask, isPending } = useScheduledTaskActions(props.api)
+    const workspace = useWorkspaceState()
     const [search, setSearch] = useState('')
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
     const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
@@ -164,9 +172,12 @@ export function ScheduledWorkspace(props: {
         }
         const exists = groups.some((group) => group.tasks.some((task) => task.id === selectedTaskId))
         if (!exists) {
-            setSelectedTaskId(groups[0]?.tasks[0]?.id ?? null)
+            const fallbackTaskId = workspace.selectedScheduledTaskId && groups.some((group) => group.tasks.some((task) => task.id === workspace.selectedScheduledTaskId))
+                ? workspace.selectedScheduledTaskId
+                : (groups[0]?.tasks[0]?.id ?? null)
+            setSelectedTaskId(fallbackTaskId)
         }
-    }, [groups, selectedTaskId])
+    }, [groups, selectedTaskId, workspace.selectedScheduledTaskId])
 
     const selectedTask = useMemo(
         () => filteredTasks.find((task) => task.id === selectedTaskId) ?? null,
@@ -207,6 +218,16 @@ export function ScheduledWorkspace(props: {
         () => selectedTaskRuns.find((run) => run.id === selectedRunId) ?? null,
         [selectedRunId, selectedTaskRuns]
     )
+
+    useEffect(() => {
+        selectWorkspaceTab('scheduled')
+    }, [])
+
+    useEffect(() => {
+        if (selectedTaskId) {
+            openWorkspaceScheduledTask(selectedTaskId, selectedRunId)
+        }
+    }, [selectedRunId, selectedTaskId])
 
     useEffect(() => {
         if (!selectedTask) {
@@ -277,8 +298,8 @@ export function ScheduledWorkspace(props: {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] p-1">
-                        <SidebarTab active={false} label="Sessions" href="/sessions" />
-                        <SidebarTab active label="Scheduled" href="/scheduled" />
+                        <SidebarTab active={false} label="Sessions" onClick={() => selectWorkspaceTab('sessions')} />
+                        <SidebarTab active label="Scheduled" onClick={() => selectWorkspaceTab('scheduled')} />
                     </div>
                     <div className="mt-3 flex items-center gap-2 rounded-md bg-[var(--app-subtle-bg)] px-3 py-2">
                         <input
@@ -313,6 +334,7 @@ export function ScheduledWorkspace(props: {
                                             onClick={() => {
                                                 setSelectedTaskId(task.id)
                                                 setSelectedRunId(latestRun?.id ?? null)
+                                                openWorkspaceScheduledTask(task.id, latestRun?.id ?? null)
                                             }}
                                             className={
                                                 'w-full rounded-2xl border px-3 py-3 text-left transition-colors ' +
@@ -470,7 +492,10 @@ export function ScheduledWorkspace(props: {
                                                 <button
                                                     key={run.id}
                                                     type="button"
-                                                    onClick={() => setSelectedRunId(run.id)}
+                                                    onClick={() => {
+                                                        setSelectedRunId(run.id)
+                                                        selectWorkspaceScheduledRun(run.id)
+                                                    }}
                                                     className={
                                                         'min-w-[280px] rounded-2xl border px-4 py-3 text-left transition-colors ' +
                                                         (run.id === selectedRunId
@@ -528,7 +553,7 @@ export function ScheduledWorkspace(props: {
                                                                 {props.onOpenSession ? (
                                                                     <button type="button" onClick={() => props.onOpenSession?.(selectedRun.sessionId as string)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open Fullscreen</button>
                                                                 ) : null}
-                                                                <Link to="/sessions/$sessionId" params={{ sessionId: selectedRun.sessionId }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open Route</Link>
+                                                                <Link to="/sessions/$sessionId" params={{ sessionId: selectedRun.sessionId }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open via Deep Link</Link>
                                                             </div>
                                                         </div>
                                                         <div className="h-[760px] bg-[var(--app-bg)]">
