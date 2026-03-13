@@ -2065,7 +2065,7 @@ function SessionsPage() {
                   {isSessionsTab ? (
                     <span
                       aria-hidden="true"
-                      className="absolute bottom-0 left-[1px] right-[1px] h-[2px] bg-[var(--app-bg)]"
+                      className="absolute -bottom-px left-0 right-0 h-[3px] bg-[var(--app-bg)]"
                     />
                   ) : null}
                 </button>
@@ -2079,7 +2079,7 @@ function SessionsPage() {
                   {isScheduledTab ? (
                     <span
                       aria-hidden="true"
-                      className="absolute bottom-0 left-[1px] right-[1px] h-[2px] bg-[var(--app-bg)]"
+                      className="absolute -bottom-px left-0 right-0 h-[3px] bg-[var(--app-bg)]"
                     />
                   ) : null}
                 </button>
