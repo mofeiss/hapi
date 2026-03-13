@@ -2058,28 +2058,28 @@ function SessionsPage() {
                 <button
                   type="button"
                   onClick={() => selectWorkspaceTab("sessions")}
-                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isSessionsTab ? "z-10 -mb-px bg-[var(--app-panel-raised-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isSessionsTab ? "z-10 bg-[var(--app-panel-raised-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
                   aria-pressed={isSessionsTab}
                 >
                   <span className="relative z-[1]">{t("sessions.tab")}</span>
                   {isSessionsTab ? (
                     <span
                       aria-hidden="true"
-                      className="absolute bottom-[-1px] left-[1px] right-[1px] h-[2px] bg-[var(--app-panel-raised-bg)]"
+                      className="absolute bottom-0 left-[1px] right-[1px] h-[2px] bg-[var(--app-panel-raised-bg)]"
                     />
                   ) : null}
                 </button>
                 <button
                   type="button"
                   onClick={handleOpenScheduledTab}
-                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isScheduledTab ? "z-10 -mb-px bg-[var(--app-panel-raised-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                  className={`relative inline-flex items-center rounded-t-[12px] border border-b-0 px-4 py-2 text-xs font-semibold transition-colors ${isScheduledTab ? "z-10 bg-[var(--app-panel-raised-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
                   aria-pressed={isScheduledTab}
                 >
                   <span className="relative z-[1]">{t("scheduled.tab")}</span>
                   {isScheduledTab ? (
                     <span
                       aria-hidden="true"
-                      className="absolute bottom-[-1px] left-[1px] right-[1px] h-[2px] bg-[var(--app-panel-raised-bg)]"
+                      className="absolute bottom-0 left-[1px] right-[1px] h-[2px] bg-[var(--app-panel-raised-bg)]"
                     />
                   ) : null}
                 </button>
