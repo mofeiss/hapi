@@ -207,7 +207,7 @@ function DraftHeader(props: {
 
     return (
         <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
-            <div className="mx-auto flex h-[49px] w-full max-w-content items-center border-b border-[var(--app-border)] px-3">
+            <div className="mx-auto flex h-[47px] w-full max-w-content items-center border-b border-[var(--app-border)] px-3">
                 {shouldShowBack ? (
                     <button
                         type="button"

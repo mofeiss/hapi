@@ -3516,9 +3516,9 @@ function SessionsPage() {
       {/* Expand sidebar strip (PC only, when collapsed) */}
       {effectiveCollapsed && (
         <div className="hidden lg:flex flex-col h-[100dvh] shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
-          <div className="h-12 shrink-0" aria-hidden="true" />
+          <div className="h-[46px] shrink-0" aria-hidden="true" />
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
-          <div className="px-2 py-1.5 pt-[calc(0.375rem+3px)] shrink-0 flex flex-col items-center gap-1.5">
+          <div className="px-2 py-1.5 pt-[calc(0.375rem)] shrink-0 flex flex-col items-center gap-1.5">
             <ToggleGroup
               value={workspace.tab}
               onValueChange={(value) => {

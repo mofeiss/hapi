@@ -164,7 +164,7 @@ body {
 
 @media (hover: hover) and (pointer: fine) {
     .session-list-new-button:hover {
-        background-color: var(--app-subtle-bg);
+        background-color: var(--app-bg);
     }
 }
 

@@ -149,8 +149,8 @@ type HeaderActionGroupProps = {
 export function HeaderActionGroup(props: HeaderActionGroupProps) {
     const { t } = useTranslation()
     const newSessionButtonClassName = props.compactIcons
-        ? 'session-list-new-button flex h-8 w-8 items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]'
-        : 'session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]'
+        ? 'session-list-new-button flex h-8 w-8 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors hover:bg-[var(--app-bg)]'
+        : 'session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors hover:bg-[var(--app-bg)]'
     const actionButtonClassName = props.compactIcons
         ? 'flex h-8 w-8 items-center justify-center rounded-full'
         : 'flex h-[30px] w-[30px] items-center justify-center rounded-full'
