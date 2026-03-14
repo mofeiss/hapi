@@ -506,6 +506,522 @@ function ScheduledRunStatusBadge(props: {
     </span>
   );
 }
+
+function MobileDetailBackButton(props: {
+  label: string;
+  title?: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="border-b border-[var(--app-divider)] px-3 py-2 lg:hidden">
+      <button
+        type="button"
+        onClick={props.onClick}
+        className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"
+        aria-label={props.title ?? props.label}
+      >
+        <BackIcon className="h-4 w-4" />
+        <span className="truncate">{props.label}</span>
+      </button>
+    </div>
+  );
+}
+
+function ScheduledTaskDetailPanel({
+  task,
+  selectedRun,
+  taskRuns,
+  isEditing,
+  editState,
+  isPending,
+  onEditStateChange,
+  onSetEditing,
+  onCancelTask,
+  onDeleteTask,
+  onUpdateTask,
+  onSelectRun,
+  onOpenRunSession,
+  onBack,
+}: {
+  task: ScheduledTask;
+  selectedRun: ScheduledTaskRun | null;
+  taskRuns: ScheduledTaskRun[];
+  isEditing: boolean;
+  editState: ScheduledEditState | null;
+  isPending: boolean;
+  onEditStateChange: React.Dispatch<React.SetStateAction<ScheduledEditState | null>>;
+  onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
+  onCancelTask: (taskId: string) => Promise<unknown> | void;
+  onDeleteTask: (taskId: string) => Promise<unknown> | void;
+  onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
+  onSelectRun: (runId: string | null) => void;
+  onOpenRunSession: (sessionId: string) => void;
+  onBack?: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
+      {onBack ? (
+        <MobileDetailBackButton
+          label={t("scheduled.tab")}
+          title={t("scheduled.detail.empty")}
+          onClick={onBack}
+        />
+      ) : null}
+      <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 py-4">
+        <div className="rounded-[24px] bg-[var(--app-panel-bg)] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              {isEditing && editState ? (
+                <input
+                  value={editState.title}
+                  onChange={(event) =>
+                    onEditStateChange((current) =>
+                      current ? { ...current, title: event.target.value } : current,
+                    )
+                  }
+                  className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-base font-semibold text-[var(--app-fg)]"
+                />
+              ) : (
+                <h1 className="truncate text-xl font-semibold text-[var(--app-fg)]">
+                  {task.title}
+                </h1>
+              )}
+              <p className="mt-1 text-sm text-[var(--app-hint)]">
+                {t("scheduled.detail.summary")}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {!isEditing ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => onSetEditing(true)}
+                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                  >
+                    {t("scheduled.action.edit")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => {
+                      void onUpdateTask({
+                        taskId: task.id,
+                        paused: !task.paused,
+                      });
+                    }}
+                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                  >
+                    {task.paused
+                      ? t("scheduled.action.resume")
+                      : t("scheduled.action.pause")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPending || task.status !== "active" || task.paused}
+                    onClick={() => void onCancelTask(task.id)}
+                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                  >
+                    {t("scheduled.action.cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => void onDeleteTask(task.id)}
+                    className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50"
+                  >
+                    {t("scheduled.action.delete")}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={isPending || !editState}
+                    onClick={() => {
+                      if (!editState) return;
+                      const parsedRunAt = Date.parse(editState.runAt);
+                      const body: Record<string, unknown> = {
+                        taskId: task.id,
+                        title: editState.title,
+                        prompt: editState.prompt,
+                        targetDirectory: editState.targetDirectory,
+                        model: editState.model.trim() || undefined,
+                        scheduleType: editState.scheduleType,
+                        paused: editState.paused,
+                      };
+                      if (editState.scheduleType === "once") {
+                        if (Number.isFinite(parsedRunAt)) {
+                          body.runAt = parsedRunAt;
+                        }
+                      } else {
+                        body.cron = editState.cron.trim();
+                      }
+                      void Promise.resolve(onUpdateTask(body)).then(() => {
+                        onSetEditing(false);
+                      });
+                    }}
+                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                  >
+                    {t("scheduled.action.save")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => {
+                      onEditStateChange(buildScheduledEditState(task));
+                      onSetEditing(false);
+                    }}
+                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                  >
+                    {t("scheduled.action.cancelEdit")}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                {t("scheduled.detail.status")}
+              </div>
+              <div className="mt-1 text-sm text-[var(--app-fg)]">
+                {task.status}
+                {task.paused ? " / paused" : ""}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                {t("scheduled.detail.schedule")}
+              </div>
+              <div className="mt-1 text-sm text-[var(--app-fg)]">{task.scheduleType}</div>
+            </div>
+            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                {t("scheduled.detail.agent")}
+              </div>
+              <div className="mt-1 text-sm text-[var(--app-fg)]">{task.agentFlavor}</div>
+            </div>
+            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                {t("scheduled.detail.created")}
+              </div>
+              <div className="mt-1 text-sm text-[var(--app-fg)]">
+                {formatScheduledDateTime(task.createdAt)}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                {t("scheduled.detail.nextRun")}
+              </div>
+              <div className="mt-1 text-sm text-[var(--app-fg)]">
+                {formatScheduledDateTime(task.nextRunAt)}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                {t("scheduled.detail.lastRun")}
+              </div>
+              <div className="mt-1 text-sm text-[var(--app-fg)]">
+                {formatScheduledDateTime(task.lastRunAt)}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                {t("scheduled.detail.prompt")}
+              </div>
+              {isEditing && editState ? (
+                <textarea
+                  value={editState.prompt}
+                  onChange={(event) =>
+                    onEditStateChange((current) =>
+                      current ? { ...current, prompt: event.target.value } : current,
+                    )
+                  }
+                  rows={6}
+                  className="mt-2 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                />
+              ) : (
+                <div className="mt-2 whitespace-pre-wrap text-sm text-[var(--app-fg)]">
+                  {task.prompt}
+                </div>
+              )}
+            </div>
+            <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
+              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                {t("scheduled.detail.config")}
+              </div>
+              <div className="mt-2 space-y-2 text-sm text-[var(--app-fg)]">
+                <div>
+                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.directory")}:</span>{" "}
+                  {isEditing && editState ? (
+                    <input
+                      value={editState.targetDirectory}
+                      onChange={(event) =>
+                        onEditStateChange((current) =>
+                          current
+                            ? { ...current, targetDirectory: event.target.value }
+                            : current,
+                        )
+                      }
+                      className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                    />
+                  ) : (
+                    <span className="break-all"> {task.targetDirectory}</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.model")}:</span>{" "}
+                  {isEditing && editState ? (
+                    <input
+                      value={editState.model}
+                      onChange={(event) =>
+                        onEditStateChange((current) =>
+                          current ? { ...current, model: event.target.value } : current,
+                        )
+                      }
+                      className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                    />
+                  ) : (
+                    <span> {task.model ?? "-"}</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.timezone")}:</span>
+                  <span> {task.timezone}</span>
+                </div>
+                <div>
+                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.taskId")}:</span>
+                  <span className="break-all"> {task.id}</span>
+                </div>
+                {isEditing && editState ? (
+                  <>
+                    <label className="block">
+                      <span className="text-[var(--app-hint)]">{t("scheduled.detail.scheduleType")}</span>
+                      <select
+                        value={editState.scheduleType}
+                        onChange={(event) =>
+                          onEditStateChange((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  scheduleType: event.target.value as "once" | "cron",
+                                }
+                              : current,
+                          )
+                        }
+                        className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                      >
+                        <option value="once">once</option>
+                        <option value="cron">cron</option>
+                      </select>
+                    </label>
+                    {editState.scheduleType === "once" ? (
+                      <label className="block">
+                        <span className="text-[var(--app-hint)]">{t("scheduled.detail.runAt")}</span>
+                        <input
+                          type="datetime-local"
+                          step={1}
+                          value={editState.runAt}
+                          onChange={(event) =>
+                            onEditStateChange((current) =>
+                              current ? { ...current, runAt: event.target.value } : current,
+                            )
+                          }
+                          className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                        />
+                      </label>
+                    ) : (
+                      <label className="block">
+                        <span className="text-[var(--app-hint)]">{t("scheduled.detail.cron")}</span>
+                        <input
+                          value={editState.cron}
+                          onChange={(event) =>
+                            onEditStateChange((current) =>
+                              current ? { ...current, cron: event.target.value } : current,
+                            )
+                          }
+                          className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                        />
+                      </label>
+                    )}
+                  </>
+                ) : (
+                  <div>
+                    <span className="text-[var(--app-hint)]">{t("scheduled.detail.expression")}:</span>
+                    <span>
+                      {" "}
+                      {task.scheduleSpec.cron ?? formatScheduledDateTime(task.scheduleSpec.runAt)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--app-fg)]">
+                  {t("scheduled.detail.runs")}
+                </h2>
+                <p className="text-sm text-[var(--app-hint)]">{t("scheduled.detail.runsHint")}</p>
+              </div>
+              <div className="text-sm text-[var(--app-hint)]">{taskRuns.length} runs</div>
+            </div>
+            {taskRuns.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-[var(--app-border)] px-4 py-6 text-sm text-[var(--app-hint)]">
+                {t("scheduled.detail.runsEmpty")}
+              </div>
+            ) : (
+              <div className="mt-4 overflow-x-auto pb-1">
+                <div className="flex min-w-max gap-3">
+                  {taskRuns.map((run) => (
+                    <button
+                      key={run.id}
+                      type="button"
+                      onClick={() => onSelectRun(run.id)}
+                      className={
+                        "min-w-[280px] rounded-2xl border px-4 py-3 text-left " +
+                        (run.id === selectedRun?.id
+                          ? "border-[var(--app-fg)] bg-[var(--app-secondary-bg)]"
+                          : "border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]")
+                      }
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <ScheduledRunStatusBadge status={run.status} />
+                            <span className="text-[11px] text-[var(--app-hint)]">
+                              {formatScheduledDateTime(run.triggeredAt)}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-xs text-[var(--app-hint)]">
+                            scheduled {formatScheduledDateTime(run.scheduledFor)}
+                          </div>
+                          {run.sessionId ? (
+                            <div className="mt-1 truncate text-xs text-[var(--app-fg)]">
+                              session {run.sessionId}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
+            {!selectedRun ? (
+              <div className="text-sm text-[var(--app-hint)]">{t("scheduled.detail.pickRun")}</div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-semibold text-[var(--app-fg)]">
+                      {t("scheduled.detail.selectedRun")}
+                    </h2>
+                    <ScheduledRunStatusBadge status={selectedRun.status} />
+                  </div>
+                  <p className="mt-1 text-sm text-[var(--app-hint)]">
+                    {t("scheduled.detail.selectedRunHint")}
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                      {t("scheduled.detail.triggered")}
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--app-fg)]">
+                      {formatScheduledDateTime(selectedRun.triggeredAt)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                      {t("scheduled.detail.finished")}
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--app-fg)]">
+                      {formatScheduledDateTime(selectedRun.finishedAt)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                      {t("scheduled.detail.runId")}
+                    </div>
+                    <div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.id}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                      {t("scheduled.detail.session")}
+                    </div>
+                    <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
+                      {selectedRun.sessionId ?? "-"}
+                    </div>
+                  </div>
+                </div>
+                {selectedRun.error ? (
+                  <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">
+                    {selectedRun.error}
+                  </div>
+                ) : null}
+                {selectedRun.resultSummary ? (
+                  <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">
+                    {selectedRun.resultSummary}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {selectedRun?.sessionId ? (
+            <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
+                <div>
+                  <div className="text-sm font-medium text-[var(--app-fg)]">
+                    {t("scheduled.detail.sessionView")}
+                  </div>
+                  <div className="mt-1 text-sm text-[var(--app-hint)]">
+                    {t("scheduled.detail.sessionViewHint")}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenRunSession(selectedRun.sessionId as string)}
+                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                  >
+                    {t("scheduled.detail.openFullscreen")}
+                  </button>
+                  <Link
+                    to="/sessions/$sessionId"
+                    params={{ sessionId: selectedRun.sessionId as string }}
+                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                  >
+                    {t("scheduled.detail.openDeepLink")}
+                  </Link>
+                </div>
+              </div>
+              <div className="h-[760px] bg-[var(--app-bg)]">
+                <EmbeddedSessionView
+                  sessionId={selectedRun.sessionId as string}
+                  onBack={() => onSelectRun(null)}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function matchesSessionSearch(
   session: SessionSummary,
   search: string,
@@ -2017,21 +2533,39 @@ function SessionsPage() {
     }
   }, [narrowViewport]);
 
+  const handleScheduledDetailBack = useCallback(() => {
+    setSelectedScheduledTaskId(null);
+    setSelectedScheduledRunId(null);
+    setScheduledEditing(false);
+    setScheduledEditState(null);
+    clearWorkspaceScheduledSelection();
+  }, []);
+
   const isScheduledTab = workspace.tab === "scheduled";
   const isSessionsTab = workspace.tab === "sessions";
+  const mobileSessionsDetailVisible =
+    narrowViewport && isSessionsTab && activeSessionId !== null && !hasOverlay;
+  const mobileScheduledDetailVisible =
+    narrowViewport && isScheduledTab && Boolean(selectedScheduledTaskId) && !hasOverlay;
+  const mobileTabDetailVisible =
+    mobileSessionsDetailVisible || mobileScheduledDetailVisible;
   const effectiveCollapsed = collapsed;
   const scheduledIndexVisible = !selectedScheduledTaskId;
   const leftPanelVisible = effectiveCollapsed
     ? isSessionsIndex && !hasOverlay
       ? "flex lg:hidden"
       : "hidden"
-    : isScheduledTab
-      ? scheduledIndexVisible && !hasOverlay
-        ? "flex"
-        : "hidden lg:flex"
-      : isSessionsIndex && !hasOverlay
-        ? "flex"
-        : "hidden lg:flex";
+    : narrowViewport
+      ? hasOverlay
+        ? "hidden"
+        : "flex"
+      : isScheduledTab
+        ? scheduledIndexVisible && !hasOverlay
+          ? "flex"
+          : "hidden lg:flex"
+        : isSessionsIndex && !hasOverlay
+          ? "flex"
+          : "hidden lg:flex";
   const showDesktopNewSessionPane =
     !narrowViewport &&
     (newSessionOpen ||
@@ -2043,7 +2577,7 @@ function SessionsPage() {
     transform: `scale(${leftPanelContentScale})`,
     transformOrigin: "top left",
   };
-  const showSidebarSearchRow = !effectiveCollapsed;
+  const showSidebarSearchRow = !effectiveCollapsed && !mobileTabDetailVisible;
   const showSidebarBatchActions = !effectiveCollapsed && isSessionsTab;
 
   useEffect(() => {
@@ -2226,7 +2760,45 @@ function SessionsPage() {
                 <div
                   className={`min-h-0 flex-1 ${showSidebarSearchRow ? "" : "rounded-b-[14px]"}`}
                 >
-                  {isScheduledTab ? (
+                  {mobileSessionsDetailVisible && activeSessionId ? (
+                    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                      <SessionView
+                        sessionId={activeSessionId}
+                        onBack={handleSessionBack}
+                        onSessionDeleted={() =>
+                          handleSessionDeleted(activeSessionId)
+                        }
+                        isDark={isDark}
+                        onToggleTheme={toggleTheme}
+                        onOpenSettings={() => {
+                          toggleSettingsOverlay();
+                        }}
+                        onOpenNewSession={toggleNewSessionOverlay}
+                      />
+                    </div>
+                  ) : mobileScheduledDetailVisible && selectedScheduledTask ? (
+                    <ScheduledTaskDetailPanel
+                      task={selectedScheduledTask}
+                      selectedRun={selectedScheduledRun}
+                      taskRuns={selectedScheduledTaskRuns}
+                      isEditing={scheduledEditing}
+                      editState={scheduledEditState}
+                      isPending={scheduledPending}
+                      onEditStateChange={setScheduledEditState}
+                      onSetEditing={setScheduledEditing}
+                      onCancelTask={cancelScheduledTask}
+                      onDeleteTask={deleteScheduledTask}
+                      onUpdateTask={updateScheduledTask}
+                      onSelectRun={(runId) => {
+                        setSelectedScheduledRunId(runId);
+                        selectWorkspaceScheduledRun(runId);
+                      }}
+                      onOpenRunSession={(sessionId) => {
+                        openWorkspaceSession(sessionId, "chat");
+                      }}
+                      onBack={handleScheduledDetailBack}
+                    />
+                  ) : isScheduledTab ? (
                     <div className="flex h-full min-h-0 flex-col">
                       {scheduledError ? (
                         <div className="px-3 py-3">
@@ -3055,7 +3627,7 @@ function SessionsPage() {
 
       {/* Right panel */}
       <div
-        className={`${(isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}` : ""}`}
+        className={`${((isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay) || mobileTabDetailVisible ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}` : ""}`}
       >
         {showDesktopNewSessionPane ? (
           <div className="flex-1 min-h-0">
@@ -3069,562 +3641,32 @@ function SessionsPage() {
             />
           </div>
         ) : isScheduledTab ? (
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="hidden min-h-0 flex-1 lg:flex">
             {!selectedScheduledTask ? (
               <div className="flex h-full items-center justify-center px-6 text-sm text-[var(--app-hint)]">
-                Select a scheduled task to manage it.
+                {t("scheduled.detail.empty")}
               </div>
             ) : (
-              <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 py-4">
-                <div className="rounded-[24px] bg-[var(--app-panel-bg)] p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      {scheduledEditing && scheduledEditState ? (
-                        <input
-                          value={scheduledEditState.title}
-                          onChange={(event) =>
-                            setScheduledEditState((current) =>
-                              current
-                                ? { ...current, title: event.target.value }
-                                : current,
-                            )
-                          }
-                          className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-base font-semibold text-[var(--app-fg)]"
-                        />
-                      ) : (
-                        <h1 className="truncate text-xl font-semibold text-[var(--app-fg)]">
-                          {selectedScheduledTask.title}
-                        </h1>
-                      )}
-                      <p className="mt-1 text-sm text-[var(--app-hint)]">
-                        {t("scheduled.detail.summary")}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {!scheduledEditing ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={scheduledPending}
-                            onClick={() => setScheduledEditing(true)}
-                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                          >
-                            {t("scheduled.action.edit")}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={scheduledPending}
-                            onClick={() => {
-                              if (!selectedScheduledTask) return;
-                              void updateScheduledTask({
-                                taskId: selectedScheduledTask.id,
-                                paused: !selectedScheduledTask.paused,
-                              });
-                            }}
-                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                          >
-                            {selectedScheduledTask.paused
-                              ? t("scheduled.action.resume")
-                              : t("scheduled.action.pause")}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={
-                              scheduledPending ||
-                              selectedScheduledTask.status !== "active" ||
-                              selectedScheduledTask.paused
-                            }
-                            onClick={() =>
-                              void cancelScheduledTask(selectedScheduledTask.id)
-                            }
-                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                          >
-                            {t("scheduled.action.cancel")}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={scheduledPending}
-                            onClick={() =>
-                              void deleteScheduledTask(selectedScheduledTask.id)
-                            }
-                            className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50"
-                          >
-                            {t("scheduled.action.delete")}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            disabled={scheduledPending || !scheduledEditState}
-                            onClick={() => {
-                              if (!selectedScheduledTask || !scheduledEditState)
-                                return;
-                              const parsedRunAt = Date.parse(
-                                scheduledEditState.runAt,
-                              );
-                              const body: Record<string, unknown> = {
-                                taskId: selectedScheduledTask.id,
-                                title: scheduledEditState.title,
-                                prompt: scheduledEditState.prompt,
-                                targetDirectory:
-                                  scheduledEditState.targetDirectory,
-                                model:
-                                  scheduledEditState.model.trim() || undefined,
-                                scheduleType: scheduledEditState.scheduleType,
-                                paused: scheduledEditState.paused,
-                              };
-                              if (scheduledEditState.scheduleType === "once") {
-                                if (Number.isFinite(parsedRunAt)) {
-                                  body.runAt = parsedRunAt;
-                                }
-                              } else {
-                                body.cron = scheduledEditState.cron.trim();
-                              }
-                              void updateScheduledTask(body).then(() => {
-                                setScheduledEditing(false);
-                              });
-                            }}
-                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                          >
-                            {t("scheduled.action.save")}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={scheduledPending}
-                            onClick={() => {
-                              setScheduledEditState(
-                                buildScheduledEditState(selectedScheduledTask),
-                              );
-                              setScheduledEditing(false);
-                            }}
-                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                          >
-                            {t("scheduled.action.cancelEdit")}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.status")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {selectedScheduledTask.status}
-                        {selectedScheduledTask.paused ? " / paused" : ""}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.schedule")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {selectedScheduledTask.scheduleType}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.agent")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {selectedScheduledTask.agentFlavor}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.created")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {formatScheduledDateTime(
-                          selectedScheduledTask.createdAt,
-                        )}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.nextRun")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {formatScheduledDateTime(
-                          selectedScheduledTask.nextRunAt,
-                        )}
-                      </div>
-                    </div>
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.lastRun")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {formatScheduledDateTime(
-                          selectedScheduledTask.lastRunAt,
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.prompt")}
-                      </div>
-                      {scheduledEditing && scheduledEditState ? (
-                        <textarea
-                          value={scheduledEditState.prompt}
-                          onChange={(event) =>
-                            setScheduledEditState((current) =>
-                              current
-                                ? { ...current, prompt: event.target.value }
-                                : current,
-                            )
-                          }
-                          rows={6}
-                          className="mt-2 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                        />
-                      ) : (
-                        <div className="mt-2 whitespace-pre-wrap text-sm text-[var(--app-fg)]">
-                          {selectedScheduledTask.prompt}
-                        </div>
-                      )}
-                    </div>
-                    <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.config")}
-                      </div>
-                      <div className="mt-2 space-y-2 text-sm text-[var(--app-fg)]">
-                        <div>
-                          <span className="text-[var(--app-hint)]">
-                            {t("scheduled.detail.directory")}:
-                          </span>{" "}
-                          {scheduledEditing && scheduledEditState ? (
-                            <input
-                              value={scheduledEditState.targetDirectory}
-                              onChange={(event) =>
-                                setScheduledEditState((current) =>
-                                  current
-                                    ? {
-                                        ...current,
-                                        targetDirectory: event.target.value,
-                                      }
-                                    : current,
-                                )
-                              }
-                              className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                            />
-                          ) : (
-                            <span className="break-all">
-                              {" "}
-                              {selectedScheduledTask.targetDirectory}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-[var(--app-hint)]">
-                            {t("scheduled.detail.model")}:
-                          </span>{" "}
-                          {scheduledEditing && scheduledEditState ? (
-                            <input
-                              value={scheduledEditState.model}
-                              onChange={(event) =>
-                                setScheduledEditState((current) =>
-                                  current
-                                    ? { ...current, model: event.target.value }
-                                    : current,
-                                )
-                              }
-                              className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                            />
-                          ) : (
-                            <span> {selectedScheduledTask.model ?? "-"}</span>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-[var(--app-hint)]">
-                            {t("scheduled.detail.timezone")}:
-                          </span>{" "}
-                          <span> {selectedScheduledTask.timezone}</span>
-                        </div>
-                        <div>
-                          <span className="text-[var(--app-hint)]">
-                            {t("scheduled.detail.taskId")}:
-                          </span>{" "}
-                          <span className="break-all">
-                            {" "}
-                            {selectedScheduledTask.id}
-                          </span>
-                        </div>
-                        {scheduledEditing && scheduledEditState ? (
-                          <>
-                            <label className="block">
-                              <span className="text-[var(--app-hint)]">
-                                {t("scheduled.detail.scheduleType")}
-                              </span>
-                              <select
-                                value={scheduledEditState.scheduleType}
-                                onChange={(event) =>
-                                  setScheduledEditState((current) =>
-                                    current
-                                      ? {
-                                          ...current,
-                                          scheduleType: event.target.value as
-                                            | "once"
-                                            | "cron",
-                                        }
-                                      : current,
-                                  )
-                                }
-                                className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                              >
-                                <option value="once">once</option>
-                                <option value="cron">cron</option>
-                              </select>
-                            </label>
-                            {scheduledEditState.scheduleType === "once" ? (
-                              <label className="block">
-                                <span className="text-[var(--app-hint)]">
-                                  {t("scheduled.detail.runAt")}
-                                </span>
-                                <input
-                                  type="datetime-local"
-                                  step={1}
-                                  value={scheduledEditState.runAt}
-                                  onChange={(event) =>
-                                    setScheduledEditState((current) =>
-                                      current
-                                        ? {
-                                            ...current,
-                                            runAt: event.target.value,
-                                          }
-                                        : current,
-                                    )
-                                  }
-                                  className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                                />
-                              </label>
-                            ) : (
-                              <label className="block">
-                                <span className="text-[var(--app-hint)]">
-                                  {t("scheduled.detail.cron")}
-                                </span>
-                                <input
-                                  value={scheduledEditState.cron}
-                                  onChange={(event) =>
-                                    setScheduledEditState((current) =>
-                                      current
-                                        ? {
-                                            ...current,
-                                            cron: event.target.value,
-                                          }
-                                        : current,
-                                    )
-                                  }
-                                  className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                                />
-                              </label>
-                            )}
-                          </>
-                        ) : (
-                          <div>
-                            <span className="text-[var(--app-hint)]">
-                              {t("scheduled.detail.expression")}:
-                            </span>{" "}
-                            <span>
-                              {" "}
-                              {selectedScheduledTask.scheduleSpec.cron ??
-                                formatScheduledDateTime(
-                                  selectedScheduledTask.scheduleSpec.runAt,
-                                )}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h2 className="text-base font-semibold text-[var(--app-fg)]">
-                          {t("scheduled.detail.runs")}
-                        </h2>
-                        <p className="text-sm text-[var(--app-hint)]">
-                          Each execution stays attached to this task. Pick one
-                          to inspect its result.
-                        </p>
-                      </div>
-                      <div className="text-sm text-[var(--app-hint)]">
-                        {selectedScheduledTaskRuns.length} runs
-                      </div>
-                    </div>
-                    {selectedScheduledTaskRuns.length === 0 ? (
-                      <div className="mt-4 rounded-2xl border border-dashed border-[var(--app-border)] px-4 py-6 text-sm text-[var(--app-hint)]">
-                        This task has not produced any runs yet.
-                      </div>
-                    ) : (
-                      <div className="mt-4 overflow-x-auto pb-1">
-                        <div className="flex min-w-max gap-3">
-                          {selectedScheduledTaskRuns.map((run) => (
-                            <button
-                              key={run.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedScheduledRunId(run.id);
-                                selectWorkspaceScheduledRun(run.id);
-                              }}
-                              className={
-                                "min-w-[280px] rounded-2xl border px-4 py-3 text-left " +
-                                (run.id === selectedScheduledRunId
-                                  ? "border-[var(--app-fg)] bg-[var(--app-secondary-bg)]"
-                                  : "border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]")
-                              }
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <ScheduledRunStatusBadge
-                                      status={run.status}
-                                    />
-                                    <span className="text-[11px] text-[var(--app-hint)]">
-                                      {formatScheduledDateTime(run.triggeredAt)}
-                                    </span>
-                                  </div>
-                                  <div className="mt-2 text-xs text-[var(--app-hint)]">
-                                    scheduled{" "}
-                                    {formatScheduledDateTime(run.scheduledFor)}
-                                  </div>
-                                  {run.sessionId ? (
-                                    <div className="mt-1 truncate text-xs text-[var(--app-fg)]">
-                                      session {run.sessionId}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
-                    {!selectedScheduledRun ? (
-                      <div className="text-sm text-[var(--app-hint)]">
-                        Pick a run to inspect it.
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h2 className="text-base font-semibold text-[var(--app-fg)]">
-                              {t("scheduled.detail.selectedRun")}
-                            </h2>
-                            <ScheduledRunStatusBadge
-                              status={selectedScheduledRun.status}
-                            />
-                          </div>
-                          <p className="mt-1 text-sm text-[var(--app-hint)]">
-                            Details for the currently selected run.
-                          </p>
-                        </div>
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                              {t("scheduled.detail.triggered")}
-                            </div>
-                            <div className="mt-1 text-sm text-[var(--app-fg)]">
-                              {formatScheduledDateTime(
-                                selectedScheduledRun.triggeredAt,
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                              {t("scheduled.detail.finished")}
-                            </div>
-                            <div className="mt-1 text-sm text-[var(--app-fg)]">
-                              {formatScheduledDateTime(
-                                selectedScheduledRun.finishedAt,
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                              {t("scheduled.detail.runId")}
-                            </div>
-                            <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
-                              {selectedScheduledRun.id}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                              {t("scheduled.detail.session")}
-                            </div>
-                            <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
-                              {selectedScheduledRun.sessionId ?? "-"}
-                            </div>
-                          </div>
-                        </div>
-                        {selectedScheduledRun.error ? (
-                          <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">
-                            {selectedScheduledRun.error}
-                          </div>
-                        ) : null}
-                        {selectedScheduledRun.resultSummary ? (
-                          <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">
-                            {selectedScheduledRun.resultSummary}
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedScheduledRun?.sessionId ? (
-                    <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] overflow-hidden">
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
-                        <div>
-                          <div className="text-sm font-medium text-[var(--app-fg)]">
-                            {t("scheduled.detail.sessionView")}
-                          </div>
-                          <div className="mt-1 text-sm text-[var(--app-hint)]">
-                            Embedded session view for the selected run.
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openWorkspaceSession(
-                                selectedScheduledRun.sessionId as string,
-                                "chat",
-                              )
-                            }
-                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                          >
-                            {t("scheduled.detail.openFullscreen")}
-                          </button>
-                          <Link
-                            to="/sessions/$sessionId"
-                            params={{
-                              sessionId:
-                                selectedScheduledRun.sessionId as string,
-                            }}
-                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                          >
-                            {t("scheduled.detail.openDeepLink")}
-                          </Link>
-                        </div>
-                      </div>
-                      <div className="h-[760px] bg-[var(--app-bg)]">
-                        <EmbeddedSessionView
-                          sessionId={selectedScheduledRun.sessionId as string}
-                          onBack={() => setSelectedScheduledRunId(null)}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+              <ScheduledTaskDetailPanel
+                task={selectedScheduledTask}
+                selectedRun={selectedScheduledRun}
+                taskRuns={selectedScheduledTaskRuns}
+                isEditing={scheduledEditing}
+                editState={scheduledEditState}
+                isPending={scheduledPending}
+                onEditStateChange={setScheduledEditState}
+                onSetEditing={setScheduledEditing}
+                onCancelTask={cancelScheduledTask}
+                onDeleteTask={deleteScheduledTask}
+                onUpdateTask={updateScheduledTask}
+                onSelectRun={(runId) => {
+                  setSelectedScheduledRunId(runId);
+                  selectWorkspaceScheduledRun(runId);
+                }}
+                onOpenRunSession={(sessionId) => {
+                  openWorkspaceSession(sessionId, "chat");
+                }}
+              />
             )}
           </div>
         ) : (
