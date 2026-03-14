@@ -2526,12 +2526,7 @@ function SessionsPage() {
 
   const handleOpenScheduledTab = useCallback(() => {
     selectWorkspaceTab("scheduled");
-    if (narrowViewport) {
-      setSelectedScheduledTaskId(null);
-      setSelectedScheduledRunId(null);
-      clearWorkspaceScheduledSelection();
-    }
-  }, [narrowViewport]);
+  }, []);
 
   const handleScheduledDetailBack = useCallback(() => {
     setSelectedScheduledTaskId(null);
