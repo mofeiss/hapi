@@ -2554,14 +2554,14 @@ function SessionsPage() {
     mobileScheduledDetailVisible;
   const effectiveCollapsed = collapsed;
   const scheduledIndexVisible = !selectedScheduledTaskId;
-  const leftPanelVisible = effectiveCollapsed
-    ? isSessionsIndex && !hasOverlay
-      ? "flex lg:hidden"
-      : "hidden"
-    : narrowViewport
-      ? settingsOpen
-        ? "hidden"
-        : "flex"
+  const leftPanelVisible = narrowViewport
+    ? settingsOpen
+      ? "hidden"
+      : "flex"
+    : effectiveCollapsed
+      ? isSessionsIndex && !hasOverlay
+        ? "flex lg:hidden"
+        : "hidden"
       : isScheduledTab
         ? scheduledIndexVisible && !hasOverlay
           ? "flex"
@@ -2582,6 +2582,8 @@ function SessionsPage() {
   };
   const showSidebarSearchRow = !effectiveCollapsed && !mobileTabDetailVisible;
   const showSidebarBatchActions = !effectiveCollapsed && isSessionsTab;
+  const mobileLeftPanelVisible = leftPanelVisible.includes("flex");
+  const showPinnedSidebarLogo = !narrowViewport || mobileLeftPanelVisible;
 
   useEffect(() => {
     if (batchMode && !showSidebarBatchActions) {
@@ -2590,7 +2592,31 @@ function SessionsPage() {
   }, [batchMode, handleExitBatchMode, showSidebarBatchActions]);
 
   return (
-    <div className="flex h-full min-h-0" onWheel={handleRootWheel}>
+      <div className="relative flex h-full min-h-0" onWheel={handleRootWheel}>
+        {showPinnedSidebarLogo && (
+          <button
+            type="button"
+            onClick={narrowViewport ? undefined : toggleCollapsed}
+            className={`absolute left-[11px] top-[calc(env(safe-area-inset-top)+7px)] z-40 inline-flex h-8 w-8 items-center justify-center text-[var(--app-fg)] ${narrowViewport ? "pointer-events-none" : ""}`}
+            title={
+              narrowViewport
+                ? "HAPI"
+                : effectiveCollapsed
+                  ? "Expand sidebar"
+                  : "Collapse sidebar"
+            }
+            aria-label={
+              narrowViewport
+                ? "HAPI"
+                : effectiveCollapsed
+                  ? "Expand sidebar"
+                  : "Collapse sidebar"
+            }
+          >
+            <img src="/icon.svg" alt="HAPI" className="block h-7 w-7 shrink-0" />
+          </button>
+        )}
+
       {/* Left panel */}
       <div
         className={`${leftPanelVisible} max-lg:!w-full shrink-0 flex-col overflow-hidden bg-[var(--app-bg)] lg:border-r lg:border-[var(--app-divider)]`}
@@ -2600,26 +2626,7 @@ function SessionsPage() {
           <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
             <div className="mx-auto w-full max-w-full lg:max-w-content px-3 pb-0 pt-2">
               <div className="flex items-end gap-2">
-                <button
-                  type="button"
-                  onClick={toggleCollapsed}
-                  className="hidden lg:inline-flex relative z-30 h-8 w-8 shrink-0 -translate-x-[1px] -translate-y-[3px] items-center justify-center text-[var(--app-fg)]"
-                  title="Collapse sidebar"
-                  aria-label="Collapse sidebar"
-                >
-                  <img
-                    src="/icon.svg"
-                    alt="HAPI"
-                    className="h-7 w-7 shrink-0"
-                  />
-                </button>
-                <div className="relative z-30 flex min-w-0 shrink-0 -translate-x-[1px] -translate-y-[3px] items-center justify-center lg:hidden">
-                  <img
-                    src="/icon.svg"
-                    alt="HAPI"
-                    className="h-7 w-7 shrink-0"
-                  />
-                </div>
+                <div className="h-8 w-8 shrink-0" aria-hidden="true" />
 
                 <div className="min-w-0 flex-1 overflow-visible pt-1">
                   <div className="-ml-[5px] flex min-w-0 items-start gap-[7px] overflow-visible pl-[2px]">
@@ -3495,18 +3502,7 @@ function SessionsPage() {
       {/* Expand sidebar strip (PC only, when collapsed) */}
       {effectiveCollapsed && (
         <div className="hidden lg:flex flex-col h-[100dvh] shrink-0 pt-[env(safe-area-inset-top)] bg-[var(--app-bg)] border-r border-[var(--app-divider)]">
-          {/* Top: expand button */}
-          <div className="flex shrink-0 justify-center px-2 py-2">
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              className="inline-flex h-8 w-8 translate-y-[4px] items-center justify-center text-[var(--app-fg)]"
-              title="Expand sidebar"
-              aria-label="Expand sidebar"
-            >
-              <img src="/icon.svg" alt="HAPI" className="h-7 w-7 shrink-0" />
-            </button>
-          </div>
+          <div className="h-12 shrink-0" aria-hidden="true" />
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
           <div className="px-2 py-1.5 pt-[calc(0.375rem+3px)] shrink-0 flex flex-col items-center gap-1.5">
             <ToggleGroup
