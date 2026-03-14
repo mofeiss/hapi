@@ -149,7 +149,7 @@ const SWIPE_WHEEL_CANCEL_PX = 24;
 const SWIPE_WHEEL_IDLE_RESET_MS = 220;
 const SWIPE_WHEEL_RELEASE_MS = 50;
 const SWIPE_WHEEL_UNLOCK_MS = 280;
-const DESKTOP_SIDEBAR_MIN_WIDTH = 360;
+const DESKTOP_SIDEBAR_MIN_WIDTH = 345;
 
 type SwipeAction = "back" | "forward";
 type SwipeDirection = -1 | 0 | 1;

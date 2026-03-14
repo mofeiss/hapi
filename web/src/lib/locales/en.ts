@@ -68,7 +68,7 @@ export default {
   "scheduled.list.meta.created": "Created",
   "scheduled.list.iconLabel": "Scheduled task status",
   "scheduled.list.kind.once": "Once",
-  "scheduled.list.kind.cron": "Recurring",
+  "scheduled.list.kind.cron": "Loop",
   "scheduled.detail.empty": "Select a scheduled task to manage it.",
   "scheduled.detail.summary": "Task overview and management. Session details only appear after you pick a run below.",
   "scheduled.detail.status": "Status",
