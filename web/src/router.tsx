@@ -3047,7 +3047,7 @@ function SessionsPage() {
               </div>
             ) : (
               <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 py-4">
-                <div className="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-panel-bg)] p-4">
+                <div className="rounded-[24px] bg-[var(--app-panel-bg)] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       {scheduledEditing && scheduledEditState ? (
@@ -3433,177 +3433,164 @@ function SessionsPage() {
                         This task has not produced any runs yet.
                       </div>
                     ) : (
-                      <div className="mt-4 space-y-4">
-                        <div className="overflow-x-auto pb-1">
-                          <div className="flex min-w-max gap-3">
-                            {selectedScheduledTaskRuns.map((run) => (
-                              <button
-                                key={run.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedScheduledRunId(run.id);
-                                  selectWorkspaceScheduledRun(run.id);
-                                }}
-                                className={
-                                  "min-w-[280px] rounded-2xl border px-4 py-3 text-left " +
-                                  (run.id === selectedScheduledRunId
-                                    ? "border-[var(--app-fg)] bg-[var(--app-secondary-bg)]"
-                                    : "border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]")
-                                }
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <ScheduledRunStatusBadge
-                                        status={run.status}
-                                      />
-                                      <span className="text-[11px] text-[var(--app-hint)]">
-                                        {formatScheduledDateTime(
-                                          run.triggeredAt,
-                                        )}
-                                      </span>
+                      <div className="mt-4 overflow-x-auto pb-1">
+                        <div className="flex min-w-max gap-3">
+                          {selectedScheduledTaskRuns.map((run) => (
+                            <button
+                              key={run.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedScheduledRunId(run.id);
+                                selectWorkspaceScheduledRun(run.id);
+                              }}
+                              className={
+                                "min-w-[280px] rounded-2xl border px-4 py-3 text-left " +
+                                (run.id === selectedScheduledRunId
+                                  ? "border-[var(--app-fg)] bg-[var(--app-secondary-bg)]"
+                                  : "border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]")
+                              }
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <ScheduledRunStatusBadge status={run.status} />
+                                    <span className="text-[11px] text-[var(--app-hint)]">
+                                      {formatScheduledDateTime(run.triggeredAt)}
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 text-xs text-[var(--app-hint)]">
+                                    scheduled {formatScheduledDateTime(run.scheduledFor)}
+                                  </div>
+                                  {run.sessionId ? (
+                                    <div className="mt-1 truncate text-xs text-[var(--app-fg)]">
+                                      session {run.sessionId}
                                     </div>
-                                    <div className="mt-2 text-xs text-[var(--app-hint)]">
-                                      scheduled{" "}
-                                      {formatScheduledDateTime(
-                                        run.scheduledFor,
-                                      )}
-                                    </div>
-                                    {run.sessionId ? (
-                                      <div className="mt-1 truncate text-xs text-[var(--app-fg)]">
-                                        session {run.sessionId}
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
-                          {!selectedScheduledRun ? (
-                            <div className="text-sm text-[var(--app-hint)]">
-                              Pick a run to inspect it.
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="text-base font-semibold text-[var(--app-fg)]">
-                                    {t("scheduled.detail.selectedRun")}
-                                  </h3>
-                                  <ScheduledRunStatusBadge
-                                    status={selectedScheduledRun.status}
-                                  />
-                                </div>
-                                <p className="mt-1 text-sm text-[var(--app-hint)]">
-                                  The selected run owns the session detail
-                                  below.
-                                </p>
-                              </div>
-                              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                <div>
-                                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                                    {t("scheduled.detail.triggered")}
-                                  </div>
-                                  <div className="mt-1 text-sm text-[var(--app-fg)]">
-                                    {formatScheduledDateTime(
-                                      selectedScheduledRun.triggeredAt,
-                                    )}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                                    {t("scheduled.detail.finished")}
-                                  </div>
-                                  <div className="mt-1 text-sm text-[var(--app-fg)]">
-                                    {formatScheduledDateTime(
-                                      selectedScheduledRun.finishedAt,
-                                    )}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                                    {t("scheduled.detail.runId")}
-                                  </div>
-                                  <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
-                                    {selectedScheduledRun.id}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                                    {t("scheduled.detail.session")}
-                                  </div>
-                                  <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
-                                    {selectedScheduledRun.sessionId ?? "-"}
-                                  </div>
+                                  ) : null}
                                 </div>
                               </div>
-                              {selectedScheduledRun.error ? (
-                                <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">
-                                  {selectedScheduledRun.error}
-                                </div>
-                              ) : null}
-                              {selectedScheduledRun.resultSummary ? (
-                                <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">
-                                  {selectedScheduledRun.resultSummary}
-                                </div>
-                              ) : null}
-                              {selectedScheduledRun.sessionId ? (
-                                <div className="rounded-2xl border border-[var(--app-border)] px-0 py-0 overflow-hidden">
-                                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
-                                    <div>
-                                      <div className="text-sm font-medium text-[var(--app-fg)]">
-                                        {t("scheduled.detail.sessionView")}
-                                      </div>
-                                      <div className="mt-1 text-sm text-[var(--app-hint)]">
-                                        Embedded session view for the selected
-                                        run.
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openWorkspaceSession(
-                                            selectedScheduledRun.sessionId as string,
-                                            "chat",
-                                          )
-                                        }
-                                        className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                                      >
-                                        {t("scheduled.detail.openFullscreen")}
-                                      </button>
-                                      <Link
-                                        to="/sessions/$sessionId"
-                                        params={{
-                                          sessionId:
-                                            selectedScheduledRun.sessionId as string,
-                                        }}
-                                        className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                                      >
-                                        {t("scheduled.detail.openDeepLink")}
-                                      </Link>
-                                    </div>
-                                  </div>
-                                  <div className="h-[760px] bg-[var(--app-bg)]">
-                                    <EmbeddedSessionView
-                                      sessionId={
-                                        selectedScheduledRun.sessionId as string
-                                      }
-                                      onBack={() =>
-                                        setSelectedScheduledRunId(null)
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                              ) : null}
-                            </div>
-                          )}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     )}
                   </div>
+
+                  <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
+                    {!selectedScheduledRun ? (
+                      <div className="text-sm text-[var(--app-hint)]">
+                        Pick a run to inspect it.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-base font-semibold text-[var(--app-fg)]">
+                              {t("scheduled.detail.selectedRun")}
+                            </h2>
+                            <ScheduledRunStatusBadge
+                              status={selectedScheduledRun.status}
+                            />
+                          </div>
+                          <p className="mt-1 text-sm text-[var(--app-hint)]">
+                            Details for the currently selected run.
+                          </p>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                              {t("scheduled.detail.triggered")}
+                            </div>
+                            <div className="mt-1 text-sm text-[var(--app-fg)]">
+                              {formatScheduledDateTime(
+                                selectedScheduledRun.triggeredAt,
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                              {t("scheduled.detail.finished")}
+                            </div>
+                            <div className="mt-1 text-sm text-[var(--app-fg)]">
+                              {formatScheduledDateTime(
+                                selectedScheduledRun.finishedAt,
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                              {t("scheduled.detail.runId")}
+                            </div>
+                            <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
+                              {selectedScheduledRun.id}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                              {t("scheduled.detail.session")}
+                            </div>
+                            <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
+                              {selectedScheduledRun.sessionId ?? "-"}
+                            </div>
+                          </div>
+                        </div>
+                        {selectedScheduledRun.error ? (
+                          <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">
+                            {selectedScheduledRun.error}
+                          </div>
+                        ) : null}
+                        {selectedScheduledRun.resultSummary ? (
+                          <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">
+                            {selectedScheduledRun.resultSummary}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedScheduledRun?.sessionId ? (
+                    <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] overflow-hidden">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
+                        <div>
+                          <div className="text-sm font-medium text-[var(--app-fg)]">
+                            {t("scheduled.detail.sessionView")}
+                          </div>
+                          <div className="mt-1 text-sm text-[var(--app-hint)]">
+                            Embedded session view for the selected run.
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openWorkspaceSession(
+                                selectedScheduledRun.sessionId as string,
+                                "chat",
+                              )
+                            }
+                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                          >
+                            {t("scheduled.detail.openFullscreen")}
+                          </button>
+                          <Link
+                            to="/sessions/$sessionId"
+                            params={{
+                              sessionId:
+                                selectedScheduledRun.sessionId as string,
+                            }}
+                            className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                          >
+                            {t("scheduled.detail.openDeepLink")}
+                          </Link>
+                        </div>
+                      </div>
+                      <div className="h-[760px] bg-[var(--app-bg)]">
+                        <EmbeddedSessionView
+                          sessionId={selectedScheduledRun.sessionId as string}
+                          onBack={() => setSelectedScheduledRunId(null)}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             )}
