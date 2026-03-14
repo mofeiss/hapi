@@ -696,18 +696,20 @@ export function SessionList(props: {
                       </span>
                     </div>
                     {props.onNewSessionForHost ? (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          props.onNewSessionForHost?.(group.host);
-                        }}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--app-link)] transition-colors hover:bg-[var(--app-secondary-bg)]"
-                        title={t("sessions.new")}
-                        aria-label={`${t("sessions.new")} ${group.host}`}
-                      >
-                        <NewChatIcon className="h-4 w-4" />
-                      </button>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            props.onNewSessionForHost?.(group.host);
+                          }}
+                          className="session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]"
+                          title={t("sessions.new")}
+                          aria-label={`${t("sessions.new")} ${group.host}`}
+                        >
+                          <NewChatIcon className="h-[18px] w-[18px]" />
+                        </button>
+                      </span>
                     ) : null}
                   </button>
                   {!isCollapsed ? (

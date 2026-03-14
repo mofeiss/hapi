@@ -2000,7 +2000,7 @@ function SessionsPage() {
         ? "flex"
         : "hidden lg:flex";
   const showDesktopNewSessionPane =
-    !narrowViewport && isSessionsTab && activeSessionId === null && !hasOverlay;
+    !narrowViewport && (newSessionOpen || (isSessionsTab && activeSessionId === null && !hasOverlay));
   const leftPanelContentScale = 1;
   const leftPanelContentStyle = {
     width: `${100 / leftPanelContentScale}%`,
@@ -2049,7 +2049,7 @@ function SessionsPage() {
                   />
                 </div>
 
-                <div className="min-w-0 flex-1 overflow-hidden pt-1">
+                <div className="min-w-0 flex-1 -translate-x-[2px] overflow-hidden pt-1">
                   <div className="flex min-w-0 items-end gap-1">
                     <button
                       type="button"
