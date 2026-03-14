@@ -188,7 +188,7 @@ export function TodoPanel(props: {
     return (
         <div
             className={cn(
-                'overflow-hidden border border-[var(--app-panel-border)]',
+                'liquid-line overflow-hidden border border-[var(--app-panel-border)]',
                 panelSurfaceClassName,
                 props.className
             )}

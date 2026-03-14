@@ -55,6 +55,7 @@
     --app-scrollbar-track: transparent;
     --app-scrollbar-thumb: rgba(107, 114, 128, 0.45);
     --app-scrollbar-thumb-hover: rgba(107, 114, 128, 0.62);
+    --app-liquid-line: rgba(255, 255, 255, 0.72);
 
 }
 
@@ -112,6 +113,7 @@
     --app-scrollbar-track: transparent;
     --app-scrollbar-thumb: rgba(156, 163, 175, 0.4);
     --app-scrollbar-thumb-hover: rgba(156, 163, 175, 0.58);
+    --app-liquid-line: rgba(255, 255, 255, 0.34);
 }
 
 html,
@@ -119,6 +121,7 @@ body {
     height: 100vh;
     height: 100dvh;
     height: var(--tg-viewport-stable-height, 100dvh);
+    height: var(--app-root-height, var(--tg-viewport-stable-height, 100dvh));
     overflow: hidden;
     touch-action: pan-x pan-y pinch-zoom;
     /* Disable native browser edge-swipe; navigation is handled in-app. */
@@ -128,13 +131,37 @@ body {
 }
 
 body {
+    margin: 0;
     font-size: 1rem;
     background: var(--app-bg);
     color: var(--app-fg);
 }
 
+.liquid-line {
+    position: relative;
+}
+
+.liquid-line::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    top: 0;
+    height: 1px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, var(--app-liquid-line), transparent);
+    pointer-events: none;
+    opacity: 0.95;
+}
+
+.liquid-line-tab::before {
+    left: 12px;
+    right: 12px;
+}
+
 #root {
     height: 100%;
+    height: var(--app-root-height, var(--tg-viewport-stable-height, 100dvh));
 }
 
 /* Chat viewport scrollbar: keep theme-aware colors in dark mode */

@@ -823,7 +823,7 @@ export function HappyComposer(props: {
         <ComposerPrimitive.Root className="relative" onSubmit={handleSubmit}>
             {overlays}
             {embedded ? shellContent : (
-                <div className="overflow-hidden rounded-[20px] border border-[var(--app-panel-border)] bg-[var(--app-secondary-bg)]">
+                <div className="liquid-line overflow-hidden rounded-[20px] border border-[var(--app-panel-border)] bg-[var(--app-secondary-bg)]">
                     {shellContent}
                 </div>
             )}

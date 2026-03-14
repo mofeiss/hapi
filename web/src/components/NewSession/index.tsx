@@ -766,7 +766,7 @@ export function NewSession(props: {
                                         </p>
                                     </div>
 
-                                    <div className="mt-5 overflow-visible rounded-[20px] border border-[var(--app-panel-border)] bg-[var(--app-secondary-bg)] text-left">
+                                    <div className="liquid-line mt-5 overflow-visible rounded-[20px] border border-[var(--app-panel-border)] bg-[var(--app-secondary-bg)] text-left">
                                         <div className="border-b border-[var(--app-panel-border)] px-4 py-2.5">
                                             <div className="flex flex-nowrap items-center gap-2">
                                                 <div className="w-[128px] shrink-0">

@@ -2620,7 +2620,7 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={() => selectWorkspaceTab("sessions")}
-                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isSessionsTab ? "z-20 h-[35px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[35px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isSessionsTab ? "liquid-line liquid-line-tab z-20 h-[35px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[35px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isSessionsTab}
                     >
                       {isSessionsTab ? null : (
@@ -2683,7 +2683,7 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={handleOpenScheduledTab}
-                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isScheduledTab ? "z-20 h-[35px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[35px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isScheduledTab ? "liquid-line liquid-line-tab z-20 h-[35px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[35px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isScheduledTab}
                     >
                       {isScheduledTab ? null : (
@@ -2753,7 +2753,7 @@ function SessionsPage() {
 
           <div className={`mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col px-3 pb-3 lg:max-w-content ${widescreen ? "widescreen-mode" : ""}`}>
             <div className="flex min-h-0 flex-1 flex-col pt-0">
-              <div className="relative -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <div className="liquid-line relative -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                 <div
                   className={`min-h-0 flex-1 ${showSidebarSearchRow ? "" : "rounded-b-[14px]"}`}
                 >
@@ -3272,7 +3272,7 @@ function SessionsPage() {
 
                 {showSidebarSearchRow ? (
                   <div className="border-t border-[var(--app-divider)] bg-[var(--app-bg)] px-4 py-3">
-                    <div className="flex items-center gap-2 rounded-[14px] border border-[var(--app-divider)] bg-[var(--app-bg)] px-3 py-2 shadow-[0_1px_0_rgba(255,255,255,0.35)_inset]">
+                    <div className="liquid-line flex items-center gap-2 rounded-[14px] border border-[var(--app-divider)] bg-[var(--app-bg)] px-3 py-2 shadow-[0_1px_0_rgba(255,255,255,0.35)_inset]">
                       <div className="flex h-4 w-4 shrink-0 items-center justify-center">
                         {(
                           isScheduledTab
