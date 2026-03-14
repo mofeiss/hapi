@@ -78,6 +78,7 @@ import { SettingsPanel } from "@/routes/settings";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
+  clearWorkspaceSessionSelection,
   clearWorkspaceScheduledSelection,
   openWorkspaceScheduledTask,
   openWorkspaceSession,
@@ -1836,6 +1837,7 @@ function SessionsPage() {
     if (activeSessionRef.current) {
       setSwipeForwardSessionId(activeSessionRef.current);
     }
+    clearWorkspaceSessionSelection();
     selectWorkspaceTab("sessions");
     setActiveSessionId(null);
     navigate({ to: "/" });
