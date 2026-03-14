@@ -19,7 +19,6 @@ import { useActiveWord } from '@/hooks/useActiveWord'
 import { useActiveSuggestions } from '@/hooks/useActiveSuggestions'
 import { applySuggestion } from '@/utils/applySuggestion'
 import { usePlatform } from '@/hooks/usePlatform'
-import { usePWAInstall } from '@/hooks/usePWAInstall'
 import { isCodexFamilyFlavor } from '@/lib/agentFlavorUtils'
 import { markSkillUsed } from '@/lib/recent-skills'
 import { FloatingOverlay } from '@/components/ChatInput/FloatingOverlay'
@@ -260,10 +259,8 @@ export function HappyComposer(props: {
     }, [controlledByUser])
 
     const { haptic: platformHaptic, isTouch } = usePlatform()
-    const { isStandalone, isIOS } = usePWAInstall()
-    const isIOSPWA = isIOS && isStandalone
     const isVoiceFocusMode = voiceStatus !== 'disconnected'
-    const bottomPaddingClass = embedded || isIOSPWA ? 'pb-0' : 'pb-3'
+    const bottomPaddingClass = embedded ? 'pb-0' : 'pb-3'
     const activeWord = useActiveWord(composerText, inputState.selection, autocompletePrefixes)
     const [suggestions, selectedIndex, moveUp, moveDown, clearSuggestions] = useActiveSuggestions(
         activeWord,
