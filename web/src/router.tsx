@@ -2063,9 +2063,15 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={() => selectWorkspaceTab("sessions")}
-                      className={`relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isSessionsTab ? "z-20 h-[32px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isSessionsTab ? "z-20 h-[32px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isSessionsTab}
                     >
+                      {isSessionsTab ? null : (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -left-[4px] -right-[4px] inset-y-1 rounded-[10px] bg-transparent transition-colors group-hover:bg-[var(--app-subtle-solid-bg)]"
+                        />
+                      )}
                       <span className="relative z-[1] inline-flex items-center gap-1.5">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -2120,9 +2126,15 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={handleOpenScheduledTab}
-                      className={`relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isScheduledTab ? "z-20 h-[32px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isScheduledTab ? "z-20 h-[32px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isScheduledTab}
                     >
+                      {isScheduledTab ? null : (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -left-[4px] -right-[4px] inset-y-1 rounded-[10px] bg-transparent transition-colors group-hover:bg-[var(--app-subtle-solid-bg)]"
+                        />
+                      )}
                       <span className="relative z-[1] inline-flex items-center gap-1.5">
                         <ScheduledTaskIcon className="h-4 w-4" />
                         <span>{t("scheduled.tab")}</span>
