@@ -967,7 +967,6 @@ export function SessionChat(props: {
         <div className="relative flex h-full flex-col">
             <SessionHeader
                 session={props.session}
-                onBack={props.onBack}
                 onToggleTerminal={props.session.active ? handleToggleTerminal : undefined}
                 terminalOpen={terminalOpen}
                 onToggleFiles={props.session.metadata?.path ? handleToggleFiles : undefined}

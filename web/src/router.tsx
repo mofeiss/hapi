@@ -2584,6 +2584,28 @@ function SessionsPage() {
   const showSidebarBatchActions = !effectiveCollapsed && isSessionsTab;
   const mobileLeftPanelVisible = leftPanelVisible.includes("flex");
   const showPinnedSidebarLogo = !narrowViewport || mobileLeftPanelVisible;
+  const mobileLogoBackMode = narrowViewport && !settingsOpen && (newSessionOpen || activeSessionId !== null || Boolean(selectedScheduledTaskId));
+  const handlePinnedLogoClick = mobileLogoBackMode
+    ? newSessionOpen
+      ? () => {
+          setNewSessionOpen(false);
+          selectWorkspaceOverlay("none");
+        }
+      : activeSessionId !== null
+        ? handleSessionBack
+        : selectedScheduledTaskId
+          ? handleScheduledDetailBack
+          : undefined
+    : narrowViewport
+      ? undefined
+      : toggleCollapsed;
+  const pinnedLogoTitle = mobileLogoBackMode
+    ? "Back"
+    : narrowViewport
+      ? "HAPI"
+      : effectiveCollapsed
+        ? "Expand sidebar"
+        : "Collapse sidebar";
 
   useEffect(() => {
     if (batchMode && !showSidebarBatchActions) {
@@ -2596,24 +2618,16 @@ function SessionsPage() {
         {showPinnedSidebarLogo && (
           <button
             type="button"
-            onClick={narrowViewport ? undefined : toggleCollapsed}
-            className={`absolute left-[11px] top-[calc(env(safe-area-inset-top)+12px)] z-40 inline-flex h-8 w-8 items-center justify-center text-[var(--app-fg)] ${narrowViewport ? "pointer-events-none" : ""}`}
-            title={
-              narrowViewport
-                ? "HAPI"
-                : effectiveCollapsed
-                  ? "Expand sidebar"
-                  : "Collapse sidebar"
-            }
-            aria-label={
-              narrowViewport
-                ? "HAPI"
-                : effectiveCollapsed
-                  ? "Expand sidebar"
-                  : "Collapse sidebar"
-            }
+            onClick={handlePinnedLogoClick}
+            className={`absolute left-[11px] top-[calc(env(safe-area-inset-top)+12px)] z-40 inline-flex h-8 w-8 items-center justify-center text-[var(--app-fg)] ${narrowViewport && !mobileLogoBackMode ? "pointer-events-none" : ""}`}
+            title={pinnedLogoTitle}
+            aria-label={pinnedLogoTitle}
           >
-            <img src="/icon.svg" alt="HAPI" className="block h-7 w-7 shrink-0" />
+            {mobileLogoBackMode ? (
+              <BackIcon className="h-7 w-7" />
+            ) : (
+              <img src="/icon.svg" alt="HAPI" className="block h-7 w-7 shrink-0" />
+            )}
           </button>
         )}
 
