@@ -714,7 +714,7 @@ function CollapsedScheduledItem(props: {
     <button
       type="button"
       onClick={() => props.onSelect(props.task.id, props.latestRun?.id ?? null)}
-      className={`flex items-center justify-center w-full py-1 px-1 transition-colors hover:bg-[var(--app-subtle-bg)] ${props.selected ? "bg-[var(--app-secondary-bg)]" : ""}`}
+      className={`flex w-full items-center justify-center px-1 py-1 hover:bg-[var(--app-subtle-bg)] ${props.selected ? "bg-[var(--app-secondary-bg)]" : ""}`}
       title={title}
     >
       <span
