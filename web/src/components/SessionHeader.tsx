@@ -52,7 +52,7 @@ export function SessionHeader(props: {
                     <button
                         type="button"
                         onClick={props.onBack}
-                        className="mr-2 flex lg:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors"
+                        className="mr-2 flex lg:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)]"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
