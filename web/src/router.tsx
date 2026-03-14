@@ -81,6 +81,7 @@ import {
   clearWorkspaceScheduledSelection,
   openWorkspaceScheduledTask,
   openWorkspaceSession,
+  selectWorkspaceOverlay,
   selectWorkspaceScheduledRun,
   selectWorkspaceTab,
   useWorkspaceState,
@@ -149,7 +150,7 @@ const SWIPE_WHEEL_CANCEL_PX = 24;
 const SWIPE_WHEEL_IDLE_RESET_MS = 220;
 const SWIPE_WHEEL_RELEASE_MS = 50;
 const SWIPE_WHEEL_UNLOCK_MS = 280;
-const DESKTOP_SIDEBAR_MIN_WIDTH = 345;
+const DESKTOP_SIDEBAR_MIN_WIDTH = 375;
 
 type SwipeAction = "back" | "forward";
 type SwipeDirection = -1 | 0 | 1;
@@ -1011,8 +1012,12 @@ function SessionsPage() {
   });
 
   const { widescreen } = useWidescreen();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [newSessionOpen, setNewSessionOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(
+    workspace.overlay === "settings",
+  );
+  const [newSessionOpen, setNewSessionOpen] = useState(
+    workspace.overlay === "newSession",
+  );
   const hasOverlay = settingsOpen || newSessionOpen;
   const [narrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== "undefined"
@@ -1086,6 +1091,7 @@ function SessionsPage() {
     setBatchSelectedIds(new Set());
     setSettingsOpen(false);
     setNewSessionOpen(false);
+    selectWorkspaceOverlay("none");
     setToolbarMenuOpen(false);
   }, []);
 
@@ -1531,6 +1537,7 @@ function SessionsPage() {
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
     setNewSessionOpen(shouldRestoreNewSession);
+    selectWorkspaceOverlay(shouldRestoreNewSession ? "newSession" : "none");
   }, []);
 
   const toggleSettingsOverlay = useCallback(() => {
@@ -1542,6 +1549,7 @@ function SessionsPage() {
     restoreNewSessionAfterSettingsRef.current = newSessionOpen;
     setSettingsOpen(true);
     setNewSessionOpen(false);
+    selectWorkspaceOverlay("settings");
     setToolbarMenuOpen(false);
   }, [closeSettingsOverlay, newSessionOpen, settingsOpen]);
 
@@ -1549,6 +1557,7 @@ function SessionsPage() {
     restoreNewSessionAfterSettingsRef.current = newSessionOpen;
     setSettingsOpen(true);
     setNewSessionOpen(false);
+    selectWorkspaceOverlay("settings");
     setToolbarMenuOpen(false);
   }, [newSessionOpen]);
 
@@ -1558,19 +1567,28 @@ function SessionsPage() {
     setNewSessionMachineId(null);
 
     if (!narrowViewport) {
-      setNewSessionOpen((prev) => !prev);
+      setNewSessionOpen((prev) => {
+        const next = !prev;
+        selectWorkspaceOverlay(next ? "newSession" : "none");
+        return next;
+      });
       setActiveSessionId(null);
       navigate({ to: "/" });
       return;
     }
 
-    setNewSessionOpen((prev) => !prev);
+    setNewSessionOpen((prev) => {
+      const next = !prev;
+      selectWorkspaceOverlay(next ? "newSession" : "none");
+      return next;
+    });
   }, [narrowViewport, navigate]);
 
   const openNewSessionOverlay = useCallback(() => {
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
     setNewSessionMachineId(null);
+    selectWorkspaceOverlay("newSession");
 
     if (!narrowViewport) {
       setNewSessionOpen(true);
@@ -1593,6 +1611,7 @@ function SessionsPage() {
       setSettingsOpen(false);
       setToolbarMenuOpen(false);
       setNewSessionMachineId(matchedMachine?.id ?? null);
+      selectWorkspaceOverlay("newSession");
 
       if (!narrowViewport) {
         setNewSessionOpen(true);
@@ -1605,6 +1624,11 @@ function SessionsPage() {
     },
     [machines, narrowViewport, navigate],
   );
+
+  useEffect(() => {
+    setSettingsOpen(workspace.overlay === "settings");
+    setNewSessionOpen(workspace.overlay === "newSession");
+  }, [workspace.overlay]);
 
   useEffect(() => {
     const handleOpenSettingsOverlay = () => {
@@ -2009,7 +2033,9 @@ function SessionsPage() {
         ? "flex"
         : "hidden lg:flex";
   const showDesktopNewSessionPane =
-    !narrowViewport && (newSessionOpen || (isSessionsTab && activeSessionId === null && !hasOverlay));
+    !narrowViewport &&
+    (newSessionOpen ||
+      (isSessionsTab && activeSessionId === null && !hasOverlay));
   const leftPanelContentScale = 1;
   const leftPanelContentStyle = {
     width: `${100 / leftPanelContentScale}%`,
@@ -3034,7 +3060,10 @@ function SessionsPage() {
         {showDesktopNewSessionPane ? (
           <div className="flex-1 min-h-0">
             <NewSessionPanel
-              onClose={() => setNewSessionOpen(false)}
+              onClose={() => {
+                setNewSessionOpen(false);
+                selectWorkspaceOverlay("none");
+              }}
               onOpenSettings={openSettingsOverlay}
               initialMachineId={newSessionMachineId}
             />
@@ -3453,13 +3482,16 @@ function SessionsPage() {
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <ScheduledRunStatusBadge status={run.status} />
+                                    <ScheduledRunStatusBadge
+                                      status={run.status}
+                                    />
                                     <span className="text-[11px] text-[var(--app-hint)]">
                                       {formatScheduledDateTime(run.triggeredAt)}
                                     </span>
                                   </div>
                                   <div className="mt-2 text-xs text-[var(--app-hint)]">
-                                    scheduled {formatScheduledDateTime(run.scheduledFor)}
+                                    scheduled{" "}
+                                    {formatScheduledDateTime(run.scheduledFor)}
                                   </div>
                                   {run.sessionId ? (
                                     <div className="mt-1 truncate text-xs text-[var(--app-fg)]">
@@ -3634,7 +3666,10 @@ function SessionsPage() {
         {narrowViewport && newSessionOpen ? (
           <div className="absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 opacity-100">
             <NewSessionPanel
-              onClose={() => setNewSessionOpen(false)}
+              onClose={() => {
+                setNewSessionOpen(false);
+                selectWorkspaceOverlay("none");
+              }}
               onOpenSettings={openSettingsOverlay}
               initialMachineId={newSessionMachineId}
             />

@@ -2,9 +2,11 @@ import { useSyncExternalStore } from 'react'
 
 export type WorkspaceTab = 'sessions' | 'scheduled'
 export type SessionSubview = 'chat' | 'files' | 'terminal'
+export type WorkspaceOverlay = 'none' | 'settings' | 'newSession'
 
 export type WorkspaceState = {
     tab: WorkspaceTab
+    overlay: WorkspaceOverlay
     selectedSessionId: string | null
     sessionSubview: SessionSubview
     selectedScheduledTaskId: string | null
@@ -13,6 +15,7 @@ export type WorkspaceState = {
 
 const DEFAULT_STATE: WorkspaceState = {
     tab: 'sessions',
+    overlay: 'none',
     selectedSessionId: null,
     sessionSubview: 'chat',
     selectedScheduledTaskId: null,
@@ -29,6 +32,10 @@ function isSessionSubview(value: unknown): value is SessionSubview {
     return value === 'chat' || value === 'files' || value === 'terminal'
 }
 
+function isWorkspaceOverlay(value: unknown): value is WorkspaceOverlay {
+    return value === 'none' || value === 'settings' || value === 'newSession'
+}
+
 function readPersistedState(): WorkspaceState {
     if (typeof window === 'undefined') {
         return DEFAULT_STATE
@@ -43,6 +50,7 @@ function readPersistedState(): WorkspaceState {
         const parsed = JSON.parse(raw) as Partial<WorkspaceState>
         return {
             tab: isWorkspaceTab(parsed.tab) ? parsed.tab : DEFAULT_STATE.tab,
+            overlay: isWorkspaceOverlay(parsed.overlay) ? parsed.overlay : DEFAULT_STATE.overlay,
             selectedSessionId: typeof parsed.selectedSessionId === 'string' ? parsed.selectedSessionId : null,
             sessionSubview: isSessionSubview(parsed.sessionSubview) ? parsed.sessionSubview : DEFAULT_STATE.sessionSubview,
             selectedScheduledTaskId: typeof parsed.selectedScheduledTaskId === 'string' ? parsed.selectedScheduledTaskId : null,
@@ -99,6 +107,10 @@ export function resetWorkspaceState(): void {
 
 export function selectWorkspaceTab(tab: WorkspaceTab): void {
     setWorkspaceState({ tab })
+}
+
+export function selectWorkspaceOverlay(overlay: WorkspaceOverlay): void {
+    setWorkspaceState({ overlay })
 }
 
 export function openWorkspaceSession(sessionId: string, subview: SessionSubview = 'chat'): void {
