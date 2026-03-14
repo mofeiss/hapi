@@ -660,11 +660,12 @@ export function SessionList(props: {
                     index > 0 ? "border-t border-[var(--app-subtle-solid-bg)]" : ""
                   }
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.host, isCollapsed)}
-                    className="sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 text-left"
-                  >
+                  <div className="sticky top-0 z-10 flex items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.host, isCollapsed)}
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -695,23 +696,21 @@ export function SessionList(props: {
                         ({group.sessions.length})
                       </span>
                     </div>
+                    </button>
                     {props.onNewSessionForHost ? (
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            props.onNewSessionForHost?.(group.host);
-                          }}
-                          className="session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]"
-                          title={t("sessions.new")}
-                          aria-label={`${t("sessions.new")} ${group.host}`}
-                        >
-                          <NewChatIcon className="h-[18px] w-[18px]" />
-                        </button>
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          props.onNewSessionForHost?.(group.host);
+                        }}
+                        className="session-list-new-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]"
+                        title={t("sessions.new")}
+                        aria-label={`${t("sessions.new")} ${group.host}`}
+                      >
+                        <NewChatIcon className="h-[18px] w-[18px]" />
+                      </button>
                     ) : null}
-                  </button>
+                  </div>
                   {!isCollapsed ? (
                     <div className="flex flex-col divide-y divide-[var(--app-divider)]">
                       {group.sessions.map((s) => (
