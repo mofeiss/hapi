@@ -541,118 +541,120 @@ function ScheduledTaskDetailPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 py-4">
-        <div className="rounded-[24px] bg-[var(--app-panel-bg)] p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              {isEditing && editState ? (
-                <input
-                  value={editState.title}
-                  onChange={(event) =>
-                    onEditStateChange((current) =>
-                      current ? { ...current, title: event.target.value } : current,
-                    )
-                  }
-                  className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-base font-semibold text-[var(--app-fg)]"
-                />
-              ) : (
-                <h1 className="truncate text-xl font-semibold text-[var(--app-fg)]">
-                  {task.title}
-                </h1>
-              )}
-              <p className="mt-1 text-sm text-[var(--app-hint)]">
-                {t("scheduled.detail.summary")}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {!isEditing ? (
-                <>
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => onSetEditing(true)}
-                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                  >
-                    {t("scheduled.action.edit")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => {
-                      void onUpdateTask({
-                        taskId: task.id,
-                        paused: !task.paused,
-                      });
-                    }}
-                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                  >
-                    {task.paused
-                      ? t("scheduled.action.resume")
-                      : t("scheduled.action.pause")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isPending || task.status !== "active" || task.paused}
-                    onClick={() => void onCancelTask(task.id)}
-                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                  >
-                    {t("scheduled.action.cancel")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => void onDeleteTask(task.id)}
-                    className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50"
-                  >
-                    {t("scheduled.action.delete")}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    disabled={isPending || !editState}
-                    onClick={() => {
-                      if (!editState) return;
-                      const parsedRunAt = Date.parse(editState.runAt);
-                      const body: Record<string, unknown> = {
-                        taskId: task.id,
-                        title: editState.title,
-                        prompt: editState.prompt,
-                        targetDirectory: editState.targetDirectory,
-                        model: editState.model.trim() || undefined,
-                        scheduleType: editState.scheduleType,
-                        paused: editState.paused,
-                      };
-                      if (editState.scheduleType === "once") {
-                        if (Number.isFinite(parsedRunAt)) {
-                          body.runAt = parsedRunAt;
+      <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-3 py-3">
+        <div className="rounded-[24px] bg-[var(--app-panel-bg)]">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                {isEditing && editState ? (
+                  <input
+                    value={editState.title}
+                    onChange={(event) =>
+                      onEditStateChange((current) =>
+                        current ? { ...current, title: event.target.value } : current,
+                      )
+                    }
+                    className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-base font-semibold text-[var(--app-fg)]"
+                  />
+                ) : (
+                  <h1 className="truncate text-xl font-semibold text-[var(--app-fg)]">
+                    {task.title}
+                  </h1>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {!isEditing ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => onSetEditing(true)}
+                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                    >
+                      {t("scheduled.action.edit")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => {
+                        void onUpdateTask({
+                          taskId: task.id,
+                          paused: !task.paused,
+                        });
+                      }}
+                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                    >
+                      {task.paused
+                        ? t("scheduled.action.resume")
+                        : t("scheduled.action.pause")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending || task.status !== "active" || task.paused}
+                      onClick={() => void onCancelTask(task.id)}
+                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                    >
+                      {t("scheduled.action.cancel")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => void onDeleteTask(task.id)}
+                      className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50"
+                    >
+                      {t("scheduled.action.delete")}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={isPending || !editState}
+                      onClick={() => {
+                        if (!editState) return;
+                        const parsedRunAt = Date.parse(editState.runAt);
+                        const body: Record<string, unknown> = {
+                          taskId: task.id,
+                          title: editState.title,
+                          prompt: editState.prompt,
+                          targetDirectory: editState.targetDirectory,
+                          model: editState.model.trim() || undefined,
+                          scheduleType: editState.scheduleType,
+                          paused: editState.paused,
+                        };
+                        if (editState.scheduleType === "once") {
+                          if (Number.isFinite(parsedRunAt)) {
+                            body.runAt = parsedRunAt;
+                          }
+                        } else {
+                          body.cron = editState.cron.trim();
                         }
-                      } else {
-                        body.cron = editState.cron.trim();
-                      }
-                      void Promise.resolve(onUpdateTask(body)).then(() => {
+                        void Promise.resolve(onUpdateTask(body)).then(() => {
+                          onSetEditing(false);
+                        });
+                      }}
+                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                    >
+                      {t("scheduled.action.save")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => {
+                        onEditStateChange(buildScheduledEditState(task));
                         onSetEditing(false);
-                      });
-                    }}
-                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                  >
-                    {t("scheduled.action.save")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => {
-                      onEditStateChange(buildScheduledEditState(task));
-                      onSetEditing(false);
-                    }}
-                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                  >
-                    {t("scheduled.action.cancelEdit")}
-                  </button>
-                </>
-              )}
+                      }}
+                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                    >
+                      {t("scheduled.action.cancelEdit")}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
+            <p className="min-w-0 truncate text-sm text-[var(--app-hint)]">
+              {t("scheduled.detail.summary")}
+            </p>
           </div>
           <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
             <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
