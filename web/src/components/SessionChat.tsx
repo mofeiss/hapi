@@ -972,10 +972,6 @@ export function SessionChat(props: {
                 terminalOpen={terminalOpen}
                 onToggleFiles={props.session.metadata?.path ? handleToggleFiles : undefined}
                 filesOpen={filesOpen}
-                isDark={props.isDark}
-                onToggleTheme={props.onToggleTheme}
-                onOpenSettings={props.onOpenSettings}
-                onOpenNewSession={props.onOpenNewSession}
                 onQuickNewSession={props.onQuickNewSession}
                 quickNewSessionPending={props.quickNewSessionPending}
                 api={props.api}

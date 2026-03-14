@@ -27,10 +27,6 @@ export function SessionHeader(props: {
     terminalOpen?: boolean
     onToggleFiles?: () => void
     filesOpen?: boolean
-    isDark?: boolean
-    onToggleTheme?: () => void
-    onOpenSettings?: () => void
-    onOpenNewSession?: () => void
     onQuickNewSession?: () => void
     quickNewSessionPending?: boolean
     api: ApiClient | null
@@ -108,11 +104,10 @@ export function SessionHeader(props: {
                     </div>
 
                     <HeaderActionGroup
-                        isDark={props.isDark}
-                        onToggleTheme={props.onToggleTheme}
-                        onOpenSettings={props.onOpenSettings}
-                        onOpenNewSession={props.onOpenNewSession}
                         onQuickNewSession={props.onQuickNewSession}
+                        hideNewSessionButton
+                        hideThemeControls
+                        hideSettingsButton
                         quickNewSessionPending={props.quickNewSessionPending}
                         onToggleTerminal={props.onToggleTerminal}
                         terminalOpen={props.terminalOpen}
@@ -120,7 +115,7 @@ export function SessionHeader(props: {
                         filesOpen={props.filesOpen}
                         onToggleWidescreen={toggleWidescreen}
                         widescreen={widescreen}
-                        widescreenClassName={`hidden lg:flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
+                        widescreenClassName={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
                         className="flex items-center gap-0.5"
                     />
                 </div>

@@ -10,7 +10,7 @@ import {
 import type { ApiClient } from '@/api/client'
 import { HappyComposer } from '@/components/AssistantChat/HappyComposer'
 import { AgentFlavorStatusIcon } from '@/components/AgentFlavorStatusIcon'
-import { PageHeaderUtilityControls } from '@/components/PageHeaderUtilityControls'
+import { HeaderActionGroup } from '@/components/HeaderActionGroup'
 import { usePlatform } from '@/hooks/usePlatform'
 import { useDirectorySuggestions } from '@/hooks/useDirectorySuggestions'
 import { useActiveSuggestions, type Suggestion } from '@/hooks/useActiveSuggestions'
@@ -23,12 +23,12 @@ import { useSessions } from '@/hooks/queries/useSessions'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { useHappyRuntime } from '@/lib/assistant-runtime'
 import { createDraftAttachmentAdapter } from '@/lib/draftAttachments'
-import { useTheme } from '@/hooks/useTheme'
 import { useTranslation } from '@/lib/use-translation'
 import type { AttachmentMetadata, Machine, PermissionMode, Session, UserMessageMeta } from '@/types/api'
 import { FloatingOverlay } from '@/components/ChatInput/FloatingOverlay'
 import { Autocomplete } from '@/components/ChatInput/Autocomplete'
 import { isTelegramApp } from '@/hooks/useTelegram'
+import { useWidescreen } from '@/hooks/useWidescreen'
 import type { AgentType, SessionType } from './types'
 import { buildCodexModelOptions, getHighestCodexReasoningEffort } from './types'
 import {
@@ -201,11 +201,9 @@ function PillSelect(props: {
 function DraftHeader(props: {
     title: string
     onBack: () => void
-    isDark: boolean
-    onToggleTheme: () => void
-    onOpenSettings?: () => void
 }) {
     const shouldShowBack = !isTelegramApp()
+    const { widescreen, toggleWidescreen } = useWidescreen()
 
     return (
         <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
@@ -222,11 +220,13 @@ function DraftHeader(props: {
                 <div className="min-w-0 flex-1 font-semibold text-[var(--app-fg)]">
                     {props.title}
                 </div>
-                <PageHeaderUtilityControls
-                    isDark={props.isDark}
-                    onToggleTheme={props.onToggleTheme}
-                    onOpenSettings={props.onOpenSettings}
-                    useFallbackSettingsEvent
+                <HeaderActionGroup
+                    onToggleWidescreen={toggleWidescreen}
+                    widescreen={widescreen}
+                    hideNewSessionButton
+                    hideThemeControls
+                    hideSettingsButton
+                    className="flex items-center gap-0.5"
                 />
             </div>
         </div>
@@ -252,7 +252,6 @@ export function NewSession(props: {
 }) {
     const { t } = useTranslation()
     const { haptic } = usePlatform()
-    const { isDark, toggleTheme } = useTheme()
     const { spawnSession, isPending, error: spawnError } = useSpawnSession(props.api)
     const { sessions } = useSessions(props.api)
     const { getRecentPaths, addRecentPath, getLastUsedMachineId, setLastUsedMachineId } = useRecentPaths()
@@ -738,9 +737,6 @@ export function NewSession(props: {
             <DraftHeader
                 title={t('newSession.title')}
                 onBack={props.onCancel}
-                isDark={isDark}
-                onToggleTheme={toggleTheme}
-                onOpenSettings={props.onOpenSettings}
             />
 
             <AssistantRuntimeProvider runtime={runtime}>
