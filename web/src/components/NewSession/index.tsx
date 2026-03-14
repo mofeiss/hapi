@@ -201,12 +201,14 @@ function PillSelect(props: {
 function DraftHeader(props: {
     title: string
     onBack: () => void
+    includeTopSafeArea?: boolean
 }) {
     const shouldShowBack = !isTelegramApp()
     const { widescreen, toggleWidescreen } = useWidescreen()
+    const includeTopSafeArea = props.includeTopSafeArea ?? true
 
     return (
-        <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
+        <div className={`bg-[var(--app-bg)] ${includeTopSafeArea ? 'pt-[env(safe-area-inset-top)]' : ''}`}>
             <div className="mx-auto flex h-[47px] w-full max-w-content items-center border-b border-[var(--app-border)] px-3">
                 {shouldShowBack ? (
                     <button
@@ -236,6 +238,7 @@ function DraftHeader(props: {
 export function NewSession(props: {
     api: ApiClient
     machines: Machine[]
+    includeTopSafeArea?: boolean
     isLoading?: boolean
     loadError?: string | null
     onSuccess: (
@@ -737,6 +740,7 @@ export function NewSession(props: {
             <DraftHeader
                 title={t('newSession.title')}
                 onBack={props.onCancel}
+                includeTopSafeArea={props.includeTopSafeArea}
             />
 
             <AssistantRuntimeProvider runtime={runtime}>

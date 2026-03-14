@@ -3807,6 +3807,7 @@ function SessionView({
       sessionId={sessionId}
       onBack={onBack}
       onSessionDeleted={onSessionDeleted}
+      includeTopSafeArea={false}
       isDark={isDark}
       onToggleTheme={onToggleTheme}
       onOpenSettings={onOpenSettings}
@@ -3878,6 +3879,7 @@ function NewSessionPanel(props: {
     <NewSession
       api={api}
       machines={machines}
+      includeTopSafeArea={false}
       isLoading={machinesLoading}
       loadError={machinesError}
       onCancel={handleCancel}

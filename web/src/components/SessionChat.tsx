@@ -112,6 +112,7 @@ function isContextResetCommand(text: string, flavor: string | null): boolean {
 export function SessionChat(props: {
     api: ApiClient
     session: Session
+    includeTopSafeArea?: boolean
     messages: DecryptedMessage[]
     messagesWarning: string | null
     hasMoreMessages: boolean
@@ -967,6 +968,7 @@ export function SessionChat(props: {
         <div className="relative flex h-full flex-col">
             <SessionHeader
                 session={props.session}
+                includeTopSafeArea={props.includeTopSafeArea}
                 onToggleTerminal={props.session.active ? handleToggleTerminal : undefined}
                 terminalOpen={terminalOpen}
                 onToggleFiles={props.session.metadata?.path ? handleToggleFiles : undefined}

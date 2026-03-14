@@ -22,6 +22,7 @@ function getSessionTitle(session: Session): string {
 export function SessionHeader(props: {
   session: Session;
   titleOverride?: string | null; // deprecated, now reads from store
+  includeTopSafeArea?: boolean;
   onToggleTerminal?: () => void;
   terminalOpen?: boolean;
   onToggleFiles?: () => void;
@@ -33,6 +34,7 @@ export function SessionHeader(props: {
 }) {
   const { widescreen, toggleWidescreen } = useWidescreen();
   const { session } = props;
+  const includeTopSafeArea = props.includeTopSafeArea ?? true;
   const titleFromStore = useSessionTitleOverride(session.id);
   const title = useMemo(
     () => titleFromStore ?? getSessionTitle(session),
@@ -51,9 +53,11 @@ export function SessionHeader(props: {
     return null;
   }
 
-  return (
+    return (
     <>
-      <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
+      <div
+        className={`bg-[var(--app-bg)] ${includeTopSafeArea ? "pt-[env(safe-area-inset-top)]" : ""}`}
+      >
         <div className="mx-auto flex w-full max-w-content items-center gap-2 px-3 py-[8px]">
           {/* Session title row */}
           <div className="min-w-0 flex-1">

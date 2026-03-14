@@ -79,6 +79,7 @@ export function EmbeddedSessionView({
   sessionId,
   onBack,
   onSessionDeleted,
+  includeTopSafeArea = true,
   isDark,
   onToggleTheme,
   onOpenSettings,
@@ -87,6 +88,7 @@ export function EmbeddedSessionView({
   sessionId: string;
   onBack: () => void;
   onSessionDeleted?: () => void;
+  includeTopSafeArea?: boolean;
   isDark?: boolean;
   onToggleTheme?: () => void;
   onOpenSettings?: () => void;
@@ -463,6 +465,7 @@ export function EmbeddedSessionView({
     <SessionChat
       api={api}
       session={session}
+      includeTopSafeArea={includeTopSafeArea}
       messages={messages}
       messagesWarning={messagesWarning}
       hasMoreMessages={messagesHasMore}
