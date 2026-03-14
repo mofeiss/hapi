@@ -508,26 +508,6 @@ function ScheduledRunStatusBadge(props: {
   );
 }
 
-function MobileDetailBackButton(props: {
-  label: string;
-  title?: string;
-  onClick: () => void;
-}) {
-  return (
-    <div className="border-b border-[var(--app-divider)] px-3 py-2 lg:hidden">
-      <button
-        type="button"
-        onClick={props.onClick}
-        className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"
-        aria-label={props.title ?? props.label}
-      >
-        <BackIcon className="h-4 w-4" />
-        <span className="truncate">{props.label}</span>
-      </button>
-    </div>
-  );
-}
-
 function ScheduledTaskDetailPanel({
   task,
   selectedRun,
@@ -542,7 +522,6 @@ function ScheduledTaskDetailPanel({
   onUpdateTask,
   onSelectRun,
   onOpenRunSession,
-  onBack,
 }: {
   task: ScheduledTask;
   selectedRun: ScheduledTaskRun | null;
@@ -557,19 +536,11 @@ function ScheduledTaskDetailPanel({
   onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
   onSelectRun: (runId: string | null) => void;
   onOpenRunSession: (sessionId: string) => void;
-  onBack?: () => void;
 }) {
   const { t } = useTranslation();
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      {onBack ? (
-        <MobileDetailBackButton
-          label={t("scheduled.tab")}
-          title={t("scheduled.detail.empty")}
-          onClick={onBack}
-        />
-      ) : null}
       <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-4 py-4">
         <div className="rounded-[24px] bg-[var(--app-panel-bg)] p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2833,7 +2804,6 @@ function SessionsPage() {
                       onOpenRunSession={(sessionId) => {
                         openWorkspaceSession(sessionId, "chat");
                       }}
-                      onBack={handleScheduledDetailBack}
                     />
                   ) : isScheduledTab ? (
                     <div className="flex h-full min-h-0 flex-col">
