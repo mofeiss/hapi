@@ -2089,16 +2089,16 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={() => selectWorkspaceTab("sessions")}
-                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isSessionsTab ? "z-20 h-[31px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isSessionsTab ? "z-20 h-[35px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[35px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isSessionsTab}
                     >
                       {isSessionsTab ? null : (
                         <span
                           aria-hidden="true"
-                          className="absolute -left-[4px] -right-[4px] inset-y-1 rounded-[10px] bg-transparent transition-colors group-hover:bg-[var(--app-subtle-solid-bg)]"
+                          className="absolute left-[-1px] -right-[4px] top-[-0.5px] bottom-[5.5px] rounded-[8px] bg-transparent transition-colors group-hover:bg-[var(--app-subtle-solid-bg)]"
                         />
                       )}
-                      <span className="relative z-[1] inline-flex items-center gap-1.5">
+                      <span className="relative z-[1] inline-flex -translate-y-[2px] items-center gap-1.5">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           width="16"
@@ -2152,16 +2152,16 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={handleOpenScheduledTab}
-                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isScheduledTab ? "z-20 h-[31px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isScheduledTab ? "z-20 h-[35px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[35px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isScheduledTab}
                     >
                       {isScheduledTab ? null : (
                         <span
                           aria-hidden="true"
-                          className="absolute -left-[4px] -right-[4px] inset-y-1 rounded-[10px] bg-transparent transition-colors group-hover:bg-[var(--app-subtle-solid-bg)]"
+                          className="absolute -left-[4px] -right-[4px] top-[-0.5px] bottom-[5.5px] rounded-[8px] bg-transparent transition-colors group-hover:bg-[var(--app-subtle-solid-bg)]"
                         />
                       )}
-                      <span className="relative z-[1] inline-flex items-center gap-1.5">
+                      <span className="relative z-[1] inline-flex -translate-y-[2px] items-center gap-1.5">
                         <ScheduledTaskIcon className="h-4 w-4" />
                         <span>{t("scheduled.tab")}</span>
                       </span>
@@ -2914,7 +2914,7 @@ function SessionsPage() {
             <button
               type="button"
               onClick={toggleCollapsed}
-              className="inline-flex h-8 w-8 translate-y-[2px] items-center justify-center text-[var(--app-fg)]"
+              className="inline-flex h-8 w-8 translate-y-[4px] items-center justify-center text-[var(--app-fg)]"
               title="Expand sidebar"
               aria-label="Expand sidebar"
             >
