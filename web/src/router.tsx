@@ -2041,7 +2041,7 @@ function SessionsPage() {
                     className="h-7 w-7 shrink-0"
                   />
                 </button>
-                <div className="flex min-w-0 shrink-0 -translate-y-[3px] items-center justify-center lg:hidden">
+                <div className="flex min-w-0 shrink-0 -translate-x-[1px] -translate-y-[3px] items-center justify-center lg:hidden">
                   <img
                     src="/icon.svg"
                     alt="HAPI"
@@ -2050,7 +2050,7 @@ function SessionsPage() {
                 </div>
 
                 <div className="min-w-0 flex-1 overflow-visible pt-1">
-                  <div className="flex min-w-0 items-end gap-1 overflow-visible pl-[2px] lg:-ml-[5px]">
+                  <div className="-ml-[5px] flex min-w-0 items-end gap-1 overflow-visible pl-[2px]">
                     <button
                       type="button"
                       onClick={() => selectWorkspaceTab("sessions")}
