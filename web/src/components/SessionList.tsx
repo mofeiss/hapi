@@ -660,11 +660,11 @@ export function SessionList(props: {
                     index > 0 ? "border-t border-[var(--app-subtle-solid-bg)]" : ""
                   }
                 >
-                  <div className="sticky top-0 z-10 flex items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2">
+                  <div className="sticky top-0 z-10 flex items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 relative">
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.host, isCollapsed)}
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      className={`flex min-w-0 flex-1 items-center gap-2 text-left ${props.onNewSessionForHost ? "pr-9" : ""}`}
                     >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -703,11 +703,11 @@ export function SessionList(props: {
                         onClick={() => {
                           props.onNewSessionForHost?.(group.host);
                         }}
-                        className="session-list-new-button flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]"
+                        className="session-list-new-button absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]"
                         title={t("sessions.new")}
                         aria-label={`${t("sessions.new")} ${group.host}`}
                       >
-                        <NewChatIcon className="h-[18px] w-[18px]" />
+                        <NewChatIcon className="h-5 w-5" />
                       </button>
                     ) : null}
                   </div>
