@@ -2049,12 +2049,12 @@ function SessionsPage() {
                   />
                 </div>
 
-                <div className="min-w-0 flex-1 overflow-hidden pt-1">
-                  <div className="flex min-w-0 items-end gap-1">
+                <div className="min-w-0 flex-1 overflow-visible pt-1">
+                  <div className="flex min-w-0 items-end gap-1 overflow-visible pl-[2px]">
                     <button
                       type="button"
                       onClick={() => selectWorkspaceTab("sessions")}
-                      className={`relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 py-2 text-xs font-semibold ${isSessionsTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                      className={`relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 py-2 text-xs font-semibold ${isSessionsTab ? "z-20 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isSessionsTab}
                     >
                       <span className="relative z-[1] inline-flex items-center gap-1.5">
@@ -2085,7 +2085,7 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={handleOpenScheduledTab}
-                      className={`relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 py-2 text-xs font-semibold ${isScheduledTab ? "z-10 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
+                      className={`relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 py-2 text-xs font-semibold ${isScheduledTab ? "z-20 bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "border-transparent bg-[var(--app-subtle-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isScheduledTab}
                     >
                       <span className="relative z-[1] inline-flex items-center gap-1.5">
