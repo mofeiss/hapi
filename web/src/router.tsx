@@ -2543,12 +2543,15 @@ function SessionsPage() {
 
   const isScheduledTab = workspace.tab === "scheduled";
   const isSessionsTab = workspace.tab === "sessions";
+  const mobileNewSessionVisible = narrowViewport && newSessionOpen;
   const mobileSessionsDetailVisible =
     narrowViewport && isSessionsTab && activeSessionId !== null && !hasOverlay;
   const mobileScheduledDetailVisible =
     narrowViewport && isScheduledTab && Boolean(selectedScheduledTaskId) && !hasOverlay;
   const mobileTabDetailVisible =
-    mobileSessionsDetailVisible || mobileScheduledDetailVisible;
+    mobileNewSessionVisible ||
+    mobileSessionsDetailVisible ||
+    mobileScheduledDetailVisible;
   const effectiveCollapsed = collapsed;
   const scheduledIndexVisible = !selectedScheduledTaskId;
   const leftPanelVisible = effectiveCollapsed
@@ -2556,7 +2559,7 @@ function SessionsPage() {
       ? "flex lg:hidden"
       : "hidden"
     : narrowViewport
-      ? hasOverlay
+      ? settingsOpen
         ? "hidden"
         : "flex"
       : isScheduledTab
@@ -2760,7 +2763,18 @@ function SessionsPage() {
                 <div
                   className={`min-h-0 flex-1 ${showSidebarSearchRow ? "" : "rounded-b-[14px]"}`}
                 >
-                  {mobileSessionsDetailVisible && activeSessionId ? (
+                  {mobileNewSessionVisible ? (
+                    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                      <NewSessionPanel
+                        onClose={() => {
+                          setNewSessionOpen(false);
+                          selectWorkspaceOverlay("none");
+                        }}
+                        onOpenSettings={openSettingsOverlay}
+                        initialMachineId={newSessionMachineId}
+                      />
+                    </div>
+                  ) : mobileSessionsDetailVisible && activeSessionId ? (
                     <div className="flex h-full min-h-0 flex-col overflow-hidden">
                       <SessionView
                         sessionId={activeSessionId}
@@ -3705,18 +3719,6 @@ function SessionsPage() {
         >
           <SettingsPanel onClose={closeSettingsOverlay} />
         </div>
-        {narrowViewport && newSessionOpen ? (
-          <div className="absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 opacity-100">
-            <NewSessionPanel
-              onClose={() => {
-                setNewSessionOpen(false);
-                selectWorkspaceOverlay("none");
-              }}
-              onOpenSettings={openSettingsOverlay}
-              initialMachineId={newSessionMachineId}
-            />
-          </div>
-        ) : null}
       </div>
     </div>
   );
