@@ -2597,7 +2597,7 @@ function SessionsPage() {
           <button
             type="button"
             onClick={narrowViewport ? undefined : toggleCollapsed}
-            className={`absolute left-[11px] top-[calc(env(safe-area-inset-top)+7px)] z-40 inline-flex h-8 w-8 items-center justify-center text-[var(--app-fg)] ${narrowViewport ? "pointer-events-none" : ""}`}
+            className={`absolute left-[11px] top-[calc(env(safe-area-inset-top)+12px)] z-40 inline-flex h-8 w-8 items-center justify-center text-[var(--app-fg)] ${narrowViewport ? "pointer-events-none" : ""}`}
             title={
               narrowViewport
                 ? "HAPI"
