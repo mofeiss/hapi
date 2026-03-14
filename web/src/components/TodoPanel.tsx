@@ -116,7 +116,7 @@ export function TodoList(props: {
                             <TodoStatusIcon status={todo.status} />
                         </span>
                         <span className={cn(
-                            'min-w-0 break-words',
+                            'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap',
                             todoTextClass(todo.status),
                             itemTextClass
                         )}>
@@ -203,7 +203,7 @@ export function TodoPanel(props: {
                     onClick={toggleExpanded}
                 >
                     <div className={headerContentClassName}>
-                        <span className="shrink-0 text-[var(--app-fg)]">
+                        <span className="shrink-0 text-[var(--app-hint)] opacity-80">
                             <ChecklistIcon className={isDock ? 'h-5 w-5' : 'h-4 w-4'} />
                         </span>
                         <span className="shrink-0">
@@ -222,7 +222,7 @@ export function TodoPanel(props: {
             ) : (
                 <div className={headerClassName}>
                     <div className={headerContentClassName}>
-                        <span className="shrink-0 text-[var(--app-fg)]">
+                        <span className="shrink-0 text-[var(--app-hint)] opacity-80">
                             <ChecklistIcon className={isDock ? 'h-5 w-5' : 'h-4 w-4'} />
                         </span>
                         <span className="shrink-0">

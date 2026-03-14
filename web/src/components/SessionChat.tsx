@@ -1016,7 +1016,7 @@ export function SessionChat(props: {
 
                     <div className="bg-[var(--app-bg)] px-3 pb-0 pt-2">
                         <div className="mx-auto w-full max-w-content">
-                            <div className="relative flex items-end gap-3">
+                            <div className="relative flex min-w-0 items-end gap-3">
                                 <StatusBar
                                     active={props.session.active}
                                     thinking={props.session.thinking}
@@ -1029,8 +1029,8 @@ export function SessionChat(props: {
 
                                 {composerTodos.length > 0 ? (
                                     <>
-                                        <div aria-hidden="true" className="min-w-0 max-w-[70%] shrink-0 self-end">
-                                            <div className="invisible h-0 w-fit max-w-full overflow-hidden pl-1 pr-4 sm:pl-2 sm:pr-5">
+                                        <div aria-hidden="true" className="min-w-0 max-w-[min(58%,32rem)] flex-1 self-end">
+                                            <div className="invisible h-0 w-full max-w-full overflow-hidden pl-1 pr-4 sm:pl-2 sm:pr-5">
                                                 <TodoPanel
                                                     todos={composerTodos}
                                                     variant="dock"
@@ -1038,13 +1038,13 @@ export function SessionChat(props: {
                                                     expanded={composerTodoExpanded}
                                                     onExpandedChange={setComposerTodoExpanded}
                                                     resetKey={composerTodoResetKey}
-                                                    className="relative z-0 w-fit max-w-full"
+                                                    className="relative z-0 ml-auto w-full min-w-0"
                                                 />
                                             </div>
                                         </div>
 
-                                        <div className="pointer-events-none absolute bottom-0 right-0 z-0 min-w-0 max-w-[70%]">
-                                            <div className="pointer-events-auto w-fit max-w-full pl-1 pr-4 sm:pl-2 sm:pr-5">
+                                        <div className="pointer-events-none absolute bottom-0 right-0 z-0 min-w-0 max-w-[min(58%,32rem)] w-full">
+                                            <div className="pointer-events-auto ml-auto w-full max-w-full pl-1 pr-4 sm:pl-2 sm:pr-5">
                                                 <TodoPanel
                                                     todos={composerTodos}
                                                     variant="dock"
@@ -1052,7 +1052,7 @@ export function SessionChat(props: {
                                                     expanded={composerTodoExpanded}
                                                     onExpandedChange={setComposerTodoExpanded}
                                                     resetKey={composerTodoResetKey}
-                                                    className="relative z-0 -mb-7 w-fit max-w-full"
+                                                    className="relative z-0 -mb-7 ml-auto w-full min-w-0"
                                                 />
                                             </div>
                                         </div>

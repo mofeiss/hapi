@@ -141,25 +141,25 @@ export function StatusBar(props: {
     )
 
     return (
-        <div className={`flex min-h-5 items-center justify-between px-1 pb-1 ${props.className ?? ''}`}>
-            <div className="flex items-center gap-3">
-                <div className={`flex items-center gap-1.5 ${connectionStatus.isPulsing ? 'animate-[snowflake-pulse_1.5s_ease-in-out_infinite]' : ''}`}>
+        <div className={`flex min-h-5 min-w-0 items-center overflow-hidden px-1 pb-1 ${props.className ?? ''}`}>
+            <div className="flex min-w-0 flex-nowrap items-center gap-3 overflow-hidden">
+                <div className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap ${connectionStatus.isPulsing ? 'animate-[snowflake-pulse_1.5s_ease-in-out_infinite]' : ''}`}>
                     {connectionStatus.isPulsing ? (
                         <span className={`inline-block text-xs leading-none ${connectionStatus.color} animate-[spin_3s_linear_infinite]`}>✻</span>
                     ) : (
                         <span className={`text-xs leading-none ${connectionStatus.color}`}>✻</span>
                     )}
-                    <span className={`text-xs ${connectionStatus.color}`}>
+                    <span className={`text-xs whitespace-nowrap ${connectionStatus.color}`}>
                         {connectionStatus.text}
                     </span>
                 </div>
                 {contextWarning ? (
-                    <span className={`inline-flex items-center gap-1.5 text-[10px] leading-none ${contextWarning.color}`}>
+                    <span className={`inline-flex min-w-0 items-center gap-1.5 text-[10px] leading-none whitespace-nowrap ${contextWarning.color}`}>
                         <ContextUsageRing
                             usedPercentage={contextWarning.usedPercentage}
                             className="h-3.5 w-3.5 shrink-0"
                         />
-                        <span>{contextWarning.text}</span>
+                        <span className="truncate">{contextWarning.text}</span>
                     </span>
                 ) : null}
             </div>
