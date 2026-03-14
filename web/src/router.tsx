@@ -1553,11 +1553,13 @@ function SessionsPage() {
     canBack: boolean;
     canForward: boolean;
     activeSessionId: string | null;
+    backTarget: "session" | "scheduled" | "newSession" | null;
     forwardSessionId: string | null;
   }>({
     canBack: false,
     canForward: false,
     activeSessionId: null,
+    backTarget: null,
     forwardSessionId: null,
   });
 
@@ -2138,13 +2140,31 @@ function SessionsPage() {
       );
   }, [openSettingsOverlay]);
 
+  const isScheduledTab = workspace.tab === "scheduled";
+  const isSessionsTab = workspace.tab === "sessions";
+  const visibleNewSessionOverlay = isSessionsTab && newSessionOpen;
+  const swipeNavEnabled = narrowViewport;
   const isSubRoute =
     activeSessionId !== null && workspace.sessionSubview !== "chat";
   const isSessionsIndex = activeSessionId === null && !hasOverlay;
+  const canSwipeBackFromSessionDetail =
+    swipeNavEnabled &&
+    isSessionsTab &&
+    activeSessionId !== null &&
+    !isSubRoute &&
+    !hasOverlay;
+  const canSwipeBackFromScheduledDetail =
+    swipeNavEnabled &&
+    isScheduledTab &&
+    selectedScheduledTaskId !== null &&
+    !hasOverlay;
+  const canSwipeBackFromNewSession =
+    swipeNavEnabled && visibleNewSessionOverlay;
 
-  const swipeNavEnabled = narrowViewport;
   const canSwipeBackToList =
-    swipeNavEnabled && activeSessionId !== null && !isSubRoute && !hasOverlay;
+    canSwipeBackFromSessionDetail ||
+    canSwipeBackFromScheduledDetail ||
+    canSwipeBackFromNewSession;
   const canSwipeForwardToSession =
     swipeNavEnabled &&
     isSessionsIndex &&
@@ -2155,6 +2175,13 @@ function SessionsPage() {
     canBack: canSwipeBackToList,
     canForward: canSwipeForwardToSession,
     activeSessionId,
+    backTarget: canSwipeBackFromSessionDetail
+      ? "session"
+      : canSwipeBackFromScheduledDetail
+        ? "scheduled"
+        : canSwipeBackFromNewSession
+          ? "newSession"
+        : null,
     forwardSessionId: swipeForwardSessionId,
   };
 
@@ -2211,12 +2238,27 @@ function SessionsPage() {
     (action: SwipeAction): boolean => {
       const capability = swipeCapabilityRef.current;
       if (action === "back") {
-        if (!capability.canBack || !capability.activeSessionId) {
+        if (!capability.canBack || !capability.backTarget) {
           return false;
         }
-        setSwipeForwardSessionId(capability.activeSessionId);
-        setActiveSessionId(null);
-        navigate({ to: "/" });
+        if (capability.backTarget === "session") {
+          if (!capability.activeSessionId) {
+            return false;
+          }
+          setSwipeForwardSessionId(capability.activeSessionId);
+          clearWorkspaceSessionSelection();
+          setActiveSessionId(null);
+          navigate({ to: "/" });
+        } else if (capability.backTarget === "newSession") {
+          setNewSessionOpen(false);
+          selectWorkspaceOverlay("none");
+        } else {
+          setSelectedScheduledTaskId(null);
+          setSelectedScheduledRunId(null);
+          setScheduledEditing(false);
+          setScheduledEditState(null);
+          clearWorkspaceScheduledSelection();
+        }
         return true;
       }
       if (!capability.canForward || !capability.forwardSessionId) {
@@ -2402,6 +2444,8 @@ function SessionsPage() {
     hasOverlay,
     isSubRoute,
     isSessionsIndex,
+    newSessionOpen,
+    selectedScheduledTaskId,
     resetWheelGesture,
   ]);
 
@@ -2463,43 +2507,6 @@ function SessionsPage() {
     });
   }, []);
 
-  const toggleMobileSessionPane = useCallback(() => {
-    if (!narrowViewport || hasOverlay || isSubRoute) {
-      return;
-    }
-
-    if (activeSessionRef.current) {
-      setSwipeForwardSessionId(activeSessionRef.current);
-      setActiveSessionId(null);
-      navigate({ to: "/" });
-      return;
-    }
-
-    if (swipeForwardSessionId) {
-      openSession(swipeForwardSessionId, { preserveForward: true });
-    }
-  }, [
-    hasOverlay,
-    isSubRoute,
-    narrowViewport,
-    navigate,
-    openSession,
-    swipeForwardSessionId,
-  ]);
-
-  useAppKeyboardShortcuts({
-    isMobileViewport: narrowViewport,
-    canToggleMobileSessionPane:
-      narrowViewport &&
-      !hasOverlay &&
-      !isSubRoute &&
-      (activeSessionId !== null || Boolean(swipeForwardSessionId)),
-    onOpenNewSession: toggleNewSessionOverlay,
-    onToggleSettings: toggleSettingsOverlay,
-    onToggleDesktopSidebar: toggleCollapsed,
-    onToggleMobileSessionPane: toggleMobileSessionPane,
-  });
-
   const handleOpenScheduledTab = useCallback(() => {
     selectWorkspaceTab("scheduled");
   }, []);
@@ -2512,9 +2519,63 @@ function SessionsPage() {
     clearWorkspaceScheduledSelection();
   }, []);
 
-  const isScheduledTab = workspace.tab === "scheduled";
-  const isSessionsTab = workspace.tab === "sessions";
-  const visibleNewSessionOverlay = isSessionsTab && newSessionOpen;
+  const toggleMobileSessionPane = useCallback(() => {
+    if (!narrowViewport || settingsOpen || isSubRoute) {
+      return;
+    }
+
+    if (visibleNewSessionOverlay) {
+      setNewSessionOpen(false);
+      selectWorkspaceOverlay("none");
+      return;
+    }
+
+    if (isSessionsTab && activeSessionRef.current) {
+      setSwipeForwardSessionId(activeSessionRef.current);
+      clearWorkspaceSessionSelection();
+      setActiveSessionId(null);
+      navigate({ to: "/" });
+      return;
+    }
+
+    if (isScheduledTab && selectedScheduledTaskId) {
+      handleScheduledDetailBack();
+      return;
+    }
+
+    if (swipeForwardSessionId) {
+      openSession(swipeForwardSessionId, { preserveForward: true });
+    }
+  }, [
+    handleScheduledDetailBack,
+    isSubRoute,
+    isScheduledTab,
+    isSessionsTab,
+    narrowViewport,
+    navigate,
+    openSession,
+    settingsOpen,
+    selectedScheduledTaskId,
+    swipeForwardSessionId,
+    visibleNewSessionOverlay,
+  ]);
+
+  useAppKeyboardShortcuts({
+    isMobileViewport: narrowViewport,
+    canToggleMobileSessionPane:
+      narrowViewport &&
+      !settingsOpen &&
+      (visibleNewSessionOverlay ||
+        ((!isSubRoute &&
+        ((isSessionsTab && activeSessionId !== null) ||
+          (isScheduledTab && selectedScheduledTaskId !== null))) ||
+        Boolean(swipeForwardSessionId))),
+    onOpenNewSession: toggleNewSessionOverlay,
+    onToggleSettings: toggleSettingsOverlay,
+    onToggleDesktopSidebar: toggleCollapsed,
+    onToggleMobileSessionPane: toggleMobileSessionPane,
+  });
+
   const mobileNewSessionVisible = narrowViewport && visibleNewSessionOverlay;
   const mobileSessionsDetailVisible =
     narrowViewport && isSessionsTab && activeSessionId !== null && !hasOverlay;
