@@ -53,20 +53,6 @@ import {
     normalizeClaudeModelValue
 } from '@/lib/claudeModels'
 
-function BackIcon() {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-        >
-            <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z" />
-        </svg>
-    )
-}
-
 function ChevronDownIcon() {
     return (
         <svg
@@ -203,22 +189,12 @@ function DraftHeader(props: {
     onBack: () => void
     includeTopSafeArea?: boolean
 }) {
-    const shouldShowBack = !isTelegramApp()
     const { widescreen, toggleWidescreen } = useWidescreen()
     const includeTopSafeArea = props.includeTopSafeArea ?? true
 
     return (
         <div className={`bg-[var(--app-bg)] ${includeTopSafeArea ? 'pt-[env(safe-area-inset-top)]' : ''}`}>
             <div className="mx-auto flex h-[47px] w-full max-w-content items-center border-b border-[var(--app-border)] px-3">
-                {shouldShowBack ? (
-                    <button
-                        type="button"
-                        onClick={props.onBack}
-                        className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors lg:hidden"
-                    >
-                        <BackIcon />
-                    </button>
-                ) : null}
                 <div className="min-w-0 flex-1 font-semibold text-[var(--app-fg)]">
                     {props.title}
                 </div>

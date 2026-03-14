@@ -1506,7 +1506,8 @@ function SessionsPage() {
   const [newSessionOpen, setNewSessionOpen] = useState(
     workspace.overlay === "newSession",
   );
-  const hasOverlay = settingsOpen || newSessionOpen;
+  const hasOverlay =
+    settingsOpen || (workspace.tab === "sessions" && newSessionOpen);
   const [narrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== "undefined"
       ? window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX
@@ -2511,7 +2512,8 @@ function SessionsPage() {
 
   const isScheduledTab = workspace.tab === "scheduled";
   const isSessionsTab = workspace.tab === "sessions";
-  const mobileNewSessionVisible = narrowViewport && newSessionOpen;
+  const visibleNewSessionOverlay = isSessionsTab && newSessionOpen;
+  const mobileNewSessionVisible = narrowViewport && visibleNewSessionOverlay;
   const mobileSessionsDetailVisible =
     narrowViewport && isSessionsTab && activeSessionId !== null && !hasOverlay;
   const mobileScheduledDetailVisible =
@@ -2539,7 +2541,7 @@ function SessionsPage() {
           : "hidden lg:flex";
   const showDesktopNewSessionPane =
     !narrowViewport &&
-    (newSessionOpen ||
+    (visibleNewSessionOverlay ||
       (isSessionsTab && activeSessionId === null && !hasOverlay));
   const leftPanelContentScale = 1;
   const leftPanelContentStyle = {
@@ -2555,11 +2557,11 @@ function SessionsPage() {
   const mobileLogoBackMode =
     narrowViewport &&
     !settingsOpen &&
-    (newSessionOpen ||
+    (visibleNewSessionOverlay ||
       (isSessionsTab && activeSessionId !== null) ||
       (isScheduledTab && Boolean(selectedScheduledTaskId)));
   const handlePinnedLogoClick = mobileLogoBackMode
-    ? newSessionOpen
+    ? visibleNewSessionOverlay
       ? () => {
           setNewSessionOpen(false);
           selectWorkspaceOverlay("none");
