@@ -149,6 +149,7 @@ const SWIPE_WHEEL_CANCEL_PX = 24;
 const SWIPE_WHEEL_IDLE_RESET_MS = 220;
 const SWIPE_WHEEL_RELEASE_MS = 50;
 const SWIPE_WHEEL_UNLOCK_MS = 280;
+const DESKTOP_SIDEBAR_MIN_WIDTH = 360;
 
 type SwipeAction = "back" | "forward";
 type SwipeDirection = -1 | 0 | 1;
@@ -1002,7 +1003,7 @@ function SessionsPage() {
   // Panel resize state (persisted to localStorage)
   const [panelWidth, setPanelWidth] = useState(() => {
     const stored = localStorage.getItem("hapi:panel:leftWidth");
-    return stored ? Math.max(280, Number(stored)) : 420;
+    return stored ? Math.max(DESKTOP_SIDEBAR_MIN_WIDTH, Number(stored)) : 420;
   });
 
   const [collapsed, setCollapsed] = useState(() => {
@@ -1907,7 +1908,12 @@ function SessionsPage() {
         const delta = ev.clientX - startX;
         const maxW = window.innerWidth * 0.5;
         setPanelWidth(
-          Math.round(Math.min(Math.max(startWidth + delta, 280), maxW)),
+          Math.round(
+            Math.min(
+              Math.max(startWidth + delta, DESKTOP_SIDEBAR_MIN_WIDTH),
+              maxW,
+            ),
+          ),
         );
       };
 
@@ -1918,7 +1924,10 @@ function SessionsPage() {
         const delta = ev.clientX - startX;
         const maxW = window.innerWidth * 0.5;
         const finalWidth = Math.round(
-          Math.min(Math.max(startWidth + delta, 280), maxW),
+          Math.min(
+            Math.max(startWidth + delta, DESKTOP_SIDEBAR_MIN_WIDTH),
+            maxW,
+          ),
         );
         localStorage.setItem("hapi:panel:leftWidth", String(finalWidth));
       };
