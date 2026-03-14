@@ -2063,7 +2063,7 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={() => selectWorkspaceTab("sessions")}
-                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isSessionsTab ? "z-20 h-[32px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isSessionsTab ? "z-20 h-[31px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isSessionsTab}
                     >
                       {isSessionsTab ? null : (
@@ -2126,7 +2126,7 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={handleOpenScheduledTab}
-                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isScheduledTab ? "z-20 h-[32px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isScheduledTab ? "z-20 h-[31px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isScheduledTab}
                     >
                       {isScheduledTab ? null : (
