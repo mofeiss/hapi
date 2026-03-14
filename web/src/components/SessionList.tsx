@@ -334,7 +334,7 @@ function SessionItem(props: {
               sizeClassName="h-4 w-4"
             />
             <div
-              className={`truncate text-sm leading-none ${
+              className={`truncate text-base leading-none ${
                 selected
                   ? "font-semibold text-[var(--app-fg)]"
                   : !s.active
@@ -345,7 +345,7 @@ function SessionItem(props: {
               {sessionName}
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0 text-xs">
+          <div className="flex items-center gap-1 shrink-0 text-sm">
             {s.thinking ? (
               <span className="text-[var(--app-hint)] animate-pulse flex items-center">
                 <svg
@@ -400,7 +400,7 @@ function SessionItem(props: {
           </div>
         </div>
         <div
-          className="flex items-center gap-x-2 text-xs text-[var(--app-hint)]"
+          className="flex items-center gap-x-2 text-sm text-[var(--app-hint)]"
           style={{ opacity: "var(--app-session-subtitle-opacity)" }}
         >
           <span className="inline-flex items-center gap-1 truncate">
@@ -621,7 +621,7 @@ export function SessionList(props: {
     >
       {renderHeader ? (
         <div className="flex items-center justify-between py-1">
-          <div className="text-xs text-[var(--app-hint)]">
+          <div className="text-sm text-[var(--app-hint)]">
             {t("sessions.count", {
               n: props.sessions.length,
               m: groups.length,
@@ -689,10 +689,10 @@ export function SessionList(props: {
                       collapsed={isCollapsed}
                     />
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="break-words text-sm font-medium">
+                      <span className="break-words text-base font-medium">
                         {group.host}
                       </span>
-                      <span className="shrink-0 text-xs text-[var(--app-hint)]">
+                      <span className="shrink-0 text-sm text-[var(--app-hint)]">
                         ({group.sessions.length})
                       </span>
                     </div>

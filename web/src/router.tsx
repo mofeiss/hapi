@@ -2063,7 +2063,7 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={() => selectWorkspaceTab("sessions")}
-                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isSessionsTab ? "z-20 h-[31px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isSessionsTab ? "z-20 h-[31px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isSessionsTab}
                     >
                       {isSessionsTab ? null : (
@@ -2126,7 +2126,7 @@ function SessionsPage() {
                     <button
                       type="button"
                       onClick={handleOpenScheduledTab}
-                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-xs font-semibold ${isScheduledTab ? "z-20 h-[31px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isScheduledTab ? "z-20 h-[31px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[31px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
                       aria-pressed={isScheduledTab}
                     >
                       {isScheduledTab ? null : (
@@ -2295,10 +2295,10 @@ function SessionsPage() {
                                           collapsed={isCollapsed}
                                         />
                                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                                          <span className="break-words text-sm font-medium">
+                                          <span className="break-words text-base font-medium">
                                             {group.title}
                                           </span>
-                                          <span className="shrink-0 text-xs text-[var(--app-hint)]">
+                                          <span className="shrink-0 text-sm text-[var(--app-hint)]">
                                             ({group.tasks.length})
                                           </span>
                                         </div>
@@ -2493,7 +2493,7 @@ function SessionsPage() {
                                                       )}
                                                     </span>
                                                     <div
-                                                      className={`truncate text-sm leading-none ${
+                                                      className={`truncate text-base leading-none ${
                                                         selected
                                                           ? "font-semibold text-[var(--app-fg)]"
                                                           : "font-medium text-[var(--app-fg)]"
@@ -2502,7 +2502,7 @@ function SessionsPage() {
                                                       {task.title}
                                                     </div>
                                                   </div>
-                                                  <div className="flex shrink-0 items-center gap-1 text-xs">
+                                                  <div className="flex shrink-0 items-center gap-1 text-sm">
                                                     <span
                                                       className={
                                                         task.paused
@@ -2524,7 +2524,7 @@ function SessionsPage() {
                                                   </div>
                                                 </div>
                                                 <div
-                                                  className="flex items-center gap-x-2 text-xs text-[var(--app-hint)] overflow-hidden whitespace-nowrap"
+                                                  className="flex items-center gap-x-2 text-sm text-[var(--app-hint)] overflow-hidden whitespace-nowrap"
                                                   style={{
                                                     opacity:
                                                       "var(--app-session-subtitle-opacity)",
