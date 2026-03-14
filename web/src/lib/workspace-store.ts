@@ -19,7 +19,53 @@ const DEFAULT_STATE: WorkspaceState = {
     selectedScheduledRunId: null,
 }
 
-let state: WorkspaceState = DEFAULT_STATE
+const STORAGE_KEY = 'hapi:workspace-state'
+
+function isWorkspaceTab(value: unknown): value is WorkspaceTab {
+    return value === 'sessions' || value === 'scheduled'
+}
+
+function isSessionSubview(value: unknown): value is SessionSubview {
+    return value === 'chat' || value === 'files' || value === 'terminal'
+}
+
+function readPersistedState(): WorkspaceState {
+    if (typeof window === 'undefined') {
+        return DEFAULT_STATE
+    }
+
+    try {
+        const raw = window.localStorage.getItem(STORAGE_KEY)
+        if (!raw) {
+            return DEFAULT_STATE
+        }
+
+        const parsed = JSON.parse(raw) as Partial<WorkspaceState>
+        return {
+            tab: isWorkspaceTab(parsed.tab) ? parsed.tab : DEFAULT_STATE.tab,
+            selectedSessionId: typeof parsed.selectedSessionId === 'string' ? parsed.selectedSessionId : null,
+            sessionSubview: isSessionSubview(parsed.sessionSubview) ? parsed.sessionSubview : DEFAULT_STATE.sessionSubview,
+            selectedScheduledTaskId: typeof parsed.selectedScheduledTaskId === 'string' ? parsed.selectedScheduledTaskId : null,
+            selectedScheduledRunId: typeof parsed.selectedScheduledRunId === 'string' ? parsed.selectedScheduledRunId : null,
+        }
+    } catch {
+        return DEFAULT_STATE
+    }
+}
+
+function persistState(nextState: WorkspaceState): void {
+    if (typeof window === 'undefined') {
+        return
+    }
+
+    try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState))
+    } catch {
+        // Ignore storage failures so the workspace remains usable.
+    }
+}
+
+let state: WorkspaceState = readPersistedState()
 const listeners = new Set<() => void>()
 
 function emit(): void {
@@ -41,11 +87,13 @@ export function getWorkspaceState(): WorkspaceState {
 
 export function setWorkspaceState(next: Partial<WorkspaceState>): void {
     state = { ...state, ...next }
+    persistState(state)
     emit()
 }
 
 export function resetWorkspaceState(): void {
     state = DEFAULT_STATE
+    persistState(state)
     emit()
 }
 
