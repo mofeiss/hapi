@@ -53,7 +53,7 @@ export default {
   menu: "Menu",
 
   // Scheduled
-  "scheduled.tab": "Scheduled",
+  "scheduled.tab": "Scheduler",
   "scheduled.search.placeholder": "Search scheduled tasks",
   "scheduled.search.clear": "Clear scheduled search",
   "scheduled.list.loading": "Loading scheduled tasks...",

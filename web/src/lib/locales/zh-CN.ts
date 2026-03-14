@@ -52,7 +52,7 @@ export default {
   'menu': '菜单',
 
   // Scheduled
-  'scheduled.tab': '任务',
+  'scheduled.tab': '计划任务',
   'scheduled.search.placeholder': '搜索定时任务',
   'scheduled.search.clear': '清除定时任务搜索',
   'scheduled.list.loading': '正在加载定时任务…',
