@@ -10,6 +10,7 @@ import { useSSE } from '@/hooks/useSSE'
 import { useSyncingState } from '@/hooks/useSyncingState'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useVisibilityReporter } from '@/hooks/useVisibilityReporter'
+import { useViewportHeight } from '@/hooks/useViewportHeight'
 import { queryKeys } from '@/lib/query-keys'
 import { AppContextProvider } from '@/lib/app-context'
 import { fetchLatestMessages } from '@/lib/message-window-store'
@@ -92,6 +93,8 @@ function AppInner() {
     const matchRoute = useMatchRoute()
     const router = useRouter()
     const { addToast } = useToast()
+
+    useViewportHeight()
 
     useEffect(() => {
         const tg = getTelegramWebApp()

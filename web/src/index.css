@@ -130,11 +130,27 @@ body {
     -webkit-text-size-adjust: 100%;
 }
 
+html {
+    background: var(--app-bg);
+}
+
 body {
     margin: 0;
     font-size: 1rem;
     background: var(--app-bg);
     color: var(--app-fg);
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: env(safe-area-inset-bottom);
+    background: var(--app-bg);
+    pointer-events: none;
+    z-index: 0;
 }
 
 .liquid-line {
@@ -160,6 +176,8 @@ body {
 }
 
 #root {
+    position: relative;
+    z-index: 1;
     height: 100%;
     height: var(--app-root-height, var(--tg-viewport-stable-height, 100dvh));
 }
