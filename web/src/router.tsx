@@ -2584,16 +2584,21 @@ function SessionsPage() {
   const showSidebarBatchActions = !effectiveCollapsed && isSessionsTab;
   const mobileLeftPanelVisible = leftPanelVisible.includes("flex");
   const showPinnedSidebarLogo = !narrowViewport || mobileLeftPanelVisible;
-  const mobileLogoBackMode = narrowViewport && !settingsOpen && (newSessionOpen || activeSessionId !== null || Boolean(selectedScheduledTaskId));
+  const mobileLogoBackMode =
+    narrowViewport &&
+    !settingsOpen &&
+    (newSessionOpen ||
+      (isSessionsTab && activeSessionId !== null) ||
+      (isScheduledTab && Boolean(selectedScheduledTaskId)));
   const handlePinnedLogoClick = mobileLogoBackMode
     ? newSessionOpen
       ? () => {
           setNewSessionOpen(false);
           selectWorkspaceOverlay("none");
         }
-      : activeSessionId !== null
+      : isSessionsTab && activeSessionId !== null
         ? handleSessionBack
-        : selectedScheduledTaskId
+        : isScheduledTab && selectedScheduledTaskId
           ? handleScheduledDetailBack
           : undefined
     : narrowViewport
