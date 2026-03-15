@@ -254,6 +254,7 @@ const SWIPE_WHEEL_IDLE_RESET_MS = 220;
 const SWIPE_WHEEL_RELEASE_MS = 50;
 const SWIPE_WHEEL_UNLOCK_MS = 280;
 const DESKTOP_SIDEBAR_MIN_WIDTH = 375;
+const DETAIL_EDGE_FADE_PX = 20;
 
 type SwipeAction = "back" | "forward";
 type SwipeDirection = -1 | 0 | 1;
@@ -1227,7 +1228,13 @@ function ScheduledTaskDetailPanel({
         onUpdateTask={onUpdateTask}
       />
 
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+      <div
+        className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+        style={{
+          WebkitMaskImage: `linear-gradient(to bottom, transparent 0, black ${DETAIL_EDGE_FADE_PX}px, black calc(100% - ${DETAIL_EDGE_FADE_PX}px), transparent 100%)`,
+          maskImage: `linear-gradient(to bottom, transparent 0, black ${DETAIL_EDGE_FADE_PX}px, black calc(100% - ${DETAIL_EDGE_FADE_PX}px), transparent 100%)`,
+        }}
+      >
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
           <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-2">
             {isEditing && editState ? (
