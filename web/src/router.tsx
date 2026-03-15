@@ -14,6 +14,7 @@ import {
 import { App } from "@/App";
 import { SessionChat } from "@/components/SessionChat";
 import { EmbeddedSessionView } from "@/components/EmbeddedSessionView";
+import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 import { HeaderActionGroup } from "@/components/HeaderActionGroup";
 import {
   SessionList,
@@ -622,32 +623,41 @@ function ScheduledTaskHeader(props: {
   );
   const headerIconButtonClassName =
     "flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50";
+  const headerCompactButtonClassName =
+    "inline-flex h-[30px] items-center rounded-lg border border-[var(--app-border)] px-2.5 text-xs text-[var(--app-fg)] disabled:opacity-50";
 
   return (
     <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex w-full max-w-content items-center gap-2 px-3 py-[8px]">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-            <ScheduledTaskIcon className="h-4 w-4 shrink-0 text-[var(--app-hint)]" />
+            <AgentFlavorStatusIcon
+              flavor={props.task.agentFlavor}
+              active
+              sizeClassName="h-4 w-4"
+            />
             <div className="min-w-0 flex-1">
               {props.isEditing && props.editState ? (
                 <input
+                  autoFocus
                   value={props.editState.title}
                   onChange={(event) =>
                     props.onEditStateChange((current) =>
                       current ? { ...current, title: event.target.value } : current,
                     )
                   }
-                  className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-base font-semibold text-[var(--app-fg)]"
+                  className="w-full border-0 bg-transparent p-0 text-base font-semibold leading-normal text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0"
                 />
               ) : (
-                <div className="min-w-0 truncate font-semibold">{props.task.title}</div>
+                <div className="min-w-0 truncate text-base font-semibold leading-normal">
+                  {props.task.title}
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+        <div className="flex shrink-0 items-center gap-0.5">
           {!props.isEditing ? (
             <>
               <button
@@ -660,6 +670,7 @@ function ScheduledTaskHeader(props: {
               >
                 <EditIcon className="h-4 w-4" />
               </button>
+              <div className="mx-0.5 h-4 w-px bg-[var(--app-divider)]" />
               <button
                 type="button"
                 disabled={props.isPending}
@@ -701,7 +712,7 @@ function ScheduledTaskHeader(props: {
                 type="button"
                 disabled={props.isPending}
                 onClick={() => void props.onDeleteTask(props.task.id)}
-                className={`${headerIconButtonClassName} text-red-600 hover:bg-red-500/10 hover:text-red-600`}
+                className={headerIconButtonClassName}
                 title={t("scheduled.action.delete")}
                 aria-label={t("scheduled.action.delete")}
               >
@@ -736,7 +747,7 @@ function ScheduledTaskHeader(props: {
                     props.onSetEditing(false);
                   });
                 }}
-                className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                className={headerCompactButtonClassName}
               >
                 {t("scheduled.action.save")}
               </button>
@@ -747,9 +758,9 @@ function ScheduledTaskHeader(props: {
                   props.onEditStateChange(buildScheduledEditState(props.task));
                   props.onSetEditing(false);
                 }}
-                className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+                className={headerCompactButtonClassName}
               >
-                {t("scheduled.action.cancelEdit")}
+                {t("button.cancel")}
               </button>
             </>
           )}
