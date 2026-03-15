@@ -1449,7 +1449,7 @@ function ScheduledTaskDetailPanel({
   const configInlineInputClassName =
     "block h-[19px] w-full overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configInlinePickerClassName =
-    "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+    "absolute inset-0 h-full w-full cursor-pointer opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer";
   const configInlineDisabledValueClassName =
     "block h-[19px] w-full overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0";
   const configScheduleTypeSlotClassName =
@@ -1459,7 +1459,7 @@ function ScheduledTaskDetailPanel({
   const configSchedulePreviewSelectClassName =
     "pointer-events-none h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
   const configScheduleValueSlotClassName =
-    "min-w-0 flex-1";
+    "min-w-0 max-w-full shrink-0";
   const configScheduleValueButtonClassName =
     "group inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configScheduleValuePreviewClassName =
@@ -1572,10 +1572,26 @@ function ScheduledTaskDetailPanel({
                           className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2"
                           aria-hidden="true"
                         />
-                      </div>
+                        </div>
 
                         {editState.scheduleType === "once" ? (
-                          <div className={configScheduleValueSlotClassName}>
+                          <div className={`relative ${configScheduleValueSlotClassName}`}>
+                            <button
+                              type="button"
+                              className={configScheduleValueButtonClassName}
+                            >
+                              <span className="block min-w-0 truncate">
+                                {editState.runAt
+                                  ? formatScheduledDateTime(
+                                      Date.parse(editState.runAt),
+                                    )
+                                  : "-"}
+                              </span>
+                              <ChevronDownIcon
+                                className="h-3 w-3 shrink-0"
+                                aria-hidden="true"
+                              />
+                            </button>
                             <input
                               type="datetime-local"
                               step={1}
@@ -1591,17 +1607,19 @@ function ScheduledTaskDetailPanel({
                             />
                           </div>
                         ) : (
-                          <InlineEditableText
-                            value={editState.cron}
-                            onChange={(value) =>
-                              onEditStateChange((current) =>
-                                current
-                                  ? { ...current, cron: value }
-                                  : current,
-                              )
-                            }
-                            className={`min-w-0 flex-1 ${configInlineInputClassName}`}
-                          />
+                          <div className="min-w-0 flex-1">
+                            <InlineEditableText
+                              value={editState.cron}
+                              onChange={(value) =>
+                                onEditStateChange((current) =>
+                                  current
+                                    ? { ...current, cron: value }
+                                    : current,
+                                )
+                              }
+                              className={configInlineInputClassName}
+                            />
+                          </div>
                         )}
                       </div>
                     ),
