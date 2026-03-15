@@ -969,6 +969,17 @@ function ScheduledTaskDetailPanel({
               <div>
                 {[
                   {
+                    key: "agent-model",
+                    label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
+                    control: (
+                      <InlineEditableText
+                        value={`${task.agentFlavor} / ${editState.model || "-"}`}
+                        readOnly
+                        className={configInlineDisabledValueClassName}
+                      />
+                    ),
+                  },
+                  {
                     key: "prompt",
                     label: t("scheduled.detail.prompt"),
                     control: (
@@ -982,17 +993,6 @@ function ScheduledTaskDetailPanel({
                           )
                         }
                         className={configInlineInputClassName}
-                      />
-                    ),
-                  },
-                  {
-                    key: "agent-model",
-                    label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
-                    control: (
-                      <InlineEditableText
-                        value={`${task.agentFlavor} / ${editState.model || "-"}`}
-                        readOnly
-                        className={configInlineDisabledValueClassName}
                       />
                     ),
                   },
@@ -1129,15 +1129,15 @@ function ScheduledTaskDetailPanel({
                 <div>
                   {[
                     {
+                      key: "agent-model",
+                      label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
+                      value: `${task.agentFlavor} / ${task.model ?? "-"}`,
+                    },
+                    {
                       key: "prompt",
                       label: t("scheduled.detail.prompt"),
                       value: task.prompt,
                       multiline: true,
-                    },
-                    {
-                      key: "agent-model",
-                      label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
-                      value: `${task.agentFlavor} / ${task.model ?? "-"}`,
                     },
                     {
                       key: "directory",
