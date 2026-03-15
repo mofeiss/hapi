@@ -654,6 +654,217 @@ function ScheduledRunStatusBadge(props: {
   );
 }
 
+function getScheduledRunTimelineStatusClassName(
+  status: ScheduledTaskRun["status"],
+): string {
+  if (status === "succeeded") {
+    return "bg-emerald-500";
+  }
+
+  if (status === "failed") {
+    return "bg-red-500";
+  }
+
+  return "bg-stone-500";
+}
+
+function getScheduledTaskStatusTag(task: ScheduledTask): {
+  label: string;
+  className: string;
+} {
+  if (task.paused) {
+    return {
+      label: "scheduled.list.status.paused",
+      className:
+        "border border-amber-500/25 bg-amber-500/12 text-amber-700 dark:text-amber-300",
+    };
+  }
+
+  if (task.status === "active") {
+    return {
+      label: "scheduled.list.status.running",
+      className:
+        "border border-emerald-500/25 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+    };
+  }
+
+  return {
+    label: "scheduled.list.status.active",
+    className:
+      "border border-[var(--app-border)] bg-[var(--app-subtle-bg)] text-[var(--app-fg)]",
+  };
+}
+
+function getScheduledRunSortTime(run: ScheduledTaskRun): number {
+  return run.triggeredAt ?? run.scheduledFor ?? run.finishedAt ?? 0;
+}
+
+function ScheduledRunsPager(props: {
+  task: ScheduledTask;
+  runs: ScheduledTaskRun[];
+  selectedRunId: string | null;
+  onSelectRun: (runId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const middleButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const runSquareClassName = "relative flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--app-bg)]";
+  const navButtonClassName = "flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--app-secondary-bg)] text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-35";
+  const taskStatusTag = getScheduledTaskStatusTag(props.task);
+
+  const sortedRuns = useMemo(
+    () => [...props.runs].sort((left, right) => getScheduledRunSortTime(right) - getScheduledRunSortTime(left)),
+    [props.runs],
+  );
+
+  const selectedIndex = sortedRuns.findIndex((run) => run.id === props.selectedRunId);
+  const effectiveSelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const effectiveSelectedRun = sortedRuns[effectiveSelectedIndex] ?? null;
+  const canGoPrevious = effectiveSelectedIndex > 0;
+  const canGoNext = effectiveSelectedIndex >= 0 && effectiveSelectedIndex < sortedRuns.length - 1;
+
+  useEffect(() => {
+    const selectedRun = effectiveSelectedRun;
+    if (!selectedRun) {
+      return;
+    }
+
+    const button = middleButtonRefs.current.get(selectedRun.id);
+    if (!button) {
+      return;
+    }
+
+    button.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [effectiveSelectedRun]);
+
+  if (sortedRuns.length === 0) {
+    return (
+      <div className="mt-4 rounded-2xl border border-dashed border-[var(--app-border)] px-4 py-6 text-sm text-[var(--app-hint)]">
+        {t("scheduled.detail.runsEmpty")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <div className="min-w-0 flex items-center gap-2 truncate text-[var(--app-hint)]">
+          <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusTag.className}`}>
+            {t(taskStatusTag.label)}
+          </span>
+          <span className="uppercase tracking-[0.12em]">{t("scheduled.detail.nextRun")}</span>
+          <span className="text-[var(--app-fg)]">{formatScheduledDateTime(props.task.nextRunAt)}</span>
+        </div>
+        <div className="shrink-0 text-[var(--app-hint)]">
+          <span className="text-[var(--app-fg)]">{sortedRuns.length}</span> {t("scheduled.detail.runs")}
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center overflow-hidden rounded-[12px] border border-[var(--app-border)]">
+        <button
+          type="button"
+          onClick={() => {
+            const targetRun = sortedRuns[effectiveSelectedIndex - 1];
+            if (targetRun) {
+              props.onSelectRun(targetRun.id);
+            }
+          }}
+          disabled={!canGoPrevious}
+          className={`${navButtonClassName} border-r border-[var(--app-border)]`}
+          aria-label={t("scheduled.detail.previousRun")}
+          title={t("scheduled.detail.previousRun")}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.25"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="h-4 w-4"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+
+        <div
+          className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="flex min-w-max items-center">
+            {sortedRuns.map((run, index) => {
+              const selected = run.id === effectiveSelectedRun?.id;
+              const isLast = index === sortedRuns.length - 1;
+              return (
+                <button
+                  key={run.id}
+                  ref={(node) => {
+                    if (node) {
+                      middleButtonRefs.current.set(run.id, node);
+                    } else {
+                      middleButtonRefs.current.delete(run.id);
+                    }
+                  }}
+                  type="button"
+                  onClick={() => props.onSelectRun(run.id)}
+                  className={`${runSquareClassName} ${!isLast ? "border-r border-[var(--app-border)]" : ""}`}
+                  aria-label={t("scheduled.detail.runNumber", { n: index + 1 })}
+                  title={`${t("scheduled.detail.runNumber", { n: index + 1 })}: ${formatScheduledDateTime(getScheduledRunSortTime(run))}`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-full w-full items-center justify-center ${selected ? "bg-[var(--app-session-active-bg)]" : "bg-transparent"}`}
+                  >
+                    <span
+                      className={`block h-3 w-3 rounded-[2px] ${getScheduledRunTimelineStatusClassName(run.status)}`}
+                    />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            const targetRun = sortedRuns[effectiveSelectedIndex + 1];
+            if (targetRun) {
+              props.onSelectRun(targetRun.id);
+            }
+          }}
+          disabled={!canGoNext}
+          className={`${navButtonClassName} border-l border-[var(--app-border)]`}
+          aria-label={t("scheduled.detail.nextRunRecord")}
+          title={t("scheduled.detail.nextRunRecord")}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.25"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="h-4 w-4"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function getScheduledResumeValidationMessage(
   task: ScheduledTask,
   t: (key: string, params?: Record<string, string | number>) => string,
@@ -1489,65 +1700,12 @@ function ScheduledTaskDetailPanel({
             )}
           </div>
 
-          <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-[var(--app-fg)]">
-                  {t("scheduled.detail.runs")}
-                </h2>
-                <p className="text-sm text-[var(--app-hint)]">
-                  {t("scheduled.detail.nextRun")}:{" "}
-                  {formatScheduledDateTime(task.nextRunAt)}
-                </p>
-              </div>
-              <div className="text-sm text-[var(--app-hint)]">
-                {taskRuns.length} runs
-              </div>
-            </div>
-            {taskRuns.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-[var(--app-border)] px-4 py-6 text-sm text-[var(--app-hint)]">
-                {t("scheduled.detail.runsEmpty")}
-              </div>
-            ) : (
-              <div className="mt-4 overflow-x-auto pb-1">
-                <div className="flex min-w-max gap-3">
-                  {taskRuns.map((run) => (
-                    <button
-                      key={run.id}
-                      type="button"
-                      onClick={() => onSelectRun(run.id)}
-                      className={
-                        "min-w-[280px] rounded-2xl border px-4 py-3 text-left " +
-                        (run.id === selectedRun?.id
-                          ? "border-[var(--app-fg)] bg-[var(--app-secondary-bg)]"
-                          : "border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]")
-                      }
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <ScheduledRunStatusBadge status={run.status} />
-                            <span className="text-[11px] text-[var(--app-hint)]">
-                              {formatScheduledDateTime(run.triggeredAt)}
-                            </span>
-                          </div>
-                          <div className="mt-2 text-xs text-[var(--app-hint)]">
-                            scheduled{" "}
-                            {formatScheduledDateTime(run.scheduledFor)}
-                          </div>
-                          {run.sessionId ? (
-                            <div className="mt-1 truncate text-xs text-[var(--app-fg)]">
-                              session {run.sessionId}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <ScheduledRunsPager
+            task={task}
+            runs={taskRuns}
+            selectedRunId={selectedRun?.id ?? null}
+            onSelectRun={onSelectRun}
+          />
 
           <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
             {!selectedRun ? (
