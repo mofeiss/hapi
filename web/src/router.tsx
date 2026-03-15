@@ -855,42 +855,6 @@ function ScheduledTaskDetailPanel({
   onOpenRunSession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
-  const statusValue = task.paused ? `${task.status} / paused` : task.status;
-  const summaryItems = [
-    {
-      key: "status",
-      label: t("scheduled.detail.status"),
-      value: statusValue,
-      emphasized: true,
-    },
-    {
-      key: "schedule",
-      label: t("scheduled.detail.schedule"),
-      value: task.scheduleType,
-    },
-    {
-      key: "agent",
-      label: t("scheduled.detail.agent"),
-      value: task.agentFlavor,
-    },
-    {
-      key: "created",
-      label: t("scheduled.detail.created"),
-      value: formatScheduledDateTime(task.createdAt),
-    },
-    {
-      key: "nextRun",
-      label: t("scheduled.detail.nextRun"),
-      value: formatScheduledDateTime(task.nextRunAt),
-      emphasized: true,
-    },
-    {
-      key: "lastRun",
-      label: t("scheduled.detail.lastRun"),
-      value: formatScheduledDateTime(task.lastRunAt),
-      emphasized: true,
-    },
-  ];
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -909,26 +873,6 @@ function ScheduledTaskDetailPanel({
 
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
-          <div className="rounded-[24px] bg-[var(--app-panel-bg)]">
-            <div>
-              <div>
-                {summaryItems.map((item, index) => (
-                  <div
-                    key={`summary-c-${item.key}`}
-                    className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-[var(--app-divider)]" : ""}`}
-                  >
-                    <div className="shrink-0 text-[11px] uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                      {item.label}
-                    </div>
-                    <div className="min-w-0 text-right text-sm text-[var(--app-fg)]">
-                      {item.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
               <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
@@ -993,6 +937,10 @@ function ScheduledTaskDetailPanel({
                 <div>
                   <span className="text-[var(--app-hint)]">{t("scheduled.detail.timezone")}:</span>
                   <span> {task.timezone}</span>
+                </div>
+                <div>
+                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.schedule")}:</span>
+                  <span> {task.scheduleType}</span>
                 </div>
                 <div>
                   <span className="text-[var(--app-hint)]">{t("scheduled.detail.taskId")}:</span>
@@ -1069,7 +1017,9 @@ function ScheduledTaskDetailPanel({
                 <h2 className="text-base font-semibold text-[var(--app-fg)]">
                   {t("scheduled.detail.runs")}
                 </h2>
-                <p className="text-sm text-[var(--app-hint)]">{t("scheduled.detail.runsHint")}</p>
+                <p className="text-sm text-[var(--app-hint)]">
+                  {t("scheduled.detail.nextRun")}: {formatScheduledDateTime(task.nextRunAt)}
+                </p>
               </div>
               <div className="text-sm text-[var(--app-hint)]">{taskRuns.length} runs</div>
             </div>
