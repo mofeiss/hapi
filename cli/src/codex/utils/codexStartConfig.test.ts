@@ -64,4 +64,17 @@ describe('buildCodexStartConfig', () => {
         });
         expect(config.config?.developer_instructions).not.toBe(codexSystemPrompt);
     });
+
+    it('injects scheduled task guidance for regular sessions', () => {
+        const config = buildCodexStartConfig({
+            message: 'hello',
+            mode: { permissionMode: 'default' },
+            first: true,
+            mcpServers
+        });
+
+        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_create');
+        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_list');
+        expect(String(config.config?.developer_instructions)).toContain('task creation success from task execution status');
+    });
 });

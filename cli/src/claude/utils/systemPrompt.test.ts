@@ -6,6 +6,9 @@ describe('claude system prompt', () => {
     it('injects title prompt for regular sessions', () => {
         expect(shouldInjectTitlePrompt()).toBe(true)
         expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__change_title')
+        expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__schedule_create')
+        expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__schedule_list')
+        expect(buildClaudeSystemPrompt()).toContain('task creation success from task execution status')
     })
 
     it('omits title prompt for scheduled-triggered sessions', () => {
