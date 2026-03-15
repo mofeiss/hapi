@@ -107,6 +107,7 @@ export function buildThreadMessageGroups(messages: readonly { id: string; role: 
 }
 
 const TOP_LOAD_THRESHOLD_PX = 72
+const THREAD_EDGE_FADE_PX = 20
 
 export function HappyThread(props: {
     api: ApiClient
@@ -417,6 +418,10 @@ export function HappyThread(props: {
                         ref={viewportRef}
                         data-chat-viewport="true"
                         className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+                        style={{
+                            WebkitMaskImage: `linear-gradient(to bottom, transparent 0, black ${THREAD_EDGE_FADE_PX}px, black calc(100% - ${THREAD_EDGE_FADE_PX}px), transparent 100%)`,
+                            maskImage: `linear-gradient(to bottom, transparent 0, black ${THREAD_EDGE_FADE_PX}px, black calc(100% - ${THREAD_EDGE_FADE_PX}px), transparent 100%)`
+                        }}
                     >
                         {props.isLoadingMoreMessages ? (
                             <div className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2" aria-live="polite">
