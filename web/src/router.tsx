@@ -886,9 +886,11 @@ function ScheduledTaskDetailPanel({
   const configValueSlotClassName =
     "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
   const configInlineInputClassName =
-    "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+    "relative -top-px block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configInlinePickerClassName =
     "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+  const configInlineDisabledValueClassName =
+    "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0";
   const configScheduleTypeSlotClassName =
     "relative shrink-0";
   const configInlineSelectClassName =
@@ -947,7 +949,9 @@ function ScheduledTaskDetailPanel({
                       <input
                         value={`${task.agentFlavor} / ${editState.model || "-"}`}
                         readOnly
-                        className={configInlineInputClassName}
+                        disabled
+                        aria-disabled="true"
+                        className={configInlineDisabledValueClassName}
                       />
                     ),
                   },
