@@ -26,14 +26,10 @@ function PauseIcon(props: { className?: string }) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            fill="currentColor"
             className={props.className}
         >
             <rect x="6" y="4" width="4" height="16" rx="1" />
@@ -42,7 +38,22 @@ function PauseIcon(props: { className?: string }) {
     )
 }
 
-function CancelIcon(props: { className?: string }) {
+function PlayIcon(props: { className?: string }) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className={props.className}
+        >
+            <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.86a1 1 0 0 0 0-1.72l-10-6.86A1 1 0 0 0 8 5.14Z" />
+        </svg>
+    )
+}
+
+function StopIcon(props: { className?: string }) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -222,7 +233,11 @@ export function ScheduledTaskActionMenu(props: ScheduledTaskActionMenuProps) {
                         onTogglePaused()
                     }}
                 >
-                    <PauseIcon className="text-[var(--app-hint)]" />
+                    {paused ? (
+                        <PlayIcon className="h-4 w-4 text-[var(--app-hint)]" />
+                    ) : (
+                        <PauseIcon className="h-4 w-4 text-[var(--app-hint)]" />
+                    )}
                     {paused ? t('scheduled.action.resume') : t('scheduled.action.pause')}
                 </button>
                 <button
@@ -236,7 +251,7 @@ export function ScheduledTaskActionMenu(props: ScheduledTaskActionMenuProps) {
                     }}
                     disabled={!canCancel}
                 >
-                    <CancelIcon className="text-[var(--app-hint)]" />
+                    <StopIcon className="text-[var(--app-hint)]" />
                     {t('scheduled.action.cancel')}
                 </button>
                 <button
