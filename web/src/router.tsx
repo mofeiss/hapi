@@ -25,12 +25,14 @@ import {
 import { NewSession } from "@/components/NewSession";
 import { LoadingState } from "@/components/LoadingState";
 import { SessionActionMenu } from "@/components/SessionActionMenu";
+import { ScheduledTaskActionMenu } from "@/components/ScheduledTaskActionMenu";
 import { RenameSessionDialog } from "@/components/RenameSessionDialog";
 import { useAppContext } from "@/lib/app-context";
 import { useAppGoBack } from "@/hooks/useAppGoBack";
 import { isTelegramApp } from "@/hooks/useTelegram";
 import { useWidescreen } from "@/hooks/useWidescreen";
 import { useLongPress } from "@/hooks/useLongPress";
+import { usePlatform } from "@/hooks/usePlatform";
 import { useAppKeyboardShortcuts } from "@/hooks/useAppKeyboardShortcuts";
 import { useMessages } from "@/hooks/queries/useMessages";
 import { useMachines } from "@/hooks/queries/useMachines";
@@ -644,6 +646,203 @@ function ScheduledRunStatusBadge(props: {
     >
       {props.status}
     </span>
+  );
+}
+
+function ScheduledTaskListRow(props: {
+  task: ScheduledTask;
+  latestRun: ScheduledTaskRun | undefined;
+  selected: boolean;
+  rowBackgroundClass: string;
+  rowStyle: React.CSSProperties;
+  typeText: string;
+  statusText: string;
+  createdAtLabel: string | null;
+  iconToneClass: string;
+  isPending: boolean;
+  onSelect: () => void;
+  onTogglePaused: () => void;
+  onCancelTask: () => void;
+  onDeleteTask: () => void;
+}) {
+  const { t } = useTranslation();
+  const { haptic } = usePlatform();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 });
+
+  const longPressHandlers = useLongPress({
+    onLongPress: (point) => {
+      haptic.impact("medium");
+      setMenuAnchorPoint(point);
+      setMenuOpen(true);
+    },
+    onClick: () => {
+      if (!menuOpen) {
+        props.onSelect();
+      }
+    },
+    threshold: 500,
+    disabled: props.isPending,
+  });
+
+  return (
+    <>
+      <button
+        type="button"
+        {...longPressHandlers}
+        className={
+          "session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none " +
+          props.rowBackgroundClass
+        }
+        style={props.rowStyle}
+        aria-current={props.selected ? "page" : undefined}
+      >
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex min-w-0 items-center gap-1">
+            <span
+              className={
+                "inline-flex h-4 w-4 shrink-0 items-center justify-center " +
+                props.iconToneClass
+              }
+              aria-label={t("scheduled.list.iconLabel")}
+            >
+              {props.latestRun?.status === "running" ? (
+                <svg
+                  className="h-3.5 w-3.5 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+              ) : props.latestRun?.status === "failed" ? (
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="m15 9-6 6" />
+                  <path d="m9 9 6 6" />
+                </svg>
+              ) : props.latestRun?.status === "succeeded" ? (
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              ) : props.task.paused ? (
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <rect x="6" y="5" width="4" height="14" rx="1" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" />
+                </svg>
+              ) : (
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+              )}
+            </span>
+            <div
+              className={`truncate text-base leading-none ${
+                props.selected
+                  ? "font-semibold text-[var(--app-fg)]"
+                  : "font-medium text-[var(--app-fg)]"
+              }`}
+            >
+              {props.task.title}
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1 text-sm">
+            <span
+              className={
+                props.task.paused
+                  ? "text-amber-600"
+                  : props.latestRun?.status === "failed"
+                    ? "text-red-600"
+                    : props.latestRun?.status === "running"
+                      ? "text-sky-600"
+                      : props.latestRun?.status === "succeeded"
+                        ? "text-emerald-600"
+                        : "text-[var(--app-hint)]"
+              }
+            >
+              {props.statusText}
+            </span>
+          </div>
+        </div>
+        <div
+          className="flex items-center gap-x-2 text-sm text-[var(--app-hint)] overflow-hidden whitespace-nowrap"
+          style={{
+            opacity: "var(--app-session-subtitle-opacity)",
+          }}
+        >
+          <span className="inline-flex shrink-0 items-center gap-1">
+            <ScheduledTaskIcon className="h-3.5 w-3.5" />
+            <span>{props.typeText}</span>
+          </span>
+          <span className="truncate">{normalizeProjectPath(props.task.targetDirectory)}</span>
+          {props.createdAtLabel ? (
+            <span className="inline-flex shrink-0 items-center gap-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{props.createdAtLabel}</span>
+            </span>
+          ) : null}
+        </div>
+      </button>
+
+      <ScheduledTaskActionMenu
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        paused={props.task.paused}
+        canCancel={
+          props.task.status === "active" && !props.task.paused && !props.isPending
+        }
+        onTogglePaused={props.onTogglePaused}
+        onCancel={props.onCancelTask}
+        onDelete={props.onDeleteTask}
+        anchorPoint={menuAnchorPoint}
+      />
+    </>
   );
 }
 
@@ -1579,8 +1778,15 @@ function CollapsedScheduledItem(props: {
   task: ScheduledTask;
   selected: boolean;
   latestRun: ScheduledTaskRun | undefined;
+  isPending: boolean;
   onSelect: (taskId: string, runId?: string | null) => void;
+  onTogglePaused: () => void;
+  onCancelTask: () => void;
+  onDeleteTask: () => void;
 }) {
+  const { haptic } = usePlatform();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 });
   const title = props.task.title.trim();
   const initial = getSessionInitial(title || "S");
   const toneClass = props.task.paused
@@ -1593,19 +1799,49 @@ function CollapsedScheduledItem(props: {
           ? "bg-emerald-500/15 text-emerald-600"
           : "bg-[var(--app-subtle-bg)] text-[var(--app-hint)]";
 
+  const longPressHandlers = useLongPress({
+    onLongPress: (point) => {
+      haptic.impact("medium");
+      setMenuAnchorPoint(point);
+      setMenuOpen(true);
+    },
+    onClick: () => {
+      if (!menuOpen) {
+        props.onSelect(props.task.id, props.latestRun?.id ?? null);
+      }
+    },
+    threshold: 500,
+    disabled: props.isPending,
+  });
+
   return (
-    <button
-      type="button"
-      onClick={() => props.onSelect(props.task.id, props.latestRun?.id ?? null)}
-      className={`flex w-full items-center justify-center px-1 py-1 hover:bg-[var(--app-subtle-bg)] ${props.selected ? "bg-[var(--app-secondary-bg)]" : ""}`}
-      title={title}
-    >
-      <span
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[14px] font-medium leading-none select-none ${toneClass}`}
+    <>
+      <button
+        type="button"
+        {...longPressHandlers}
+        className={`flex w-full items-center justify-center px-1 py-1 hover:bg-[var(--app-subtle-bg)] ${props.selected ? "bg-[var(--app-secondary-bg)]" : ""}`}
+        title={title}
       >
-        {initial}
-      </span>
-    </button>
+        <span
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[14px] font-medium leading-none select-none ${toneClass}`}
+        >
+          {initial}
+        </span>
+      </button>
+
+      <ScheduledTaskActionMenu
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        paused={props.task.paused}
+        canCancel={
+          props.task.status === "active" && !props.task.paused && !props.isPending
+        }
+        onTogglePaused={props.onTogglePaused}
+        onCancel={props.onCancelTask}
+        onDelete={props.onDeleteTask}
+        anchorPoint={menuAnchorPoint}
+      />
+    </>
   );
 }
 
@@ -1645,6 +1881,9 @@ function SessionsPage() {
   >(null);
   const [selectedScheduledRunId, setSelectedScheduledRunId] = useState<
     string | null
+  >(null);
+  const [scheduledDeleteTarget, setScheduledDeleteTarget] = useState<
+    ScheduledTask | null
   >(null);
   const [scheduledEditing, setScheduledEditing] = useState(false);
   const [scheduledEditState, setScheduledEditState] =
@@ -3452,10 +3691,19 @@ function SessionsPage() {
                                                     ? "text-emerald-600"
                                                     : "text-[var(--app-hint)]";
                                             return (
-                                              <button
+                                              <ScheduledTaskListRow
                                                 key={task.id}
-                                                type="button"
-                                                onClick={() => {
+                                                task={task}
+                                                latestRun={latestRun}
+                                                selected={selected}
+                                                rowBackgroundClass={rowBackgroundClass}
+                                                rowStyle={rowStyle}
+                                                typeText={typeText}
+                                                statusText={statusText}
+                                                createdAtLabel={createdAtLabel}
+                                                iconToneClass={iconToneClass}
+                                                isPending={scheduledPending}
+                                                onSelect={() => {
                                                   setSelectedScheduledTaskId(
                                                     task.id,
                                                   );
@@ -3467,233 +3715,21 @@ function SessionsPage() {
                                                     latestRun?.id ?? null,
                                                   );
                                                 }}
-                                                className={
-                                                  "session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none " +
-                                                  rowBackgroundClass
-                                                }
-                                                style={rowStyle}
-                                                aria-current={
-                                                  selected ? "page" : undefined
-                                                }
-                                              >
-                                                <div className="flex items-center justify-between gap-1.5">
-                                                  <div className="flex min-w-0 items-center gap-1">
-                                                    <span
-                                                      className={
-                                                        "inline-flex h-4 w-4 shrink-0 items-center justify-center " +
-                                                        iconToneClass
-                                                      }
-                                                      aria-label={t(
-                                                        "scheduled.list.iconLabel",
-                                                      )}
-                                                    >
-                                                      {latestRun?.status ===
-                                                      "running" ? (
-                                                        <svg
-                                                          className="h-3.5 w-3.5 animate-spin"
-                                                          viewBox="0 0 24 24"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          strokeWidth="2"
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                          aria-hidden="true"
-                                                        >
-                                                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                                                        </svg>
-                                                      ) : latestRun?.status ===
-                                                        "failed" ? (
-                                                        <svg
-                                                          className="h-3.5 w-3.5"
-                                                          viewBox="0 0 24 24"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          strokeWidth="2"
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                          aria-hidden="true"
-                                                        >
-                                                          <circle
-                                                            cx="12"
-                                                            cy="12"
-                                                            r="10"
-                                                          />
-                                                          <path d="m15 9-6 6" />
-                                                          <path d="m9 9 6 6" />
-                                                        </svg>
-                                                      ) : latestRun?.status ===
-                                                        "succeeded" ? (
-                                                        <svg
-                                                          className="h-3.5 w-3.5"
-                                                          viewBox="0 0 24 24"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          strokeWidth="2.5"
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                          aria-hidden="true"
-                                                        >
-                                                          <path d="M20 6 9 17l-5-5" />
-                                                        </svg>
-                                                      ) : task.paused ? (
-                                                        <svg
-                                                          className="h-3.5 w-3.5"
-                                                          viewBox="0 0 24 24"
-                                                          fill="currentColor"
-                                                          aria-hidden="true"
-                                                        >
-                                                          <rect
-                                                            x="6"
-                                                            y="5"
-                                                            width="4"
-                                                            height="14"
-                                                            rx="1"
-                                                          />
-                                                          <rect
-                                                            x="14"
-                                                            y="5"
-                                                            width="4"
-                                                            height="14"
-                                                            rx="1"
-                                                          />
-                                                        </svg>
-                                                      ) : (
-                                                        <svg
-                                                          className="h-3.5 w-3.5"
-                                                          viewBox="0 0 24 24"
-                                                          fill="currentColor"
-                                                          aria-hidden="true"
-                                                        >
-                                                          <circle
-                                                            cx="12"
-                                                            cy="12"
-                                                            r="4"
-                                                          />
-                                                        </svg>
-                                                      )}
-                                                    </span>
-                                                    <div
-                                                      className={`truncate text-base leading-none ${
-                                                        selected
-                                                          ? "font-semibold text-[var(--app-fg)]"
-                                                          : "font-medium text-[var(--app-fg)]"
-                                                      }`}
-                                                    >
-                                                      {task.title}
-                                                    </div>
-                                                  </div>
-                                                  <div className="flex shrink-0 items-center gap-1 text-sm">
-                                                    <span
-                                                      className={
-                                                        task.paused
-                                                          ? "text-amber-600"
-                                                          : latestRun?.status ===
-                                                              "failed"
-                                                            ? "text-red-600"
-                                                            : latestRun?.status ===
-                                                                "running"
-                                                              ? "text-sky-600"
-                                                              : latestRun?.status ===
-                                                                  "succeeded"
-                                                                ? "text-emerald-600"
-                                                                : "text-[var(--app-hint)]"
-                                                      }
-                                                    >
-                                                      {statusText}
-                                                    </span>
-                                                  </div>
-                                                </div>
-                                                <div
-                                                  className="flex items-center gap-x-2 text-sm text-[var(--app-hint)] overflow-hidden whitespace-nowrap"
-                                                  style={{
-                                                    opacity:
-                                                      "var(--app-session-subtitle-opacity)",
-                                                  }}
-                                                >
-                                                  <span className="inline-flex shrink-0 items-center gap-1">
-                                                    <svg
-                                                      xmlns="http://www.w3.org/2000/svg"
-                                                      width="12"
-                                                      height="12"
-                                                      viewBox="0 0 24 24"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      strokeWidth="2"
-                                                      strokeLinecap="round"
-                                                      strokeLinejoin="round"
-                                                      aria-hidden="true"
-                                                    >
-                                                      <path d="M12 8V4H8" />
-                                                      <rect
-                                                        x="4"
-                                                        y="8"
-                                                        width="16"
-                                                        height="12"
-                                                        rx="2"
-                                                      />
-                                                      <path d="M2 14h2" />
-                                                      <path d="M20 14h2" />
-                                                      <path d="M15 13v2" />
-                                                      <path d="M9 13v2" />
-                                                    </svg>
-                                                    <span>
-                                                      {task.agentFlavor}
-                                                    </span>
-                                                  </span>
-                                                  <span className="inline-flex shrink-0 items-center gap-1">
-                                                    <svg
-                                                      xmlns="http://www.w3.org/2000/svg"
-                                                      width="12"
-                                                      height="12"
-                                                      viewBox="0 0 24 24"
-                                                      fill="none"
-                                                      stroke="currentColor"
-                                                      strokeWidth="2"
-                                                      strokeLinecap="round"
-                                                      strokeLinejoin="round"
-                                                      aria-hidden="true"
-                                                    >
-                                                      <path d="M4 7h16" />
-                                                      <path d="M7 3v8" />
-                                                      <path d="M17 3v8" />
-                                                      <rect
-                                                        x="4"
-                                                        y="7"
-                                                        width="16"
-                                                        height="13"
-                                                        rx="2"
-                                                      />
-                                                    </svg>
-                                                    <span>{typeText}</span>
-                                                  </span>
-                                                  {createdAtLabel ? (
-                                                    <span className="inline-flex shrink-0 items-center gap-1">
-                                                      <svg
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        width="12"
-                                                        height="12"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        aria-hidden="true"
-                                                      >
-                                                        <circle
-                                                          cx="12"
-                                                          cy="12"
-                                                          r="10"
-                                                        />
-                                                        <polyline points="12 6 12 12 16 14" />
-                                                      </svg>
-                                                      <span>
-                                                        {createdAtLabel}
-                                                      </span>
-                                                    </span>
-                                                  ) : null}
-                                                </div>
-                                              </button>
+                                                onTogglePaused={() => {
+                                                  void updateScheduledTask({
+                                                    taskId: task.id,
+                                                    paused: !task.paused,
+                                                  });
+                                                }}
+                                                onCancelTask={() => {
+                                                  void cancelScheduledTask(
+                                                    task.id,
+                                                  );
+                                                }}
+                                                onDeleteTask={() => {
+                                                  setScheduledDeleteTarget(task);
+                                                }}
+                                              />
                                             );
                                           })}
                                         </div>
@@ -4051,10 +4087,23 @@ function SessionsPage() {
                         task={task}
                         selected={task.id === selectedScheduledTaskId}
                         latestRun={latestScheduledRunByTaskId.get(task.id)}
+                        isPending={scheduledPending}
                         onSelect={(taskId, runId) => {
                           setSelectedScheduledTaskId(taskId);
                           setSelectedScheduledRunId(runId ?? null);
                           openWorkspaceScheduledTask(taskId, runId ?? null);
+                        }}
+                        onTogglePaused={() => {
+                          void updateScheduledTask({
+                            taskId: task.id,
+                            paused: !task.paused,
+                          });
+                        }}
+                        onCancelTask={() => {
+                          void cancelScheduledTask(task.id);
+                        }}
+                        onDeleteTask={() => {
+                          setScheduledDeleteTarget(task);
                         }}
                       />
                     ))}
@@ -4140,6 +4189,24 @@ function SessionsPage() {
                 }}
               />
             )}
+
+            <ConfirmDialog
+              isOpen={scheduledDeleteTarget !== null}
+              onClose={() => setScheduledDeleteTarget(null)}
+              title={t("scheduled.deleteDialog.title")}
+              description={t("scheduled.deleteDialog.description", {
+                name: scheduledDeleteTarget?.title ?? "",
+              })}
+              confirmLabel={t("scheduled.deleteDialog.confirm")}
+              confirmingLabel={t("scheduled.deleteDialog.confirming")}
+              onConfirm={async () => {
+                if (!scheduledDeleteTarget) return;
+                await deleteScheduledTask(scheduledDeleteTarget.id);
+                setScheduledDeleteTarget(null);
+              }}
+              isPending={scheduledPending}
+              destructive
+            />
           </div>
         ) : (
           <>

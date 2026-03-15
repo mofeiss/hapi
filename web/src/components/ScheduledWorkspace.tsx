@@ -5,7 +5,12 @@ import type { ApiClient } from '@/api/client'
 import type { Machine, ScheduledTask, ScheduledTaskRun } from '@/types/api'
 import { useScheduledTasks } from '@/hooks/queries/useScheduledTasks'
 import { useScheduledTaskActions } from '@/hooks/mutations/useScheduledTaskActions'
+import { useLongPress } from '@/hooks/useLongPress'
+import { usePlatform } from '@/hooks/usePlatform'
 import { EmbeddedSessionView } from '@/components/EmbeddedSessionView'
+import { ScheduledTaskActionMenu } from '@/components/ScheduledTaskActionMenu'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { useTranslation } from '@/lib/use-translation'
 import {
     openWorkspaceScheduledTask,
     selectWorkspaceScheduledRun,
@@ -126,11 +131,92 @@ function RunStatusBadge(props: { status: ScheduledTaskRun['status'] }) {
     return <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + className}>{props.status}</span>
 }
 
+function ScheduledTaskListItem(props: {
+    task: ScheduledTask
+    latestRun: ScheduledTaskRun | undefined
+    selected: boolean
+    isPending: boolean
+    onSelect: () => void
+    onTogglePaused: () => void
+    onCancel: () => void
+    onDelete: () => void
+}) {
+    const { t } = useTranslation()
+    const { haptic } = usePlatform()
+    const [menuOpen, setMenuOpen] = useState(false)
+    const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 })
+
+    const longPressHandlers = useLongPress({
+        onLongPress: (point) => {
+            haptic.impact('medium')
+            setMenuAnchorPoint(point)
+            setMenuOpen(true)
+        },
+        onClick: () => {
+            if (!menuOpen) {
+                props.onSelect()
+            }
+        },
+        threshold: 500,
+        disabled: props.isPending,
+    })
+
+    return (
+        <>
+            <button
+                type="button"
+                {...longPressHandlers}
+                className={
+                    'w-full rounded-2xl border px-3 py-3 text-left transition-colors ' +
+                    (props.selected
+                        ? 'border-[var(--app-fg)] bg-[var(--app-secondary-bg)]'
+                        : 'border-transparent hover:border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]')
+                }
+            >
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-[var(--app-fg)]">{props.task.title}</div>
+                        <div className="mt-1 truncate text-xs text-[var(--app-hint)]">{props.task.targetDirectory}</div>
+                    </div>
+                    <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + (props.task.paused ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')}>
+                        {props.task.paused ? t('scheduled.list.status.paused') : props.task.status}
+                    </span>
+                </div>
+                <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
+                    <span>{props.task.scheduleType}</span>
+                    <span>·</span>
+                    <span>{props.task.agentFlavor}</span>
+                    <span>·</span>
+                    <span>next {formatDateTime(props.task.nextRunAt)}</span>
+                </div>
+                {props.latestRun ? (
+                    <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
+                        <RunStatusBadge status={props.latestRun.status} />
+                        <span>{formatDateTime(props.latestRun.triggeredAt)}</span>
+                    </div>
+                ) : null}
+            </button>
+
+            <ScheduledTaskActionMenu
+                isOpen={menuOpen}
+                onClose={() => setMenuOpen(false)}
+                paused={props.task.paused}
+                canCancel={props.task.status === 'active' && !props.task.paused && !props.isPending}
+                onTogglePaused={props.onTogglePaused}
+                onCancel={props.onCancel}
+                onDelete={props.onDelete}
+                anchorPoint={menuAnchorPoint}
+            />
+        </>
+    )
+}
+
 export function ScheduledWorkspace(props: {
     api: ApiClient | null
     machines: Machine[]
     onOpenSession?: (sessionId: string) => void
 }) {
+    const { t } = useTranslation()
     const { tasks, runs, isLoading, error } = useScheduledTasks(props.api)
     const { cancelScheduledTask, deleteScheduledTask, updateScheduledTask, isPending } = useScheduledTaskActions(props.api)
     const workspace = useWorkspaceState()
@@ -139,6 +225,7 @@ export function ScheduledWorkspace(props: {
     const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
     const [isEditing, setIsEditing] = useState(false)
     const [editState, setEditState] = useState<EditState | null>(null)
+    const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 
     const normalizedSearch = search.trim().toLowerCase()
 
@@ -287,9 +374,20 @@ export function ScheduledWorkspace(props: {
         await updateScheduledTask({ taskId: selectedTask.id, paused: !selectedTask.paused })
     }
 
+    async function handleDeleteTask(): Promise<void> {
+        if (!deleteTaskId) {
+            return
+        }
+        await deleteScheduledTask(deleteTaskId)
+        setDeleteTaskId(null)
+    }
+
+    const deleteTask = tasks.find((task) => task.id === deleteTaskId) ?? null
+
     return (
-        <div className="flex h-full min-h-0 bg-[var(--app-bg)]">
-            <div className="flex w-[360px] shrink-0 flex-col border-r border-[var(--app-divider)] bg-[var(--app-bg)]">
+        <>
+            <div className="flex h-full min-h-0 bg-[var(--app-bg)]">
+                <div className="flex w-[360px] shrink-0 flex-col border-r border-[var(--app-divider)] bg-[var(--app-bg)]">
                 <div className="border-b border-[var(--app-divider)] px-3 pb-3 pt-[env(safe-area-inset-top)]">
                     <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-1.5">
@@ -328,44 +426,21 @@ export function ScheduledWorkspace(props: {
                                     const latestRun = latestRunByTaskId.get(task.id)
                                     const selected = task.id === selectedTaskId
                                     return (
-                                        <button
+                                        <ScheduledTaskListItem
                                             key={task.id}
-                                            type="button"
-                                            onClick={() => {
+                                            task={task}
+                                            latestRun={latestRun}
+                                            selected={selected}
+                                            isPending={isPending}
+                                            onSelect={() => {
                                                 setSelectedTaskId(task.id)
                                                 setSelectedRunId(latestRun?.id ?? null)
                                                 openWorkspaceScheduledTask(task.id, latestRun?.id ?? null)
                                             }}
-                                            className={
-                                                'w-full rounded-2xl border px-3 py-3 text-left transition-colors ' +
-                                                (selected
-                                                    ? 'border-[var(--app-fg)] bg-[var(--app-secondary-bg)]'
-                                                    : 'border-transparent hover:border-[var(--app-border)] hover:bg-[var(--app-subtle-bg)]')
-                                            }
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="truncate text-sm font-medium text-[var(--app-fg)]">{task.title}</div>
-                                                    <div className="mt-1 truncate text-xs text-[var(--app-hint)]">{task.targetDirectory}</div>
-                                                </div>
-                                                <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + (task.paused ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')}>
-                                                    {task.paused ? 'paused' : task.status}
-                                                </span>
-                                            </div>
-                                            <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
-                                                <span>{task.scheduleType}</span>
-                                                <span>·</span>
-                                                <span>{task.agentFlavor}</span>
-                                                <span>·</span>
-                                                <span>next {formatDateTime(task.nextRunAt)}</span>
-                                            </div>
-                                            {latestRun ? (
-                                                <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
-                                                    <RunStatusBadge status={latestRun.status} />
-                                                    <span>{formatDateTime(latestRun.triggeredAt)}</span>
-                                                </div>
-                                            ) : null}
-                                        </button>
+                                            onTogglePaused={() => void updateScheduledTask({ taskId: task.id, paused: !task.paused })}
+                                            onCancel={() => void cancelScheduledTask(task.id)}
+                                            onDelete={() => setDeleteTaskId(task.id)}
+                                        />
                                     )
                                 })}
                             </div>
@@ -401,7 +476,7 @@ export function ScheduledWorkspace(props: {
                                             <button type="button" disabled={isPending} onClick={() => setIsEditing(true)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Edit</button>
                                             <button type="button" disabled={isPending} onClick={() => void handleTogglePaused()} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{selectedTask.paused ? 'Resume' : 'Pause'}</button>
                                             <button type="button" disabled={isPending || selectedTask.status !== 'active' || selectedTask.paused} onClick={() => void cancelScheduledTask(selectedTask.id)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Cancel</button>
-                                            <button type="button" disabled={isPending} onClick={() => void deleteScheduledTask(selectedTask.id)} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50">Delete</button>
+                                            <button type="button" disabled={isPending} onClick={() => setDeleteTaskId(selectedTask.id)} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50">Delete</button>
                                         </>
                                     ) : (
                                         <>
@@ -573,6 +648,21 @@ export function ScheduledWorkspace(props: {
                     </div>
                 )}
             </div>
-        </div>
+            </div>
+
+            <ConfirmDialog
+                isOpen={deleteTask !== null}
+                onClose={() => setDeleteTaskId(null)}
+                title={t('scheduled.deleteDialog.title')}
+                description={t('scheduled.deleteDialog.description', {
+                    name: deleteTask?.title ?? '',
+                })}
+                confirmLabel={t('scheduled.deleteDialog.confirm')}
+                confirmingLabel={t('scheduled.deleteDialog.confirming')}
+                onConfirm={handleDeleteTask}
+                isPending={isPending}
+                destructive
+            />
+        </>
     )
 }
