@@ -609,7 +609,9 @@ function ScheduledTaskHeader(props: {
   isEditing: boolean;
   editState: ScheduledEditState | null;
   isPending: boolean;
-  onEditStateChange: React.Dispatch<React.SetStateAction<ScheduledEditState | null>>;
+  onEditStateChange: React.Dispatch<
+    React.SetStateAction<ScheduledEditState | null>
+  >;
   onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
   onCancelTask: (taskId: string) => Promise<unknown> | void;
   onDeleteTask: (taskId: string) => Promise<unknown> | void;
@@ -643,7 +645,9 @@ function ScheduledTaskHeader(props: {
                   value={props.editState.title}
                   onChange={(event) =>
                     props.onEditStateChange((current) =>
-                      current ? { ...current, title: event.target.value } : current,
+                      current
+                        ? { ...current, title: event.target.value }
+                        : current,
                     )
                   }
                   className="w-full border-0 bg-transparent p-0 text-base font-semibold leading-normal text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0"
@@ -700,7 +704,11 @@ function ScheduledTaskHeader(props: {
               </button>
               <button
                 type="button"
-                disabled={props.isPending || props.task.status !== "active" || props.task.paused}
+                disabled={
+                  props.isPending ||
+                  props.task.status !== "active" ||
+                  props.task.paused
+                }
                 onClick={() => void props.onCancelTask(props.task.id)}
                 className={headerIconButtonClassName}
                 title={t("scheduled.action.cancel")}
@@ -846,7 +854,9 @@ function ScheduledTaskDetailPanel({
   isEditing: boolean;
   editState: ScheduledEditState | null;
   isPending: boolean;
-  onEditStateChange: React.Dispatch<React.SetStateAction<ScheduledEditState | null>>;
+  onEditStateChange: React.Dispatch<
+    React.SetStateAction<ScheduledEditState | null>
+  >;
   onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
   onCancelTask: (taskId: string) => Promise<unknown> | void;
   onDeleteTask: (taskId: string) => Promise<unknown> | void;
@@ -855,6 +865,17 @@ function ScheduledTaskDetailPanel({
   onOpenRunSession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
+  const scheduleRunAtInputRef = useRef<HTMLInputElement | null>(null);
+  const configValueSlotClassName =
+    "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
+  const configInlineInputClassName =
+    "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+  const configInlinePickerClassName =
+    "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+  const configInlineSelectClassName =
+    "block h-[19px] shrink-0 border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+  const configSchedulePreviewSelectClassName =
+    "pointer-events-none block h-[19px] shrink-0 border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-hint)] disabled:opacity-70";
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -875,111 +896,152 @@ function ScheduledTaskDetailPanel({
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
           <div className="mt-4">
             {isEditing && editState ? (
-              <div className="grid gap-x-6 gap-y-3 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                    {t("scheduled.detail.prompt")}
-                  </div>
-                  <textarea
-                    value={editState.prompt}
-                    onChange={(event) =>
-                      onEditStateChange((current) =>
-                        current ? { ...current, prompt: event.target.value } : current,
-                      )
-                    }
-                    rows={6}
-                    className="mt-2 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                    Agent / Model
-                  </div>
-                  <div className="mt-1 text-sm text-[var(--app-fg)]">
-                    {task.agentFlavor} / {editState.model || "-"}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                    {t("scheduled.detail.directory")}
-                  </div>
-                  <input
-                    value={editState.targetDirectory}
-                    onChange={(event) =>
-                      onEditStateChange((current) =>
-                        current
-                          ? { ...current, targetDirectory: event.target.value }
-                          : current,
-                      )
-                    }
-                    className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                  />
-                </div>
-
-                <div>
-                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                    {t("scheduled.detail.model")}
-                  </div>
-                  <input
-                    value={editState.model}
-                    onChange={(event) =>
-                      onEditStateChange((current) =>
-                        current ? { ...current, model: event.target.value } : current,
-                      )
-                    }
-                    className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                    {t("scheduled.detail.schedule")}
-                  </div>
-                  <div className="mt-1 space-y-2">
-                    <select
-                      value={editState.scheduleType}
-                      onChange={(event) =>
-                        onEditStateChange((current) =>
-                          current
-                            ? {
-                                ...current,
-                                scheduleType: event.target.value as "once" | "cron",
+              <div>
+                {[
+                  {
+                    key: "prompt",
+                    label: t("scheduled.detail.prompt"),
+                    control: (
+                      <input
+                        value={editState.prompt}
+                        onChange={(event) =>
+                          onEditStateChange((current) =>
+                            current
+                              ? { ...current, prompt: event.target.value }
+                              : current,
+                          )
+                        }
+                        className={configInlineInputClassName}
+                      />
+                    ),
+                  },
+                  {
+                    key: "agent-model",
+                    label: "Agent / Model",
+                    control: (
+                      <input
+                        value={`${task.agentFlavor} / ${editState.model || "-"}`}
+                        readOnly
+                        className={configInlineInputClassName}
+                      />
+                    ),
+                  },
+                  {
+                    key: "directory",
+                    label: t("scheduled.detail.directory"),
+                    control: (
+                      <input
+                        value={editState.targetDirectory}
+                        onChange={(event) =>
+                          onEditStateChange((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  targetDirectory: event.target.value,
+                                }
+                              : current,
+                          )
+                        }
+                        className={configInlineInputClassName}
+                      />
+                    ),
+                  },
+                  {
+                    key: "schedule",
+                    label: t("scheduled.detail.schedule"),
+                    control: (
+                      <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2">
+                        <select
+                          value={editState.scheduleType}
+                          onChange={(event) =>
+                            onEditStateChange((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    scheduleType: event.target.value as
+                                      | "once"
+                                      | "cron",
+                                  }
+                                : current,
+                            )
+                          }
+                          className={configInlineSelectClassName}
+                        >
+                          <option value="once">once</option>
+                          <option value="cron">cron</option>
+                        </select>
+                        {editState.scheduleType === "once" ? (
+                          <div className="relative min-w-0 max-w-full shrink-0">
+                            <input
+                              ref={scheduleRunAtInputRef}
+                              type="datetime-local"
+                              step={1}
+                              value={editState.runAt}
+                              onChange={(event) =>
+                                onEditStateChange((current) =>
+                                  current
+                                    ? { ...current, runAt: event.target.value }
+                                    : current,
+                                )
                               }
-                            : current,
-                        )
-                      }
-                      className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                    >
-                      <option value="once">once</option>
-                      <option value="cron">cron</option>
-                    </select>
-                    {editState.scheduleType === "once" ? (
-                      <input
-                        type="datetime-local"
-                        step={1}
-                        value={editState.runAt}
-                        onChange={(event) =>
-                          onEditStateChange((current) =>
-                            current ? { ...current, runAt: event.target.value } : current,
-                          )
-                        }
-                        className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                      />
-                    ) : (
-                      <input
-                        value={editState.cron}
-                        onChange={(event) =>
-                          onEditStateChange((current) =>
-                            current ? { ...current, cron: event.target.value } : current,
-                          )
-                        }
-                        className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                      />
-                    )}
+                              className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+                              tabIndex={-1}
+                              aria-hidden="true"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const input = scheduleRunAtInputRef.current;
+                                if (!input) {
+                                  return;
+                                }
+                                if (typeof input.showPicker === "function") {
+                                  input.showPicker();
+                                  return;
+                                }
+                                input.focus();
+                                input.click();
+                              }}
+                              className="block h-[19px] w-full overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0"
+                            >
+                              <span className="block truncate">
+                                {editState.runAt
+                                  ? formatScheduledDateTime(
+                                      Date.parse(editState.runAt),
+                                    )
+                                  : "-"}
+                              </span>
+                            </button>
+                          </div>
+                        ) : (
+                          <input
+                            value={editState.cron}
+                            onChange={(event) =>
+                              onEditStateChange((current) =>
+                                current
+                                  ? { ...current, cron: event.target.value }
+                                  : current,
+                              )
+                            }
+                            className={`min-w-0 flex-1 ${configInlineInputClassName}`}
+                          />
+                        )}
+                      </div>
+                    ),
+                  },
+                ].map((item, index) => (
+                  <div
+                    key={`config-edit-${item.key}`}
+                    className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-[var(--app-divider)]" : ""}`}
+                  >
+                    <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                      {item.label}
+                    </div>
+                    <div className={configValueSlotClassName}>
+                      {item.control}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             ) : (
               <div>
@@ -992,24 +1054,40 @@ function ScheduledTaskDetailPanel({
                       multiline: true,
                     },
                     {
+                      key: "agent-model",
+                      label: "Agent / Model",
+                      value: `${task.agentFlavor} / ${task.model ?? "-"}`,
+                    },
+                    {
                       key: "directory",
                       label: t("scheduled.detail.directory"),
                       value: task.targetDirectory,
                       multiline: true,
                     },
                     {
-                      key: "agent-model",
-                      label: "Agent / Model",
-                      value: `${task.agentFlavor} / ${task.model ?? "-"}`,
-                    },
-                    {
                       key: "schedule",
                       label: t("scheduled.detail.schedule"),
-                      value:
-                        task.scheduleType +
-                        " · " +
-                        (task.scheduleSpec.cron ??
-                          formatScheduledDateTime(task.scheduleSpec.runAt)),
+                      valueNode: (
+                        <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2">
+                          <select
+                            value={task.scheduleType}
+                            disabled
+                            aria-hidden="true"
+                            tabIndex={-1}
+                            className={configSchedulePreviewSelectClassName}
+                          >
+                            <option value="once">once</option>
+                            <option value="cron">cron</option>
+                          </select>
+                          <span className="block min-w-0 truncate">
+                            {task.scheduleType === "cron"
+                              ? (task.scheduleSpec.cron ?? "-")
+                              : formatScheduledDateTime(
+                                  task.scheduleSpec.runAt,
+                                )}
+                          </span>
+                        </div>
+                      ),
                     },
                   ].map((item, index) => (
                     <div
@@ -1020,9 +1098,9 @@ function ScheduledTaskDetailPanel({
                         {item.label}
                       </div>
                       <div
-                        className="min-w-0 truncate text-right text-sm text-[var(--app-fg)]"
+                        className={`${configValueSlotClassName} ${item.valueNode ? "" : "truncate"}`}
                       >
-                        {item.value}
+                        {item.valueNode ?? item.value}
                       </div>
                     </div>
                   ))}
@@ -1038,10 +1116,13 @@ function ScheduledTaskDetailPanel({
                   {t("scheduled.detail.runs")}
                 </h2>
                 <p className="text-sm text-[var(--app-hint)]">
-                  {t("scheduled.detail.nextRun")}: {formatScheduledDateTime(task.nextRunAt)}
+                  {t("scheduled.detail.nextRun")}:{" "}
+                  {formatScheduledDateTime(task.nextRunAt)}
                 </p>
               </div>
-              <div className="text-sm text-[var(--app-hint)]">{taskRuns.length} runs</div>
+              <div className="text-sm text-[var(--app-hint)]">
+                {taskRuns.length} runs
+              </div>
             </div>
             {taskRuns.length === 0 ? (
               <div className="mt-4 rounded-2xl border border-dashed border-[var(--app-border)] px-4 py-6 text-sm text-[var(--app-hint)]">
@@ -1071,7 +1152,8 @@ function ScheduledTaskDetailPanel({
                             </span>
                           </div>
                           <div className="mt-2 text-xs text-[var(--app-hint)]">
-                            scheduled {formatScheduledDateTime(run.scheduledFor)}
+                            scheduled{" "}
+                            {formatScheduledDateTime(run.scheduledFor)}
                           </div>
                           {run.sessionId ? (
                             <div className="mt-1 truncate text-xs text-[var(--app-fg)]">
@@ -1089,7 +1171,9 @@ function ScheduledTaskDetailPanel({
 
           <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
             {!selectedRun ? (
-              <div className="text-sm text-[var(--app-hint)]">{t("scheduled.detail.pickRun")}</div>
+              <div className="text-sm text-[var(--app-hint)]">
+                {t("scheduled.detail.pickRun")}
+              </div>
             ) : (
               <div className="space-y-4">
                 <div>
@@ -1124,7 +1208,9 @@ function ScheduledTaskDetailPanel({
                     <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
                       {t("scheduled.detail.runId")}
                     </div>
-                    <div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.id}</div>
+                    <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
+                      {selectedRun.id}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
@@ -1163,7 +1249,9 @@ function ScheduledTaskDetailPanel({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => onOpenRunSession(selectedRun.sessionId as string)}
+                    onClick={() =>
+                      onOpenRunSession(selectedRun.sessionId as string)
+                    }
                     className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
                   >
                     {t("scheduled.detail.openFullscreen")}
@@ -2385,7 +2473,7 @@ function SessionsPage() {
         ? "scheduled"
         : canSwipeBackFromNewSession
           ? "newSession"
-        : null,
+          : null,
     forwardSessionId: swipeForwardSessionId,
   };
 
@@ -2770,10 +2858,10 @@ function SessionsPage() {
       narrowViewport &&
       !settingsOpen &&
       (visibleNewSessionOverlay ||
-        ((!isSubRoute &&
-        ((isSessionsTab && activeSessionId !== null) ||
-          (isScheduledTab && selectedScheduledTaskId !== null))) ||
-        Boolean(swipeForwardSessionId))),
+        (!isSubRoute &&
+          ((isSessionsTab && activeSessionId !== null) ||
+            (isScheduledTab && selectedScheduledTaskId !== null))) ||
+        Boolean(swipeForwardSessionId)),
     onOpenNewSession: toggleNewSessionOverlay,
     onToggleSettings: toggleSettingsOverlay,
     onToggleDesktopSidebar: toggleCollapsed,
@@ -2784,7 +2872,10 @@ function SessionsPage() {
   const mobileSessionsDetailVisible =
     narrowViewport && isSessionsTab && activeSessionId !== null && !hasOverlay;
   const mobileScheduledDetailVisible =
-    narrowViewport && isScheduledTab && Boolean(selectedScheduledTaskId) && !hasOverlay;
+    narrowViewport &&
+    isScheduledTab &&
+    Boolean(selectedScheduledTaskId) &&
+    !hasOverlay;
   const mobileTabDetailVisible =
     mobileNewSessionVisible ||
     mobileSessionsDetailVisible ||
@@ -2856,22 +2947,26 @@ function SessionsPage() {
   }, [batchMode, handleExitBatchMode, showSidebarBatchActions]);
 
   return (
-      <div className="relative flex h-full min-h-0" onWheel={handleRootWheel}>
-        {showPinnedSidebarLogo && (
-          <button
-            type="button"
-            onClick={handlePinnedLogoClick}
-            className={`absolute left-[11px] top-[calc(env(safe-area-inset-top)+12px)] z-40 inline-flex h-8 w-8 items-center justify-center text-[var(--app-fg)] ${narrowViewport && !mobileLogoBackMode ? "pointer-events-none" : ""}`}
-            title={pinnedLogoTitle}
-            aria-label={pinnedLogoTitle}
-          >
-            {mobileLogoBackMode ? (
-              <BackIcon className="h-7 w-7" />
-            ) : (
-              <img src="/icon.svg" alt="HAPI" className="block h-7 w-7 shrink-0" />
-            )}
-          </button>
-        )}
+    <div className="relative flex h-full min-h-0" onWheel={handleRootWheel}>
+      {showPinnedSidebarLogo && (
+        <button
+          type="button"
+          onClick={handlePinnedLogoClick}
+          className={`absolute left-[11px] top-[calc(env(safe-area-inset-top)+12px)] z-40 inline-flex h-8 w-8 items-center justify-center text-[var(--app-fg)] ${narrowViewport && !mobileLogoBackMode ? "pointer-events-none" : ""}`}
+          title={pinnedLogoTitle}
+          aria-label={pinnedLogoTitle}
+        >
+          {mobileLogoBackMode ? (
+            <BackIcon className="h-7 w-7" />
+          ) : (
+            <img
+              src="/icon.svg"
+              alt="HAPI"
+              className="block h-7 w-7 shrink-0"
+            />
+          )}
+        </button>
+      )}
 
       {/* Left panel */}
       <div
@@ -3020,7 +3115,9 @@ function SessionsPage() {
             </div>
           </div>
 
-          <div className={`mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col px-3 pb-3 lg:max-w-content ${widescreen ? "widescreen-mode" : ""}`}>
+          <div
+            className={`mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col px-3 pb-3 lg:max-w-content ${widescreen ? "widescreen-mode" : ""}`}
+          >
             <div className="flex min-h-0 flex-1 flex-col pt-0">
               <div className="relative -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                 <div
