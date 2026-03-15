@@ -1229,7 +1229,7 @@ function ScheduledTaskDetailPanel({
 
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
-          <div className="border-y border-[var(--app-divider)]">
+          <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-2">
             {isEditing && editState ? (
               <div>
                 {[
@@ -1378,7 +1378,7 @@ function ScheduledTaskDetailPanel({
                 ].map((item, index) => (
                   <div
                     key={`config-edit-${item.key}`}
-                    className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-[var(--app-divider)]" : ""}`}
+                    className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" : ""}`}
                   >
                     <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
                       {item.label}
@@ -1465,7 +1465,7 @@ function ScheduledTaskDetailPanel({
                   ].map((item, index) => (
                     <div
                       key={`config-definition-${item.key}`}
-                      className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-[var(--app-divider)]" : ""}`}
+                      className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" : ""}`}
                     >
                       <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
                         {item.label}
