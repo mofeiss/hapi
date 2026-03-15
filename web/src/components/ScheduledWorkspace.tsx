@@ -11,6 +11,7 @@ import { EmbeddedSessionView } from '@/components/EmbeddedSessionView'
 import { ScheduledTaskActionMenu } from '@/components/ScheduledTaskActionMenu'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
+import { getScheduledRunStatusToneClassName } from '@/lib/scheduled-run-status'
 import {
     openWorkspaceScheduledTask,
     selectWorkspaceScheduledRun,
@@ -46,6 +47,10 @@ function getScheduledRunResultSummaryLabel(resultSummary: string, t: ReturnType<
     const summaryKey = `scheduled.runResult.${resultSummary}`
     const translated = t(summaryKey)
     return translated === summaryKey ? resultSummary : translated
+}
+
+function getScheduledTaskStatusText(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string {
+    return task.paused ? t('scheduled.list.status.paused') : t('scheduled.list.status.running')
 }
 
 type EditState = {
@@ -126,15 +131,10 @@ function SidebarTab(props: { active: boolean; label: string; onClick: () => void
 }
 
 function RunStatusBadge(props: { status: ScheduledTaskRun['status'] }) {
-    const className = props.status === 'succeeded'
-        ? 'bg-emerald-500/10 text-emerald-600'
-        : props.status === 'failed'
-            ? 'bg-red-500/10 text-red-600'
-            : props.status === 'running'
-                ? 'bg-blue-500/10 text-blue-600'
-                : 'bg-[var(--app-subtle-bg)] text-[var(--app-hint)]'
+    const { t } = useTranslation()
+    const className = getScheduledRunStatusToneClassName(props.status)
 
-    return <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + className}>{props.status}</span>
+    return <span className={'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ' + className}>{t(`scheduled.runStatus.${props.status}`)}</span>
 }
 
 function ScheduledTaskListItem(props: {
@@ -185,7 +185,7 @@ function ScheduledTaskListItem(props: {
                         <div className="mt-1 truncate text-xs text-[var(--app-hint)]">{props.task.targetDirectory}</div>
                     </div>
                     <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + (props.task.paused ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')}>
-                        {props.task.paused ? t('scheduled.list.status.paused') : props.task.status}
+                        {getScheduledTaskStatusText(props.task, t)}
                     </span>
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
@@ -605,7 +605,7 @@ export function ScheduledWorkspace(props: {
                                                 <div className="text-sm text-[var(--app-hint)]">{t('scheduled.detail.pickRun')}</div>
                                             ) : (
                                                 <div className="space-y-4">
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center justify-between gap-3">
                                                         <h3 className="text-base font-semibold text-[var(--app-fg)]">{t('scheduled.detail.selectedRun')}</h3>
                                                         <RunStatusBadge status={selectedRun.status} />
                                                     </div>
@@ -616,18 +616,18 @@ export function ScheduledWorkspace(props: {
                                                         <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t('scheduled.detail.session')}</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.sessionId ?? '-'}</div></div>
                                                     </div>
                                                     {selectedRun.error ? (
-                                                        <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">{selectedRun.error}</div>
+                                                        <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>{selectedRun.error}</div>
                                                     ) : null}
                                                     {selectedRun.resultSummary ? (
-                                                        <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">{getScheduledRunResultSummaryLabel(selectedRun.resultSummary, t)}</div>
+                                                        <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>{getScheduledRunResultSummaryLabel(selectedRun.resultSummary, t)}</div>
                                                     ) : null}
                                                 </div>
                                             )}
                                         </div>
                                         {selectedRun?.sessionId ? (
                                             <div>
-                                                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                                                    <div className="text-sm font-medium text-[var(--app-fg)]">{t('scheduled.detail.sessionView')}</div>
+                                                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+                                                    <h3 className="text-base font-semibold text-[var(--app-fg)]">{t('scheduled.detail.sessionView')}</h3>
                                                     {props.onOpenSession ? (
                                                         <button type="button" onClick={() => props.onOpenSession?.(selectedRun.sessionId as string)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">{t('scheduled.detail.openFullscreen')}</button>
                                                     ) : null}

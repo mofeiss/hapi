@@ -17,6 +17,7 @@ import { SessionChat } from "@/components/SessionChat";
 import { EmbeddedSessionView } from "@/components/EmbeddedSessionView";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 import { HeaderActionGroup } from "@/components/HeaderActionGroup";
+import { ClockIcon } from "@/components/icons";
 import { ChevronDownIcon } from "@/components/icons";
 import {
   SessionList,
@@ -51,6 +52,10 @@ import { useTranslation } from "@/lib/use-translation";
 import { useTheme } from "@/hooks/useTheme";
 import { ApiError } from "@/api/client";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
+import {
+  getScheduledRunFillClassName,
+  getScheduledRunStatusToneClassName,
+} from "@/lib/scheduled-run-status";
 import { formatTimestamp } from "@/lib/dateTime";
 import { normalizeProjectPath } from "@/utils/path";
 import type {
@@ -634,22 +639,16 @@ function groupTasksByMachine(
 function ScheduledRunStatusBadge(props: {
   status: ScheduledTaskRun["status"];
 }) {
-  const className =
-    props.status === "succeeded"
-      ? "bg-emerald-500/10 text-emerald-600"
-      : props.status === "failed"
-        ? "bg-red-500/10 text-red-600"
-        : props.status === "running"
-          ? "bg-blue-500/10 text-blue-600"
-          : "bg-[var(--app-subtle-bg)] text-[var(--app-hint)]";
+  const { t } = useTranslation();
+  const className = getScheduledRunStatusToneClassName(props.status);
 
   return (
     <span
       className={
-        "rounded-full px-2 py-0.5 text-[11px] font-medium " + className
+        "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium " + className
       }
     >
-      {props.status}
+      {t(`scheduled.runStatus.${props.status}`)}
     </span>
   );
 }
@@ -657,15 +656,7 @@ function ScheduledRunStatusBadge(props: {
 function getScheduledRunTimelineStatusClassName(
   status: ScheduledTaskRun["status"],
 ): string {
-  if (status === "succeeded") {
-    return "bg-emerald-500";
-  }
-
-  if (status === "failed") {
-    return "bg-red-500";
-  }
-
-  return "bg-stone-500";
+  return getScheduledRunFillClassName(status);
 }
 
 function getScheduledTaskStatusTag(task: ScheduledTask): {
@@ -675,24 +666,46 @@ function getScheduledTaskStatusTag(task: ScheduledTask): {
   if (task.paused) {
     return {
       label: "scheduled.list.status.paused",
-      className:
-        "border border-amber-500/25 bg-amber-500/12 text-amber-700 dark:text-amber-300",
+      className: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
     };
   }
 
   if (task.status === "active") {
     return {
       label: "scheduled.list.status.running",
-      className:
-        "border border-emerald-500/25 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+      className: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
     };
   }
 
   return {
     label: "scheduled.list.status.active",
-    className:
-      "border border-[var(--app-border)] bg-[var(--app-subtle-bg)] text-[var(--app-fg)]",
+    className: "bg-[var(--app-subtle-bg)] text-[var(--app-fg)]",
   };
+}
+
+function getScheduledTaskStatusText(
+  task: ScheduledTask,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  return t(getScheduledTaskStatusTag(task).label);
+}
+
+function ScheduledTaskStatusTag(props: {
+  task: ScheduledTask;
+  labelOverride?: string;
+  icon?: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const taskStatusTag = getScheduledTaskStatusTag(props.task);
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${taskStatusTag.className}`}
+    >
+      {props.icon}
+      <span>{props.labelOverride ?? t(taskStatusTag.label)}</span>
+    </span>
+  );
 }
 
 function getScheduledRunSortTime(run: ScheduledTaskRun): number {
@@ -718,7 +731,6 @@ function ScheduledRunsPager(props: {
   const middleButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const runSquareClassName = "relative flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--app-bg)]";
   const navButtonClassName = "flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--app-secondary-bg)] text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-35";
-  const taskStatusTag = getScheduledTaskStatusTag(props.task);
 
   const sortedRuns = useMemo(
     () => [...props.runs].sort((left, right) => getScheduledRunSortTime(right) - getScheduledRunSortTime(left)),
@@ -751,28 +763,50 @@ function ScheduledRunsPager(props: {
 
   if (sortedRuns.length === 0) {
     return (
-      <div className="py-2 text-sm text-[var(--app-hint)]">
-        {t("scheduled.detail.runsEmpty")}
+      <div className="space-y-3 py-1">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-[var(--app-fg)]">
+            0 {t("scheduled.detail.runs")}
+          </h2>
+          <ScheduledTaskStatusTag
+            task={props.task}
+            labelOverride={
+              props.task.paused
+                ? t("scheduled.list.status.paused")
+                : formatScheduledDateTime(props.task.nextRunAt)
+            }
+            icon={
+              props.task.paused ? undefined : <ClockIcon className="h-3.5 w-3.5" />
+            }
+          />
+        </div>
+        <div className="text-sm text-[var(--app-hint)]">
+          {t("scheduled.detail.runsEmpty")}
+        </div>
       </div>
     );
   }
 
+  const isActiveTask = !props.task.paused;
+
   return (
-    <div className="py-1">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <div className="min-w-0 flex items-center gap-2 truncate text-[var(--app-hint)]">
-          <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusTag.className}`}>
-            {t(taskStatusTag.label)}
-          </span>
-          <span className="uppercase tracking-[0.12em]">{t("scheduled.detail.nextRun")}</span>
-          <span className="text-[var(--app-fg)]">{formatScheduledDateTime(props.task.nextRunAt)}</span>
-        </div>
-        <div className="shrink-0 text-[var(--app-hint)]">
-          <span className="text-[var(--app-fg)]">{sortedRuns.length}</span> {t("scheduled.detail.runs")}
-        </div>
+    <div className="space-y-3 py-1">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-[var(--app-fg)]">
+          {sortedRuns.length} {t("scheduled.detail.runs")}
+        </h2>
+        <ScheduledTaskStatusTag
+          task={props.task}
+          labelOverride={
+            props.task.paused
+              ? t("scheduled.list.status.paused")
+              : formatScheduledDateTime(props.task.nextRunAt)
+          }
+          icon={isActiveTask ? <ClockIcon className="h-3.5 w-3.5" /> : undefined}
+        />
       </div>
 
-      <div className="mt-3 flex items-center overflow-hidden rounded-[12px] border border-[var(--app-border)]">
+      <div className="flex items-center overflow-hidden rounded-[12px] border border-[var(--app-border)]">
         <button
           type="button"
           onClick={() => {
@@ -1410,7 +1444,6 @@ function ScheduledTaskDetailPanel({
   onOpenRunSession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
-  const scheduleRunAtInputRef = useRef<HTMLInputElement | null>(null);
   const configValueSlotClassName =
     "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
   const configInlineInputClassName =
@@ -1420,17 +1453,19 @@ function ScheduledTaskDetailPanel({
   const configInlineDisabledValueClassName =
     "block h-[19px] w-full overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0";
   const configScheduleTypeSlotClassName =
-    "relative shrink-0";
+    "relative shrink-0 basis-[72px]";
   const configInlineSelectClassName =
     "h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configSchedulePreviewSelectClassName =
     "pointer-events-none h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
   const configScheduleValueSlotClassName =
-    "min-w-0 max-w-full shrink-0";
+    "min-w-0 flex-1";
   const configScheduleValueButtonClassName =
     "group inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configScheduleValuePreviewClassName =
     "pointer-events-none inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
+  const configScheduleControlGroupClassName =
+    "ml-auto flex min-w-0 max-w-full items-center justify-end gap-2";
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -1512,7 +1547,7 @@ function ScheduledTaskDetailPanel({
                     key: "schedule",
                     label: t("scheduled.detail.schedule"),
                     control: (
-                      <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2">
+                      <div className={configScheduleControlGroupClassName}>
                         <div className={configScheduleTypeSlotClassName}>
                         <select
                           value={editState.scheduleType}
@@ -1542,7 +1577,6 @@ function ScheduledTaskDetailPanel({
                         {editState.scheduleType === "once" ? (
                           <div className={configScheduleValueSlotClassName}>
                             <input
-                              ref={scheduleRunAtInputRef}
                               type="datetime-local"
                               step={1}
                               value={editState.runAt}
@@ -1553,38 +1587,8 @@ function ScheduledTaskDetailPanel({
                                     : current,
                                 )
                               }
-                              className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
-                              tabIndex={-1}
-                              aria-hidden="true"
+                              className={configInlinePickerClassName}
                             />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const input = scheduleRunAtInputRef.current;
-                                if (!input) {
-                                  return;
-                                }
-                                if (typeof input.showPicker === "function") {
-                                  input.showPicker();
-                                  return;
-                                }
-                                input.focus();
-                                input.click();
-                              }}
-                              className={configScheduleValueButtonClassName}
-                            >
-                              <span className="block min-w-0 truncate">
-                                {editState.runAt
-                                  ? formatScheduledDateTime(
-                                      Date.parse(editState.runAt),
-                                    )
-                                  : "-"}
-                              </span>
-                              <ChevronDownIcon
-                                className="h-3 w-3 shrink-0"
-                                aria-hidden="true"
-                              />
-                            </button>
                           </div>
                         ) : (
                           <InlineEditableText
@@ -1647,7 +1651,7 @@ function ScheduledTaskDetailPanel({
                       key: "schedule",
                       label: t("scheduled.detail.schedule"),
                       valueNode: (
-                        <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2">
+                        <div className={configScheduleControlGroupClassName}>
                           <div className={configScheduleTypeSlotClassName}>
                           <select
                             value={task.scheduleType}
@@ -1666,7 +1670,7 @@ function ScheduledTaskDetailPanel({
                         </div>
 
                           {task.scheduleType === "cron" ? (
-                            <span className="block min-w-0 truncate">
+                            <span className="block min-w-0 flex-1 truncate">
                               {task.scheduleSpec.cron ?? "-"}
                             </span>
                           ) : (
@@ -1726,7 +1730,7 @@ function ScheduledTaskDetailPanel({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-3">
                     <h2 className="text-base font-semibold text-[var(--app-fg)]">
                       {t("scheduled.detail.selectedRun")}
                     </h2>
@@ -1743,18 +1747,18 @@ function ScheduledTaskDetailPanel({
                     </div>
                     <div>
                       <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.finished")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {formatScheduledDateTime(selectedRun.finishedAt)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
                         {t("scheduled.detail.runId")}
                       </div>
                       <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
                         {selectedRun.id}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                        {t("scheduled.detail.finished")}
+                      </div>
+                      <div className="mt-1 text-sm text-[var(--app-fg)]">
+                        {formatScheduledDateTime(selectedRun.finishedAt)}
                       </div>
                     </div>
                     <div>
@@ -1767,12 +1771,12 @@ function ScheduledTaskDetailPanel({
                     </div>
                   </div>
                   {selectedRun.error ? (
-                    <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">
+                    <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>
                       {selectedRun.error}
                     </div>
                   ) : null}
                   {selectedRun.resultSummary ? (
-                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">
+                    <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>
                       {getScheduledRunResultSummaryLabel(
                         selectedRun.resultSummary,
                         t,
@@ -1785,10 +1789,10 @@ function ScheduledTaskDetailPanel({
 
             {selectedRun?.sessionId ? (
               <div className="border-t border-[var(--app-border)]">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div className="text-sm font-medium text-[var(--app-fg)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+                  <h2 className="text-base font-semibold text-[var(--app-fg)]">
                     {t("scheduled.detail.sessionView")}
-                  </div>
+                  </h2>
                   <button
                     type="button"
                     onClick={() => onOpenRunSession(selectedRun.sessionId as string)}
@@ -3925,30 +3929,10 @@ function SessionsPage() {
                                               task.scheduleType === "cron"
                                                 ? t("scheduled.list.kind.cron")
                                                 : t("scheduled.list.kind.once");
-                                            const statusText = task.paused
-                                              ? t(
-                                                  "scheduled.list.status.paused",
-                                                )
-                                              : latestRun?.status === "running"
-                                                ? t(
-                                                    "scheduled.list.status.running",
-                                                  )
-                                                : latestRun?.status === "failed"
-                                                  ? t(
-                                                      "scheduled.list.status.failed",
-                                                    )
-                                                  : latestRun?.status ===
-                                                      "succeeded"
-                                                    ? t(
-                                                        "scheduled.list.status.succeeded",
-                                                      )
-                                                    : task.status === "active"
-                                                      ? t(
-                                                          "scheduled.list.status.active",
-                                                        )
-                                                      : t(
-                                                          "scheduled.list.status.idle",
-                                                        );
+                                            const statusText = getScheduledTaskStatusText(
+                                              task,
+                                              t,
+                                            );
                                             const createdAtLabel =
                                               formatTimestamp(task.createdAt);
                                             const iconToneClass = task.paused
