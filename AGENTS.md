@@ -57,6 +57,7 @@ Bun workspaces; `shared` consumed by cli, hub, web.
 - Path alias `@/*` maps to `./src/*` per package
 - Prefer 4-space indentation
 - Zod for runtime validation (schemas in `shared/src/schemas.ts`)
+- Agent support policy: only `Claude` and `Codex` are actively supported. `OpenCode` and `Gemini` are deprecated, no longer maintained, and should be ignored for all new features, bug fixes, design decisions, and reviews unless the user explicitly asks to touch them.
 - Web 基础橙色统一使用 `var(--app-orange-base)`（定义在 `web/src/index.css`，当前值 `#f59e0b`）；新增橙色 UI 时必须复用该 token
 - 新增组件或新增界面文案时，必须同时适配中文和英文语义；特定术语、产品名、协议名、库名、代码标识等保持英文，不要强行翻译
 
