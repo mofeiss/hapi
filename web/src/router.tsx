@@ -893,7 +893,7 @@ function ScheduledTaskDetailPanel({
   ];
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-[var(--app-bg)]">
+    <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-[var(--app-bg)]">
       <ScheduledTaskHeader
         task={task}
         machineTitle={machineTitle}
@@ -907,8 +907,8 @@ function ScheduledTaskDetailPanel({
         onUpdateTask={onUpdateTask}
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-3 py-3">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
           <div className="rounded-[24px] bg-[var(--app-panel-bg)]">
             <div>
               <div>
@@ -1180,7 +1180,7 @@ function ScheduledTaskDetailPanel({
           </div>
 
           {selectedRun?.sessionId ? (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
+            <div className="mt-4 min-w-0 overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
                 <div>
                   <div className="text-sm font-medium text-[var(--app-fg)]">
@@ -1207,7 +1207,7 @@ function ScheduledTaskDetailPanel({
                   </Link>
                 </div>
               </div>
-              <div className="h-[760px] bg-[var(--app-bg)]">
+              <div className="h-[760px] min-w-0 bg-[var(--app-bg)]">
                 <EmbeddedSessionView
                   sessionId={selectedRun.sessionId as string}
                   onBack={() => onSelectRun(null)}
@@ -3937,7 +3937,7 @@ function SessionsPage() {
             />
           </div>
         ) : isScheduledTab ? (
-          <div className="hidden min-h-0 flex-1 lg:flex">
+          <div className="hidden min-h-0 min-w-0 flex-1 overflow-x-hidden lg:flex">
             {!selectedScheduledTask ? (
               <div className="flex h-full items-center justify-center px-6 text-sm text-[var(--app-hint)]">
                 {t("scheduled.detail.empty")}
