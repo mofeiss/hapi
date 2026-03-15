@@ -1465,7 +1465,7 @@ function ScheduledTaskDetailPanel({
   const configScheduleValueButtonClassName =
     "group inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configScheduleValuePreviewClassName =
-    "pointer-events-none inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
+    "pointer-events-none flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
   const configScheduleControlGroupClassName =
     "ml-auto flex min-w-0 max-w-full items-center justify-end gap-2";
   const cronInputWidthCh = Math.min(
@@ -1695,10 +1695,11 @@ function ScheduledTaskDetailPanel({
                         </div>
 
                           {task.scheduleType === "cron" ? (
-                            <span className="block min-w-0 flex-1 truncate">
+                            <span className="block min-w-0 shrink-0 flex-1 truncate">
                               {task.scheduleSpec.cron ?? "-"}
                             </span>
                           ) : (
+                            <div className={configScheduleValueSlotClassName}>
                             <button
                               type="button"
                               disabled
@@ -1714,6 +1715,7 @@ function ScheduledTaskDetailPanel({
                                 aria-hidden="true"
                               />
                             </button>
+                            </div>
                           )}
                         </div>
                       ),
