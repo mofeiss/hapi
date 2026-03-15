@@ -939,13 +939,13 @@ function ScheduledTaskDetailPanel({
   const configInlineSelectClassName =
     "h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configSchedulePreviewSelectClassName =
-    "pointer-events-none h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-hint)] disabled:opacity-70";
+    "pointer-events-none h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
   const configScheduleValueSlotClassName =
     "min-w-0 max-w-full shrink-0";
   const configScheduleValueButtonClassName =
     "group inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configScheduleValuePreviewClassName =
-    "pointer-events-none inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-hint)] disabled:opacity-70";
+    "pointer-events-none inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -1131,7 +1131,13 @@ function ScheduledTaskDetailPanel({
                     {
                       key: "agent-model",
                       label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
-                      value: `${task.agentFlavor} / ${task.model ?? "-"}`,
+                      valueNode: (
+                        <InlineEditableText
+                          value={`${task.agentFlavor} / ${task.model ?? "-"}`}
+                          readOnly
+                          className={configInlineDisabledValueClassName}
+                        />
+                      ),
                     },
                     {
                       key: "prompt",
@@ -1183,7 +1189,7 @@ function ScheduledTaskDetailPanel({
                                 {formatScheduledDateTime(task.scheduleSpec.runAt)}
                               </span>
                               <ChevronDownIcon
-                                className="h-3 w-3 shrink-0"
+                                className="h-3 w-3 shrink-0 text-[var(--app-hint)] opacity-70"
                                 aria-hidden="true"
                               />
                             </button>
