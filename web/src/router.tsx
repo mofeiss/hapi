@@ -948,7 +948,7 @@ function ScheduledTaskDetailPanel({
     "pointer-events-none inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
 
   return (
-    <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-[var(--app-bg)]">
+    <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
       <ScheduledTaskHeader
         task={task}
         machineTitle={machineTitle}
@@ -964,7 +964,7 @@ function ScheduledTaskDetailPanel({
 
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
-          <div className="mt-4">
+          <div className="border-y border-[var(--app-divider)]">
             {isEditing && editState ? (
               <div>
                 {[
@@ -4112,7 +4112,7 @@ function SessionsPage() {
             />
           </div>
         ) : isScheduledTab ? (
-          <div className="hidden min-h-0 min-w-0 flex-1 overflow-x-hidden lg:flex">
+          <div className="hidden min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden lg:flex">
             {!selectedScheduledTask ? (
               <div className="flex h-full items-center justify-center px-6 text-sm text-[var(--app-hint)]">
                 {t("scheduled.detail.empty")}
