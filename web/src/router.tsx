@@ -619,6 +619,7 @@ function ScheduledTaskHeader(props: {
   onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
 }) {
   const { t } = useTranslation();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const displayPath = normalizeProjectPath(props.task.targetDirectory);
   const createdAtLabel = useMemo(
     () => formatTimestamp(props.task.createdAt),
@@ -720,7 +721,7 @@ function ScheduledTaskHeader(props: {
               <button
                 type="button"
                 disabled={props.isPending}
-                onClick={() => void props.onDeleteTask(props.task.id)}
+                onClick={() => setDeleteConfirmOpen(true)}
                 className={headerIconButtonClassName}
                 title={t("scheduled.action.delete")}
                 aria-label={t("scheduled.action.delete")}
@@ -828,6 +829,21 @@ function ScheduledTaskHeader(props: {
           ) : null}
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        title={t("scheduled.deleteDialog.title")}
+        description={t("scheduled.deleteDialog.description", {
+          name: props.task.title,
+        })}
+        confirmLabel={t("scheduled.deleteDialog.confirm")}
+        confirmingLabel={t("scheduled.deleteDialog.confirming")}
+        onConfirm={async () => {
+          await props.onDeleteTask(props.task.id);
+        }}
+        isPending={props.isPending}
+        destructive
+      />
     </div>
   );
 }
@@ -926,7 +942,7 @@ function ScheduledTaskDetailPanel({
                   },
                   {
                     key: "agent-model",
-                    label: "Agent / Model",
+                    label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
                     control: (
                       <input
                         value={`${task.agentFlavor} / ${editState.model || "-"}`}
@@ -1075,7 +1091,7 @@ function ScheduledTaskDetailPanel({
                     },
                     {
                       key: "agent-model",
-                      label: "Agent / Model",
+                      label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
                       value: `${task.agentFlavor} / ${task.model ?? "-"}`,
                     },
                     {
