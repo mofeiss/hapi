@@ -339,6 +339,49 @@ function BatchXIcon(props: { className?: string }) {
   );
 }
 
+function InlineEditableText(props: {
+  value: string;
+  onChange?: (value: string) => void;
+  className?: string;
+  readOnly?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || props.readOnly) {
+      return;
+    }
+    if (element.textContent !== props.value) {
+      element.textContent = props.value;
+    }
+  }, [props.readOnly, props.value]);
+
+  if (props.readOnly) {
+    return <div className={props.className}>{props.value}</div>;
+  }
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-multiline="false"
+      spellCheck={false}
+      className={props.className}
+      onInput={(event) => {
+        props.onChange?.(event.currentTarget.textContent ?? "");
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+        }
+      }}
+    />
+  );
+}
+
 function BatchSelectAllIcon(props: { className?: string }) {
   return (
     <svg
@@ -886,11 +929,11 @@ function ScheduledTaskDetailPanel({
   const configValueSlotClassName =
     "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
   const configInlineInputClassName =
-    "relative -top-px block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+    "block h-[19px] w-full overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configInlinePickerClassName =
     "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configInlineDisabledValueClassName =
-    "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0";
+    "block h-[19px] w-full overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0";
   const configScheduleTypeSlotClassName =
     "relative shrink-0";
   const configInlineSelectClassName =
@@ -929,12 +972,12 @@ function ScheduledTaskDetailPanel({
                     key: "prompt",
                     label: t("scheduled.detail.prompt"),
                     control: (
-                      <input
+                      <InlineEditableText
                         value={editState.prompt}
-                        onChange={(event) =>
+                        onChange={(value) =>
                           onEditStateChange((current) =>
                             current
-                              ? { ...current, prompt: event.target.value }
+                              ? { ...current, prompt: value }
                               : current,
                           )
                         }
@@ -946,11 +989,9 @@ function ScheduledTaskDetailPanel({
                     key: "agent-model",
                     label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
                     control: (
-                      <input
+                      <InlineEditableText
                         value={`${task.agentFlavor} / ${editState.model || "-"}`}
                         readOnly
-                        disabled
-                        aria-disabled="true"
                         className={configInlineDisabledValueClassName}
                       />
                     ),
@@ -959,14 +1000,14 @@ function ScheduledTaskDetailPanel({
                     key: "directory",
                     label: t("scheduled.detail.directory"),
                     control: (
-                      <input
+                      <InlineEditableText
                         value={editState.targetDirectory}
-                        onChange={(event) =>
+                        onChange={(value) =>
                           onEditStateChange((current) =>
                             current
                               ? {
                                   ...current,
-                                  targetDirectory: event.target.value,
+                                  targetDirectory: value,
                                 }
                               : current,
                           )
@@ -1054,12 +1095,12 @@ function ScheduledTaskDetailPanel({
                             </button>
                           </div>
                         ) : (
-                          <input
+                          <InlineEditableText
                             value={editState.cron}
-                            onChange={(event) =>
+                            onChange={(value) =>
                               onEditStateChange((current) =>
                                 current
-                                  ? { ...current, cron: event.target.value }
+                                  ? { ...current, cron: value }
                                   : current,
                               )
                             }
