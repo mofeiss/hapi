@@ -855,11 +855,6 @@ function ScheduledTaskDetailPanel({
   onOpenRunSession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
-  const notice = isEditing
-    ? t("scheduled.action.save") + " / " + t("scheduled.action.cancelEdit")
-    : task.paused
-      ? t("scheduled.action.resume")
-      : selectedRun?.error ?? null;
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-[var(--app-bg)]">
@@ -875,14 +870,6 @@ function ScheduledTaskDetailPanel({
         onDeleteTask={onDeleteTask}
         onUpdateTask={onUpdateTask}
       />
-
-      {notice ? (
-        <div className="px-3 pt-3">
-          <div className="mx-auto w-full max-w-content rounded-md bg-[var(--app-subtle-bg)] p-3 text-sm text-[var(--app-hint)]">
-            {notice}
-          </div>
-        </div>
-      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-3 py-3">
