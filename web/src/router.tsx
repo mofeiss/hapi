@@ -699,6 +699,15 @@ function getScheduledRunSortTime(run: ScheduledTaskRun): number {
   return run.triggeredAt ?? run.scheduledFor ?? run.finishedAt ?? 0;
 }
 
+function getScheduledRunResultSummaryLabel(
+  resultSummary: string,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  const summaryKey = `scheduled.runResult.${resultSummary}`;
+  const translated = t(summaryKey);
+  return translated === summaryKey ? resultSummary : translated;
+}
+
 function ScheduledRunsPager(props: {
   task: ScheduledTask;
   runs: ScheduledTaskRun[];
@@ -742,14 +751,14 @@ function ScheduledRunsPager(props: {
 
   if (sortedRuns.length === 0) {
     return (
-      <div className="mt-4 rounded-2xl border border-dashed border-[var(--app-border)] px-4 py-6 text-sm text-[var(--app-hint)]">
+      <div className="py-2 text-sm text-[var(--app-hint)]">
         {t("scheduled.detail.runsEmpty")}
       </div>
     );
   }
 
   return (
-    <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
+    <div className="py-1">
       <div className="flex items-center justify-between gap-3 text-sm">
         <div className="min-w-0 flex items-center gap-2 truncate text-[var(--app-hint)]">
           <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${taskStatusTag.className}`}>
@@ -1700,117 +1709,103 @@ function ScheduledTaskDetailPanel({
             )}
           </div>
 
-          <ScheduledRunsPager
-            task={task}
-            runs={taskRuns}
-            selectedRunId={selectedRun?.id ?? null}
-            onSelectRun={onSelectRun}
-          />
+          <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
+            <div className="px-4 py-3">
+              <ScheduledRunsPager
+                task={task}
+                runs={taskRuns}
+                selectedRunId={selectedRun?.id ?? null}
+                onSelectRun={onSelectRun}
+              />
+            </div>
 
-          <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
-            {!selectedRun ? (
-              <div className="text-sm text-[var(--app-hint)]">
-                {t("scheduled.detail.pickRun")}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
+            <div className="border-t border-[var(--app-border)] px-4 py-4">
+              {!selectedRun ? (
+                <div className="text-sm text-[var(--app-hint)]">
+                  {t("scheduled.detail.pickRun")}
+                </div>
+              ) : (
+                <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <h2 className="text-base font-semibold text-[var(--app-fg)]">
                       {t("scheduled.detail.selectedRun")}
                     </h2>
                     <ScheduledRunStatusBadge status={selectedRun.status} />
                   </div>
-                  <p className="mt-1 text-sm text-[var(--app-hint)]">
-                    {t("scheduled.detail.selectedRunHint")}
-                  </p>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                        {t("scheduled.detail.triggered")}
+                      </div>
+                      <div className="mt-1 text-sm text-[var(--app-fg)]">
+                        {formatScheduledDateTime(selectedRun.triggeredAt)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                        {t("scheduled.detail.finished")}
+                      </div>
+                      <div className="mt-1 text-sm text-[var(--app-fg)]">
+                        {formatScheduledDateTime(selectedRun.finishedAt)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                        {t("scheduled.detail.runId")}
+                      </div>
+                      <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
+                        {selectedRun.id}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                        {t("scheduled.detail.session")}
+                      </div>
+                      <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
+                        {selectedRun.sessionId ?? "-"}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedRun.error ? (
+                    <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">
+                      {selectedRun.error}
+                    </div>
+                  ) : null}
+                  {selectedRun.resultSummary ? (
+                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">
+                      {getScheduledRunResultSummaryLabel(
+                        selectedRun.resultSummary,
+                        t,
+                      )}
+                    </div>
+                  ) : null}
                 </div>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                      {t("scheduled.detail.triggered")}
-                    </div>
-                    <div className="mt-1 text-sm text-[var(--app-fg)]">
-                      {formatScheduledDateTime(selectedRun.triggeredAt)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                      {t("scheduled.detail.finished")}
-                    </div>
-                    <div className="mt-1 text-sm text-[var(--app-fg)]">
-                      {formatScheduledDateTime(selectedRun.finishedAt)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                      {t("scheduled.detail.runId")}
-                    </div>
-                    <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
-                      {selectedRun.id}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                      {t("scheduled.detail.session")}
-                    </div>
-                    <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
-                      {selectedRun.sessionId ?? "-"}
-                    </div>
-                  </div>
-                </div>
-                {selectedRun.error ? (
-                  <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">
-                    {selectedRun.error}
-                  </div>
-                ) : null}
-                {selectedRun.resultSummary ? (
-                  <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">
-                    {selectedRun.resultSummary}
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {selectedRun?.sessionId ? (
-            <div className="mt-4 min-w-0 overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
-                <div>
+            {selectedRun?.sessionId ? (
+              <div className="border-t border-[var(--app-border)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                   <div className="text-sm font-medium text-[var(--app-fg)]">
                     {t("scheduled.detail.sessionView")}
                   </div>
-                  <div className="mt-1 text-sm text-[var(--app-hint)]">
-                    {t("scheduled.detail.sessionViewHint")}
-                  </div>
-                </div>
-                <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      onOpenRunSession(selectedRun.sessionId as string)
-                    }
+                    onClick={() => onOpenRunSession(selectedRun.sessionId as string)}
                     className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
                   >
                     {t("scheduled.detail.openFullscreen")}
                   </button>
-                  <Link
-                    to="/sessions/$sessionId"
-                    params={{ sessionId: selectedRun.sessionId as string }}
-                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                  >
-                    {t("scheduled.detail.openDeepLink")}
-                  </Link>
+                </div>
+                <div className="h-[760px] min-w-0 bg-[var(--app-bg)]">
+                  <EmbeddedSessionView
+                    sessionId={selectedRun.sessionId as string}
+                    onBack={() => onSelectRun(null)}
+                  />
                 </div>
               </div>
-              <div className="h-[760px] min-w-0 bg-[var(--app-bg)]">
-                <EmbeddedSessionView
-                  sessionId={selectedRun.sessionId as string}
-                  onBack={() => onSelectRun(null)}
-                />
-              </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

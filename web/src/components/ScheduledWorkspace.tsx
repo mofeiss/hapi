@@ -42,6 +42,12 @@ function formatDateTimeLocalInput(value: number | undefined): string {
     return year + '-' + month + '-' + day + 'T' + hour + ':' + minute + ':' + second
 }
 
+function getScheduledRunResultSummaryLabel(resultSummary: string, t: ReturnType<typeof useTranslation>['t']): string {
+    const summaryKey = `scheduled.runResult.${resultSummary}`
+    const translated = t(summaryKey)
+    return translated === summaryKey ? resultSummary : translated
+}
+
 type EditState = {
     title: string
     prompt: string
@@ -593,54 +599,47 @@ export function ScheduledWorkspace(props: {
                                         </div>
                                     </div>
 
-                                    <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
-                                        {!selectedRun ? (
-                                            <div className="text-sm text-[var(--app-hint)]">Pick a run to inspect it.</div>
-                                        ) : (
-                                            <div className="space-y-4">
-                                                <div>
+                                    <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] overflow-hidden">
+                                        <div className="border-b border-[var(--app-border)] px-4 py-4">
+                                            {!selectedRun ? (
+                                                <div className="text-sm text-[var(--app-hint)]">{t('scheduled.detail.pickRun')}</div>
+                                            ) : (
+                                                <div className="space-y-4">
                                                     <div className="flex items-center gap-2">
-                                                        <h3 className="text-base font-semibold text-[var(--app-fg)]">Selected Run</h3>
+                                                        <h3 className="text-base font-semibold text-[var(--app-fg)]">{t('scheduled.detail.selectedRun')}</h3>
                                                         <RunStatusBadge status={selectedRun.status} />
                                                     </div>
-                                                    <p className="mt-1 text-sm text-[var(--app-hint)]">The selected run owns the session detail below.</p>
-                                                </div>
-                                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                                    <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Triggered</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatDateTime(selectedRun.triggeredAt)}</div></div>
-                                                    <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Finished</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatDateTime(selectedRun.finishedAt)}</div></div>
-                                                    <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Run ID</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.id}</div></div>
-                                                    <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Session</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.sessionId ?? '-'}</div></div>
-                                                </div>
-                                                {selectedRun.error ? (
-                                                    <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">{selectedRun.error}</div>
-                                                ) : null}
-                                                {selectedRun.resultSummary ? (
-                                                    <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">{selectedRun.resultSummary}</div>
-                                                ) : null}
-                                                {selectedRun.sessionId ? (
-                                                    <div className="rounded-2xl border border-[var(--app-border)] px-0 py-0 overflow-hidden">
-                                                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
-                                                            <div>
-                                                                <div className="text-sm font-medium text-[var(--app-fg)]">Session Detail</div>
-                                                                <div className="mt-1 text-sm text-[var(--app-hint)]">Embedded session view for the selected run.</div>
-                                                            </div>
-                                                            <div className="flex gap-2">
-                                                                {props.onOpenSession ? (
-                                                                    <button type="button" onClick={() => props.onOpenSession?.(selectedRun.sessionId as string)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open Fullscreen</button>
-                                                                ) : null}
-                                                                <Link to="/sessions/$sessionId" params={{ sessionId: selectedRun.sessionId }} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">Open via Deep Link</Link>
-                                                            </div>
-                                                        </div>
-                                                        <div className="h-[760px] bg-[var(--app-bg)]">
-                                                            <EmbeddedSessionView
-                                                                sessionId={selectedRun.sessionId}
-                                                                onBack={() => setSelectedRunId(null)}
-                                                            />
-                                                        </div>
+                                                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                                        <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t('scheduled.detail.triggered')}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatDateTime(selectedRun.triggeredAt)}</div></div>
+                                                        <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t('scheduled.detail.finished')}</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatDateTime(selectedRun.finishedAt)}</div></div>
+                                                        <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t('scheduled.detail.runId')}</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.id}</div></div>
+                                                        <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t('scheduled.detail.session')}</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.sessionId ?? '-'}</div></div>
                                                     </div>
-                                                ) : null}
+                                                    {selectedRun.error ? (
+                                                        <div className="rounded-2xl bg-red-500/8 px-4 py-3 text-sm text-red-600">{selectedRun.error}</div>
+                                                    ) : null}
+                                                    {selectedRun.resultSummary ? (
+                                                        <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-4 py-3 text-sm text-[var(--app-fg)]">{getScheduledRunResultSummaryLabel(selectedRun.resultSummary, t)}</div>
+                                                    ) : null}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {selectedRun?.sessionId ? (
+                                            <div>
+                                                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                                                    <div className="text-sm font-medium text-[var(--app-fg)]">{t('scheduled.detail.sessionView')}</div>
+                                                    {props.onOpenSession ? (
+                                                        <button type="button" onClick={() => props.onOpenSession?.(selectedRun.sessionId as string)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]">{t('scheduled.detail.openFullscreen')}</button>
+                                                    ) : null}
+                                                </div>
+                                                <div className="h-[760px] bg-[var(--app-bg)] border-t border-[var(--app-border)]">
+                                                    <EmbeddedSessionView
+                                                        sessionId={selectedRun.sessionId}
+                                                        onBack={() => setSelectedRunId(null)}
+                                                    />
+                                                </div>
                                             </div>
-                                        )}
+                                        ) : null}
                                     </div>
                                 </div>
                             )}
