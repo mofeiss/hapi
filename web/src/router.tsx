@@ -873,142 +873,162 @@ function ScheduledTaskDetailPanel({
 
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                {t("scheduled.detail.prompt")}
-              </div>
-              {isEditing && editState ? (
-                <textarea
-                  value={editState.prompt}
-                  onChange={(event) =>
-                    onEditStateChange((current) =>
-                      current ? { ...current, prompt: event.target.value } : current,
-                    )
-                  }
-                  rows={6}
-                  className="mt-2 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                />
-              ) : (
-                <div className="mt-2 whitespace-pre-wrap text-sm text-[var(--app-fg)]">
-                  {task.prompt}
+          <div className="mt-4">
+            {isEditing && editState ? (
+              <div className="grid gap-x-6 gap-y-3 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                    {t("scheduled.detail.prompt")}
+                  </div>
+                  <textarea
+                    value={editState.prompt}
+                    onChange={(event) =>
+                      onEditStateChange((current) =>
+                        current ? { ...current, prompt: event.target.value } : current,
+                      )
+                    }
+                    rows={6}
+                    className="mt-2 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                  />
                 </div>
-              )}
-            </div>
-            <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
-              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                {t("scheduled.detail.config")}
-              </div>
-              <div className="mt-2 space-y-2 text-sm text-[var(--app-fg)]">
+
+                <div className="md:col-span-2">
+                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                    Agent / Model
+                  </div>
+                  <div className="mt-1 text-sm text-[var(--app-fg)]">
+                    {task.agentFlavor} / {editState.model || "-"}
+                  </div>
+                </div>
+
                 <div>
-                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.directory")}:</span>{" "}
-                  {isEditing && editState ? (
-                    <input
-                      value={editState.targetDirectory}
+                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                    {t("scheduled.detail.directory")}
+                  </div>
+                  <input
+                    value={editState.targetDirectory}
+                    onChange={(event) =>
+                      onEditStateChange((current) =>
+                        current
+                          ? { ...current, targetDirectory: event.target.value }
+                          : current,
+                      )
+                    }
+                    className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                  />
+                </div>
+
+                <div>
+                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                    {t("scheduled.detail.model")}
+                  </div>
+                  <input
+                    value={editState.model}
+                    onChange={(event) =>
+                      onEditStateChange((current) =>
+                        current ? { ...current, model: event.target.value } : current,
+                      )
+                    }
+                    className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                    {t("scheduled.detail.schedule")}
+                  </div>
+                  <div className="mt-1 space-y-2">
+                    <select
+                      value={editState.scheduleType}
                       onChange={(event) =>
                         onEditStateChange((current) =>
                           current
-                            ? { ...current, targetDirectory: event.target.value }
+                            ? {
+                                ...current,
+                                scheduleType: event.target.value as "once" | "cron",
+                              }
                             : current,
                         )
                       }
-                      className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                    />
-                  ) : (
-                    <span className="break-all"> {task.targetDirectory}</span>
-                  )}
-                </div>
-                <div>
-                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.model")}:</span>{" "}
-                  {isEditing && editState ? (
-                    <input
-                      value={editState.model}
-                      onChange={(event) =>
-                        onEditStateChange((current) =>
-                          current ? { ...current, model: event.target.value } : current,
-                        )
-                      }
-                      className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                    />
-                  ) : (
-                    <span> {task.model ?? "-"}</span>
-                  )}
-                </div>
-                <div>
-                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.timezone")}:</span>
-                  <span> {task.timezone}</span>
-                </div>
-                <div>
-                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.schedule")}:</span>
-                  <span> {task.scheduleType}</span>
-                </div>
-                <div>
-                  <span className="text-[var(--app-hint)]">{t("scheduled.detail.taskId")}:</span>
-                  <span className="break-all"> {task.id}</span>
-                </div>
-                {isEditing && editState ? (
-                  <>
-                    <label className="block">
-                      <span className="text-[var(--app-hint)]">{t("scheduled.detail.scheduleType")}</span>
-                      <select
-                        value={editState.scheduleType}
+                      className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                    >
+                      <option value="once">once</option>
+                      <option value="cron">cron</option>
+                    </select>
+                    {editState.scheduleType === "once" ? (
+                      <input
+                        type="datetime-local"
+                        step={1}
+                        value={editState.runAt}
                         onChange={(event) =>
                           onEditStateChange((current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  scheduleType: event.target.value as "once" | "cron",
-                                }
-                              : current,
+                            current ? { ...current, runAt: event.target.value } : current,
                           )
                         }
-                        className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                      >
-                        <option value="once">once</option>
-                        <option value="cron">cron</option>
-                      </select>
-                    </label>
-                    {editState.scheduleType === "once" ? (
-                      <label className="block">
-                        <span className="text-[var(--app-hint)]">{t("scheduled.detail.runAt")}</span>
-                        <input
-                          type="datetime-local"
-                          step={1}
-                          value={editState.runAt}
-                          onChange={(event) =>
-                            onEditStateChange((current) =>
-                              current ? { ...current, runAt: event.target.value } : current,
-                            )
-                          }
-                          className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                        />
-                      </label>
+                        className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                      />
                     ) : (
-                      <label className="block">
-                        <span className="text-[var(--app-hint)]">{t("scheduled.detail.cron")}</span>
-                        <input
-                          value={editState.cron}
-                          onChange={(event) =>
-                            onEditStateChange((current) =>
-                              current ? { ...current, cron: event.target.value } : current,
-                            )
-                          }
-                          className="mt-1 w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                        />
-                      </label>
+                      <input
+                        value={editState.cron}
+                        onChange={(event) =>
+                          onEditStateChange((current) =>
+                            current ? { ...current, cron: event.target.value } : current,
+                          )
+                        }
+                        className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                      />
                     )}
-                  </>
-                ) : (
-                  <div>
-                    <span className="text-[var(--app-hint)]">{t("scheduled.detail.expression")}:</span>
-                    <span>
-                      {" "}
-                      {task.scheduleSpec.cron ?? formatScheduledDateTime(task.scheduleSpec.runAt)}
-                    </span>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <div>
+                  {[
+                    {
+                      key: "prompt",
+                      label: t("scheduled.detail.prompt"),
+                      value: task.prompt,
+                      multiline: true,
+                    },
+                    {
+                      key: "directory",
+                      label: t("scheduled.detail.directory"),
+                      value: task.targetDirectory,
+                      multiline: true,
+                    },
+                    {
+                      key: "agent-model",
+                      label: "Agent / Model",
+                      value: `${task.agentFlavor} / ${task.model ?? "-"}`,
+                    },
+                    {
+                      key: "schedule",
+                      label: t("scheduled.detail.schedule"),
+                      value:
+                        task.scheduleType +
+                        " · " +
+                        (task.scheduleSpec.cron ??
+                          formatScheduledDateTime(task.scheduleSpec.runAt)),
+                    },
+                  ].map((item, index) => (
+                    <div
+                      key={`config-definition-${item.key}`}
+                      className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-[var(--app-divider)]" : ""}`}
+                    >
+                      <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                        {item.label}
+                      </div>
+                      <div
+                        className="min-w-0 truncate text-right text-sm text-[var(--app-fg)]"
+                      >
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
