@@ -182,6 +182,11 @@ export default {
     'Are you sure you want to delete "{name}"? This action cannot be undone.',
   "dialog.delete.confirm": "Delete",
   "dialog.delete.confirming": "Deleting…",
+  "scheduled.deleteDialog.title": "Delete Task",
+  "scheduled.deleteDialog.description":
+    'Are you sure you want to delete task "{name}"? This action cannot be undone.',
+  "scheduled.deleteDialog.confirm": "Delete",
+  "scheduled.deleteDialog.confirming": "Deleting…",
   "dialog.error.default": "Operation failed. Please try again.",
   "dialog.dontAskAgain": "Don't ask again",
 

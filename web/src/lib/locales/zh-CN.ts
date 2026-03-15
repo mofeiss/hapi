@@ -176,6 +176,10 @@ export default {
   'dialog.delete.description': '确定要删除 "{name}" 吗？此操作无法撤销。',
   'dialog.delete.confirm': '删除',
   'dialog.delete.confirming': '删除中…',
+  'scheduled.deleteDialog.title': '删除任务',
+  'scheduled.deleteDialog.description': '确定要删除任务 "{name}" 吗？此操作无法撤销。',
+  'scheduled.deleteDialog.confirm': '删除',
+  'scheduled.deleteDialog.confirming': '删除中…',
   'dialog.error.default': '操作失败，请重试。',
   'dialog.dontAskAgain': '不再提示',
 
