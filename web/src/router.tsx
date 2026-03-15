@@ -855,6 +855,42 @@ function ScheduledTaskDetailPanel({
   onOpenRunSession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
+  const statusValue = task.paused ? `${task.status} / paused` : task.status;
+  const summaryItems = [
+    {
+      key: "status",
+      label: t("scheduled.detail.status"),
+      value: statusValue,
+      emphasized: true,
+    },
+    {
+      key: "schedule",
+      label: t("scheduled.detail.schedule"),
+      value: task.scheduleType,
+    },
+    {
+      key: "agent",
+      label: t("scheduled.detail.agent"),
+      value: task.agentFlavor,
+    },
+    {
+      key: "created",
+      label: t("scheduled.detail.created"),
+      value: formatScheduledDateTime(task.createdAt),
+    },
+    {
+      key: "nextRun",
+      label: t("scheduled.detail.nextRun"),
+      value: formatScheduledDateTime(task.nextRunAt),
+      emphasized: true,
+    },
+    {
+      key: "lastRun",
+      label: t("scheduled.detail.lastRun"),
+      value: formatScheduledDateTime(task.lastRunAt),
+      emphasized: true,
+    },
+  ];
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-[var(--app-bg)]">
@@ -874,56 +910,21 @@ function ScheduledTaskDetailPanel({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-3 py-3">
           <div className="rounded-[24px] bg-[var(--app-panel-bg)]">
-            <div className="flex flex-col gap-3">
-              <p className="min-w-0 truncate text-sm text-[var(--app-hint)]">
-                {t("scheduled.detail.summary")}
-              </p>
-            </div>
-            <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                  {t("scheduled.detail.status")}
-                </div>
-                <div className="mt-1 text-sm text-[var(--app-fg)]">
-                  {task.status}
-                  {task.paused ? " / paused" : ""}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                  {t("scheduled.detail.schedule")}
-                </div>
-                <div className="mt-1 text-sm text-[var(--app-fg)]">{task.scheduleType}</div>
-              </div>
-              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                  {t("scheduled.detail.agent")}
-                </div>
-                <div className="mt-1 text-sm text-[var(--app-fg)]">{task.agentFlavor}</div>
-              </div>
-              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                  {t("scheduled.detail.created")}
-                </div>
-                <div className="mt-1 text-sm text-[var(--app-fg)]">
-                  {formatScheduledDateTime(task.createdAt)}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                  {t("scheduled.detail.nextRun")}
-                </div>
-                <div className="mt-1 text-sm text-[var(--app-fg)]">
-                  {formatScheduledDateTime(task.nextRunAt)}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                  {t("scheduled.detail.lastRun")}
-                </div>
-                <div className="mt-1 text-sm text-[var(--app-fg)]">
-                  {formatScheduledDateTime(task.lastRunAt)}
-                </div>
+            <div>
+              <div>
+                {summaryItems.map((item, index) => (
+                  <div
+                    key={`summary-c-${item.key}`}
+                    className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-[var(--app-divider)]" : ""}`}
+                  >
+                    <div className="shrink-0 text-[11px] uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                      {item.label}
+                    </div>
+                    <div className="min-w-0 text-right text-sm text-[var(--app-fg)]">
+                      {item.value}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
