@@ -59,6 +59,66 @@ Bun workspaces; `shared` consumed by cli, hub, web.
 - Zod for runtime validation (schemas in `shared/src/schemas.ts`)
 - Web 基础橙色统一使用 `var(--app-orange-base)`（定义在 `web/src/index.css`，当前值 `#f59e0b`）；新增橙色 UI 时必须复用该 token
 
+## Web notes
+
+Current web shape; keep this section updated when layout/navigation model shifts.
+
+### Current layout model
+
+- Web now behaves like a workspace-style single app shell, not a set of isolated pages.
+- Primary workspace tabs: `sessions` and `scheduled`.
+- Workspace state persisted in `localStorage` key `hapi:workspace-state`.
+- Session subviews inside workspace: `chat`, `files`, `terminal`.
+- Workspace overlays: `none`, `settings`, `newSession`.
+- Route layer still exposes compat URLs: `/sessions`, `/sessions/$sessionId`, `/sessions/$sessionId/files`, `/sessions/$sessionId/terminal`, `/sessions/$sessionId/file`, `/sessions/new`, `/scheduled`.
+- Treat router URLs as deep-link/compat surface; real UI state often comes from `web/src/lib/workspace-store.ts`.
+
+### Current shell behavior
+
+- Main app bootstrap in `web/src/App.tsx`.
+- App startup does: Telegram `ready()`/`expand()`, `initializeTheme()`, auth-source detection, auth/bind flow, SSE subscription, visibility reporting, push notification prompt/subscription, toast container, install prompt.
+- On hub/base URL change, app clears TanStack Query cache and resets first-connect sync state.
+- SSE connect invalidates session queries and refreshes latest messages for selected session.
+- `Ready for input` toast should become system notification only when page not actively focused.
+
+### Current desktop/mobile layout
+
+- Desktop layout has resizable left sidebar; minimum width `375px`; width persisted in local storage from router shell.
+- Desktop can collapse sidebar into icon strip; collapsed strip still exposes tab switcher plus header utility actions.
+- Widescreen mode persisted in `localStorage` key `hapi:widescreen`; used for session detail area density/layout.
+- Mobile/narrow mode behaves like drill-down panels: list/index hidden while detail/overlay visible.
+- Telegram app suppresses some native web chrome, especially session header rendering.
+
+### Current header/layout components
+
+- `web/src/components/SessionHeader.tsx`: session title row + host/path/time metadata row; hidden in Telegram.
+- `web/src/components/HeaderActionGroup.tsx`: shared header action cluster for theme/settings/new session/quick new/files/terminal/widescreen.
+- `web/src/components/PageHeaderUtilityControls.tsx`: shared theme/language/settings controls path; prefer extending here instead of duplicating header utility buttons.
+- `web/src/components/ScheduledTaskActionMenu.tsx`: floating anchored action menu for scheduled tasks; handles viewport-aware positioning, outside click, escape close, first-item focus.
+
+### Current scheduled tasks UI
+
+- Scheduled tasks are first-class top-level workspace tab, not secondary settings content.
+- Scheduled pane has grouped task list + task detail + run detail selection model.
+- Search, collapsed machine groups, selected task/run, and edit/delete flows live in `web/src/router.tsx` shell logic.
+- If changing scheduled interactions, inspect both `ScheduledTaskActionMenu` and workspace selection helpers.
+
+### Theme switching pitfall
+
+- Theme switching in web relies on immediate CSS variable swap via `data-theme`; avoid adding `transition-colors`, `transition-all`, or other color/background/border transitions to theme-sensitive controls unless user explicitly wants delayed animation.
+- Common failure mode: newly added sidebar/header/icon buttons look one beat slower than the rest of the page during black/white theme toggle. Root cause usually not state lag; color transition animating old -> new theme values.
+- High-risk spots: collapsed sidebar buttons, floating action buttons, header utility controls, compact icon-only controls, newly introduced reusable button classes.
+- Prefer no color transition for controls using `var(--app-bg)`, `var(--app-fg)`, `var(--app-hint)`, `var(--app-border)`, `var(--app-divider)`, `var(--app-secondary-bg)`, `var(--app-subtle-bg)`.
+- If motion needed, prefer transform/opacity animation; do not animate theme token changes by default.
+- When adding new themed component, manually verify theme toggle sync: whole page + component should switch in the same frame, no delayed recolor.
+
+### Current web working heuristics
+
+- Before changing layout, read `web/src/router.tsx` first; much of the shell composition lives there, not in route leaf files.
+- Before adding new header buttons, check whether `HeaderActionGroup` or `PageHeaderUtilityControls` should be extended instead.
+- Before assuming a route means a full page, verify whether it is a compat wrapper around workspace state.
+- For session-related UI, keep parity across chat/files/terminal subviews.
+
 ## Common commands (repo root)
 
 ```bash
