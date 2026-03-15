@@ -18,6 +18,21 @@ type SchedulerChangeEvent =
   | { type: 'task-removed'; taskId: string; machineId: string; namespace: string }
   | { type: 'run-updated'; run: ScheduledTaskRun; task: ScheduledTask }
 
+type SchedulerValidationCode =
+  | 'scheduled.once_expired'
+  | 'scheduled.cron_invalid'
+  | 'scheduled.invalid_state'
+
+class SchedulerValidationError extends Error {
+  code: SchedulerValidationCode
+
+  constructor(code: SchedulerValidationCode, message: string) {
+    super(message)
+    this.name = 'SchedulerValidationError'
+    this.code = code
+  }
+}
+
 function resolveScheduleSpec(input: {
   scheduleType: ScheduledTask['scheduleType']
   runAt?: number
@@ -44,6 +59,56 @@ function assertScheduleInput(input: {
 
   if (!Number.isFinite(input.runAt)) {
     throw new Error('once schedule requires a valid runAt timestamp')
+  }
+}
+
+function assertTaskCanRun(input: {
+  scheduleType: ScheduledTask['scheduleType']
+  runAt?: number
+  cron?: string
+  timezone?: string
+  now: number
+}): void {
+  if (input.scheduleType === 'once') {
+    if (!Number.isFinite(input.runAt)) {
+      throw new SchedulerValidationError('scheduled.invalid_state', 'once schedule requires a valid runAt timestamp')
+    }
+    if ((input.runAt as number) <= input.now) {
+      throw new SchedulerValidationError('scheduled.once_expired', 'once task run time has already passed and cannot be resumed')
+    }
+    return
+  }
+
+  const expression = input.cron?.trim()
+  if (!expression) {
+    throw new SchedulerValidationError('scheduled.cron_invalid', 'cron schedule requires a cron expression')
+  }
+
+  try {
+    resolveNextRunAt({
+      id: 'validation',
+      namespace: 'default',
+      machineId: 'validation',
+      title: 'validation',
+      prompt: 'validation',
+      agentFlavor: 'claude',
+      targetDirectory: '.',
+      permissionMode: 'bypassPermissions',
+      basePermissionMode: 'bypassPermissions',
+      runStrategy: 'new_session',
+      scheduleType: 'cron',
+      scheduleSpec: { cron: expression },
+      timezone: input.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+      status: 'active',
+      paused: false,
+      allowOverlap: false,
+      catchUpPolicy: 'once_within_window',
+      maxSkewMs: 10 * 60 * 1000,
+      createdAt: input.now,
+      updatedAt: input.now
+    }, input.now)
+  } catch {
+    throw new SchedulerValidationError('scheduled.cron_invalid', 'cron schedule is invalid and cannot be resumed')
   }
 }
 
@@ -150,6 +215,17 @@ export class RunnerSchedulerService {
     const cron = input.cron ?? existing.scheduleSpec.cron
     assertScheduleInput({ scheduleType, runAt, cron })
 
+    const nextPaused = input.paused ?? existing.paused
+    if (!nextPaused) {
+      assertTaskCanRun({
+        scheduleType,
+        runAt,
+        cron,
+        timezone: input.timezone ?? existing.timezone,
+        now
+      })
+    }
+
     const updated: ScheduledTask = {
       ...existing,
       title: input.title ?? existing.title,
@@ -163,7 +239,7 @@ export class RunnerSchedulerService {
       scheduleType,
       scheduleSpec: resolveScheduleSpec({ scheduleType, runAt, cron }),
       timezone: input.timezone ?? existing.timezone,
-      paused: input.paused ?? existing.paused,
+      paused: nextPaused,
       allowOverlap: input.allowOverlap ?? existing.allowOverlap,
       catchUpPolicy: input.catchUpPolicy ?? existing.catchUpPolicy,
       maxSkewMs: input.maxSkewMs ?? existing.maxSkewMs,

@@ -108,6 +108,9 @@ export default {
   "scheduled.action.delete": "Delete",
   "scheduled.action.save": "Save",
   "scheduled.action.cancelEdit": "Cancel Edit",
+  "scheduled.validation.onceExpired": "This one-time task is already past its scheduled run time and cannot be resumed.",
+  "scheduled.validation.cronInvalid": "This cron expression is invalid and cannot be resumed.",
+  "scheduled.validation.unknown": "This scheduled task cannot be resumed in its current state.",
 
   // Session list
   "session.item.path": "path",

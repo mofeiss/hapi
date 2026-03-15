@@ -35,15 +35,55 @@ type ApiClientOptions = {
 
 type ErrorPayload = {
     error?: unknown
+    message?: unknown
+    code?: unknown
 }
 
 function parseErrorCode(bodyText: string): string | undefined {
     try {
         const parsed = JSON.parse(bodyText) as ErrorPayload
+        if (typeof parsed.code === 'string') {
+            return parsed.code
+        }
         return typeof parsed.error === 'string' ? parsed.error : undefined
     } catch {
         return undefined
     }
+}
+
+function extractErrorMessage(bodyText: string): string | undefined {
+    const queue: string[] = [bodyText]
+    const seen = new Set<string>()
+
+    while (queue.length > 0) {
+        const current = queue.shift()
+        if (!current) continue
+
+        const trimmed = current.trim()
+        if (!trimmed || seen.has(trimmed)) {
+            continue
+        }
+        seen.add(trimmed)
+
+        try {
+            const parsed = JSON.parse(trimmed) as ErrorPayload
+            if (typeof parsed.message === 'string' && parsed.message.trim()) {
+                queue.unshift(parsed.message)
+            }
+            if (typeof parsed.error === 'string' && parsed.error.trim()) {
+                queue.unshift(parsed.error)
+                continue
+            }
+        } catch {
+            // Fall through to plain string handling.
+        }
+
+        if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+            return trimmed
+        }
+    }
+
+    return undefined
 }
 
 export class ApiError extends Error {
@@ -120,7 +160,12 @@ export class ApiClient {
 
         if (!res.ok) {
             const body = await res.text().catch(() => '')
-            throw new Error(`HTTP ${res.status} ${res.statusText}: ${body}`)
+            const code = parseErrorCode(body)
+            const message = extractErrorMessage(body)
+            if (message) {
+                throw new ApiError(message, res.status, code, body || undefined)
+            }
+            throw new ApiError(`HTTP ${res.status} ${res.statusText}`, res.status, code, body || undefined)
         }
 
         return await res.json() as T

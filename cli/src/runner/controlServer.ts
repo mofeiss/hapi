@@ -205,12 +205,23 @@ export function startRunnerControlServer({
           maxSkewMs: z.number().int().nonnegative().optional()
         }),
         response: {
-          200: z.object({ task: z.unknown() })
+          200: z.object({ task: z.unknown() }),
+          500: z.object({ error: z.string(), code: z.string().optional() })
         }
       }
-    }, async (request) => {
-      const task = await createScheduledTask(request.body)
-      return { task }
+    }, async (request, reply) => {
+      try {
+        const task = await createScheduledTask(request.body)
+        return { task }
+      } catch (error) {
+        reply.code(500)
+        return {
+          error: error instanceof Error && error.message ? error.message : 'Failed to create scheduled task',
+          code: typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+            ? (error as { code: string }).code
+            : undefined
+        }
+      }
     });
 
     typed.post('/scheduler/tasks/update', {
@@ -232,12 +243,23 @@ export function startRunnerControlServer({
           maxSkewMs: z.number().int().nonnegative().optional()
         }),
         response: {
-          200: z.object({ task: z.unknown().nullable() })
+          200: z.object({ task: z.unknown().nullable() }),
+          500: z.object({ error: z.string(), code: z.string().optional() })
         }
       }
-    }, async (request) => {
-      const task = await updateScheduledTask(request.body)
-      return { task }
+    }, async (request, reply) => {
+      try {
+        const task = await updateScheduledTask(request.body)
+        return { task }
+      } catch (error) {
+        reply.code(500)
+        return {
+          error: error instanceof Error && error.message ? error.message : 'Failed to update scheduled task',
+          code: typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+            ? (error as { code: string }).code
+            : undefined
+        }
+      }
     });
 
     typed.post('/scheduler/tasks/list', {
@@ -266,24 +288,46 @@ export function startRunnerControlServer({
       schema: {
         body: z.object({ taskId: z.string() }),
         response: {
-          200: z.object({ task: z.unknown().nullable() })
+          200: z.object({ task: z.unknown().nullable() }),
+          500: z.object({ error: z.string(), code: z.string().optional() })
         }
       }
-    }, async (request) => {
-      const task = await cancelScheduledTask(request.body.taskId)
-      return { task }
+    }, async (request, reply) => {
+      try {
+        const task = await cancelScheduledTask(request.body.taskId)
+        return { task }
+      } catch (error) {
+        reply.code(500)
+        return {
+          error: error instanceof Error && error.message ? error.message : 'Failed to cancel scheduled task',
+          code: typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+            ? (error as { code: string }).code
+            : undefined
+        }
+      }
     });
 
     typed.post('/scheduler/tasks/delete', {
       schema: {
         body: z.object({ taskId: z.string() }),
         response: {
-          200: z.object({ deleted: z.object({ taskId: z.string(), machineId: z.string(), namespace: z.string() }).nullable() })
+          200: z.object({ deleted: z.object({ taskId: z.string(), machineId: z.string(), namespace: z.string() }).nullable() }),
+          500: z.object({ error: z.string(), code: z.string().optional() })
         }
       }
-    }, async (request) => {
-      const deleted = await deleteScheduledTask(request.body.taskId)
-      return { deleted }
+    }, async (request, reply) => {
+      try {
+        const deleted = await deleteScheduledTask(request.body.taskId)
+        return { deleted }
+      } catch (error) {
+        reply.code(500)
+        return {
+          error: error instanceof Error && error.message ? error.message : 'Failed to delete scheduled task',
+          code: typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+            ? (error as { code: string }).code
+            : undefined
+        }
+      }
     });
 
     // Stop runner

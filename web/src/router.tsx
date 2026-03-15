@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { CronExpressionParser } from "cron-parser";
 import {
   Link,
   Navigate,
@@ -48,6 +49,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useToast } from "@/lib/toast-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useTheme } from "@/hooks/useTheme";
+import { ApiError } from "@/api/client";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import { formatTimestamp } from "@/lib/dateTime";
 import { normalizeProjectPath } from "@/utils/path";
@@ -651,6 +653,67 @@ function ScheduledRunStatusBadge(props: {
   );
 }
 
+function getScheduledResumeValidationMessage(
+  task: ScheduledTask,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string | null {
+  if (!task.paused) {
+    return null;
+  }
+
+  if (task.scheduleType === "once") {
+    const runAt = task.scheduleSpec.runAt;
+    if (typeof runAt !== "number" || !Number.isFinite(runAt)) {
+      return t("scheduled.validation.unknown");
+    }
+    if (runAt <= Date.now()) {
+      return t("scheduled.validation.onceExpired");
+    }
+    return null;
+  }
+
+  const expression = task.scheduleSpec.cron?.trim();
+  if (!expression) {
+    return t("scheduled.validation.cronInvalid");
+  }
+
+  try {
+    CronExpressionParser.parse(expression, {
+      currentDate: Date.now(),
+      tz: task.timezone,
+    }).next();
+    return null;
+  } catch {
+    return t("scheduled.validation.cronInvalid");
+  }
+}
+
+function getScheduledErrorMessage(
+  error: unknown,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (error instanceof ApiError) {
+    if (error.code === "scheduled.once_expired") {
+      return t("scheduled.validation.onceExpired");
+    }
+    if (error.code === "scheduled.cron_invalid") {
+      return t("scheduled.validation.cronInvalid");
+    }
+    if (error.code === "scheduled.invalid_state") {
+      return t("scheduled.validation.unknown");
+    }
+    if (error.message) {
+      return error.message;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return t("dialog.error.default");
+}
+
 function ScheduledTaskListRow(props: {
   task: ScheduledTask;
   latestRun: ScheduledTaskRun | undefined;
@@ -858,6 +921,7 @@ function ScheduledTaskHeader(props: {
     React.SetStateAction<ScheduledEditState | null>
   >;
   onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
+  onTogglePaused: () => Promise<unknown> | void;
   onCancelTask: (taskId: string) => Promise<unknown> | void;
   onDeleteTask: (taskId: string) => Promise<unknown> | void;
   onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
@@ -925,10 +989,7 @@ function ScheduledTaskHeader(props: {
                 type="button"
                 disabled={props.isPending}
                 onClick={() => {
-                  void props.onUpdateTask({
-                    taskId: props.task.id,
-                    paused: !props.task.paused,
-                  });
+                  void props.onTogglePaused();
                 }}
                 className={headerIconButtonClassName}
                 title={
@@ -1102,6 +1163,7 @@ function ScheduledTaskDetailPanel({
   isPending,
   onEditStateChange,
   onSetEditing,
+  onTogglePaused,
   onCancelTask,
   onDeleteTask,
   onUpdateTask,
@@ -1119,6 +1181,7 @@ function ScheduledTaskDetailPanel({
     React.SetStateAction<ScheduledEditState | null>
   >;
   onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
+  onTogglePaused: () => Promise<unknown> | void;
   onCancelTask: (taskId: string) => Promise<unknown> | void;
   onDeleteTask: (taskId: string) => Promise<unknown> | void;
   onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
@@ -1158,6 +1221,7 @@ function ScheduledTaskDetailPanel({
         isPending={isPending}
         onEditStateChange={onEditStateChange}
         onSetEditing={onSetEditing}
+        onTogglePaused={onTogglePaused}
         onCancelTask={onCancelTask}
         onDeleteTask={onDeleteTask}
         onUpdateTask={onUpdateTask}
@@ -1884,6 +1948,7 @@ function SessionsPage() {
   const [selectedScheduledRunId, setSelectedScheduledRunId] = useState<
     string | null
   >(null);
+  const lastScheduledTaskIdRef = useRef<string | null>(null);
   const [scheduledDeleteTarget, setScheduledDeleteTarget] = useState<
     ScheduledTask | null
   >(null);
@@ -2100,15 +2165,25 @@ function SessionsPage() {
   useEffect(() => {
     if (selectedScheduledTaskRuns.length === 0) {
       setSelectedScheduledRunId(null);
+      lastScheduledTaskIdRef.current = selectedScheduledTaskId;
       return;
     }
+
+    const taskChanged = lastScheduledTaskIdRef.current !== selectedScheduledTaskId;
+    lastScheduledTaskIdRef.current = selectedScheduledTaskId;
+
+    if (taskChanged || !selectedScheduledRunId) {
+      setSelectedScheduledRunId(selectedScheduledTaskRuns[0]?.id ?? null);
+      return;
+    }
+
     const exists = selectedScheduledTaskRuns.some(
       (run) => run.id === selectedScheduledRunId,
     );
     if (!exists) {
-      setSelectedScheduledRunId(selectedScheduledTaskRuns[0]?.id ?? null);
+      setSelectedScheduledRunId((current) => current ?? selectedScheduledTaskRuns[0]?.id ?? null);
     }
-  }, [selectedScheduledRunId, selectedScheduledTaskRuns]);
+  }, [selectedScheduledRunId, selectedScheduledTaskId, selectedScheduledTaskRuns]);
 
   useEffect(() => {
     if (selectedScheduledTaskId && workspace.tab === "scheduled") {
@@ -2559,6 +2634,39 @@ function SessionsPage() {
     : activeSession
       ? t("sessions.quickNew")
       : t("sessions.quickNew.unavailable");
+
+  const handleScheduledTogglePaused = useCallback(
+    async (task: ScheduledTask) => {
+      const validationMessage = getScheduledResumeValidationMessage(task, t);
+      if (validationMessage) {
+        addToast({
+          title: t("scheduled.action.resume"),
+          body: validationMessage,
+          sessionId: "",
+          url: "/scheduled",
+        });
+        return;
+      }
+
+      try {
+        await updateScheduledTask({
+          taskId: task.id,
+          paused: !task.paused,
+        });
+      } catch (error) {
+        const message = getScheduledErrorMessage(error, t);
+        addToast({
+          title: task.paused
+            ? t("scheduled.action.resume")
+            : t("scheduled.action.pause"),
+          body: message,
+          sessionId: "",
+          url: "/scheduled",
+        });
+      }
+    },
+    [addToast, t, updateScheduledTask],
+  );
 
   const executeBatchOperation = useCallback(() => {
     if (!api || batchSelectedIds.size === 0 || !batchMode) return;
@@ -3510,6 +3618,7 @@ function SessionsPage() {
                       isPending={scheduledPending}
                       onEditStateChange={setScheduledEditState}
                       onSetEditing={setScheduledEditing}
+                      onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
                       onCancelTask={cancelScheduledTask}
                       onDeleteTask={deleteScheduledTask}
                       onUpdateTask={updateScheduledTask}
@@ -3717,12 +3826,7 @@ function SessionsPage() {
                                                     latestRun?.id ?? null,
                                                   );
                                                 }}
-                                                onTogglePaused={() => {
-                                                  void updateScheduledTask({
-                                                    taskId: task.id,
-                                                    paused: !task.paused,
-                                                  });
-                                                }}
+                                                onTogglePaused={() => void handleScheduledTogglePaused(task)}
                                                 onCancelTask={() => {
                                                   void cancelScheduledTask(
                                                     task.id,
@@ -4095,12 +4199,7 @@ function SessionsPage() {
                           setSelectedScheduledRunId(runId ?? null);
                           openWorkspaceScheduledTask(taskId, runId ?? null);
                         }}
-                        onTogglePaused={() => {
-                          void updateScheduledTask({
-                            taskId: task.id,
-                            paused: !task.paused,
-                          });
-                        }}
+                        onTogglePaused={() => void handleScheduledTogglePaused(task)}
                         onCancelTask={() => {
                           void cancelScheduledTask(task.id);
                         }}
@@ -4179,6 +4278,7 @@ function SessionsPage() {
                 isPending={scheduledPending}
                 onEditStateChange={setScheduledEditState}
                 onSetEditing={setScheduledEditing}
+                onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
                 onCancelTask={cancelScheduledTask}
                 onDeleteTask={deleteScheduledTask}
                 onUpdateTask={updateScheduledTask}

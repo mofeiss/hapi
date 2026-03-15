@@ -52,6 +52,10 @@ async function runnerPost<T>(path: string, body: unknown): Promise<T> {
     })
 
     if (!response.ok) {
+        const detail = await response.text().catch(() => '')
+        if (detail) {
+            throw new Error(detail)
+        }
         throw new Error(`Runner request failed: HTTP ${response.status}`)
     }
 
@@ -119,8 +123,18 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
             return c.json({ error: 'Invalid body' }, 400)
         }
 
-        const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/cancel', parsed.data)
-        return c.json(result)
+        try {
+            const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/cancel', parsed.data)
+            return c.json(result)
+        } catch (error) {
+            const message = error instanceof Error && error.message ? error.message : 'Runner request failed'
+            try {
+                const parsed = JSON.parse(message) as { error?: string; code?: string }
+                return c.json({ error: parsed.error ?? message, code: parsed.code }, 500)
+            } catch {
+                return c.json({ error: message }, 500)
+            }
+        }
     })
 
     app.post('/scheduled-tasks/update', async (c) => {
@@ -135,8 +149,18 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
             return c.json({ error: 'Invalid body' }, 400)
         }
 
-        const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/update', parsed.data)
-        return c.json(result)
+        try {
+            const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/update', parsed.data)
+            return c.json(result)
+        } catch (error) {
+            const message = error instanceof Error && error.message ? error.message : 'Runner request failed'
+            try {
+                const parsed = JSON.parse(message) as { error?: string; code?: string }
+                return c.json({ error: parsed.error ?? message, code: parsed.code }, 500)
+            } catch {
+                return c.json({ error: message }, 500)
+            }
+        }
     })
 
     app.post('/scheduled-tasks/delete', async (c) => {
@@ -151,8 +175,18 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
             return c.json({ error: 'Invalid body' }, 400)
         }
 
-        const result = await runnerPost<{ deleted: unknown | null }>('/scheduler/tasks/delete', parsed.data)
-        return c.json(result)
+        try {
+            const result = await runnerPost<{ deleted: unknown | null }>('/scheduler/tasks/delete', parsed.data)
+            return c.json(result)
+        } catch (error) {
+            const message = error instanceof Error && error.message ? error.message : 'Runner request failed'
+            try {
+                const parsed = JSON.parse(message) as { error?: string; code?: string }
+                return c.json({ error: parsed.error ?? message, code: parsed.code }, 500)
+            } catch {
+                return c.json({ error: message }, 500)
+            }
+        }
     })
 
     return app

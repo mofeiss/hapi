@@ -28,6 +28,7 @@
         "@xterm/xterm": "^6.0.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+        "cron-parser": "^5.5.0",
         "diff": "^8.0.2",
         "hast-util-to-jsx-runtime": "^2.3.6",
         "qrcode.react": "^4.2.0",
