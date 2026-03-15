@@ -356,6 +356,7 @@ function InlineEditableText(props: {
   onChange?: (value: string) => void;
   className?: string;
   readOnly?: boolean;
+  style?: React.CSSProperties;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -370,7 +371,7 @@ function InlineEditableText(props: {
   }, [props.readOnly, props.value]);
 
   if (props.readOnly) {
-    return <div className={props.className}>{props.value}</div>;
+    return <div className={props.className} style={props.style}>{props.value}</div>;
   }
 
   return (
@@ -382,6 +383,7 @@ function InlineEditableText(props: {
       aria-multiline="false"
       spellCheck={false}
       className={props.className}
+      style={props.style}
       onInput={(event) => {
         props.onChange?.(event.currentTarget.textContent ?? "");
       }}
@@ -1466,6 +1468,10 @@ function ScheduledTaskDetailPanel({
     "pointer-events-none inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
   const configScheduleControlGroupClassName =
     "ml-auto flex min-w-0 max-w-full items-center justify-end gap-2";
+  const cronInputWidthCh = Math.min(
+    24,
+    Math.max(12, (editState?.cron.trim().length ?? 0) + 1),
+  );
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -1607,7 +1613,7 @@ function ScheduledTaskDetailPanel({
                             />
                           </div>
                         ) : (
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 max-w-full shrink-0">
                             <InlineEditableText
                               value={editState.cron}
                               onChange={(value) =>
@@ -1618,6 +1624,7 @@ function ScheduledTaskDetailPanel({
                                 )
                               }
                               className={configInlineInputClassName}
+                              style={{ width: `${cronInputWidthCh}ch`, maxWidth: "100%" }}
                             />
                           </div>
                         )}
