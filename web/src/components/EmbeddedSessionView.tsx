@@ -17,6 +17,7 @@ import {
   seedMessageWindowFromSession,
 } from "@/lib/message-window-store";
 import {
+  consumePendingSessionInitialMessage,
   clearPendingSessionInitialMessage,
   peekPendingSessionInitialMessage,
 } from "@/lib/pending-session-initial-message-store";
@@ -303,8 +304,8 @@ export function EmbeddedSessionView({
   }, [sessionId]);
 
   useEffect(() => {
-    const pending = pendingInitialMessageRef.current;
-    if (!api || !session || !pending || pendingInitialMessageSendingRef.current) {
+    const pendingPreview = pendingInitialMessageRef.current;
+    if (!api || !session || !pendingPreview || pendingInitialMessageSendingRef.current) {
       return;
     }
 
@@ -312,13 +313,20 @@ export function EmbeddedSessionView({
       return;
     }
 
-    if (!pending.text && (!pending.attachments || pending.attachments.length === 0)) {
+    if (!pendingPreview.text && (!pendingPreview.attachments || pendingPreview.attachments.length === 0)) {
       pendingInitialMessageRef.current = null;
       clearPendingSessionInitialMessage(session.id);
       return;
     }
 
+    const pending = consumePendingSessionInitialMessage(session.id);
+    if (!pending) {
+      pendingInitialMessageRef.current = null;
+      return;
+    }
+
     pendingInitialMessageSendingRef.current = true;
+    pendingInitialMessageRef.current = null;
     void (async () => {
       try {
         const resolvedAttachments = await resolveDraftAttachmentMetadata(
@@ -326,12 +334,8 @@ export function EmbeddedSessionView({
           session.id,
           pending.attachments,
         );
-        clearPendingSessionInitialMessage(session.id);
-        pendingInitialMessageRef.current = null;
         sendMessage(pending.text, resolvedAttachments, { meta: pending.meta });
       } catch (error) {
-        clearPendingSessionInitialMessage(session.id);
-        pendingInitialMessageRef.current = null;
         const message =
           error instanceof Error && error.message
             ? error.message
