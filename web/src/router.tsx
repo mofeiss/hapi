@@ -16,6 +16,7 @@ import { SessionChat } from "@/components/SessionChat";
 import { EmbeddedSessionView } from "@/components/EmbeddedSessionView";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 import { HeaderActionGroup } from "@/components/HeaderActionGroup";
+import { ChevronDownIcon } from "@/components/icons";
 import {
   SessionList,
   groupSessionsByHost,
@@ -872,10 +873,18 @@ function ScheduledTaskDetailPanel({
     "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configInlinePickerClassName =
     "block h-[19px] w-full border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+  const configScheduleTypeSlotClassName =
+    "relative shrink-0";
   const configInlineSelectClassName =
-    "block h-[19px] shrink-0 border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+    "h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
   const configSchedulePreviewSelectClassName =
-    "pointer-events-none block h-[19px] shrink-0 border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-hint)] disabled:opacity-70";
+    "pointer-events-none h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-hint)] disabled:opacity-70";
+  const configScheduleValueSlotClassName =
+    "min-w-0 max-w-full shrink-0";
+  const configScheduleValueButtonClassName =
+    "group inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
+  const configScheduleValuePreviewClassName =
+    "pointer-events-none inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-hint)] disabled:opacity-70";
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -951,6 +960,7 @@ function ScheduledTaskDetailPanel({
                     label: t("scheduled.detail.schedule"),
                     control: (
                       <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2">
+                        <div className={configScheduleTypeSlotClassName}>
                         <select
                           value={editState.scheduleType}
                           onChange={(event) =>
@@ -970,8 +980,14 @@ function ScheduledTaskDetailPanel({
                           <option value="once">once</option>
                           <option value="cron">cron</option>
                         </select>
+                        <ChevronDownIcon
+                          className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2"
+                          aria-hidden="true"
+                        />
+                      </div>
+
                         {editState.scheduleType === "once" ? (
-                          <div className="relative min-w-0 max-w-full shrink-0">
+                          <div className={configScheduleValueSlotClassName}>
                             <input
                               ref={scheduleRunAtInputRef}
                               type="datetime-local"
@@ -1002,15 +1018,19 @@ function ScheduledTaskDetailPanel({
                                 input.focus();
                                 input.click();
                               }}
-                              className="block h-[19px] w-full overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0"
+                              className={configScheduleValueButtonClassName}
                             >
-                              <span className="block truncate">
+                              <span className="block min-w-0 truncate">
                                 {editState.runAt
                                   ? formatScheduledDateTime(
                                       Date.parse(editState.runAt),
                                     )
                                   : "-"}
                               </span>
+                              <ChevronDownIcon
+                                className="h-3 w-3 shrink-0"
+                                aria-hidden="true"
+                              />
                             </button>
                           </div>
                         ) : (
@@ -1069,6 +1089,7 @@ function ScheduledTaskDetailPanel({
                       label: t("scheduled.detail.schedule"),
                       valueNode: (
                         <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2">
+                          <div className={configScheduleTypeSlotClassName}>
                           <select
                             value={task.scheduleType}
                             disabled
@@ -1079,13 +1100,33 @@ function ScheduledTaskDetailPanel({
                             <option value="once">once</option>
                             <option value="cron">cron</option>
                           </select>
-                          <span className="block min-w-0 truncate">
-                            {task.scheduleType === "cron"
-                              ? (task.scheduleSpec.cron ?? "-")
-                              : formatScheduledDateTime(
-                                  task.scheduleSpec.runAt,
-                                )}
-                          </span>
+                          <ChevronDownIcon
+                            className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--app-hint)] opacity-70"
+                            aria-hidden="true"
+                          />
+                        </div>
+
+                          {task.scheduleType === "cron" ? (
+                            <span className="block min-w-0 truncate">
+                              {task.scheduleSpec.cron ?? "-"}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled
+                              aria-hidden="true"
+                              tabIndex={-1}
+                              className={configScheduleValuePreviewClassName}
+                            >
+                              <span className="block min-w-0 truncate">
+                                {formatScheduledDateTime(task.scheduleSpec.runAt)}
+                              </span>
+                              <ChevronDownIcon
+                                className="h-3 w-3 shrink-0"
+                                aria-hidden="true"
+                              />
+                            </button>
+                          )}
                         </div>
                       ),
                     },
