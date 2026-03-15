@@ -46,6 +46,7 @@ import { useTranslation } from "@/lib/use-translation";
 import { useTheme } from "@/hooks/useTheme";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import { formatTimestamp } from "@/lib/dateTime";
+import { normalizeProjectPath } from "@/utils/path";
 import type {
   AttachmentMetadata,
   Machine,
@@ -119,6 +120,99 @@ function ScheduledTaskIcon(props: { className?: string }) {
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7.5v5l3.5 2.25" />
+    </svg>
+  );
+}
+
+function EditIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function PauseIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={props.className}
+    >
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </svg>
+  );
+}
+
+function PlayIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={props.className}
+    >
+      <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l10-6.86a1 1 0 0 0 0-1.72l-10-6.86A1 1 0 0 0 8 5.14Z" />
+    </svg>
+  );
+}
+
+function StopIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M9.5 9.5l5 5" />
+      <path d="M14.5 9.5l-5 5" />
+    </svg>
+  );
+}
+
+function TrashIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
     </svg>
   );
 }
@@ -508,8 +602,219 @@ function ScheduledRunStatusBadge(props: {
   );
 }
 
+function ScheduledTaskHeader(props: {
+  task: ScheduledTask;
+  machineTitle: string;
+  isEditing: boolean;
+  editState: ScheduledEditState | null;
+  isPending: boolean;
+  onEditStateChange: React.Dispatch<React.SetStateAction<ScheduledEditState | null>>;
+  onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
+  onCancelTask: (taskId: string) => Promise<unknown> | void;
+  onDeleteTask: (taskId: string) => Promise<unknown> | void;
+  onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
+}) {
+  const { t } = useTranslation();
+  const displayPath = normalizeProjectPath(props.task.targetDirectory);
+  const createdAtLabel = useMemo(
+    () => formatTimestamp(props.task.createdAt),
+    [props.task.createdAt],
+  );
+  const headerIconButtonClassName =
+    "flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50";
+
+  return (
+    <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto flex w-full max-w-content items-center gap-2 px-3 py-[8px]">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+            <ScheduledTaskIcon className="h-4 w-4 shrink-0 text-[var(--app-hint)]" />
+            <div className="min-w-0 flex-1">
+              {props.isEditing && props.editState ? (
+                <input
+                  value={props.editState.title}
+                  onChange={(event) =>
+                    props.onEditStateChange((current) =>
+                      current ? { ...current, title: event.target.value } : current,
+                    )
+                  }
+                  className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-base font-semibold text-[var(--app-fg)]"
+                />
+              ) : (
+                <div className="min-w-0 truncate font-semibold">{props.task.title}</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          {!props.isEditing ? (
+            <>
+              <button
+                type="button"
+                disabled={props.isPending}
+                onClick={() => props.onSetEditing(true)}
+                className={headerIconButtonClassName}
+                title={t("scheduled.action.edit")}
+                aria-label={t("scheduled.action.edit")}
+              >
+                <EditIcon className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                disabled={props.isPending}
+                onClick={() => {
+                  void props.onUpdateTask({
+                    taskId: props.task.id,
+                    paused: !props.task.paused,
+                  });
+                }}
+                className={headerIconButtonClassName}
+                title={
+                  props.task.paused
+                    ? t("scheduled.action.resume")
+                    : t("scheduled.action.pause")
+                }
+                aria-label={
+                  props.task.paused
+                    ? t("scheduled.action.resume")
+                    : t("scheduled.action.pause")
+                }
+              >
+                {props.task.paused ? (
+                  <PlayIcon className="h-[17px] w-[17px]" />
+                ) : (
+                  <PauseIcon className="h-[17px] w-[17px]" />
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={props.isPending || props.task.status !== "active" || props.task.paused}
+                onClick={() => void props.onCancelTask(props.task.id)}
+                className={headerIconButtonClassName}
+                title={t("scheduled.action.cancel")}
+                aria-label={t("scheduled.action.cancel")}
+              >
+                <StopIcon className="h-[18px] w-[18px]" />
+              </button>
+              <button
+                type="button"
+                disabled={props.isPending}
+                onClick={() => void props.onDeleteTask(props.task.id)}
+                className={`${headerIconButtonClassName} text-red-600 hover:bg-red-500/10 hover:text-red-600`}
+                title={t("scheduled.action.delete")}
+                aria-label={t("scheduled.action.delete")}
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={props.isPending || !props.editState}
+                onClick={() => {
+                  if (!props.editState) return;
+                  const parsedRunAt = Date.parse(props.editState.runAt);
+                  const body: Record<string, unknown> = {
+                    taskId: props.task.id,
+                    title: props.editState.title,
+                    prompt: props.editState.prompt,
+                    targetDirectory: props.editState.targetDirectory,
+                    model: props.editState.model.trim() || undefined,
+                    scheduleType: props.editState.scheduleType,
+                    paused: props.editState.paused,
+                  };
+                  if (props.editState.scheduleType === "once") {
+                    if (Number.isFinite(parsedRunAt)) {
+                      body.runAt = parsedRunAt;
+                    }
+                  } else {
+                    body.cron = props.editState.cron.trim();
+                  }
+                  void Promise.resolve(props.onUpdateTask(body)).then(() => {
+                    props.onSetEditing(false);
+                  });
+                }}
+                className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+              >
+                {t("scheduled.action.save")}
+              </button>
+              <button
+                type="button"
+                disabled={props.isPending}
+                onClick={() => {
+                  props.onEditStateChange(buildScheduledEditState(props.task));
+                  props.onSetEditing(false);
+                }}
+                className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
+              >
+                {t("scheduled.action.cancelEdit")}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="border-t border-[var(--app-border)]" />
+      <div className="mx-auto w-full max-w-content px-3 py-1.5">
+        <div
+          className="flex min-w-0 items-center gap-x-3 overflow-hidden whitespace-nowrap text-xs text-[var(--app-hint)]"
+          style={{ opacity: "var(--app-session-subtitle-opacity)" }}
+        >
+          <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+            </svg>
+            <span className="truncate">{props.machineTitle}</span>
+          </span>
+          <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
+            <span className="shrink-0 text-[10px]" aria-hidden="true">
+              📂
+            </span>
+            <span className="truncate">{displayPath}</span>
+          </span>
+          {createdAtLabel ? (
+            <span className="inline-flex shrink-0 items-center gap-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>{createdAtLabel}</span>
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ScheduledTaskDetailPanel({
   task,
+  machineTitle,
   selectedRun,
   taskRuns,
   isEditing,
@@ -524,6 +829,7 @@ function ScheduledTaskDetailPanel({
   onOpenRunSession,
 }: {
   task: ScheduledTask;
+  machineTitle: string;
   selectedRun: ScheduledTaskRun | null;
   taskRuns: ScheduledTaskRun[];
   isEditing: boolean;
@@ -538,168 +844,88 @@ function ScheduledTaskDetailPanel({
   onOpenRunSession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
+  const notice = isEditing
+    ? t("scheduled.action.save") + " / " + t("scheduled.action.cancelEdit")
+    : task.paused
+      ? t("scheduled.action.resume")
+      : selectedRun?.error ?? null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-3 py-3">
-        <div className="rounded-[24px] bg-[var(--app-panel-bg)]">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                {isEditing && editState ? (
-                  <input
-                    value={editState.title}
-                    onChange={(event) =>
-                      onEditStateChange((current) =>
-                        current ? { ...current, title: event.target.value } : current,
-                      )
-                    }
-                    className="w-full rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] px-3 py-2 text-base font-semibold text-[var(--app-fg)]"
-                  />
-                ) : (
-                  <h1 className="truncate text-xl font-semibold text-[var(--app-fg)]">
-                    {task.title}
-                  </h1>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {!isEditing ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => onSetEditing(true)}
-                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                    >
-                      {t("scheduled.action.edit")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => {
-                        void onUpdateTask({
-                          taskId: task.id,
-                          paused: !task.paused,
-                        });
-                      }}
-                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                    >
-                      {task.paused
-                        ? t("scheduled.action.resume")
-                        : t("scheduled.action.pause")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isPending || task.status !== "active" || task.paused}
-                      onClick={() => void onCancelTask(task.id)}
-                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                    >
-                      {t("scheduled.action.cancel")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => void onDeleteTask(task.id)}
-                      className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50"
-                    >
-                      {t("scheduled.action.delete")}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      disabled={isPending || !editState}
-                      onClick={() => {
-                        if (!editState) return;
-                        const parsedRunAt = Date.parse(editState.runAt);
-                        const body: Record<string, unknown> = {
-                          taskId: task.id,
-                          title: editState.title,
-                          prompt: editState.prompt,
-                          targetDirectory: editState.targetDirectory,
-                          model: editState.model.trim() || undefined,
-                          scheduleType: editState.scheduleType,
-                          paused: editState.paused,
-                        };
-                        if (editState.scheduleType === "once") {
-                          if (Number.isFinite(parsedRunAt)) {
-                            body.runAt = parsedRunAt;
-                          }
-                        } else {
-                          body.cron = editState.cron.trim();
-                        }
-                        void Promise.resolve(onUpdateTask(body)).then(() => {
-                          onSetEditing(false);
-                        });
-                      }}
-                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                    >
-                      {t("scheduled.action.save")}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => {
-                        onEditStateChange(buildScheduledEditState(task));
-                        onSetEditing(false);
-                      }}
-                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50"
-                    >
-                      {t("scheduled.action.cancelEdit")}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-            <p className="min-w-0 truncate text-sm text-[var(--app-hint)]">
-              {t("scheduled.detail.summary")}
-            </p>
+    <div className="relative flex h-full min-h-0 flex-col bg-[var(--app-bg)]">
+      <ScheduledTaskHeader
+        task={task}
+        machineTitle={machineTitle}
+        isEditing={isEditing}
+        editState={editState}
+        isPending={isPending}
+        onEditStateChange={onEditStateChange}
+        onSetEditing={onSetEditing}
+        onCancelTask={onCancelTask}
+        onDeleteTask={onDeleteTask}
+        onUpdateTask={onUpdateTask}
+      />
+
+      {notice ? (
+        <div className="px-3 pt-3">
+          <div className="mx-auto w-full max-w-content rounded-md bg-[var(--app-subtle-bg)] p-3 text-sm text-[var(--app-hint)]">
+            {notice}
           </div>
-          <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                {t("scheduled.detail.status")}
-              </div>
-              <div className="mt-1 text-sm text-[var(--app-fg)]">
-                {task.status}
-                {task.paused ? " / paused" : ""}
-              </div>
+        </div>
+      ) : null}
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-content flex-col gap-4 px-3 py-3">
+          <div className="rounded-[24px] bg-[var(--app-panel-bg)]">
+            <div className="flex flex-col gap-3">
+              <p className="min-w-0 truncate text-sm text-[var(--app-hint)]">
+                {t("scheduled.detail.summary")}
+              </p>
             </div>
-            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                {t("scheduled.detail.schedule")}
+            <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                  {t("scheduled.detail.status")}
+                </div>
+                <div className="mt-1 text-sm text-[var(--app-fg)]">
+                  {task.status}
+                  {task.paused ? " / paused" : ""}
+                </div>
               </div>
-              <div className="mt-1 text-sm text-[var(--app-fg)]">{task.scheduleType}</div>
-            </div>
-            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                {t("scheduled.detail.agent")}
+              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                  {t("scheduled.detail.schedule")}
+                </div>
+                <div className="mt-1 text-sm text-[var(--app-fg)]">{task.scheduleType}</div>
               </div>
-              <div className="mt-1 text-sm text-[var(--app-fg)]">{task.agentFlavor}</div>
-            </div>
-            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                {t("scheduled.detail.created")}
+              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                  {t("scheduled.detail.agent")}
+                </div>
+                <div className="mt-1 text-sm text-[var(--app-fg)]">{task.agentFlavor}</div>
               </div>
-              <div className="mt-1 text-sm text-[var(--app-fg)]">
-                {formatScheduledDateTime(task.createdAt)}
+              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                  {t("scheduled.detail.created")}
+                </div>
+                <div className="mt-1 text-sm text-[var(--app-fg)]">
+                  {formatScheduledDateTime(task.createdAt)}
+                </div>
               </div>
-            </div>
-            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                {t("scheduled.detail.nextRun")}
+              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                  {t("scheduled.detail.nextRun")}
+                </div>
+                <div className="mt-1 text-sm text-[var(--app-fg)]">
+                  {formatScheduledDateTime(task.nextRunAt)}
+                </div>
               </div>
-              <div className="mt-1 text-sm text-[var(--app-fg)]">
-                {formatScheduledDateTime(task.nextRunAt)}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
-              <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                {t("scheduled.detail.lastRun")}
-              </div>
-              <div className="mt-1 text-sm text-[var(--app-fg)]">
-                {formatScheduledDateTime(task.lastRunAt)}
+              <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3">
+                <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                  {t("scheduled.detail.lastRun")}
+                </div>
+                <div className="mt-1 text-sm text-[var(--app-fg)]">
+                  {formatScheduledDateTime(task.lastRunAt)}
+                </div>
               </div>
             </div>
           </div>
@@ -1341,6 +1567,15 @@ function SessionsPage() {
       ) ?? null,
     [filteredScheduledTasks, selectedScheduledTaskId],
   );
+  const selectedScheduledMachineTitle = useMemo(() => {
+    if (!selectedScheduledTask) {
+      return "Unknown machine";
+    }
+    const machine = machines.find(
+      (entry) => entry.id === selectedScheduledTask.machineId,
+    );
+    return getMachineTitle(machine ?? null);
+  }, [machines, selectedScheduledTask]);
 
   const scheduledRunsByTaskId = useMemo(() => {
     const map = new Map<string, ScheduledTaskRun[]>();
@@ -2852,6 +3087,7 @@ function SessionsPage() {
                   ) : mobileScheduledDetailVisible && selectedScheduledTask ? (
                     <ScheduledTaskDetailPanel
                       task={selectedScheduledTask}
+                      machineTitle={selectedScheduledMachineTitle}
                       selectedRun={selectedScheduledRun}
                       taskRuns={selectedScheduledTaskRuns}
                       isEditing={scheduledEditing}
@@ -3710,6 +3946,7 @@ function SessionsPage() {
             ) : (
               <ScheduledTaskDetailPanel
                 task={selectedScheduledTask}
+                machineTitle={selectedScheduledMachineTitle}
                 selectedRun={selectedScheduledRun}
                 taskRuns={selectedScheduledTaskRuns}
                 isEditing={scheduledEditing}
