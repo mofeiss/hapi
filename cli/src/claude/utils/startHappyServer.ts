@@ -12,6 +12,11 @@ import { logger } from "@/ui/logger";
 import { ApiSessionClient } from "@/api/apiSession";
 import { randomUUID } from "node:crypto";
 import { registerScheduleTools } from '@/mcp/tools/scheduleTools';
+import type { SessionTriggerMetadata } from '@/api/types';
+
+function shouldExposeChangeTitleTool(trigger?: SessionTriggerMetadata): boolean {
+    return trigger?.type !== 'scheduled-task';
+}
 
 export async function startHappyServer(client: ApiSessionClient) {
     // Handler that sends title updates via the client
@@ -45,36 +50,41 @@ export async function startHappyServer(client: ApiSessionClient) {
         title: z.string().describe('The new title for the chat session'),
     });
 
-    mcp.registerTool<any, any>('change_title', {
-        description: 'Change the title of the current chat session',
-        title: 'Change Chat Title',
-        inputSchema: changeTitleInputSchema,
-    }, async (args: { title: string }) => {
-        const response = await handler(args.title);
-        logger.debug('[hapiMCP] Response:', response);
-        
-        if (response.success) {
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: `Successfully changed chat title to: "${args.title}"`,
-                    },
-                ],
-                isError: false,
-            };
-        } else {
-            return {
-                content: [
-                    {
-                        type: 'text' as const,
-                        text: `Failed to change chat title: ${response.error || 'Unknown error'}`,
-                    },
-                ],
-                isError: true,
-            };
-        }
-    });
+    const trigger = client.getMetadata()?.trigger;
+    const exposeChangeTitle = shouldExposeChangeTitleTool(trigger);
+
+    if (exposeChangeTitle) {
+        mcp.registerTool<any, any>('change_title', {
+            description: 'Change the title of the current chat session',
+            title: 'Change Chat Title',
+            inputSchema: changeTitleInputSchema,
+        }, async (args: { title: string }) => {
+            const response = await handler(args.title);
+            logger.debug('[hapiMCP] Response:', response);
+
+            if (response.success) {
+                return {
+                    content: [
+                        {
+                            type: 'text' as const,
+                            text: `Successfully changed chat title to: "${args.title}"`,
+                        },
+                    ],
+                    isError: false,
+                };
+            } else {
+                return {
+                    content: [
+                        {
+                            type: 'text' as const,
+                            text: `Failed to change chat title: ${response.error || 'Unknown error'}`,
+                        },
+                    ],
+                    isError: true,
+                };
+            }
+        });
+    }
 
     await registerScheduleTools(mcp, client);
 
@@ -109,7 +119,16 @@ export async function startHappyServer(client: ApiSessionClient) {
 
     return {
         url: baseUrl.toString(),
-        toolNames: ['change_title', 'schedule_create', 'schedule_update', 'schedule_pause', 'schedule_resume', 'schedule_list', 'schedule_cancel', 'schedule_delete'],
+        toolNames: [
+            ...(exposeChangeTitle ? ['change_title'] : []),
+            'schedule_create',
+            'schedule_update',
+            'schedule_pause',
+            'schedule_resume',
+            'schedule_list',
+            'schedule_cancel',
+            'schedule_delete'
+        ],
         stop: () => {
             logger.debug('[hapiMCP] Stopping server');
             mcp.close();

@@ -23,6 +23,26 @@ describe('appServerConfig', () => {
         });
     });
 
+    it('omits base instructions for scheduled-triggered sessions', () => {
+        const params = buildThreadStartParams({
+            mode: { permissionMode: 'default' },
+            mcpServers,
+            trigger: {
+                type: 'scheduled-task',
+                taskId: 'task-1',
+                runId: 'run-1'
+            }
+        });
+
+        expect(params.baseInstructions).toBeUndefined();
+        expect(params.config).toEqual({
+            'mcp_servers.hapi': {
+                command: 'node',
+                args: ['mcp']
+            }
+        });
+    });
+
     it('ignores CLI overrides when permission mode is not default', () => {
         const params = buildThreadStartParams({
             mode: { permissionMode: 'yolo' },

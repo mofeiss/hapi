@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 
 import { ApiClient } from '@/api/api'
 import type { ApiSessionClient } from '@/api/apiSession'
-import type { AgentState, MachineMetadata, Metadata, Session } from '@/api/types'
+import type { AgentState, MachineMetadata, Metadata, Session, SessionTriggerMetadata } from '@/api/types'
 import { notifyRunnerSessionStarted } from '@/runner/controlClient'
 import { readSettings } from '@/persistence'
 import { configuration } from '@/configuration'
@@ -21,6 +21,7 @@ export type SessionBootstrapOptions = {
     workingDirectory?: string
     tag?: string
     agentState?: AgentState | null
+    trigger?: SessionTriggerMetadata
 }
 
 export type SessionBootstrapResult = {
@@ -50,6 +51,7 @@ export function buildSessionMetadata(options: {
     workingDirectory: string
     machineId: string
     now?: number
+    trigger?: SessionTriggerMetadata
 }): Metadata {
     const happyLibDir = runtimePath()
     const worktreeInfo = readWorktreeEnv()
@@ -71,7 +73,27 @@ export function buildSessionMetadata(options: {
         lifecycleState: 'running',
         lifecycleStateSince: now,
         flavor: options.flavor,
-        worktree: worktreeInfo ?? undefined
+        worktree: worktreeInfo ?? undefined,
+        trigger: options.trigger
+    }
+}
+
+function readSessionTriggerEnv(): SessionTriggerMetadata | undefined {
+    const type = process.env.HAPI_SESSION_TRIGGER_TYPE?.trim()
+    if (type !== 'scheduled-task') {
+        return undefined
+    }
+
+    const taskId = process.env.HAPI_SCHEDULED_TASK_ID?.trim()
+    const runId = process.env.HAPI_SCHEDULED_RUN_ID?.trim()
+    if (!taskId || !runId) {
+        return undefined
+    }
+
+    return {
+        type: 'scheduled-task',
+        taskId,
+        runId
     }
 }
 
@@ -118,7 +140,8 @@ export async function bootstrapSession(options: SessionBootstrapOptions): Promis
         flavor: options.flavor,
         startedBy,
         workingDirectory,
-        machineId
+        machineId,
+        trigger: options.trigger ?? readSessionTriggerEnv()
     })
 
     const sessionInfo = await api.getOrCreateSession({

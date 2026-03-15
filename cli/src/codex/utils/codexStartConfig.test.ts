@@ -45,4 +45,23 @@ describe('buildCodexStartConfig', () => {
 
         expect(config.model).toBe('o3');
     });
+
+    it('omits title instructions for scheduled-triggered sessions', () => {
+        const config = buildCodexStartConfig({
+            message: 'hello',
+            mode: { permissionMode: 'default' },
+            first: true,
+            mcpServers,
+            trigger: {
+                type: 'scheduled-task',
+                taskId: 'task-1',
+                runId: 'run-1'
+            }
+        });
+
+        expect(config.config).toEqual({
+            mcp_servers: mcpServers
+        });
+        expect(config.config?.developer_instructions).not.toBe(codexSystemPrompt);
+    });
 });

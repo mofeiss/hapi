@@ -6,6 +6,7 @@
  */
 
 import { trimIdent } from '@/utils/trimIdent';
+import type { SessionTriggerMetadata } from '@/api/types';
 
 /**
  * Title instruction for Codex to call the hapi MCP tool.
@@ -16,7 +17,11 @@ export const TITLE_INSTRUCTION = trimIdent(`
     Based on this message, call functions.hapi__change_title to change chat session title that would represent the current task. If chat idea would change dramatically - call this function again to update the title.
 `);
 
+export function buildCodexSystemPrompt(trigger?: SessionTriggerMetadata): string {
+    return trigger?.type === 'scheduled-task' ? '' : TITLE_INSTRUCTION;
+}
+
 /**
  * The system prompt to inject via developer_instructions in local mode.
  */
-export const codexSystemPrompt = TITLE_INSTRUCTION;
+export const codexSystemPrompt = buildCodexSystemPrompt();

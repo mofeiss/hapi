@@ -1,7 +1,8 @@
 import type { EnhancedMode } from '../loop';
 import type { CodexCliOverrides } from './codexCliOverrides';
 import type { McpServersConfig } from './buildHapiMcpBridge';
-import { codexSystemPrompt } from './systemPrompt';
+import { buildCodexSystemPrompt, codexSystemPrompt } from './systemPrompt';
+import type { SessionTriggerMetadata } from '@/api/types';
 import type {
     ApprovalPolicy,
     ReasoningEffort,
@@ -79,6 +80,7 @@ export function buildThreadStartParams(args: {
     cliOverrides?: CodexCliOverrides;
     baseInstructions?: string;
     developerInstructions?: string;
+    trigger?: SessionTriggerMetadata;
 }): ThreadStartParams {
     const approvalPolicy = resolveApprovalPolicy(args.mode);
     const sandbox = resolveSandbox(args.mode);
@@ -88,12 +90,12 @@ export function buildThreadStartParams(args: {
     const resolvedSandbox = cliOverrides?.sandbox ?? sandbox;
 
     const config = buildMcpServerConfig(args.mcpServers);
-    const baseInstructions = args.baseInstructions ?? codexSystemPrompt;
+    const baseInstructions = args.baseInstructions ?? buildCodexSystemPrompt(args.trigger);
 
     const params: ThreadStartParams = {
         approvalPolicy: resolvedApprovalPolicy,
         sandbox: resolvedSandbox,
-        baseInstructions,
+        ...(baseInstructions ? { baseInstructions } : {}),
         ...(args.developerInstructions ? { developerInstructions: args.developerInstructions } : {}),
         ...(Object.keys(config).length > 0 ? { config } : {})
     };

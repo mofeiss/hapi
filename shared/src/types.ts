@@ -7,6 +7,7 @@ export type {
     Metadata,
     ScheduledTask,
     ScheduledTaskRun,
+    SessionTriggerMetadata,
     Session,
     SyncEvent,
     TodoItem,

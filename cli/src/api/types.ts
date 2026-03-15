@@ -18,6 +18,7 @@ export type {
     ClaudePermissionMode,
     CodexPermissionMode,
     Metadata,
+    SessionTriggerMetadata,
     Session
 } from '@hapi/protocol/types'
 export type SessionPermissionMode = PermissionMode

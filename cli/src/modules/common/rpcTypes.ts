@@ -12,6 +12,11 @@ export interface SpawnSessionOptions {
     token?: string
     sessionType?: 'simple' | 'worktree'
     worktreeName?: string
+    trigger?: {
+        type: 'scheduled-task'
+        taskId: string
+        runId: string
+    }
 }
 
 export type SpawnSessionResult =

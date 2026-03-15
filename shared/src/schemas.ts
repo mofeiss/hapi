@@ -30,6 +30,16 @@ export type WorktreeMetadata = z.infer<typeof WorktreeMetadataSchema>
 export const ReasoningEffortSchema = z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh'])
 export type ReasoningEffort = z.infer<typeof ReasoningEffortSchema>
 
+export const SessionTriggerMetadataSchema = z.discriminatedUnion('type', [
+    z.object({
+        type: z.literal('scheduled-task'),
+        taskId: z.string(),
+        runId: z.string()
+    })
+])
+
+export type SessionTriggerMetadata = z.infer<typeof SessionTriggerMetadataSchema>
+
 export const MetadataSchema = z.object({
     path: z.string(),
     host: z.string(),
@@ -58,7 +68,8 @@ export const MetadataSchema = z.object({
     flavor: z.string().nullish(),
     model: z.string().optional(),
     reasoningEffort: ReasoningEffortSchema.optional(),
-    worktree: WorktreeMetadataSchema.optional()
+    worktree: WorktreeMetadataSchema.optional(),
+    trigger: SessionTriggerMetadataSchema.optional()
 })
 
 export type Metadata = z.infer<typeof MetadataSchema>

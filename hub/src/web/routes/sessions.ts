@@ -48,9 +48,11 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
         }
 
         const getPendingCount = (s: Session) => s.agentState?.requests ? Object.keys(s.agentState.requests).length : 0
+        const shouldIncludeInSessionList = (s: Session) => s.metadata?.trigger?.type !== 'scheduled-task'
 
         const namespace = c.get('namespace')
         const sessions = engine.getSessionsByNamespace(namespace)
+            .filter(shouldIncludeInSessionList)
             .sort((a, b) => {
                 // Active sessions first
                 if (a.active !== b.active) {

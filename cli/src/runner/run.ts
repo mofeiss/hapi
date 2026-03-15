@@ -416,6 +416,15 @@ export async function startRunner(): Promise<void> {
           };
         }
 
+        if (options.trigger?.type === 'scheduled-task') {
+          extraEnv = {
+            ...extraEnv,
+            HAPI_SESSION_TRIGGER_TYPE: options.trigger.type,
+            HAPI_SCHEDULED_TASK_ID: options.trigger.taskId,
+            HAPI_SCHEDULED_RUN_ID: options.trigger.runId
+          };
+        }
+
         // Construct arguments for the CLI
         const agentCommand = agent === 'codex'
           ? 'codex'
@@ -672,7 +681,12 @@ export async function startRunner(): Promise<void> {
           model: task.model,
           reasoningEffort: task.reasoningEffort,
           permissionMode: task.permissionMode,
-          basePermissionMode: task.basePermissionMode
+          basePermissionMode: task.basePermissionMode,
+          trigger: {
+            type: 'scheduled-task',
+            taskId: task.id,
+            runId: run.id
+          }
         });
 
         if (spawnResult.type !== 'success') {

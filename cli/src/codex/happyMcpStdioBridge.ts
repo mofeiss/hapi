@@ -16,6 +16,10 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { z } from 'zod';
 
+function shouldExposeChangeTitleTool(): boolean {
+  return process.env.HAPI_SESSION_TRIGGER_TYPE !== 'scheduled-task';
+}
+
 function parseArgs(argv: string[]): { url: string | null } {
   let url: string | null = null;
   for (let i = 0; i < argv.length; i++) {
@@ -32,7 +36,7 @@ const scheduleAgentSchema = z.enum(['claude', 'codex']);
 const scheduleTypeSchema = z.enum(['once', 'cron']);
 const scheduleModelSchema = z.enum(['opus', 'sonnet', 'gpt-5.4']);
 
-const toolDefinitions = [
+const allToolDefinitions = [
   {
     name: 'change_title',
     description: 'Change the title of the current chat session',
@@ -106,7 +110,9 @@ const toolDefinitions = [
     title: 'Delete Scheduled Task',
     inputSchema: z.object({ taskId: z.string().min(1) })
   }
-] as const;
+];
+
+const toolDefinitions = allToolDefinitions.filter((tool) => tool.name !== 'change_title' || shouldExposeChangeTitleTool());
 
 export async function runHappyMcpStdioBridge(argv: string[]): Promise<void> {
   try {

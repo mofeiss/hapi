@@ -1,7 +1,8 @@
 import type { CodexSessionConfig } from '../types';
 import type { EnhancedMode } from '../loop';
 import type { CodexCliOverrides } from './codexCliOverrides';
-import { codexSystemPrompt } from './systemPrompt';
+import { buildCodexSystemPrompt } from './systemPrompt';
+import type { SessionTriggerMetadata } from '@/api/types';
 
 function resolveApprovalPolicy(mode: EnhancedMode): CodexSessionConfig['approval-policy'] {
     switch (mode.permissionMode) {
@@ -34,6 +35,7 @@ export function buildCodexStartConfig(args: {
     mcpServers: Record<string, { command: string; args: string[] }>;
     cliOverrides?: CodexCliOverrides;
     developerInstructions?: string;
+    trigger?: SessionTriggerMetadata;
 }): CodexSessionConfig {
     const approvalPolicy = resolveApprovalPolicy(args.mode);
     const sandbox = resolveSandbox(args.mode);
@@ -43,12 +45,14 @@ export function buildCodexStartConfig(args: {
     const resolvedSandbox = cliOverrides?.sandbox ?? sandbox;
 
     const prompt = args.message;
-    const baseInstructions = codexSystemPrompt;
+    const baseInstructions = buildCodexSystemPrompt(args.trigger);
     const config: Record<string, unknown> = {
         mcp_servers: args.mcpServers,
-        developer_instructions: args.developerInstructions
-            ? `${baseInstructions}\n\n${args.developerInstructions}`
-            : baseInstructions
+        ...(baseInstructions || args.developerInstructions ? {
+            developer_instructions: args.developerInstructions && baseInstructions
+                ? `${baseInstructions}\n\n${args.developerInstructions}`
+                : (args.developerInstructions ?? baseInstructions)
+        } : {})
     };
     const startConfig: CodexSessionConfig = {
         prompt,

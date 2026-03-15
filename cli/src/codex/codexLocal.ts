@@ -1,8 +1,9 @@
 import { logger } from '@/ui/logger';
+import type { SessionTriggerMetadata } from '@/api/types';
 import { restoreTerminalState } from '@/ui/terminalState';
 import { spawnWithAbort } from '@/utils/spawnWithAbort';
 import { buildMcpServerConfigArgs, buildDeveloperInstructionsArg } from './utils/codexMcpConfig';
-import { codexSystemPrompt } from './utils/systemPrompt';
+import { buildCodexSystemPrompt } from './utils/systemPrompt';
 
 /**
  * Filter out 'resume' subcommand which is managed internally by hapi.
@@ -32,6 +33,7 @@ export async function codexLocal(opts: {
     onSessionFound: (id: string) => void;
     codexArgs?: string[];
     mcpServers?: Record<string, { command: string; args: string[] }>;
+    trigger?: SessionTriggerMetadata;
 }): Promise<void> {
     const args: string[] = [];
 
@@ -54,7 +56,10 @@ export async function codexLocal(opts: {
     }
 
     // Add developer instructions (system prompt)
-    args.push(...buildDeveloperInstructionsArg(codexSystemPrompt));
+    const codexSystemPrompt = buildCodexSystemPrompt(opts.trigger);
+    if (codexSystemPrompt) {
+        args.push(...buildDeveloperInstructionsArg(codexSystemPrompt));
+    }
 
     if (opts.codexArgs) {
         const safeArgs = filterResumeSubcommand(opts.codexArgs);
