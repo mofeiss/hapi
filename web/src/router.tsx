@@ -694,7 +694,9 @@ function getScheduledRunResultSummaryLabel(
 }
 
 type ScheduledDetailMode = "overview" | "runs" | "session";
+type ScheduledSessionSubMode = "view" | "active";
 const SCHEDULED_DETAIL_MODE_STORAGE_KEY = "hapi:scheduled-detail-mode";
+const SCHEDULED_SESSION_SUB_MODE_STORAGE_KEY = "hapi:scheduled-session-sub-mode";
 
 function getScheduledSessionPermissionLabel(
   permission: ScheduledTask["scheduledSessionPermission"],
@@ -1511,6 +1513,14 @@ function ScheduledTaskDetailPanel({
       ? stored
       : "overview";
   });
+  const [sessionSubMode, setSessionSubMode] = useState<ScheduledSessionSubMode>(() => {
+    if (typeof window === "undefined") {
+      return "view";
+    }
+
+    const stored = window.localStorage.getItem(SCHEDULED_SESSION_SUB_MODE_STORAGE_KEY);
+    return stored === "view" || stored === "active" ? stored : "view";
+  });
   const [runSummaryTipOpen, setRunSummaryTipOpen] = useState(false);
   const runSummaryTipRef = useRef<HTMLDivElement | null>(null);
   const configValueSlotClassName =
@@ -1533,8 +1543,42 @@ function ScheduledTaskDetailPanel({
   }, [detailMode]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(SCHEDULED_SESSION_SUB_MODE_STORAGE_KEY, sessionSubMode);
+  }, [sessionSubMode]);
+
+  useEffect(() => {
     setOutcomeExpanded(false);
   }, [selectedRun?.id]);
+
+  useEffect(() => {
+    if (!selectedRun?.sessionId && sessionSubMode === "active") {
+      setSessionSubMode("view");
+    }
+  }, [selectedRun?.sessionId, sessionSubMode]);
+
+  useEffect(() => {
+    if (detailMode !== "session") {
+      return;
+    }
+
+    if (!selectedRun?.sessionId) {
+      return;
+    }
+
+    const shouldBeInteractive = sessionSubMode === "active";
+    if (scheduledSessionInteractive !== shouldBeInteractive) {
+      onOpenRunSession(selectedRun.sessionId);
+    }
+  }, [
+    detailMode,
+    onOpenRunSession,
+    scheduledSessionInteractive,
+    selectedRun?.sessionId,
+    sessionSubMode,
+  ]);
 
   useEffect(() => {
     if (!runSummaryTipOpen) {
@@ -1568,14 +1612,6 @@ function ScheduledTaskDetailPanel({
       setDetailMode("runs");
     }
   }, [detailMode, onSelectRun]);
-
-  const handleToggleInteractive = useCallback(() => {
-    if (!selectedRun?.sessionId) {
-      return;
-    }
-    onOpenRunSession(selectedRun.sessionId as string);
-    setDetailMode("session");
-  }, [onOpenRunSession, selectedRun?.sessionId]);
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -1627,6 +1663,24 @@ function ScheduledTaskDetailPanel({
                   {t("scheduled.detail.mode.session")}
                 </ToggleGroupItem>
               </ToggleGroup>
+
+              {detailMode === "session" && !sessionModeDisabled ? (
+                <ToggleGroup
+                  value={sessionSubMode}
+                  onValueChange={(value) => {
+                    setSessionSubMode(value as ScheduledSessionSubMode);
+                  }}
+                  aria-label="Scheduled session mode"
+                  className="rounded-xl"
+                >
+                  <ToggleGroupItem value="view" className="rounded-lg px-2.5 py-1.5">
+                    View
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="active" className="rounded-lg px-2.5 py-1.5">
+                    Active
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              ) : null}
 
               <div className="min-w-0 flex-1 truncate text-right text-sm text-[var(--app-hint)] whitespace-nowrap">
                 {detailMode === "overview"
@@ -1942,41 +1996,6 @@ function ScheduledTaskDetailPanel({
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-                    <div className="min-w-0">
-                      <h2 className="text-base font-semibold text-[var(--app-fg)]">
-                        {t("scheduled.detail.sessionView")}
-                      </h2>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--app-hint)]">
-                        <span>{t(`scheduled.runStatus.${selectedRun.status}`)}</span>
-                        <span>·</span>
-                        <span>{formatScheduledDateTime(selectedRun.triggeredAt)}</span>
-                        {selectedRun.taskOutcome ? (
-                          <>
-                            <span>·</span>
-                            <span>{getScheduledTaskOutcomeStatusLabel(selectedRun.taskOutcome.status, t)}</span>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleToggleInteractive}
-                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                    >
-                      {scheduledSessionInteractive
-                        ? t("scheduled.detail.exitInteractive")
-                        : t("scheduled.detail.enterInteractive")}
-                    </button>
-                  </div>
-
-                  {selectedRun.taskOutcome?.summary ? (
-                    <div className="border-t border-[var(--app-border)] px-4 py-3 text-sm text-[var(--app-hint)]">
-                      {selectedRun.taskOutcome.summary}
-                    </div>
-                  ) : null}
-
                   <div className="h-[760px] min-w-0 bg-[var(--app-bg)] border-t border-[var(--app-border)]">
                     <EmbeddedSessionView
                       sessionId={selectedRun.sessionId as string}
