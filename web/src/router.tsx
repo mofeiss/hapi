@@ -818,7 +818,7 @@ function ScheduledRunsPager(props: {
 
   if (sortedRuns.length === 0) {
     return (
-      <div className="space-y-3 py-1">
+      <div className="space-y-3">
         <div className="flex items-center justify-end">
           <div ref={nextRunTipRef} className="relative">
             <button
@@ -845,8 +845,8 @@ function ScheduledRunsPager(props: {
   }
 
   return (
-    <div className="space-y-3 py-1">
-      <div className="flex items-center overflow-visible rounded-[12px] border border-[var(--app-border)]">
+    <div className="space-y-3">
+      <div className="flex items-center overflow-visible rounded-2xl border border-[var(--app-border)]">
         <button
           type="button"
           onClick={() => {
@@ -856,7 +856,7 @@ function ScheduledRunsPager(props: {
             }
           }}
           disabled={!canGoPrevious}
-          className={`${navButtonClassName} overflow-hidden rounded-l-[12px] border-r border-[var(--app-border)]`}
+          className={`${navButtonClassName} overflow-hidden rounded-l-2xl border-r border-[var(--app-border)]`}
           aria-label={t("scheduled.detail.previousRun")}
           title={t("scheduled.detail.previousRun")}
         >
@@ -946,12 +946,12 @@ function ScheduledRunsPager(props: {
 
         <div
           ref={nextRunTipRef}
-          className="relative rounded-r-[12px] border-l border-[var(--app-border)]"
+          className="relative rounded-r-2xl border-l border-[var(--app-border)]"
         >
           <button
             type="button"
             onClick={() => setNextRunTipOpen((open) => !open)}
-            className={`${navButtonClassName} overflow-hidden rounded-r-[12px]`}
+            className={`${navButtonClassName} overflow-hidden rounded-r-2xl`}
             aria-label={t("scheduled.detail.nextRun")}
             aria-expanded={nextRunTipOpen}
           >
@@ -1552,7 +1552,7 @@ function ScheduledTaskDetailPanel({
       >
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
           <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <ToggleGroup
                 value={detailMode}
                 onValueChange={(value) => {
@@ -1577,7 +1577,7 @@ function ScheduledTaskDetailPanel({
                 </ToggleGroupItem>
               </ToggleGroup>
 
-              <div className="max-w-[38rem] text-sm text-[var(--app-hint)]">
+              <div className="min-w-0 flex-1 truncate text-right text-sm text-[var(--app-hint)] whitespace-nowrap">
                 {detailMode === "overview"
                   ? t("scheduled.detail.mode.overviewHint")
                   : detailMode === "runs"
