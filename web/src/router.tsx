@@ -1528,10 +1528,23 @@ function ScheduledTaskDetailPanel({
   const sessionModeDisabled = !selectedRun?.sessionId;
 
   useEffect(() => {
-    if (detailMode === "session" && sessionModeDisabled) {
+    if (detailMode !== "session") {
+      return;
+    }
+
+    // On refresh, detail mode restores before the selected run finishes
+    // rehydrating. Avoid downgrading the remembered Session tab during that gap.
+    if (!selectedRun) {
+      if (taskRuns.length === 0) {
+        setDetailMode("overview");
+      }
+      return;
+    }
+
+    if (sessionModeDisabled) {
       setDetailMode(taskRuns.length > 0 ? "runs" : "overview");
     }
-  }, [detailMode, sessionModeDisabled, taskRuns.length]);
+  }, [detailMode, selectedRun, sessionModeDisabled, taskRuns.length]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
