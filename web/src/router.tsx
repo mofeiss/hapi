@@ -522,15 +522,8 @@ function ChevronIcon(props: { className?: string; collapsed?: boolean }) {
   );
 }
 
-type ScheduledEditState = {
+type ScheduledTitleEditState = {
   title: string;
-  prompt: string;
-  targetDirectory: string;
-  model: string;
-  scheduleType: "once" | "cron";
-  runAt: string;
-  cron: string;
-  paused: boolean;
 };
 
 function getScheduledPathDisplayName(path: string): string {
@@ -566,32 +559,9 @@ function formatScheduledDateTime(value: number | undefined): string {
   return new Date(value).toLocaleString();
 }
 
-function formatScheduledDateTimeLocalInput(value: number | undefined): string {
-  if (!value) return "";
-  const date = new Date(value);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hour = String(date.getHours()).padStart(2, "0");
-  const minute = String(date.getMinutes()).padStart(2, "0");
-  const second = String(date.getSeconds()).padStart(2, "0");
-  return (
-    year + "-" + month + "-" + day + "T" + hour + ":" + minute + ":" + second
-  );
-}
-
-function buildScheduledEditState(task: ScheduledTask): ScheduledEditState {
+function buildScheduledTitleEditState(task: ScheduledTask): ScheduledTitleEditState {
   return {
     title: task.title,
-    prompt: task.prompt,
-    targetDirectory: task.targetDirectory,
-    model: task.model ?? "",
-    scheduleType: task.scheduleType,
-    runAt: formatScheduledDateTimeLocalInput(
-      task.scheduleSpec.runAt ?? task.nextRunAt,
-    ),
-    cron: task.scheduleSpec.cron ?? "",
-    paused: task.paused,
   };
 }
 
@@ -1207,10 +1177,10 @@ function ScheduledTaskHeader(props: {
   task: ScheduledTask;
   machineTitle: string;
   isEditing: boolean;
-  editState: ScheduledEditState | null;
+  editState: ScheduledTitleEditState | null;
   isPending: boolean;
   onEditStateChange: React.Dispatch<
-    React.SetStateAction<ScheduledEditState | null>
+    React.SetStateAction<ScheduledTitleEditState | null>
   >;
   onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
   onTogglePaused: () => Promise<unknown> | void;
@@ -1229,6 +1199,8 @@ function ScheduledTaskHeader(props: {
     "flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50";
   const headerCompactButtonClassName =
     "inline-flex h-[30px] items-center rounded-lg border border-[var(--app-border)] px-2.5 text-xs text-[var(--app-fg)] disabled:opacity-50";
+  const trimmedEditedTitle = props.editState?.title.trim() ?? "";
+  const titleChanged = trimmedEditedTitle.length > 0 && trimmedEditedTitle !== props.task.title;
 
   return (
     <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
@@ -1330,26 +1302,13 @@ function ScheduledTaskHeader(props: {
             <>
               <button
                 type="button"
-                disabled={props.isPending || !props.editState}
+                disabled={props.isPending || !props.editState || !titleChanged}
                 onClick={() => {
                   if (!props.editState) return;
-                  const parsedRunAt = Date.parse(props.editState.runAt);
                   const body: Record<string, unknown> = {
                     taskId: props.task.id,
-                    title: props.editState.title,
-                    prompt: props.editState.prompt,
-                    targetDirectory: props.editState.targetDirectory,
-                    model: props.editState.model.trim() || undefined,
-                    scheduleType: props.editState.scheduleType,
-                    paused: props.editState.paused,
+                    title: trimmedEditedTitle,
                   };
-                  if (props.editState.scheduleType === "once") {
-                    if (Number.isFinite(parsedRunAt)) {
-                      body.runAt = parsedRunAt;
-                    }
-                  } else {
-                    body.cron = props.editState.cron.trim();
-                  }
                   void Promise.resolve(props.onUpdateTask(body)).then(() => {
                     props.onSetEditing(false);
                   });
@@ -1362,7 +1321,7 @@ function ScheduledTaskHeader(props: {
                 type="button"
                 disabled={props.isPending}
                 onClick={() => {
-                  props.onEditStateChange(buildScheduledEditState(props.task));
+                  props.onEditStateChange(buildScheduledTitleEditState(props.task));
                   props.onSetEditing(false);
                 }}
                 className={headerCompactButtonClassName}
@@ -1467,10 +1426,10 @@ function ScheduledTaskDetailPanel({
   selectedRun: ScheduledTaskRun | null;
   taskRuns: ScheduledTaskRun[];
   isEditing: boolean;
-  editState: ScheduledEditState | null;
+  editState: ScheduledTitleEditState | null;
   isPending: boolean;
   onEditStateChange: React.Dispatch<
-    React.SetStateAction<ScheduledEditState | null>
+    React.SetStateAction<ScheduledTitleEditState | null>
   >;
   onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
   onTogglePaused: () => Promise<unknown> | void;
@@ -1481,32 +1440,11 @@ function ScheduledTaskDetailPanel({
   onOpenRunSession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
+  const [promptExpanded, setPromptExpanded] = useState(false);
   const configValueSlotClassName =
     "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
-  const configInlineInputClassName =
-    "block h-[19px] w-full overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
-  const configInlinePickerClassName =
-    "absolute inset-0 h-full w-full cursor-pointer opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer";
-  const configInlineDisabledValueClassName =
-    "block h-[19px] w-full overflow-hidden whitespace-nowrap border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-hint)] opacity-70 outline-none focus:outline-none focus:ring-0";
-  const configScheduleTypeSlotClassName =
-    "relative shrink-0 basis-[72px]";
-  const configInlineSelectClassName =
-    "h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
-  const configSchedulePreviewSelectClassName =
-    "pointer-events-none h-[19px] appearance-none border-0 bg-transparent pl-0 pr-4 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
-  const configScheduleValueSlotClassName =
-    "min-w-0 max-w-full shrink-0";
-  const configScheduleValueButtonClassName =
-    "group inline-flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0";
-  const configScheduleValuePreviewClassName =
-    "pointer-events-none flex h-[19px] min-w-0 max-w-full items-center justify-end gap-1 overflow-hidden border-0 bg-transparent p-0 text-right text-sm leading-[19px] text-[var(--app-fg)] outline-none focus:outline-none focus:ring-0 disabled:text-[var(--app-fg)]";
-  const configScheduleControlGroupClassName =
-    "ml-auto flex min-w-0 max-w-full items-center justify-end gap-2";
-  const cronInputWidthCh = Math.min(
-    24,
-    Math.max(12, (editState?.cron.trim().length ?? 0) + 1),
-  );
+  const configReadOnlyValueClassName =
+    "block min-h-[19px] w-full overflow-hidden whitespace-nowrap text-right text-sm leading-[19px] text-[var(--app-fg)]";
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -1533,180 +1471,48 @@ function ScheduledTaskDetailPanel({
       >
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
           <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-2">
-            {isEditing && editState ? (
+            <div>
               <div>
                 {[
                   {
                     key: "agent-model",
                     label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
-                    control: (
-                      <InlineEditableText
-                        value={`${task.agentFlavor} / ${editState.model || "-"}`}
-                        readOnly
-                        className={configInlineDisabledValueClassName}
-                      />
-                    ),
+                    valueNode: <span className={configReadOnlyValueClassName}>{`${task.agentFlavor} / ${task.model ?? "-"}`}</span>,
                   },
                   {
                     key: "prompt",
                     label: t("scheduled.detail.prompt"),
-                    control: (
-                      <InlineEditableText
-                        value={editState.prompt}
-                        onChange={(value) =>
-                          onEditStateChange((current) =>
-                            current
-                              ? { ...current, prompt: value }
-                              : current,
-                          )
-                        }
-                        className={configInlineInputClassName}
-                      />
+                    valueNode: (
+                      <button
+                        type="button"
+                        onClick={() => setPromptExpanded((current) => !current)}
+                        className="ml-auto flex max-w-full items-center justify-end gap-1 text-right text-sm leading-[19px] text-[var(--app-fg)]"
+                        title={promptExpanded ? t("button.close") : t("chat.prompt.expand")}
+                        aria-label={promptExpanded ? t("button.close") : t("chat.prompt.expand")}
+                      >
+                        {!promptExpanded ? (
+                          <>
+                            <span className="truncate">{task.prompt}</span>
+                            <ChevronDownIcon
+                              className="h-3 w-3 shrink-0 text-[var(--app-hint)] transition-transform"
+                              aria-hidden="true"
+                            />
+                          </>
+                        ) : (
+                          <ChevronDownIcon
+                            className="h-3 w-3 shrink-0 text-[var(--app-hint)] rotate-180 transition-transform"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </button>
                     ),
                   },
                   {
                     key: "directory",
                     label: t("scheduled.detail.directory"),
-                    control: (
-                      <InlineEditableText
-                        value={editState.targetDirectory}
-                        onChange={(value) =>
-                          onEditStateChange((current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  targetDirectory: value,
-                                }
-                              : current,
-                          )
-                        }
-                        className={configInlineInputClassName}
-                      />
-                    ),
+                    value: task.targetDirectory,
+                    multiline: true,
                   },
-                  {
-                    key: "schedule",
-                    label: t("scheduled.detail.schedule"),
-                    control: (
-                      <div className={configScheduleControlGroupClassName}>
-                        <div className={configScheduleTypeSlotClassName}>
-                        <select
-                          value={editState.scheduleType}
-                          onChange={(event) =>
-                            onEditStateChange((current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    scheduleType: event.target.value as
-                                      | "once"
-                                      | "cron",
-                                  }
-                                : current,
-                            )
-                          }
-                          className={configInlineSelectClassName}
-                        >
-                          <option value="once">once</option>
-                          <option value="cron">cron</option>
-                        </select>
-                        <ChevronDownIcon
-                          className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2"
-                          aria-hidden="true"
-                        />
-                        </div>
-
-                        {editState.scheduleType === "once" ? (
-                          <div className={`relative ${configScheduleValueSlotClassName}`}>
-                            <button
-                              type="button"
-                              className={configScheduleValueButtonClassName}
-                            >
-                              <span className="block min-w-0 truncate">
-                                {editState.runAt
-                                  ? formatScheduledDateTime(
-                                      Date.parse(editState.runAt),
-                                    )
-                                  : "-"}
-                              </span>
-                              <ChevronDownIcon
-                                className="h-3 w-3 shrink-0"
-                                aria-hidden="true"
-                              />
-                            </button>
-                            <input
-                              type="datetime-local"
-                              step={1}
-                              value={editState.runAt}
-                              onChange={(event) =>
-                                onEditStateChange((current) =>
-                                  current
-                                    ? { ...current, runAt: event.target.value }
-                                    : current,
-                                )
-                              }
-                              className={configInlinePickerClassName}
-                            />
-                          </div>
-                        ) : (
-                          <div className="min-w-0 max-w-full shrink-0">
-                            <InlineEditableText
-                              value={editState.cron}
-                              onChange={(value) =>
-                                onEditStateChange((current) =>
-                                  current
-                                    ? { ...current, cron: value }
-                                    : current,
-                                )
-                              }
-                              className={configInlineInputClassName}
-                              style={{ width: `${cronInputWidthCh}ch`, maxWidth: "100%" }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ),
-                  },
-                ].map((item, index) => (
-                  <div
-                    key={`config-edit-${item.key}`}
-                    className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" : ""}`}
-                  >
-                    <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                      {item.label}
-                    </div>
-                    <div className={configValueSlotClassName}>
-                      {item.control}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div>
-                <div>
-                  {[
-                    {
-                      key: "agent-model",
-                      label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
-                      valueNode: (
-                        <InlineEditableText
-                          value={`${task.agentFlavor} / ${task.model ?? "-"}`}
-                          readOnly
-                          className={configInlineDisabledValueClassName}
-                        />
-                      ),
-                    },
-                    {
-                      key: "prompt",
-                      label: t("scheduled.detail.prompt"),
-                      value: task.prompt,
-                      multiline: true,
-                    },
-                    {
-                      key: "directory",
-                      label: t("scheduled.detail.directory"),
-                      value: task.targetDirectory,
-                      multiline: true,
-                    },
                   {
                     key: "permission",
                     label: t("scheduled.detail.permission"),
@@ -1719,51 +1525,22 @@ function ScheduledTaskDetailPanel({
                     key: "schedule",
                     label: t("scheduled.detail.schedule"),
                     valueNode: (
-                        <div className={configScheduleControlGroupClassName}>
-                          <div className={configScheduleTypeSlotClassName}>
-                          <select
-                            value={task.scheduleType}
-                            disabled
-                            aria-hidden="true"
-                            tabIndex={-1}
-                            className={configSchedulePreviewSelectClassName}
-                          >
-                            <option value="once">once</option>
-                            <option value="cron">cron</option>
-                          </select>
-                          <ChevronDownIcon
-                            className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--app-hint)] opacity-70"
-                            aria-hidden="true"
-                          />
-                        </div>
-
-                          {task.scheduleType === "cron" ? (
-                            <span className="block min-w-0 shrink-0 flex-1 truncate">
-                              {task.scheduleSpec.cron ?? "-"}
-                            </span>
-                          ) : (
-                            <div className={configScheduleValueSlotClassName}>
-                            <button
-                              type="button"
-                              disabled
-                              aria-hidden="true"
-                              tabIndex={-1}
-                              className={configScheduleValuePreviewClassName}
-                            >
-                              <span className="block min-w-0 truncate">
-                                {formatScheduledDateTime(task.scheduleSpec.runAt)}
-                              </span>
-                              <ChevronDownIcon
-                                className="h-3 w-3 shrink-0 text-[var(--app-hint)] opacity-70"
-                                aria-hidden="true"
-                              />
-                            </button>
-                            </div>
-                          )}
-                        </div>
-                      ),
-                    },
-                  ].map((item, index) => (
+                      <div className="flex min-w-0 items-center justify-end gap-2 text-right text-sm leading-[19px] text-[var(--app-fg)]">
+                        <span className="shrink-0">
+                          {task.scheduleType === "cron"
+                            ? t("scheduled.list.kind.cron")
+                            : t("scheduled.list.kind.once")}
+                        </span>
+                        <span className="block min-w-0 truncate">
+                          {task.scheduleType === "cron"
+                            ? (task.scheduleSpec.cron ?? "-")
+                            : formatScheduledDateTime(task.scheduleSpec.runAt)}
+                        </span>
+                      </div>
+                    ),
+                  },
+                ].map((item, index) => (
+                  <>
                     <div
                       key={`config-definition-${item.key}`}
                       className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" : ""}`}
@@ -1777,10 +1554,16 @@ function ScheduledTaskDetailPanel({
                         {item.valueNode ?? item.value}
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    {item.key === "prompt" && promptExpanded ? (
+                      <div key="config-definition-prompt-expanded" className="pb-2 text-sm leading-6 text-[var(--app-fg)] whitespace-pre-wrap break-words">
+                        {task.prompt}
+                      </div>
+                    ) : null}
+                  </>
+                ))}
               </div>
-            )}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
@@ -2265,7 +2048,7 @@ function SessionsPage() {
   >(null);
   const [scheduledEditing, setScheduledEditing] = useState(false);
   const [scheduledEditState, setScheduledEditState] =
-    useState<ScheduledEditState | null>(null);
+    useState<ScheduledTitleEditState | null>(null);
   const [newSessionMachineId, setNewSessionMachineId] = useState<string | null>(
     null,
   );
@@ -2512,7 +2295,7 @@ function SessionsPage() {
       return;
     }
     if (!scheduledEditing) {
-      setScheduledEditState(buildScheduledEditState(selectedScheduledTask));
+      setScheduledEditState(buildScheduledTitleEditState(selectedScheduledTask));
     }
   }, [scheduledEditing, selectedScheduledTask]);
 
