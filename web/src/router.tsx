@@ -694,6 +694,7 @@ function getScheduledRunResultSummaryLabel(
 }
 
 type ScheduledDetailMode = "overview" | "runs" | "session";
+const SCHEDULED_DETAIL_MODE_STORAGE_KEY = "hapi:scheduled-detail-mode";
 
 function getScheduledSessionPermissionLabel(
   permission: ScheduledTask["scheduledSessionPermission"],
@@ -1499,7 +1500,17 @@ function ScheduledTaskDetailPanel({
 }) {
   const { t } = useTranslation();
   const [promptExpanded, setPromptExpanded] = useState(false);
-  const [detailMode, setDetailMode] = useState<ScheduledDetailMode>("overview");
+  const [outcomeExpanded, setOutcomeExpanded] = useState(false);
+  const [detailMode, setDetailMode] = useState<ScheduledDetailMode>(() => {
+    if (typeof window === "undefined") {
+      return "overview";
+    }
+
+    const stored = window.localStorage.getItem(SCHEDULED_DETAIL_MODE_STORAGE_KEY);
+    return stored === "overview" || stored === "runs" || stored === "session"
+      ? stored
+      : "overview";
+  });
   const [runSummaryTipOpen, setRunSummaryTipOpen] = useState(false);
   const runSummaryTipRef = useRef<HTMLDivElement | null>(null);
   const configValueSlotClassName =
@@ -1513,6 +1524,17 @@ function ScheduledTaskDetailPanel({
       setDetailMode(taskRuns.length > 0 ? "runs" : "overview");
     }
   }, [detailMode, sessionModeDisabled, taskRuns.length]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(SCHEDULED_DETAIL_MODE_STORAGE_KEY, detailMode);
+  }, [detailMode]);
+
+  useEffect(() => {
+    setOutcomeExpanded(false);
+  }, [selectedRun?.id]);
 
   useEffect(() => {
     if (!runSummaryTipOpen) {
@@ -1773,7 +1795,6 @@ function ScheduledTaskDetailPanel({
                         key: "run-id",
                         label: t("scheduled.detail.runId"),
                         value: selectedRun.id,
-                        multiline: true,
                       },
                       {
                         key: "finished",
@@ -1784,7 +1805,6 @@ function ScheduledTaskDetailPanel({
                         key: "session",
                         label: t("scheduled.detail.session"),
                         value: selectedRun.sessionId ?? "-",
-                        multiline: true,
                       },
                       ...(selectedRun.error
                         ? [{
@@ -1792,7 +1812,6 @@ function ScheduledTaskDetailPanel({
                             label: "Error",
                             value: selectedRun.error,
                             toneClassName: getScheduledRunStatusToneClassName(selectedRun.status),
-                            multiline: true,
                           }]
                         : []),
                     ].map((item, index) => (
@@ -1804,7 +1823,7 @@ function ScheduledTaskDetailPanel({
                           {item.label}
                         </div>
                         <div
-                          className={`${configValueSlotClassName} ${item.multiline ? "whitespace-pre-wrap break-words" : "truncate"} ${item.toneClassName ? `rounded-xl px-3 py-2 ${item.toneClassName}` : ""} ${item.key === "run-status" && runSummaryTipOpen ? "overflow-visible" : ""}`}
+                          className={`${configValueSlotClassName} ${"multiline" in item && item.multiline ? "whitespace-pre-wrap break-words" : "truncate"} ${item.toneClassName ? `rounded-xl px-3 py-2 ${item.toneClassName}` : ""} ${item.key === "run-status" && runSummaryTipOpen ? "overflow-visible" : ""}`}
                         >
                           {item.valueNode ?? item.value}
                         </div>
@@ -1813,6 +1832,10 @@ function ScheduledTaskDetailPanel({
 
                     {selectedRun.taskOutcome ? (
                       <div className="space-y-0 pt-2">
+                        {(() => {
+                          const taskOutcome = selectedRun.taskOutcome;
+                          return (
+                            <>
                         <div className="border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" />
                         {[
                           {
@@ -1820,10 +1843,10 @@ function ScheduledTaskDetailPanel({
                             label: t("scheduled.detail.outcomeStatus"),
                             valueNode: (
                               <span
-                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${getScheduledTaskOutcomeToneClassName(selectedRun.taskOutcome.status)}`}
+                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${getScheduledTaskOutcomeToneClassName(taskOutcome.status)}`}
                               >
                                 {getScheduledTaskOutcomeStatusLabel(
-                                  selectedRun.taskOutcome.status,
+                                  taskOutcome.status,
                                   t,
                                 )}
                               </span>
@@ -1832,43 +1855,77 @@ function ScheduledTaskDetailPanel({
                           {
                             key: "outcome-summary",
                             label: t("scheduled.detail.outcome"),
-                            value: selectedRun.taskOutcome.summary,
                             multiline: true,
+                            valueNode: (
+                              <button
+                                type="button"
+                                onClick={() => setOutcomeExpanded((current) => !current)}
+                                className="ml-auto flex max-w-full items-center justify-end gap-1 text-right text-sm leading-[19px] text-[var(--app-fg)]"
+                                title={outcomeExpanded ? t("button.close") : t("chat.prompt.expand")}
+                                aria-label={outcomeExpanded ? t("button.close") : t("chat.prompt.expand")}
+                              >
+                                {!outcomeExpanded ? (
+                                  <>
+                                    <span className="truncate">{taskOutcome.summary}</span>
+                                    <ChevronDownIcon
+                                      className="h-3 w-3 shrink-0 text-[var(--app-hint)] transition-transform"
+                                      aria-hidden="true"
+                                    />
+                                  </>
+                                ) : (
+                                  <ChevronDownIcon
+                                    className="h-3 w-3 shrink-0 rotate-180 text-[var(--app-hint)] transition-transform"
+                                    aria-hidden="true"
+                                  />
+                                )}
+                              </button>
+                            ),
                           },
                           {
                             key: "outcome-reported-at",
                             label: t("scheduled.detail.outcomeReportedAt"),
-                            value: formatScheduledDateTime(selectedRun.taskOutcome.reportedAt),
+                            value: formatScheduledDateTime(taskOutcome.reportedAt),
                           },
                           {
                             key: "needs-user-intervention",
                             label: t("scheduled.detail.needsUserIntervention"),
-                            value: selectedRun.taskOutcome.needsUserIntervention
+                            value: taskOutcome.needsUserIntervention
                               ? t("common.yes")
                               : t("common.no"),
                           },
                           {
                             key: "permanent-failure-likely",
                             label: t("scheduled.detail.permanentFailureLikely"),
-                            value: selectedRun.taskOutcome.permanentFailureLikely
+                            value: taskOutcome.permanentFailureLikely
                               ? t("common.yes")
                               : t("common.no"),
                           },
                         ].map((item) => (
-                          <div
-                            key={item.key}
-                            className="flex items-start justify-between gap-4 border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)] py-2 text-sm"
-                          >
-                            <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                              {item.label}
-                            </div>
+                          <>
                             <div
-                              className={`${configValueSlotClassName} ${item.multiline ? "whitespace-pre-wrap break-words" : "truncate"}`}
+                              key={item.key}
+                              className="flex items-start justify-between gap-4 border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)] py-2 text-sm"
                             >
-                              {item.valueNode ?? item.value}
+                              <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                                {item.label}
+                              </div>
+                              <div
+                                className={`${configValueSlotClassName} ${item.multiline ? "whitespace-pre-wrap break-words" : "truncate"}`}
+                              >
+                                {item.valueNode ?? item.value}
+                              </div>
                             </div>
-                          </div>
+
+                            {item.key === "outcome-summary" && outcomeExpanded ? (
+                              <div key="outcome-summary-expanded" className="pb-2 text-sm leading-6 text-[var(--app-fg)] whitespace-pre-wrap break-words">
+                                {taskOutcome.summary}
+                              </div>
+                            ) : null}
+                          </>
                         ))}
+                            </>
+                          );
+                        })()}
                       </div>
                     ) : null}
                   </div>
