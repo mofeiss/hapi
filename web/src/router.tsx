@@ -1476,7 +1476,7 @@ function ScheduledTaskDetailPanel({
   onDeleteTask,
   onUpdateTask,
   onSelectRun,
-  onOpenRunSession,
+  onSetRunSessionInteractive,
   scheduledSessionInteractive,
 }: {
   task: ScheduledTask;
@@ -1495,7 +1495,7 @@ function ScheduledTaskDetailPanel({
   onDeleteTask: (taskId: string) => Promise<unknown> | void;
   onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
   onSelectRun: (runId: string | null) => void;
-  onOpenRunSession: (sessionId: string) => void;
+  onSetRunSessionInteractive: (sessionId: string, interactive: boolean) => void;
   scheduledSessionInteractive: boolean;
 }) {
   const { t } = useTranslation();
@@ -1581,11 +1581,11 @@ function ScheduledTaskDetailPanel({
 
     const shouldBeInteractive = sessionSubMode === "active";
     if (scheduledSessionInteractive !== shouldBeInteractive) {
-      onOpenRunSession(selectedRun.sessionId);
+      onSetRunSessionInteractive(selectedRun.sessionId, shouldBeInteractive);
     }
   }, [
     detailMode,
-    onOpenRunSession,
+    onSetRunSessionInteractive,
     scheduledSessionInteractive,
     selectedRun?.sessionId,
     sessionSubMode,
@@ -4011,10 +4011,8 @@ function SessionsPage() {
                         setSelectedScheduledRunId(runId);
                         selectWorkspaceScheduledRun(runId);
                       }}
-                      onOpenRunSession={(sessionId) => {
-                        setScheduledInteractiveSessionId((current) =>
-                          current === sessionId ? null : sessionId,
-                        );
+                      onSetRunSessionInteractive={(sessionId, interactive) => {
+                        setScheduledInteractiveSessionId(interactive ? sessionId : null);
                       }}
                       scheduledSessionInteractive={
                         selectedScheduledRun?.sessionId === scheduledInteractiveSessionId
@@ -4631,7 +4629,7 @@ function SessionsPage() {
               initialMachineId={newSessionMachineId}
             />
           </div>
-        ) : isScheduledTab ? (
+        ) : isScheduledTab && !narrowViewport ? (
           <div className="hidden min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden lg:flex">
             {!selectedScheduledTask ? (
               <div className="flex h-full items-center justify-center px-6 text-sm text-[var(--app-hint)]">
@@ -4656,10 +4654,8 @@ function SessionsPage() {
                   setSelectedScheduledRunId(runId);
                   selectWorkspaceScheduledRun(runId);
                 }}
-                onOpenRunSession={(sessionId) => {
-                  setScheduledInteractiveSessionId((current) =>
-                    current === sessionId ? null : sessionId,
-                  );
+                onSetRunSessionInteractive={(sessionId, interactive) => {
+                  setScheduledInteractiveSessionId(interactive ? sessionId : null);
                 }}
                 scheduledSessionInteractive={
                   selectedScheduledRun?.sessionId === scheduledInteractiveSessionId
