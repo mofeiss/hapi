@@ -153,6 +153,7 @@ export function SessionChat(props: {
     const [editedResend, setEditedResend] = useState<EditedResendState | null>(null)
     const [editedMessageTextById, setEditedMessageTextById] = useState<Record<string, string>>({})
     const agentFlavor = props.session.metadata?.flavor ?? null
+    const suppressNewMessagesIndicator = props.session.metadata?.trigger?.type === 'scheduled-task'
     const { abortSession, setPermissionMode, setModelMode } = useSessionActions(
         props.api,
         props.session.id,
@@ -1022,6 +1023,7 @@ export function SessionChat(props: {
                         messagesVersion={props.messagesVersion}
                         forceScrollToken={forceScrollToken}
                         initialScrollAnchor={props.initialScrollAnchor ?? 'bottom'}
+                        suppressNewMessagesIndicator={suppressNewMessagesIndicator}
                         queuedMessages={messageQueue.queue}
                     />
 
