@@ -685,7 +685,10 @@ export async function startRunner(): Promise<void> {
           trigger: {
             type: 'scheduled-task',
             taskId: task.id,
-            runId: run.id
+            runId: run.id,
+            scheduleType: task.scheduleType,
+            scheduledSessionPermission: task.scheduledSessionPermission,
+            iteration: (await scheduler.listRuns({ taskId: task.id })).length
           }
         });
 
@@ -774,6 +777,10 @@ export async function startRunner(): Promise<void> {
       return await scheduler.listRuns({ machineId });
     };
 
+    const reportScheduledTaskOutcome = async (input: { runId: string; outcome: import('@hapi/protocol').ScheduledTaskRun['taskOutcome'] }) => {
+      return await scheduler.reportTaskOutcome(input as any);
+    };
+
     const cancelScheduledTask = async (taskId: string) => {
       return await scheduler.cancelTask(taskId);
     };
@@ -833,6 +840,7 @@ export async function startRunner(): Promise<void> {
       updateScheduledTask,
       listScheduledTasks,
       listScheduledTaskRuns,
+      reportScheduledTaskOutcome,
       cancelScheduledTask,
       deleteScheduledTask,
       requestShutdown: () => requestShutdown('hapi-cli'),

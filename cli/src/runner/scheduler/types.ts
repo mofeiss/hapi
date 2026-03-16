@@ -1,7 +1,9 @@
 import type {
   ScheduledAgentFlavor,
   ScheduledCatchUpPolicy,
+  ScheduledSessionPermission,
   ScheduledTask,
+  ScheduledTaskOutcome,
   ScheduledTaskRun
 } from '@hapi/protocol'
 
@@ -19,6 +21,7 @@ export type CreateScheduledTaskInput = {
   cron?: string
   timezone?: string
   paused?: boolean
+  scheduledSessionPermission: ScheduledSessionPermission
   allowOverlap?: boolean
   catchUpPolicy?: ScheduledCatchUpPolicy
   maxSkewMs?: number
@@ -36,6 +39,7 @@ export type UpdateScheduledTaskInput = {
   cron?: string
   timezone?: string
   paused?: boolean
+  scheduledSessionPermission?: ScheduledSessionPermission
   allowOverlap?: boolean
   catchUpPolicy?: ScheduledCatchUpPolicy
   maxSkewMs?: number
@@ -59,4 +63,9 @@ export type SchedulerTriggerContext = {
 export type SchedulerTriggerResult = {
   sessionId?: string
   resultSummary?: string
+}
+
+export type ReportScheduledTaskOutcomeInput = {
+  runId: string
+  outcome: ScheduledTaskOutcome
 }

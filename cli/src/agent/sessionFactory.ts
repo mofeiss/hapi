@@ -93,7 +93,9 @@ function readSessionTriggerEnv(): SessionTriggerMetadata | undefined {
     return {
         type: 'scheduled-task',
         taskId,
-        runId
+        runId,
+        scheduleType: 'once',
+        scheduledSessionPermission: 'aware'
     }
 }
 

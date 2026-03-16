@@ -639,7 +639,8 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                         const threadParams = buildThreadStartParams({
                             mode: message.mode,
                             mcpServers,
-                            cliOverrides: session.codexCliOverrides
+                            cliOverrides: session.codexCliOverrides,
+                            trigger: session.client.getMetadata()?.trigger
                         });
 
                         const resumeCandidate = session.sessionId;
@@ -703,7 +704,8 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                             mode: message.mode,
                             first,
                             mcpServers,
-                            cliOverrides: session.codexCliOverrides
+                            cliOverrides: session.codexCliOverrides,
+                            trigger: session.client.getMetadata()?.trigger
                         });
 
                         await mcpClient.startSession(startConfig, { signal: this.abortController.signal });

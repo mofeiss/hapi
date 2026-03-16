@@ -30,7 +30,10 @@ describe('appServerConfig', () => {
             trigger: {
                 type: 'scheduled-task',
                 taskId: 'task-1',
-                runId: 'run-1'
+                runId: 'run-1',
+                scheduleType: 'cron',
+                scheduledSessionPermission: 'aware',
+                iteration: 2
             }
         });
 

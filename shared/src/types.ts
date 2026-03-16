@@ -6,6 +6,7 @@ export type {
     DecryptedMessage,
     Metadata,
     ScheduledTask,
+    ScheduledTaskOutcome,
     ScheduledTaskRun,
     SessionTriggerMetadata,
     Session,
@@ -32,6 +33,8 @@ export type {
     ScheduledAgentFlavor,
     ScheduledCatchUpPolicy,
     ScheduledRunStrategy,
+    ScheduledSessionPermission,
+    ScheduledTaskOutcomeStatus,
     ScheduledTaskRunStatus,
     ScheduledTaskStatus,
     ScheduledTaskType

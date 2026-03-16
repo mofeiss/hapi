@@ -16,6 +16,9 @@ export interface SpawnSessionOptions {
         type: 'scheduled-task'
         taskId: string
         runId: string
+        scheduleType: 'once' | 'cron'
+        scheduledSessionPermission: 'aware' | 'self_control' | 'system_control'
+        iteration?: number
     }
 }
 

@@ -723,6 +723,38 @@ function getScheduledRunResultSummaryLabel(
   return translated === summaryKey ? resultSummary : translated;
 }
 
+function getScheduledSessionPermissionLabel(
+  permission: ScheduledTask["scheduledSessionPermission"],
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  return t(`scheduled.permission.${permission}`);
+}
+
+function getScheduledTaskOutcomeStatusLabel(
+  status: NonNullable<ScheduledTaskRun["taskOutcome"]>["status"],
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  return t(`scheduled.outcomeStatus.${status}`);
+}
+
+function getScheduledTaskOutcomeToneClassName(
+  status: NonNullable<ScheduledTaskRun["taskOutcome"]>["status"],
+): string {
+  if (status === "completed") {
+    return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+  }
+
+  if (status === "partial") {
+    return "bg-sky-500/10 text-sky-700 dark:text-sky-300";
+  }
+
+  if (status === "blocked") {
+    return "bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  }
+
+  return "bg-rose-500/10 text-rose-700 dark:text-rose-300";
+}
+
 function ScheduledRunsPager(props: {
   task: ScheduledTask;
   runs: ScheduledTaskRun[];
@@ -1149,6 +1181,9 @@ function ScheduledTaskListRow(props: {
               <span>{props.createdAtLabel}</span>
             </span>
           ) : null}
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--app-subtle-bg)] px-2 py-0.5 text-[11px] text-[var(--app-hint)]">
+            <span>{getScheduledSessionPermissionLabel(props.task.scheduledSessionPermission, t)}</span>
+          </span>
         </div>
       </button>
 
@@ -1672,10 +1707,18 @@ function ScheduledTaskDetailPanel({
                       value: task.targetDirectory,
                       multiline: true,
                     },
-                    {
-                      key: "schedule",
-                      label: t("scheduled.detail.schedule"),
-                      valueNode: (
+                  {
+                    key: "permission",
+                    label: t("scheduled.detail.permission"),
+                    value: getScheduledSessionPermissionLabel(
+                      task.scheduledSessionPermission,
+                      t,
+                    ),
+                  },
+                  {
+                    key: "schedule",
+                    label: t("scheduled.detail.schedule"),
+                    valueNode: (
                         <div className={configScheduleControlGroupClassName}>
                           <div className={configScheduleTypeSlotClassName}>
                           <select
@@ -1796,10 +1839,82 @@ function ScheduledTaskDetailPanel({
                         {selectedRun.sessionId ?? "-"}
                       </div>
                     </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                        {t("scheduled.detail.outcomeStatus")}
+                      </div>
+                      <div className="mt-1 text-sm text-[var(--app-fg)]">
+                        {selectedRun.taskOutcome
+                          ? getScheduledTaskOutcomeStatusLabel(
+                              selectedRun.taskOutcome.status,
+                              t,
+                            )
+                          : "-"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                        {t("scheduled.detail.outcomeReportedAt")}
+                      </div>
+                      <div className="mt-1 text-sm text-[var(--app-fg)]">
+                        {formatScheduledDateTime(
+                          selectedRun.taskOutcome?.reportedAt,
+                        )}
+                      </div>
+                    </div>
                   </div>
                   {selectedRun.error ? (
                     <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>
                       {selectedRun.error}
+                    </div>
+                  ) : null}
+                  {selectedRun.taskOutcome ? (
+                    <div className="space-y-3 rounded-2xl border border-[var(--app-border)] px-4 py-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                            {t("scheduled.detail.outcome")}
+                          </div>
+                          <div className="mt-1 text-sm text-[var(--app-hint)]">
+                            {t("scheduled.detail.outcomeSummaryHint")}
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${getScheduledTaskOutcomeToneClassName(selectedRun.taskOutcome.status)}`}
+                        >
+                          {getScheduledTaskOutcomeStatusLabel(
+                            selectedRun.taskOutcome.status,
+                            t,
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="text-sm text-[var(--app-fg)]">
+                        {selectedRun.taskOutcome.summary}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                            {t("scheduled.detail.needsUserIntervention")}
+                          </div>
+                          <div className="mt-1 text-sm text-[var(--app-fg)]">
+                            {selectedRun.taskOutcome.needsUserIntervention
+                              ? t("common.yes")
+                              : t("common.no")}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                            {t("scheduled.detail.permanentFailureLikely")}
+                          </div>
+                          <div className="mt-1 text-sm text-[var(--app-fg)]">
+                            {selectedRun.taskOutcome.permanentFailureLikely
+                              ? t("common.yes")
+                              : t("common.no")}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ) : null}
                   {selectedRun.resultSummary ? (

@@ -4,6 +4,8 @@ import {
     ScheduledAgentFlavorSchema,
     ScheduledCatchUpPolicySchema,
     ScheduledRunStrategySchema,
+    ScheduledSessionPermissionSchema,
+    ScheduledTaskOutcomeStatusSchema,
     ScheduledTaskRunStatusSchema,
     ScheduledTaskStatusSchema,
     ScheduledTaskTypeSchema
@@ -34,7 +36,10 @@ export const SessionTriggerMetadataSchema = z.discriminatedUnion('type', [
     z.object({
         type: z.literal('scheduled-task'),
         taskId: z.string(),
-        runId: z.string()
+        runId: z.string(),
+        scheduleType: ScheduledTaskTypeSchema,
+        scheduledSessionPermission: ScheduledSessionPermissionSchema,
+        iteration: z.number().int().positive().optional()
     })
 ])
 
@@ -166,6 +171,7 @@ export const ScheduledTaskSchema = z.object({
     lastRunAt: z.number().optional(),
     status: ScheduledTaskStatusSchema,
     paused: z.boolean(),
+    scheduledSessionPermission: ScheduledSessionPermissionSchema,
     allowOverlap: z.boolean(),
     catchUpPolicy: ScheduledCatchUpPolicySchema,
     maxSkewMs: z.number().int().nonnegative(),
@@ -175,6 +181,16 @@ export const ScheduledTaskSchema = z.object({
 })
 
 export type ScheduledTask = z.infer<typeof ScheduledTaskSchema>
+
+export const ScheduledTaskOutcomeSchema = z.object({
+    status: ScheduledTaskOutcomeStatusSchema,
+    summary: z.string().min(1),
+    needsUserIntervention: z.boolean().optional(),
+    permanentFailureLikely: z.boolean().optional(),
+    reportedAt: z.number()
+})
+
+export type ScheduledTaskOutcome = z.infer<typeof ScheduledTaskOutcomeSchema>
 
 export const ScheduledTaskRunSchema = z.object({
     id: z.string(),
@@ -188,6 +204,7 @@ export const ScheduledTaskRunSchema = z.object({
     sessionId: z.string().optional(),
     error: z.string().optional(),
     resultSummary: z.string().optional(),
+    taskOutcome: ScheduledTaskOutcomeSchema.optional(),
     createdAt: z.number(),
     updatedAt: z.number()
 })

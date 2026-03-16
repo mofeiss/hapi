@@ -31,3 +31,17 @@ export type ScheduledTaskType = z.infer<typeof ScheduledTaskTypeSchema>
 export const ScheduledCatchUpPolicySchema = z.enum(['once_within_window', 'skip'])
 export type ScheduledCatchUpPolicy = z.infer<typeof ScheduledCatchUpPolicySchema>
 
+export const ScheduledSessionPermissionSchema = z.enum([
+    'aware',
+    'self_control',
+    'system_control'
+])
+export type ScheduledSessionPermission = z.infer<typeof ScheduledSessionPermissionSchema>
+
+export const ScheduledTaskOutcomeStatusSchema = z.enum([
+    'completed',
+    'partial',
+    'blocked',
+    'abandoned'
+])
+export type ScheduledTaskOutcomeStatus = z.infer<typeof ScheduledTaskOutcomeStatusSchema>

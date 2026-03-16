@@ -345,6 +345,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                     await claudeRemote({
                         sessionId: session.sessionId,
                         path: session.path,
+                        trigger: session.client.getMetadata()?.trigger,
                         allowedTools: session.allowedTools ?? [],
                         mcpServers: session.mcpServers,
                         hookSettingsPath: session.hookSettingsPath,

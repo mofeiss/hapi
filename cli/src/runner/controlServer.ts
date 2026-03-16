@@ -21,6 +21,7 @@ export function startRunnerControlServer({
   updateScheduledTask,
   listScheduledTasks,
   listScheduledTaskRuns,
+  reportScheduledTaskOutcome,
   cancelScheduledTask,
   deleteScheduledTask,
   requestShutdown,
@@ -33,6 +34,7 @@ export function startRunnerControlServer({
   updateScheduledTask: (input: UpdateScheduledTaskInput) => Promise<ScheduledTask | null>;
   listScheduledTasks: () => Promise<ScheduledTask[]>;
   listScheduledTaskRuns: () => Promise<ScheduledTaskRun[]>;
+  reportScheduledTaskOutcome: (input: { runId: string; outcome: ScheduledTaskRun['taskOutcome'] }) => Promise<ScheduledTaskRun | null>;
   cancelScheduledTask: (taskId: string) => Promise<ScheduledTask | null>;
   deleteScheduledTask: (taskId: string) => Promise<{ taskId: string; machineId: string; namespace: string } | null>;
   requestShutdown: () => void;
@@ -128,7 +130,10 @@ export function startRunnerControlServer({
           trigger: z.object({
             type: z.literal('scheduled-task'),
             taskId: z.string(),
-            runId: z.string()
+            runId: z.string(),
+            scheduleType: z.enum(['once', 'cron']),
+            scheduledSessionPermission: z.enum(['aware', 'self_control', 'system_control']),
+            iteration: z.number().int().positive().optional()
           }).optional()
         }),
         response: {
@@ -205,6 +210,7 @@ export function startRunnerControlServer({
           cron: z.string().optional(),
           timezone: z.string().optional(),
           paused: z.boolean().optional(),
+          scheduledSessionPermission: z.enum(['aware', 'self_control', 'system_control']),
           allowOverlap: z.boolean().optional(),
           catchUpPolicy: z.enum(['once_within_window', 'skip']).optional(),
           maxSkewMs: z.number().int().nonnegative().optional()
@@ -243,6 +249,7 @@ export function startRunnerControlServer({
           cron: z.string().optional(),
           timezone: z.string().optional(),
           paused: z.boolean().optional(),
+          scheduledSessionPermission: z.enum(['aware', 'self_control', 'system_control']).optional(),
           allowOverlap: z.boolean().optional(),
           catchUpPolicy: z.enum(['once_within_window', 'skip']).optional(),
           maxSkewMs: z.number().int().nonnegative().optional()
@@ -287,6 +294,38 @@ export function startRunnerControlServer({
     }, async () => {
       const runs = await listScheduledTaskRuns()
       return { runs }
+    });
+
+    typed.post('/scheduler/runs/report-outcome', {
+      schema: {
+        body: z.object({
+          runId: z.string(),
+          outcome: z.object({
+            status: z.enum(['completed', 'partial', 'blocked', 'abandoned']),
+            summary: z.string().min(1),
+            needsUserIntervention: z.boolean().optional(),
+            permanentFailureLikely: z.boolean().optional(),
+            reportedAt: z.number()
+          })
+        }),
+        response: {
+          200: z.object({ run: z.unknown().nullable() }),
+          500: z.object({ error: z.string() })
+        }
+      }
+    }, async (request, reply) => {
+      try {
+        const run = await reportScheduledTaskOutcome({
+          runId: request.body.runId,
+          outcome: request.body.outcome
+        })
+        return { run }
+      } catch (error) {
+        reply.code(500)
+        return {
+          error: error instanceof Error && error.message ? error.message : 'Failed to report scheduled task outcome'
+        }
+      }
     });
 
     typed.post('/scheduler/tasks/cancel', {

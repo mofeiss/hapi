@@ -8,6 +8,7 @@ import type {
   CreateScheduledTaskInput,
   ListScheduledTaskRunsFilters,
   ListScheduledTasksFilters,
+  ReportScheduledTaskOutcomeInput,
   SchedulerTriggerContext,
   SchedulerTriggerResult,
   UpdateScheduledTaskInput
@@ -101,6 +102,7 @@ function assertTaskCanRun(input: {
       timezone: input.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
       status: 'active',
       paused: false,
+      scheduledSessionPermission: 'aware',
       allowOverlap: false,
       catchUpPolicy: 'once_within_window',
       maxSkewMs: 10 * 60 * 1000,
@@ -180,6 +182,7 @@ export class RunnerSchedulerService {
       nextRunAt: undefined,
       status: 'active',
       paused: input.paused ?? false,
+      scheduledSessionPermission: input.scheduledSessionPermission,
       allowOverlap: input.allowOverlap ?? false,
       catchUpPolicy: input.catchUpPolicy ?? 'once_within_window',
       maxSkewMs: input.maxSkewMs ?? 10 * 60 * 1000,
@@ -240,6 +243,7 @@ export class RunnerSchedulerService {
       scheduleSpec: resolveScheduleSpec({ scheduleType, runAt, cron }),
       timezone: input.timezone ?? existing.timezone,
       paused: nextPaused,
+      scheduledSessionPermission: input.scheduledSessionPermission ?? existing.scheduledSessionPermission,
       allowOverlap: input.allowOverlap ?? existing.allowOverlap,
       catchUpPolicy: input.catchUpPolicy ?? existing.catchUpPolicy,
       maxSkewMs: input.maxSkewMs ?? existing.maxSkewMs,
@@ -314,6 +318,32 @@ export class RunnerSchedulerService {
 
     this.scheduleNextWakeup()
     return deletedTask
+  }
+
+  async reportTaskOutcome(input: ReportScheduledTaskOutcomeInput): Promise<ScheduledTaskRun | null> {
+    const currentState = await this.store.read()
+    const existing = currentState.runs.find((run) => run.id === input.runId)
+    if (!existing) {
+      return null
+    }
+
+    const updatedRun: ScheduledTaskRun = {
+      ...existing,
+      taskOutcome: input.outcome,
+      updatedAt: Math.max(existing.updatedAt, input.outcome.reportedAt)
+    }
+
+    await this.store.update((state) => ({
+      ...state,
+      runs: state.runs.map((run) => run.id === input.runId ? updatedRun : run)
+    }))
+
+    const task = currentState.tasks.find((entry) => entry.id === existing.taskId)
+    if (task) {
+      await this.emitChange({ type: 'run-updated', run: updatedRun, task })
+    }
+
+    return updatedRun
   }
 
   async reconcileTasks(now: number = Date.now()): Promise<void> {

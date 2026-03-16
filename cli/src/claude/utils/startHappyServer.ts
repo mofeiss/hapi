@@ -86,7 +86,7 @@ export async function startHappyServer(client: ApiSessionClient) {
         });
     }
 
-    await registerScheduleTools(mcp, client);
+    const scheduleToolNames = await registerScheduleTools(mcp, client);
 
     const transport = new StreamableHTTPServerTransport({
         // NOTE: Returning session id here will result in claude
@@ -121,13 +121,7 @@ export async function startHappyServer(client: ApiSessionClient) {
         url: baseUrl.toString(),
         toolNames: [
             ...(exposeChangeTitle ? ['change_title'] : []),
-            'schedule_create',
-            'schedule_update',
-            'schedule_pause',
-            'schedule_resume',
-            'schedule_list',
-            'schedule_cancel',
-            'schedule_delete'
+            ...scheduleToolNames
         ],
         stop: () => {
             logger.debug('[hapiMCP] Stopping server');

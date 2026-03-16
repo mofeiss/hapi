@@ -35,6 +35,8 @@ function parseArgs(argv: string[]): { url: string | null } {
 const scheduleAgentSchema = z.enum(['claude', 'codex']);
 const scheduleTypeSchema = z.enum(['once', 'cron']);
 const scheduleModelSchema = z.enum(['opus', 'sonnet', 'gpt-5.4']);
+const scheduledSessionPermissionSchema = z.enum(['aware', 'self_control', 'system_control']);
+const scheduledTaskOutcomeStatusSchema = z.enum(['completed', 'partial', 'blocked', 'abandoned']);
 
 const allToolDefinitions = [
   {
@@ -59,7 +61,8 @@ const allToolDefinitions = [
       cron: z.string().optional().describe('For cron tasks: cron expression, e.g. */5 * * * *'),
       targetDirectory: z.string().min(1).describe('Working directory for the spawned session'),
       timezone: z.string().optional(),
-      paused: z.boolean().optional()
+      paused: z.boolean().optional(),
+      scheduledSessionPermission: scheduledSessionPermissionSchema.describe('Must be explicitly chosen by the user: aware, self_control, or system_control')
     })
   },
   {
@@ -77,7 +80,8 @@ const allToolDefinitions = [
       cron: z.string().optional(),
       targetDirectory: z.string().min(1).optional(),
       timezone: z.string().optional(),
-      paused: z.boolean().optional()
+      paused: z.boolean().optional(),
+      scheduledSessionPermission: scheduledSessionPermissionSchema.optional()
     })
   },
   {
@@ -109,6 +113,17 @@ const allToolDefinitions = [
     description: 'Delete a scheduled task by id',
     title: 'Delete Scheduled Task',
     inputSchema: z.object({ taskId: z.string().min(1) })
+  },
+  {
+    name: 'schedule_report_outcome',
+    description: 'Report the business outcome of the current scheduled run',
+    title: 'Report Scheduled Outcome',
+    inputSchema: z.object({
+      status: scheduledTaskOutcomeStatusSchema,
+      summary: z.string().min(1),
+      needsUserIntervention: z.boolean().optional(),
+      permanentFailureLikely: z.boolean().optional()
+    })
   }
 ];
 

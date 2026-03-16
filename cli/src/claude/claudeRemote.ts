@@ -7,7 +7,7 @@ import { logger } from "@/lib";
 import { PushableAsyncIterable } from "@/utils/PushableAsyncIterable";
 import { getProjectPath } from "./utils/path";
 import { awaitFileExist } from "@/modules/watcher/awaitFileExist";
-import { systemPrompt } from "./utils/systemPrompt";
+import { buildClaudeSystemPrompt } from "./utils/systemPrompt";
 import { PermissionResult } from "./sdk/types";
 import { getHapiBlobsDir } from "@/constants/uploadPaths";
 
@@ -21,6 +21,7 @@ export async function claudeRemote(opts: {
     claudeArgs?: string[],
     allowedTools: string[],
     hookSettingsPath: string,
+    trigger?: import('@/api/types').SessionTriggerMetadata,
     signal?: AbortSignal,
     canCallTool: (toolName: string, input: unknown, mode: EnhancedMode, options: { signal: AbortSignal }) => Promise<PermissionResult>,
 
@@ -82,6 +83,8 @@ export async function claudeRemote(opts: {
     if (!initial) { // No initial message - exit
         return;
     }
+
+    const systemPrompt = buildClaudeSystemPrompt(opts.trigger);
 
     // Handle special commands
     const specialCommand = parseSpecialCommand(initial.message);
