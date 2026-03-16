@@ -141,6 +141,7 @@ export function SessionChat(props: {
     basePermissionModeOverride?: PermissionMode
     headerTitleOverride?: string | null
     streamOnly?: boolean
+    initialScrollAnchor?: 'top' | 'bottom'
 }) {
     const { t } = useTranslation()
     const { addToast } = useToast()
@@ -1020,6 +1021,7 @@ export function SessionChat(props: {
                         normalizedMessagesCount={normalizedMessages.length}
                         messagesVersion={props.messagesVersion}
                         forceScrollToken={forceScrollToken}
+                        initialScrollAnchor={props.initialScrollAnchor ?? 'bottom'}
                         queuedMessages={messageQueue.queue}
                     />
 

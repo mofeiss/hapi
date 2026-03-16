@@ -136,6 +136,7 @@ export function HappyThread(props: {
     normalizedMessagesCount: number
     messagesVersion: number
     forceScrollToken: number
+    initialScrollAnchor: 'top' | 'bottom'
     queuedMessages?: QueuedMessage[]
 }) {
     const assistantApi = useAssistantApi()
@@ -155,6 +156,7 @@ export function HappyThread(props: {
     const onAtBottomChangeRef = useRef(props.onAtBottomChange)
     const onFlushPendingRef = useRef(props.onFlushPending)
     const forceScrollTokenRef = useRef(props.forceScrollToken)
+    const initialScrollAnchorRef = useRef(props.initialScrollAnchor)
 
     // Smart scroll state: autoScroll enabled when user is near bottom
     const [autoScrollEnabled, setAutoScrollEnabled] = useState(true)
@@ -170,6 +172,9 @@ export function HappyThread(props: {
     useEffect(() => {
         onFlushPendingRef.current = props.onFlushPending
     }, [props.onFlushPending])
+    useEffect(() => {
+        initialScrollAnchorRef.current = props.initialScrollAnchor
+    }, [props.initialScrollAnchor])
     useEffect(() => {
         hasMoreMessagesRef.current = props.hasMoreMessages
     }, [props.hasMoreMessages])
@@ -287,10 +292,18 @@ export function HappyThread(props: {
 
     // Reset state when session changes
     useEffect(() => {
-        setAutoScrollEnabled(true)
-        atBottomRef.current = true
-        onAtBottomChangeRef.current(true)
+        const viewport = viewportRef.current
+        const startAtBottom = initialScrollAnchorRef.current !== 'top'
+
+        setAutoScrollEnabled(startAtBottom)
+        atBottomRef.current = startAtBottom
+        onAtBottomChangeRef.current(startAtBottom)
         forceScrollTokenRef.current = props.forceScrollToken
+
+        if (viewport && !startAtBottom) {
+            viewport.scrollTo({ top: 0, behavior: 'auto' })
+            lastScrollTopRef.current = 0
+        }
     }, [props.sessionId])
 
     useEffect(() => {

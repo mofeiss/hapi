@@ -41,6 +41,7 @@ function renderHappyThread() {
                 normalizedMessagesCount={0}
                 messagesVersion={0}
                 forceScrollToken={0}
+                initialScrollAnchor="bottom"
             />
         </I18nProvider>
     )

@@ -87,6 +87,7 @@ export function EmbeddedSessionView({
   onOpenNewSession,
   headerTitleOverride,
   streamOnly = false,
+  initialScrollAnchor = "bottom",
 }: {
   sessionId: string;
   onBack: () => void;
@@ -98,6 +99,7 @@ export function EmbeddedSessionView({
   onOpenNewSession?: () => void;
   headerTitleOverride?: string | null;
   streamOnly?: boolean;
+  initialScrollAnchor?: "top" | "bottom";
 }) {
   const { api } = useAppContext();
   const { t } = useTranslation();
@@ -502,6 +504,7 @@ export function EmbeddedSessionView({
       permissionSyncPending={permissionSyncPending || modeSyncInFlight}
       permissionModeOverride={optimisticPermissionMode}
       basePermissionModeOverride={optimisticBasePermissionMode}
+      initialScrollAnchor={initialScrollAnchor}
     />
   );
 }

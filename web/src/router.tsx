@@ -2020,6 +2020,7 @@ function ScheduledTaskDetailPanel({
                       onBack={() => handleSelectRun(null)}
                       headerTitleOverride={task.title}
                       streamOnly={!scheduledSessionInteractive}
+                      initialScrollAnchor="top"
                     />
                   </div>
                 </>
