@@ -39,8 +39,17 @@ describe('appServerConfig', () => {
 
         expect(params.baseInstructions).toBeDefined();
         expect(String(params.baseInstructions)).not.toContain('functions.hapi__change_title');
+        expect(String(params.baseInstructions)).toContain('## Scheduled Session Environment');
+        expect(String(params.baseInstructions)).toContain('## Scheduled Run Outcome Reporting');
+        expect(String(params.baseInstructions)).toContain('## Scheduled Session Permissions');
         expect(String(params.baseInstructions)).toContain('functions.hapi__schedule_create');
         expect(String(params.baseInstructions)).toContain('functions.hapi__schedule_list');
+        expect(String(params.baseInstructions)).toContain('MUST use "functions.hapi__schedule_report_outcome" to report the final business outcome of this run.');
+        expect(String(params.baseInstructions)).toContain('The summary must describe the real business outcome, not merely list actions taken.');
+        expect(String(params.baseInstructions)).toContain('Do not use this tool for partial progress updates.');
+        expect(String(params.baseInstructions)).toContain('Use these meanings:');
+        expect(String(params.baseInstructions)).toContain('If you are unsure between partial and blocked, prefer blocked');
+        expect(String(params.baseInstructions)).toContain('Even without scheduler control permissions, you still MUST report the final run outcome through the scheduled outcome reporting tool.');
         expect(params.config).toEqual({
             'mcp_servers.hapi': {
                 command: 'node',

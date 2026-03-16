@@ -67,11 +67,25 @@ describe('buildCodexStartConfig', () => {
             developer_instructions: expect.any(String)
         });
         expect(String(config.config?.developer_instructions)).not.toContain('functions.hapi__change_title');
+        expect(String(config.config?.developer_instructions)).toContain('## Scheduled Session Environment');
+        expect(String(config.config?.developer_instructions)).toContain('## Scheduled Run Outcome Reporting');
+        expect(String(config.config?.developer_instructions)).toContain('## Scheduled Session Permissions');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_create');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_list');
         expect(String(config.config?.developer_instructions)).toContain('You are running inside a HAPI scheduled session.');
         expect(String(config.config?.developer_instructions)).toContain('scheduledSessionPermission: aware');
-        expect(String(config.config?.developer_instructions)).not.toContain('functions.hapi__schedule_report_outcome');
+        expect(String(config.config?.developer_instructions)).toContain('MUST use "functions.hapi__schedule_report_outcome" to report the final business outcome of this run.');
+        expect(String(config.config?.developer_instructions)).toContain('Do not rely on plain text alone to report completion status.');
+        expect(String(config.config?.developer_instructions)).toContain('The summary must describe the real business outcome, not merely list actions taken.');
+        expect(String(config.config?.developer_instructions)).toContain('Do not use this tool for partial progress updates.');
+        expect(String(config.config?.developer_instructions)).toContain('Use these meanings:');
+        expect(String(config.config?.developer_instructions)).toContain('- completed: the requested task objective was successfully achieved.');
+        expect(String(config.config?.developer_instructions)).toContain('- partial: useful progress was made, but the full requested objective was not fully achieved.');
+        expect(String(config.config?.developer_instructions)).toContain('- blocked: the objective could not be completed because required information, access, dependencies, or external conditions were missing or unavailable.');
+        expect(String(config.config?.developer_instructions)).toContain('- abandoned: the objective should be treated as intentionally stopped');
+        expect(String(config.config?.developer_instructions)).toContain('If you are unsure between partial and blocked, prefer blocked');
+        expect(String(config.config?.developer_instructions)).toContain('Your permission level is aware.');
+        expect(String(config.config?.developer_instructions)).toContain('Even without scheduler control permissions, you still MUST report the final run outcome through the scheduled outcome reporting tool.');
         expect(String(config.config?.developer_instructions)).not.toContain('You may use HAPI scheduler tools only for your own task');
         expect(String(config.config?.developer_instructions)).not.toContain('You may use the full HAPI scheduler toolset');
     });
@@ -84,9 +98,17 @@ describe('buildCodexStartConfig', () => {
             mcpServers
         });
 
+        expect(String(config.config?.developer_instructions)).toContain('## Title Management');
+        expect(String(config.config?.developer_instructions)).toContain('## Scheduled Task Creation');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_create');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_list');
-        expect(String(config.config?.developer_instructions)).toContain('must explicitly specify one of: aware, self_control, system_control');
+        expect(String(config.config?.developer_instructions)).toContain('If the user already clearly specifies the permission through direct names or equivalent admin/business wording, do not ask again.');
+        expect(String(config.config?.developer_instructions)).toContain('"lowest permission", "minimal privilege", or "aware permission" => aware');
+        expect(String(config.config?.developer_instructions)).toContain('"self-maintained" or "self-managing" => self_control');
+        expect(String(config.config?.developer_instructions)).toContain('"minimal privilege"');
+        expect(String(config.config?.developer_instructions)).toContain('"self-managing"');
+        expect(String(config.config?.developer_instructions)).toContain('"full scheduler access"');
+        expect(String(config.config?.developer_instructions)).toContain('number them as 1/2/3');
         expect(String(config.config?.developer_instructions)).toContain('task creation success from task execution status');
     });
 
@@ -108,6 +130,7 @@ describe('buildCodexStartConfig', () => {
 
         expect(String(config.config?.developer_instructions)).toContain('You may use HAPI scheduler tools only for your own task (task-1).');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_report_outcome');
+        expect(String(config.config?.developer_instructions)).toContain('Your permission level is self_control.');
         expect(String(config.config?.developer_instructions)).not.toContain('functions.hapi__change_title');
         expect(String(config.config?.developer_instructions)).not.toContain('You may use the full HAPI scheduler toolset');
     });
@@ -130,6 +153,7 @@ describe('buildCodexStartConfig', () => {
 
         expect(String(config.config?.developer_instructions)).toContain('You may use the full HAPI scheduler toolset, including creating new scheduled tasks and managing existing ones.');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_report_outcome');
+        expect(String(config.config?.developer_instructions)).toContain('Your permission level is system_control.');
         expect(String(config.config?.developer_instructions)).toContain('prevent repeated pointless failures');
         expect(String(config.config?.developer_instructions)).not.toContain('functions.hapi__change_title');
     });
