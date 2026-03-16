@@ -1872,11 +1872,16 @@ function ScheduledTaskDetailPanel({
                     <div className="space-y-3 rounded-2xl border border-[var(--app-border)] px-4 py-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                            {t("scheduled.detail.outcome")}
-                          </div>
-                          <div className="mt-1 text-sm text-[var(--app-hint)]">
-                            {t("scheduled.detail.outcomeSummaryHint")}
+                          <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                            <span>{t("scheduled.detail.outcome")}</span>
+                            <button
+                              type="button"
+                              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--app-border)] text-[10px] normal-case tracking-normal text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                              title={t("scheduled.detail.outcomeSummaryHint")}
+                              aria-label={t("scheduled.detail.outcomeSummaryHint")}
+                            >
+                              i
+                            </button>
                           </div>
                         </div>
                         <span
