@@ -139,6 +139,8 @@ export function SessionChat(props: {
     permissionSyncPending?: boolean
     permissionModeOverride?: PermissionMode
     basePermissionModeOverride?: PermissionMode
+    headerTitleOverride?: string | null
+    streamOnly?: boolean
 }) {
     const { t } = useTranslation()
     const { addToast } = useToast()
@@ -966,25 +968,30 @@ export function SessionChat(props: {
 
     return (
         <div className="relative flex h-full flex-col">
-            <SessionHeader
-                session={props.session}
-                includeTopSafeArea={props.includeTopSafeArea}
-                onToggleTerminal={props.session.active ? handleToggleTerminal : undefined}
-                terminalOpen={terminalOpen}
-                onToggleFiles={props.session.metadata?.path ? handleToggleFiles : undefined}
-                filesOpen={filesOpen}
-                onQuickNewSession={props.onQuickNewSession}
-                quickNewSessionPending={props.quickNewSessionPending}
-                api={props.api}
-                onSessionDeleted={props.onSessionDeleted ?? props.onBack}
-            />
+            {!props.streamOnly ? (
+                <>
+                    <SessionHeader
+                        session={props.session}
+                        titleOverride={props.headerTitleOverride}
+                        includeTopSafeArea={props.includeTopSafeArea}
+                        onToggleTerminal={props.session.active ? handleToggleTerminal : undefined}
+                        terminalOpen={terminalOpen}
+                        onToggleFiles={props.session.metadata?.path ? handleToggleFiles : undefined}
+                        filesOpen={filesOpen}
+                        onQuickNewSession={props.onQuickNewSession}
+                        quickNewSessionPending={props.quickNewSessionPending}
+                        api={props.api}
+                        onSessionDeleted={props.onSessionDeleted ?? props.onBack}
+                    />
 
-            {props.permissionSyncPending ? (
-                <div className="px-3 pt-3">
-                    <div className="mx-auto w-full max-w-content rounded-md bg-[var(--app-subtle-bg)] p-3 text-sm text-[var(--app-hint)]">
-                        {t('session.permissionSync.pending')}
-                    </div>
-                </div>
+                    {props.permissionSyncPending ? (
+                        <div className="px-3 pt-3">
+                            <div className="mx-auto w-full max-w-content rounded-md bg-[var(--app-subtle-bg)] p-3 text-sm text-[var(--app-hint)]">
+                                {t('session.permissionSync.pending')}
+                            </div>
+                        </div>
+                    ) : null}
+                </>
             ) : null}
 
             <AssistantRuntimeProvider runtime={runtime}>
@@ -1016,106 +1023,110 @@ export function SessionChat(props: {
                         queuedMessages={messageQueue.queue}
                     />
 
-                    <div className="bg-[var(--app-bg)] px-3 pb-0 pt-2">
-                        <div className="mx-auto w-full max-w-content">
-                            <div className="relative flex min-w-0 items-end gap-3">
-                                <StatusBar
+                    {!props.streamOnly ? (
+                        <>
+                            <div className="bg-[var(--app-bg)] px-3 pb-0 pt-2">
+                                <div className="mx-auto w-full max-w-content">
+                                    <div className="relative flex min-w-0 items-end gap-3">
+                                        <StatusBar
+                                            active={props.session.active}
+                                            thinking={props.session.thinking}
+                                            agentState={props.session.agentState}
+                                            contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
+                                            modelMode={props.session.modelMode}
+                                            voiceStatus={sttVoiceStatus}
+                                            className="relative z-10 min-w-0 flex-1 self-end px-0 pb-2"
+                                        />
+
+                                        {composerTodos.length > 0 ? (
+                                            <>
+                                                <div aria-hidden="true" className="min-w-0 max-w-[min(58%,32rem)] flex-1 self-end">
+                                                    <div className="invisible h-0 w-full max-w-full overflow-hidden pl-1 pr-4 sm:pl-2 sm:pr-5">
+                                                        <TodoPanel
+                                                            todos={composerTodos}
+                                                            variant="dock"
+                                                            collapsible
+                                                            expanded={composerTodoExpanded}
+                                                            onExpandedChange={setComposerTodoExpanded}
+                                                            resetKey={composerTodoResetKey}
+                                                            className="relative z-0 ml-auto w-full min-w-0"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="pointer-events-none absolute bottom-0 right-0 z-0 min-w-0 max-w-[min(58%,32rem)] w-full">
+                                                    <div className="pointer-events-auto ml-auto w-full max-w-full pl-1 pr-4 sm:pl-2 sm:pr-5">
+                                                        <TodoPanel
+                                                            todos={composerTodos}
+                                                            variant="dock"
+                                                            collapsible
+                                                            expanded={composerTodoExpanded}
+                                                            onExpandedChange={setComposerTodoExpanded}
+                                                            resetKey={composerTodoResetKey}
+                                                            className="relative z-0 -mb-7 ml-auto w-full min-w-0"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="relative z-20">
+                                <HappyComposer
+                                    disabled={props.isSending}
+                                    sendDisabled={props.permissionSyncPending === true}
+                                    permissionMode={props.permissionModeOverride ?? props.session.permissionMode}
+                                    basePermissionMode={props.basePermissionModeOverride ?? props.session.basePermissionMode}
+                                    modelMode={props.session.modelMode}
+                                    agentFlavor={agentFlavor}
                                     active={props.session.active}
+                                    allowSendWhenInactive
                                     thinking={props.session.thinking}
                                     agentState={props.session.agentState}
                                     contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
-                                    modelMode={props.session.modelMode}
+                                    controlledByUser={props.session.agentState?.controlledByUser === true}
+                                    onPermissionModeChange={handlePermissionModeChange}
+                                    onModelModeChange={handleModelModeChange}
+                                    onPlanToggle={handlePlanToggle}
+                                    claudeModel={composerClaudeModel}
+                                    claudeModelOptions={claudeComposerModelOptions}
+                                    onClaudeModelChange={handleClaudeModelChange}
+                                    geminiModel={composerGeminiModel}
+                                    geminiModelOptions={isGeminiSession ? LEGACY_GEMINI_MODEL_OPTIONS : []}
+                                    onGeminiModelChange={isGeminiSession ? handleGeminiModelChange : undefined}
+                                    codexModel={composerCodexModel}
+                                    codexModelOptions={codexComposerModelOptions}
+                                    codexReasoningEffort={composerCodexReasoningEffort}
+                                    codexReasoningOptions={[]}
+                                    onCodexModelChange={setComposerCodexModel}
+                                    onCodexReasoningEffortChange={setComposerCodexReasoningEffort}
+                                    autocompleteSuggestions={props.autocompleteSuggestions}
                                     voiceStatus={sttVoiceStatus}
-                                    className="relative z-10 min-w-0 flex-1 self-end px-0 pb-2"
+                                    voiceRawText={stt.rawText}
+                                    voiceCorrectedText={stt.correctedText}
+                                    voiceError={stt.error}
+                                    voiceCorrectionUnavailable={stt.correctionAvailability === 'unavailable'}
+                                    onVoiceToggle={handleVoiceToggle}
+                                    onTranscript={stt.setOnTranscript}
+                                    onQueueSend={messageQueue.enqueue}
+                                    hasQueue={messageQueue.queue.length > 0}
+                                    onFlushQueue={handleFlushNow}
                                 />
-
-                                {composerTodos.length > 0 ? (
-                                    <>
-                                        <div aria-hidden="true" className="min-w-0 max-w-[min(58%,32rem)] flex-1 self-end">
-                                            <div className="invisible h-0 w-full max-w-full overflow-hidden pl-1 pr-4 sm:pl-2 sm:pr-5">
-                                                <TodoPanel
-                                                    todos={composerTodos}
-                                                    variant="dock"
-                                                    collapsible
-                                                    expanded={composerTodoExpanded}
-                                                    onExpandedChange={setComposerTodoExpanded}
-                                                    resetKey={composerTodoResetKey}
-                                                    className="relative z-0 ml-auto w-full min-w-0"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="pointer-events-none absolute bottom-0 right-0 z-0 min-w-0 max-w-[min(58%,32rem)] w-full">
-                                            <div className="pointer-events-auto ml-auto w-full max-w-full pl-1 pr-4 sm:pl-2 sm:pr-5">
-                                                <TodoPanel
-                                                    todos={composerTodos}
-                                                    variant="dock"
-                                                    collapsible
-                                                    expanded={composerTodoExpanded}
-                                                    onExpandedChange={setComposerTodoExpanded}
-                                                    resetKey={composerTodoResetKey}
-                                                    className="relative z-0 -mb-7 ml-auto w-full min-w-0"
-                                                />
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : null}
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="relative z-20">
-                        <HappyComposer
-                            disabled={props.isSending}
-                            sendDisabled={props.permissionSyncPending === true}
-                            permissionMode={props.permissionModeOverride ?? props.session.permissionMode}
-                            basePermissionMode={props.basePermissionModeOverride ?? props.session.basePermissionMode}
-                            modelMode={props.session.modelMode}
-                            agentFlavor={agentFlavor}
-                            active={props.session.active}
-                            allowSendWhenInactive
-                            thinking={props.session.thinking}
-                            agentState={props.session.agentState}
-                            contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
-                            controlledByUser={props.session.agentState?.controlledByUser === true}
-                            onPermissionModeChange={handlePermissionModeChange}
-                            onModelModeChange={handleModelModeChange}
-                            onPlanToggle={handlePlanToggle}
-                            claudeModel={composerClaudeModel}
-                            claudeModelOptions={claudeComposerModelOptions}
-                            onClaudeModelChange={handleClaudeModelChange}
-                            geminiModel={composerGeminiModel}
-                            geminiModelOptions={isGeminiSession ? LEGACY_GEMINI_MODEL_OPTIONS : []}
-                            onGeminiModelChange={isGeminiSession ? handleGeminiModelChange : undefined}
-                            codexModel={composerCodexModel}
-                            codexModelOptions={codexComposerModelOptions}
-                            codexReasoningEffort={composerCodexReasoningEffort}
-                            codexReasoningOptions={[]}
-                            onCodexModelChange={setComposerCodexModel}
-                            onCodexReasoningEffortChange={setComposerCodexReasoningEffort}
-                            autocompleteSuggestions={props.autocompleteSuggestions}
-                            voiceStatus={sttVoiceStatus}
-                            voiceRawText={stt.rawText}
-                            voiceCorrectedText={stt.correctedText}
-                            voiceError={stt.error}
-                            voiceCorrectionUnavailable={stt.correctionAvailability === 'unavailable'}
-                            onVoiceToggle={handleVoiceToggle}
-                            onTranscript={stt.setOnTranscript}
-                            onQueueSend={messageQueue.enqueue}
-                            hasQueue={messageQueue.queue.length > 0}
-                            onFlushQueue={handleFlushNow}
-                        />
-                    </div>
+                            {/* Files overlay - covers main content area only */}
+                            <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${filesOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                <FilesPanel sessionId={props.session.id} />
+                            </div>
 
-                    {/* Files overlay - covers main content area only */}
-                    <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${filesOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                        <FilesPanel sessionId={props.session.id} />
-                    </div>
-
-                    {/* Terminal overlay - covers main content area only */}
-                    <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${terminalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                        <TerminalPanel sessionId={props.session.id} />
-                    </div>
+                            {/* Terminal overlay - covers main content area only */}
+                            <div className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${terminalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                <TerminalPanel sessionId={props.session.id} />
+                            </div>
+                        </>
+                    ) : null}
                 </div>
             </AssistantRuntimeProvider>
 

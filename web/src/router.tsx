@@ -1420,6 +1420,7 @@ function ScheduledTaskDetailPanel({
   onUpdateTask,
   onSelectRun,
   onOpenRunSession,
+  scheduledSessionInteractive,
 }: {
   task: ScheduledTask;
   machineTitle: string;
@@ -1438,6 +1439,7 @@ function ScheduledTaskDetailPanel({
   onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
   onSelectRun: (runId: string | null) => void;
   onOpenRunSession: (sessionId: string) => void;
+  scheduledSessionInteractive: boolean;
 }) {
   const { t } = useTranslation();
   const [promptExpanded, setPromptExpanded] = useState(false);
@@ -1728,13 +1730,17 @@ function ScheduledTaskDetailPanel({
                     onClick={() => onOpenRunSession(selectedRun.sessionId as string)}
                     className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
                   >
-                    {t("scheduled.detail.openFullscreen")}
+                    {scheduledSessionInteractive
+                      ? t("scheduled.detail.exitInteractive")
+                      : t("scheduled.detail.enterInteractive")}
                   </button>
                 </div>
                 <div className="h-[760px] min-w-0 bg-[var(--app-bg)]">
                   <EmbeddedSessionView
                     sessionId={selectedRun.sessionId as string}
                     onBack={() => onSelectRun(null)}
+                    headerTitleOverride={task.title}
+                    streamOnly={!scheduledSessionInteractive}
                   />
                 </div>
               </div>
@@ -2042,6 +2048,8 @@ function SessionsPage() {
   const [selectedScheduledRunId, setSelectedScheduledRunId] = useState<
     string | null
   >(null);
+  const [scheduledInteractiveSessionId, setScheduledInteractiveSessionId] =
+    useState<string | null>(null);
   const lastScheduledTaskIdRef = useRef<string | null>(null);
   const [scheduledDeleteTarget, setScheduledDeleteTarget] = useState<
     ScheduledTask | null
@@ -2259,6 +2267,7 @@ function SessionsPage() {
   useEffect(() => {
     if (selectedScheduledTaskRuns.length === 0) {
       setSelectedScheduledRunId(null);
+      setScheduledInteractiveSessionId(null);
       lastScheduledTaskIdRef.current = selectedScheduledTaskId;
       return;
     }
@@ -2278,6 +2287,20 @@ function SessionsPage() {
       setSelectedScheduledRunId((current) => current ?? selectedScheduledTaskRuns[0]?.id ?? null);
     }
   }, [selectedScheduledRunId, selectedScheduledTaskId, selectedScheduledTaskRuns]);
+
+  useEffect(() => {
+    if (!scheduledInteractiveSessionId) {
+      return;
+    }
+
+    const exists = selectedScheduledTaskRuns.some(
+      (run) => run.sessionId === scheduledInteractiveSessionId,
+    );
+
+    if (!exists) {
+      setScheduledInteractiveSessionId(null);
+    }
+  }, [scheduledInteractiveSessionId, selectedScheduledTaskRuns]);
 
   useEffect(() => {
     if (selectedScheduledTaskId && workspace.tab === "scheduled") {
@@ -3355,11 +3378,16 @@ function SessionsPage() {
   }, []);
 
   const handleScheduledDetailBack = useCallback(() => {
+    setScheduledInteractiveSessionId(null);
     setSelectedScheduledTaskId(null);
     setSelectedScheduledRunId(null);
     setScheduledEditing(false);
     setScheduledEditState(null);
     clearWorkspaceScheduledSelection();
+  }, []);
+
+  const handleScheduledInteractiveBack = useCallback(() => {
+    setScheduledInteractiveSessionId(null);
   }, []);
 
   const toggleMobileSessionPane = useCallback(() => {
@@ -3381,6 +3409,11 @@ function SessionsPage() {
       return;
     }
 
+    if (isScheduledTab && scheduledInteractiveSessionId) {
+      handleScheduledInteractiveBack();
+      return;
+    }
+
     if (isScheduledTab && selectedScheduledTaskId) {
       handleScheduledDetailBack();
       return;
@@ -3391,12 +3424,14 @@ function SessionsPage() {
     }
   }, [
     handleScheduledDetailBack,
+    handleScheduledInteractiveBack,
     isSubRoute,
     isScheduledTab,
     isSessionsTab,
     narrowViewport,
     navigate,
     openSession,
+    scheduledInteractiveSessionId,
     settingsOpen,
     selectedScheduledTaskId,
     swipeForwardSessionId,
@@ -3477,8 +3512,10 @@ function SessionsPage() {
         }
       : isSessionsTab && activeSessionId !== null
         ? handleSessionBack
-        : isScheduledTab && selectedScheduledTaskId
-          ? handleScheduledDetailBack
+        : isScheduledTab && scheduledInteractiveSessionId
+          ? handleScheduledInteractiveBack
+          : isScheduledTab && selectedScheduledTaskId
+            ? handleScheduledDetailBack
           : undefined
     : narrowViewport
       ? undefined
@@ -3721,8 +3758,13 @@ function SessionsPage() {
                         selectWorkspaceScheduledRun(runId);
                       }}
                       onOpenRunSession={(sessionId) => {
-                        openWorkspaceSession(sessionId, "chat");
+                        setScheduledInteractiveSessionId((current) =>
+                          current === sessionId ? null : sessionId,
+                        );
                       }}
+                      scheduledSessionInteractive={
+                        selectedScheduledRun?.sessionId === scheduledInteractiveSessionId
+                      }
                     />
                   ) : isScheduledTab ? (
                     <div className="flex h-full min-h-0 flex-col">
@@ -4342,28 +4384,45 @@ function SessionsPage() {
                 {t("scheduled.detail.empty")}
               </div>
             ) : (
-              <ScheduledTaskDetailPanel
-                task={selectedScheduledTask}
-                machineTitle={selectedScheduledMachineTitle}
-                selectedRun={selectedScheduledRun}
-                taskRuns={selectedScheduledTaskRuns}
-                isEditing={scheduledEditing}
-                editState={scheduledEditState}
-                isPending={scheduledPending}
-                onEditStateChange={setScheduledEditState}
-                onSetEditing={setScheduledEditing}
-                onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
-                onCancelTask={cancelScheduledTask}
-                onDeleteTask={deleteScheduledTask}
-                onUpdateTask={updateScheduledTask}
-                onSelectRun={(runId) => {
-                  setSelectedScheduledRunId(runId);
-                  selectWorkspaceScheduledRun(runId);
-                }}
-                onOpenRunSession={(sessionId) => {
-                  openWorkspaceSession(sessionId, "chat");
-                }}
-              />
+              scheduledInteractiveSessionId && selectedScheduledTask ? (
+                <SessionView
+                  sessionId={scheduledInteractiveSessionId}
+                  onBack={handleScheduledInteractiveBack}
+                  headerTitleOverride={selectedScheduledTask.title}
+                  isDark={isDark}
+                  onToggleTheme={toggleTheme}
+                  onOpenSettings={() => setSettingsOpen(true)}
+                  onOpenNewSession={() => setNewSessionOpen(true)}
+                />
+              ) : (
+                <ScheduledTaskDetailPanel
+                  task={selectedScheduledTask}
+                  machineTitle={selectedScheduledMachineTitle}
+                  selectedRun={selectedScheduledRun}
+                  taskRuns={selectedScheduledTaskRuns}
+                  isEditing={scheduledEditing}
+                  editState={scheduledEditState}
+                  isPending={scheduledPending}
+                  onEditStateChange={setScheduledEditState}
+                  onSetEditing={setScheduledEditing}
+                  onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
+                  onCancelTask={cancelScheduledTask}
+                  onDeleteTask={deleteScheduledTask}
+                  onUpdateTask={updateScheduledTask}
+                  onSelectRun={(runId) => {
+                    setSelectedScheduledRunId(runId);
+                    selectWorkspaceScheduledRun(runId);
+                  }}
+                  onOpenRunSession={(sessionId) => {
+                    setScheduledInteractiveSessionId((current) =>
+                      current === sessionId ? null : sessionId,
+                    );
+                  }}
+                  scheduledSessionInteractive={
+                    selectedScheduledRun?.sessionId === scheduledInteractiveSessionId
+                  }
+                />
+              )
             )}
 
             <ConfirmDialog
@@ -4512,6 +4571,7 @@ function SessionView({
   onToggleTheme,
   onOpenSettings,
   onOpenNewSession,
+  headerTitleOverride,
 }: {
   sessionId: string;
   onBack: () => void;
@@ -4520,6 +4580,7 @@ function SessionView({
   onToggleTheme?: () => void;
   onOpenSettings?: () => void;
   onOpenNewSession?: () => void;
+  headerTitleOverride?: string | null;
 }) {
   return (
     <EmbeddedSessionView
@@ -4527,6 +4588,7 @@ function SessionView({
       onBack={onBack}
       onSessionDeleted={onSessionDeleted}
       includeTopSafeArea={false}
+      headerTitleOverride={headerTitleOverride}
       isDark={isDark}
       onToggleTheme={onToggleTheme}
       onOpenSettings={onOpenSettings}

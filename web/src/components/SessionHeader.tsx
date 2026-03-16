@@ -21,7 +21,7 @@ function getSessionTitle(session: Session): string {
 
 export function SessionHeader(props: {
   session: Session;
-  titleOverride?: string | null; // deprecated, now reads from store
+  titleOverride?: string | null;
   includeTopSafeArea?: boolean;
   onToggleTerminal?: () => void;
   terminalOpen?: boolean;
@@ -37,8 +37,8 @@ export function SessionHeader(props: {
   const includeTopSafeArea = props.includeTopSafeArea ?? true;
   const titleFromStore = useSessionTitleOverride(session.id);
   const title = useMemo(
-    () => titleFromStore ?? getSessionTitle(session),
-    [session, titleFromStore],
+    () => props.titleOverride ?? titleFromStore ?? getSessionTitle(session),
+    [props.titleOverride, session, titleFromStore],
   );
   const displayPath = session.metadata?.path
     ? normalizeProjectPath(session.metadata.path)

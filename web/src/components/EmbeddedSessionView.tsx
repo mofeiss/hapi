@@ -85,6 +85,8 @@ export function EmbeddedSessionView({
   onToggleTheme,
   onOpenSettings,
   onOpenNewSession,
+  headerTitleOverride,
+  streamOnly = false,
 }: {
   sessionId: string;
   onBack: () => void;
@@ -94,6 +96,8 @@ export function EmbeddedSessionView({
   onToggleTheme?: () => void;
   onOpenSettings?: () => void;
   onOpenNewSession?: () => void;
+  headerTitleOverride?: string | null;
+  streamOnly?: boolean;
 }) {
   const { api } = useAppContext();
   const { t } = useTranslation();
@@ -470,6 +474,8 @@ export function EmbeddedSessionView({
       api={api}
       session={session}
       includeTopSafeArea={includeTopSafeArea}
+      headerTitleOverride={headerTitleOverride}
+      streamOnly={streamOnly}
       messages={messages}
       messagesWarning={messagesWarning}
       hasMoreMessages={messagesHasMore}
