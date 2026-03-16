@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Outlet, useLocation, useMatchRoute, useRouter } from '@tanstack/react-router'
+import { Outlet, useLocation, useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { getTelegramWebApp, isTelegramApp } from '@/hooks/useTelegram'
 import { initializeTheme } from '@/hooks/useTheme'
@@ -14,6 +14,7 @@ import { useViewportHeight } from '@/hooks/useViewportHeight'
 import { queryKeys } from '@/lib/query-keys'
 import { AppContextProvider } from '@/lib/app-context'
 import { fetchLatestMessages } from '@/lib/message-window-store'
+import { useWorkspaceState } from '@/lib/workspace-store'
 import { useAppGoBack } from '@/hooks/useAppGoBack'
 import { useTranslation } from '@/lib/use-translation'
 import { VoiceProvider } from '@/lib/voice-context'
@@ -90,7 +91,7 @@ function AppInner() {
     const { token, api, isLoading: isAuthLoading, error: authError, needsBinding, bind } = useAuth(authSource, baseUrl)
     const goBack = useAppGoBack()
     const pathname = useLocation({ select: (location) => location.pathname })
-    const matchRoute = useMatchRoute()
+    const workspace = useWorkspaceState()
     const router = useRouter()
     const { addToast } = useToast()
 
@@ -122,8 +123,7 @@ function AppInner() {
         }
     }, [goBack, pathname])
     const queryClient = useQueryClient()
-    const sessionMatch = matchRoute({ to: '/sessions/$sessionId' })
-    const selectedSessionId = sessionMatch && sessionMatch.sessionId !== 'new' ? sessionMatch.sessionId : null
+    const selectedSessionId = workspace.tab === 'sessions' ? workspace.selectedSessionId : null
     const { isSyncing, startSync, endSync } = useSyncingState()
     const [sseDisconnected, setSseDisconnected] = useState(false)
     const syncTokenRef = useRef(0)
