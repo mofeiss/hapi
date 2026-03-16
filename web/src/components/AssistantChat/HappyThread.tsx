@@ -160,6 +160,7 @@ export function HappyThread(props: {
     const forceScrollTokenRef = useRef(props.forceScrollToken)
     const initialScrollAnchorRef = useRef(props.initialScrollAnchor)
     const suppressNewMessagesIndicatorRef = useRef(Boolean(props.suppressNewMessagesIndicator))
+    const topAnchorStabilizedSessionIdRef = useRef<string | null>(null)
 
     // Smart scroll state: autoScroll enabled when user is near bottom
     const [autoScrollEnabled, setAutoScrollEnabled] = useState(() => !startPinnedAtTop)
@@ -324,8 +325,50 @@ export function HappyThread(props: {
         if (viewport && !startAtBottom) {
             viewport.scrollTo({ top: 0, behavior: 'auto' })
             lastScrollTopRef.current = 0
+            topAnchorStabilizedSessionIdRef.current = null
         }
     }, [props.sessionId])
+
+    useLayoutEffect(() => {
+        if (initialScrollAnchorRef.current !== 'top') {
+            return
+        }
+
+        if (topAnchorStabilizedSessionIdRef.current === props.sessionId) {
+            return
+        }
+
+        const viewport = viewportRef.current
+        if (!viewport) {
+            return
+        }
+
+        let cancelled = false
+        let frameCount = 0
+
+        const pinToTop = () => {
+            if (cancelled) {
+                return
+            }
+
+            viewport.scrollTo({ top: 0, behavior: 'auto' })
+            lastScrollTopRef.current = 0
+            frameCount += 1
+
+            if (frameCount < 4) {
+                requestAnimationFrame(pinToTop)
+                return
+            }
+
+            topAnchorStabilizedSessionIdRef.current = props.sessionId
+        }
+
+        requestAnimationFrame(pinToTop)
+
+        return () => {
+            cancelled = true
+        }
+    }, [props.messagesVersion, props.sessionId])
 
     useEffect(() => {
         if (forceScrollTokenRef.current === props.forceScrollToken) {

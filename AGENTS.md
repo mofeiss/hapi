@@ -104,6 +104,12 @@ Current web shape; keep this section updated when layout/navigation model shifts
 - Scheduled pane has grouped task list + task detail + run detail selection model.
 - Search, collapsed machine groups, selected task/run, and edit/delete flows live in `web/src/router.tsx` shell logic.
 - If changing scheduled interactions, inspect both `ScheduledTaskActionMenu` and workspace selection helpers.
+- Scheduler task detail -> Session subview has different scroll semantics from normal Sessions and this is intentional.
+- Normal Session entry from `sessions` tab is editing-oriented: default chat/thread focus should land at the bottom so users can continue from latest state.
+- Scheduler Session entry from scheduled task detail is review-oriented: both `View` and `Active` must default to the top so users can read execution history from the beginning.
+- Do not unify these two entry behaviors unless the user explicitly asks. Treat them as distinct product requirements, not inconsistent implementations.
+- High-risk regression area: changing scheduler detail height, replacing fixed heights with `flex-1`, changing header height/rows, or altering chat viewport mount timing can silently reintroduce Scheduler Session auto-scroll-to-bottom.
+- Current implementation relies on `EmbeddedSessionView`/`SessionChat`/`HappyThread` passing `initialScrollAnchor="top"` for Scheduler Sessions, suppressing new-message bottom-jump behavior for scheduled sessions, and stabilizing the top anchor for the first few frames to survive late layout growth. Preserve that chain when refactoring.
 
 ### Theme switching pitfall
 
