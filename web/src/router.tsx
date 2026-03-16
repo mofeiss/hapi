@@ -1565,10 +1565,23 @@ function ScheduledTaskDetailPanel({
   }, [selectedRun?.id]);
 
   useEffect(() => {
-    if (!selectedRun?.sessionId && sessionSubMode === "active") {
+    if (sessionSubMode !== "active") {
+      return;
+    }
+
+    // On refresh, the remembered sub-mode may restore before the selected run
+    // rehydrates. Keep Active during that gap instead of forcing a fallback.
+    if (!selectedRun) {
+      if (taskRuns.length === 0) {
+        setSessionSubMode("view");
+      }
+      return;
+    }
+
+    if (!selectedRun.sessionId) {
       setSessionSubMode("view");
     }
-  }, [selectedRun?.sessionId, sessionSubMode]);
+  }, [selectedRun, sessionSubMode, taskRuns.length]);
 
   useEffect(() => {
     if (detailMode !== "session") {
