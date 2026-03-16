@@ -140,6 +140,10 @@ export function SessionChat(props: {
     permissionModeOverride?: PermissionMode
     basePermissionModeOverride?: PermissionMode
     headerTitleOverride?: string | null
+    headerTitleClassName?: string
+    headerHideQuickNewButton?: boolean
+    headerHideWidescreenButton?: boolean
+    headerHideSubtitleRow?: boolean
     streamOnly?: boolean
     initialScrollAnchor?: 'top' | 'bottom'
 }) {
@@ -975,6 +979,7 @@ export function SessionChat(props: {
                     <SessionHeader
                         session={props.session}
                         titleOverride={props.headerTitleOverride}
+                        titleClassName={props.headerTitleClassName}
                         includeTopSafeArea={props.includeTopSafeArea}
                         onToggleTerminal={props.session.active ? handleToggleTerminal : undefined}
                         terminalOpen={terminalOpen}
@@ -982,6 +987,9 @@ export function SessionChat(props: {
                         filesOpen={filesOpen}
                         onQuickNewSession={props.onQuickNewSession}
                         quickNewSessionPending={props.quickNewSessionPending}
+                        hideQuickNewButton={props.headerHideQuickNewButton}
+                        hideWidescreenButton={props.headerHideWidescreenButton}
+                        hideSubtitleRow={props.headerHideSubtitleRow}
                         api={props.api}
                         onSessionDeleted={props.onSessionDeleted ?? props.onBack}
                     />

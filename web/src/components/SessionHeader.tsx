@@ -22,6 +22,7 @@ function getSessionTitle(session: Session): string {
 export function SessionHeader(props: {
   session: Session;
   titleOverride?: string | null;
+  titleClassName?: string;
   includeTopSafeArea?: boolean;
   onToggleTerminal?: () => void;
   terminalOpen?: boolean;
@@ -29,6 +30,9 @@ export function SessionHeader(props: {
   filesOpen?: boolean;
   onQuickNewSession?: () => void;
   quickNewSessionPending?: boolean;
+  hideQuickNewButton?: boolean;
+  hideWidescreenButton?: boolean;
+  hideSubtitleRow?: boolean;
   api: ApiClient | null;
   onSessionDeleted?: () => void;
 }) {
@@ -40,14 +44,6 @@ export function SessionHeader(props: {
     () => props.titleOverride ?? titleFromStore ?? getSessionTitle(session),
     [props.titleOverride, session, titleFromStore],
   );
-  const displayPath = session.metadata?.path
-    ? normalizeProjectPath(session.metadata.path)
-    : null;
-  const createdAtLabel = useMemo(
-    () => formatTimestamp(session.createdAt),
-    [session.createdAt],
-  );
-
   // In Telegram, don't render header (Telegram provides its own)
   if (isTelegramApp()) {
     return null;
@@ -68,7 +64,7 @@ export function SessionHeader(props: {
                 thinking={session.thinking}
                 sizeClassName="h-4 w-4"
               />
-              <div className="min-w-0 flex-1 truncate font-semibold">
+              <div className={`min-w-0 flex-1 truncate font-semibold ${props.titleClassName ?? ""}`}>
                 {title}
               </div>
             </div>
@@ -77,6 +73,7 @@ export function SessionHeader(props: {
           <HeaderActionGroup
             onQuickNewSession={props.onQuickNewSession}
             hideNewSessionButton
+            hideQuickNewButton={props.hideQuickNewButton}
             hideThemeControls
             hideSettingsButton
             quickNewSessionPending={props.quickNewSessionPending}
@@ -84,69 +81,73 @@ export function SessionHeader(props: {
             terminalOpen={props.terminalOpen}
             onToggleFiles={props.onToggleFiles}
             filesOpen={props.filesOpen}
-            onToggleWidescreen={toggleWidescreen}
-            widescreen={widescreen}
+            onToggleWidescreen={props.hideWidescreenButton ? undefined : toggleWidescreen}
+            widescreen={props.hideWidescreenButton ? undefined : widescreen}
             widescreenClassName={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${widescreen ? "text-[var(--app-link)]" : "text-[var(--app-hint)]"}`}
             className="flex items-center gap-0.5"
           />
         </div>
-        <div className="border-t border-[var(--app-border)]" />
-        <div className="mx-auto w-full max-w-content px-3 py-1.5">
-          <div
-            className="flex min-w-0 items-center gap-x-3 overflow-hidden whitespace-nowrap text-xs text-[var(--app-hint)]"
-            style={{ opacity: "var(--app-session-subtitle-opacity)" }}
-          >
-            {session.metadata?.host ? (
-              <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                  <line x1="8" y1="21" x2="16" y2="21" />
-                  <line x1="12" y1="17" x2="12" y2="21" />
-                </svg>
-                <span className="truncate">{session.metadata.host}</span>
-              </span>
-            ) : null}
-            {displayPath ? (
-              <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
-                <span className="shrink-0 text-[10px]" aria-hidden="true">
-                  📂
-                </span>
-                <span className="truncate">{displayPath}</span>
-              </span>
-            ) : null}
-            {createdAtLabel ? (
-              <span className="inline-flex shrink-0 items-center gap-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-                <span>{createdAtLabel}</span>
-              </span>
-            ) : null}
-          </div>
-        </div>
+        {!props.hideSubtitleRow ? (
+          <>
+            <div className="border-t border-[var(--app-border)]" />
+            <div className="mx-auto w-full max-w-content px-3 py-1.5">
+              <div
+                className="flex min-w-0 items-center gap-x-3 overflow-hidden whitespace-nowrap text-xs text-[var(--app-hint)]"
+                style={{ opacity: "var(--app-session-subtitle-opacity)" }}
+              >
+                {session.metadata?.host ? (
+                  <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                      <line x1="8" y1="21" x2="16" y2="21" />
+                      <line x1="12" y1="17" x2="12" y2="21" />
+                    </svg>
+                    <span className="truncate">{session.metadata.host}</span>
+                  </span>
+                ) : null}
+                {session.metadata?.path ? (
+                  <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
+                    <span className="shrink-0 text-[10px]" aria-hidden="true">
+                      📂
+                    </span>
+                    <span className="truncate">{normalizeProjectPath(session.metadata.path)}</span>
+                  </span>
+                ) : null}
+                {session.createdAt ? (
+                  <span className="inline-flex shrink-0 items-center gap-1">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <span>{formatTimestamp(session.createdAt)}</span>
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
     </>
   );

@@ -111,7 +111,7 @@ export default {
   "scheduled.detail.triggered": "Triggered",
   "scheduled.detail.finished": "Finished",
   "scheduled.detail.runId": "Run ID",
-  "scheduled.detail.session": "Session",
+  "scheduled.detail.session": "Session ID",
   "scheduled.detail.sessionView": "Session Detail",
   "scheduled.detail.enterInteractive": "Enter Interactive Mode",
   "scheduled.detail.exitInteractive": "Exit Interactive Mode",

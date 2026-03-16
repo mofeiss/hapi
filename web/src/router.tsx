@@ -1087,67 +1087,11 @@ function ScheduledTaskListRow(props: {
               }
               aria-label={t("scheduled.list.iconLabel")}
             >
-              {props.latestRun?.status === "running" ? (
-                <svg
-                  className="h-3.5 w-3.5 animate-spin"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-              ) : props.latestRun?.status === "failed" ? (
-                <svg
-                  className="h-3.5 w-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="m15 9-6 6" />
-                  <path d="m9 9 6 6" />
-                </svg>
-              ) : props.latestRun?.status === "succeeded" ? (
-                <svg
-                  className="h-3.5 w-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-              ) : props.task.paused ? (
-                <svg
-                  className="h-3.5 w-3.5"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <rect x="6" y="5" width="4" height="14" rx="1" />
-                  <rect x="14" y="5" width="4" height="14" rx="1" />
-                </svg>
-              ) : (
-                <svg
-                  className="h-3.5 w-3.5"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="4" />
-                </svg>
-              )}
+              <ScheduledTaskStatusIcon
+                task={props.task}
+                latestRun={props.latestRun}
+                className="h-3.5 w-3.5"
+              />
             </span>
             <div
               className={`truncate text-base leading-none ${
@@ -1230,9 +1174,94 @@ function ScheduledTaskListRow(props: {
   );
 }
 
+function ScheduledTaskStatusIcon(props: {
+  task: ScheduledTask;
+  latestRun: ScheduledTaskRun | undefined;
+  className?: string;
+}) {
+  if (props.latestRun?.status === "running") {
+    return (
+      <svg
+        className={`${props.className ?? "h-3.5 w-3.5"} animate-spin`}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+    );
+  }
+
+  if (props.latestRun?.status === "failed") {
+    return (
+      <svg
+        className={props.className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="m15 9-6 6" />
+        <path d="m9 9 6 6" />
+      </svg>
+    );
+  }
+
+  if (props.latestRun?.status === "succeeded") {
+    return (
+      <svg
+        className={props.className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    );
+  }
+
+  if (props.task.paused) {
+    return (
+      <svg
+        className={props.className}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <rect x="6" y="5" width="4" height="14" rx="1" />
+        <rect x="14" y="5" width="4" height="14" rx="1" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      className={props.className}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="4" />
+    </svg>
+  );
+}
+
 function ScheduledTaskHeader(props: {
   task: ScheduledTask;
-  machineTitle: string;
+  latestRun: ScheduledTaskRun | undefined;
+  iconToneClass: string;
   isEditing: boolean;
   editState: ScheduledTitleEditState | null;
   isPending: boolean;
@@ -1247,11 +1276,6 @@ function ScheduledTaskHeader(props: {
 }) {
   const { t } = useTranslation();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const displayPath = normalizeProjectPath(props.task.targetDirectory);
-  const createdAtLabel = useMemo(
-    () => formatTimestamp(props.task.createdAt),
-    [props.task.createdAt],
-  );
   const headerIconButtonClassName =
     "flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-50";
   const headerCompactButtonClassName =
@@ -1264,11 +1288,16 @@ function ScheduledTaskHeader(props: {
       <div className="mx-auto flex w-full max-w-content items-center gap-2 px-3 py-[8px]">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-            <AgentFlavorStatusIcon
-              flavor={props.task.agentFlavor}
-              active
-              sizeClassName="h-4 w-4"
-            />
+            <span
+              className={"inline-flex h-4 w-4 shrink-0 items-center justify-center " + props.iconToneClass}
+              aria-label={t("scheduled.list.iconLabel")}
+            >
+              <ScheduledTaskStatusIcon
+                task={props.task}
+                latestRun={props.latestRun}
+                className="h-3.5 w-3.5"
+              />
+            </span>
             <div className="min-w-0 flex-1">
               {props.isEditing && props.editState ? (
                 <input
@@ -1390,58 +1419,6 @@ function ScheduledTaskHeader(props: {
         </div>
       </div>
       <div className="border-t border-[var(--app-border)]" />
-      <div className="mx-auto w-full max-w-content px-3 py-1.5">
-        <div
-          className="flex min-w-0 items-center gap-x-3 overflow-hidden whitespace-nowrap text-xs text-[var(--app-hint)]"
-          style={{ opacity: "var(--app-session-subtitle-opacity)" }}
-        >
-          <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
-            <span className="truncate">{props.machineTitle}</span>
-          </span>
-          <span className="inline-flex min-w-0 items-center gap-1 overflow-hidden">
-            <span className="shrink-0 text-[10px]" aria-hidden="true">
-              📂
-            </span>
-            <span className="truncate">{displayPath}</span>
-          </span>
-          {createdAtLabel ? (
-            <span className="inline-flex shrink-0 items-center gap-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span>{createdAtLabel}</span>
-            </span>
-          ) : null}
-        </div>
-      </div>
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
@@ -1466,6 +1443,7 @@ function ScheduledTaskDetailPanel({
   machineTitle,
   selectedRun,
   taskRuns,
+  latestRun,
   isEditing,
   editState,
   isPending,
@@ -1483,6 +1461,7 @@ function ScheduledTaskDetailPanel({
   machineTitle: string;
   selectedRun: ScheduledTaskRun | null;
   taskRuns: ScheduledTaskRun[];
+  latestRun: ScheduledTaskRun | undefined;
   isEditing: boolean;
   editState: ScheduledTitleEditState | null;
   isPending: boolean;
@@ -1526,6 +1505,19 @@ function ScheduledTaskDetailPanel({
   const configReadOnlyValueClassName =
     "block min-h-[19px] w-full overflow-hidden whitespace-nowrap text-right text-sm leading-[19px] text-[var(--app-fg)]";
   const sessionModeDisabled = !selectedRun?.sessionId;
+  const createdAtLabel = useMemo(
+    () => formatTimestamp(task.createdAt),
+    [task.createdAt],
+  );
+  const scheduledTaskIconToneClassName = task.paused
+    ? "text-amber-600"
+    : latestRun?.status === "running"
+      ? "text-sky-600"
+      : latestRun?.status === "failed"
+        ? "text-red-600"
+        : latestRun?.status === "succeeded"
+          ? "text-emerald-600"
+          : "text-[var(--app-hint)]";
 
   useEffect(() => {
     if (detailMode !== "session") {
@@ -1641,7 +1633,8 @@ function ScheduledTaskDetailPanel({
     <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
       <ScheduledTaskHeader
         task={task}
-        machineTitle={machineTitle}
+        latestRun={latestRun}
+        iconToneClass={scheduledTaskIconToneClassName}
         isEditing={isEditing}
         editState={editState}
         isPending={isPending}
@@ -1718,9 +1711,25 @@ function ScheduledTaskDetailPanel({
               <div>
                 {[
                   {
+                    key: "machine",
+                    label: "Machine",
+                    value: machineTitle,
+                  },
+                  {
                     key: "agent-model",
                     label: `${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`,
-                    valueNode: <span className={configReadOnlyValueClassName}>{`${task.agentFlavor} / ${task.model ?? "-"}`}</span>,
+                    valueNode: (
+                      <span className={configReadOnlyValueClassName}>
+                        <span className="inline-flex max-w-full items-center justify-end gap-1.5 align-top">
+                          <AgentFlavorStatusIcon
+                            flavor={task.agentFlavor}
+                            active
+                            sizeClassName="h-3.5 w-3.5"
+                          />
+                          <span className="truncate">{`${task.agentFlavor} / ${task.model ?? "-"}`}</span>
+                        </span>
+                      </span>
+                    ),
                   },
                   {
                     key: "prompt",
@@ -1781,6 +1790,11 @@ function ScheduledTaskDetailPanel({
                         </span>
                       </div>
                     ),
+                  },
+                  {
+                    key: "created",
+                    label: t("scheduled.detail.created"),
+                    value: createdAtLabel ?? "-",
                   },
                 ].map((item, index) => (
                   <>
@@ -2018,7 +2032,11 @@ function ScheduledTaskDetailPanel({
                     <EmbeddedSessionView
                       sessionId={selectedRun.sessionId as string}
                       onBack={() => handleSelectRun(null)}
-                      headerTitleOverride={task.title}
+                      headerTitleOverride={`SESSION ID ${selectedRun.sessionId}`}
+                      headerTitleClassName="text-xs font-medium text-[var(--app-hint)]"
+                      headerHideQuickNewButton
+                      headerHideWidescreenButton
+                      headerHideSubtitleRow
                       streamOnly={!scheduledSessionInteractive}
                       initialScrollAnchor="top"
                     />
@@ -4012,6 +4030,7 @@ function SessionsPage() {
                       machineTitle={selectedScheduledMachineTitle}
                       selectedRun={selectedScheduledRun}
                       taskRuns={selectedScheduledTaskRuns}
+                      latestRun={latestScheduledRunByTaskId.get(selectedScheduledTask.id)}
                       isEditing={scheduledEditing}
                       editState={scheduledEditState}
                       isPending={scheduledPending}
@@ -4655,6 +4674,7 @@ function SessionsPage() {
                 machineTitle={selectedScheduledMachineTitle}
                 selectedRun={selectedScheduledRun}
                 taskRuns={selectedScheduledTaskRuns}
+                latestRun={latestScheduledRunByTaskId.get(selectedScheduledTask.id)}
                 isEditing={scheduledEditing}
                 editState={scheduledEditState}
                 isPending={scheduledPending}

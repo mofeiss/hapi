@@ -110,7 +110,7 @@ export default {
   'scheduled.detail.triggered': '触发时间',
   'scheduled.detail.finished': '完成时间',
   'scheduled.detail.runId': '执行 ID',
-  'scheduled.detail.session': '会话',
+  'scheduled.detail.session': '会话 ID',
   'scheduled.detail.sessionView': '会话详情',
   'scheduled.detail.enterInteractive': '进入交互模式',
   'scheduled.detail.exitInteractive': '退出交互模式',

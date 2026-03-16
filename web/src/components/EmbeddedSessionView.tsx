@@ -86,6 +86,10 @@ export function EmbeddedSessionView({
   onOpenSettings,
   onOpenNewSession,
   headerTitleOverride,
+  headerTitleClassName,
+  headerHideQuickNewButton = false,
+  headerHideWidescreenButton = false,
+  headerHideSubtitleRow = false,
   streamOnly = false,
   initialScrollAnchor = "bottom",
 }: {
@@ -98,6 +102,10 @@ export function EmbeddedSessionView({
   onOpenSettings?: () => void;
   onOpenNewSession?: () => void;
   headerTitleOverride?: string | null;
+  headerTitleClassName?: string;
+  headerHideQuickNewButton?: boolean;
+  headerHideWidescreenButton?: boolean;
+  headerHideSubtitleRow?: boolean;
   streamOnly?: boolean;
   initialScrollAnchor?: "top" | "bottom";
 }) {
@@ -477,6 +485,10 @@ export function EmbeddedSessionView({
       session={session}
       includeTopSafeArea={includeTopSafeArea}
       headerTitleOverride={headerTitleOverride}
+      headerTitleClassName={headerTitleClassName}
+      headerHideQuickNewButton={headerHideQuickNewButton}
+      headerHideWidescreenButton={headerHideWidescreenButton}
+      headerHideSubtitleRow={headerHideSubtitleRow}
       streamOnly={streamOnly}
       messages={messages}
       messagesWarning={messagesWarning}
