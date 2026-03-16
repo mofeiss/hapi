@@ -1562,16 +1562,17 @@ function ScheduledTaskDetailPanel({
                   setDetailMode(value as ScheduledDetailMode);
                 }}
                 aria-label={t("scheduled.detail.modeSwitcher")}
+                className="rounded-xl"
               >
-                <ToggleGroupItem value="overview">
+                <ToggleGroupItem value="overview" className="rounded-lg px-2.5 py-1.5">
                   {t("scheduled.detail.mode.overview")}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="runs">
+                <ToggleGroupItem value="runs" className="rounded-lg px-2.5 py-1.5">
                   {t("scheduled.detail.mode.runs")}
                 </ToggleGroupItem>
                 <ToggleGroupItem
                   value="session"
-                  className={sessionModeDisabled ? "opacity-50 cursor-not-allowed" : ""}
+                  className={`rounded-lg px-2.5 py-1.5 ${sessionModeDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {t("scheduled.detail.mode.session")}
                 </ToggleGroupItem>
