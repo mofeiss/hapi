@@ -1989,7 +1989,7 @@ function ScheduledTaskDetailPanel({
           ) : null}
 
           {detailMode === "session" ? (
-            <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
+            <div className="overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
               {!selectedRun?.sessionId ? (
                 <div className="px-4 py-6 text-sm text-[var(--app-hint)]">
                   {t("scheduled.detail.mode.sessionDisabled")}
