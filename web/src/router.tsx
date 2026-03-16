@@ -3386,10 +3386,6 @@ function SessionsPage() {
     clearWorkspaceScheduledSelection();
   }, []);
 
-  const handleScheduledInteractiveBack = useCallback(() => {
-    setScheduledInteractiveSessionId(null);
-  }, []);
-
   const toggleMobileSessionPane = useCallback(() => {
     if (!narrowViewport || settingsOpen || isSubRoute) {
       return;
@@ -3409,11 +3405,6 @@ function SessionsPage() {
       return;
     }
 
-    if (isScheduledTab && scheduledInteractiveSessionId) {
-      handleScheduledInteractiveBack();
-      return;
-    }
-
     if (isScheduledTab && selectedScheduledTaskId) {
       handleScheduledDetailBack();
       return;
@@ -3424,14 +3415,12 @@ function SessionsPage() {
     }
   }, [
     handleScheduledDetailBack,
-    handleScheduledInteractiveBack,
     isSubRoute,
     isScheduledTab,
     isSessionsTab,
     narrowViewport,
     navigate,
     openSession,
-    scheduledInteractiveSessionId,
     settingsOpen,
     selectedScheduledTaskId,
     swipeForwardSessionId,
@@ -3512,9 +3501,7 @@ function SessionsPage() {
         }
       : isSessionsTab && activeSessionId !== null
         ? handleSessionBack
-        : isScheduledTab && scheduledInteractiveSessionId
-          ? handleScheduledInteractiveBack
-          : isScheduledTab && selectedScheduledTaskId
+        : isScheduledTab && selectedScheduledTaskId
             ? handleScheduledDetailBack
           : undefined
     : narrowViewport
@@ -4384,45 +4371,33 @@ function SessionsPage() {
                 {t("scheduled.detail.empty")}
               </div>
             ) : (
-              scheduledInteractiveSessionId && selectedScheduledTask ? (
-                <SessionView
-                  sessionId={scheduledInteractiveSessionId}
-                  onBack={handleScheduledInteractiveBack}
-                  headerTitleOverride={selectedScheduledTask.title}
-                  isDark={isDark}
-                  onToggleTheme={toggleTheme}
-                  onOpenSettings={() => setSettingsOpen(true)}
-                  onOpenNewSession={() => setNewSessionOpen(true)}
-                />
-              ) : (
-                <ScheduledTaskDetailPanel
-                  task={selectedScheduledTask}
-                  machineTitle={selectedScheduledMachineTitle}
-                  selectedRun={selectedScheduledRun}
-                  taskRuns={selectedScheduledTaskRuns}
-                  isEditing={scheduledEditing}
-                  editState={scheduledEditState}
-                  isPending={scheduledPending}
-                  onEditStateChange={setScheduledEditState}
-                  onSetEditing={setScheduledEditing}
-                  onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
-                  onCancelTask={cancelScheduledTask}
-                  onDeleteTask={deleteScheduledTask}
-                  onUpdateTask={updateScheduledTask}
-                  onSelectRun={(runId) => {
-                    setSelectedScheduledRunId(runId);
-                    selectWorkspaceScheduledRun(runId);
-                  }}
-                  onOpenRunSession={(sessionId) => {
-                    setScheduledInteractiveSessionId((current) =>
-                      current === sessionId ? null : sessionId,
-                    );
-                  }}
-                  scheduledSessionInteractive={
-                    selectedScheduledRun?.sessionId === scheduledInteractiveSessionId
-                  }
-                />
-              )
+              <ScheduledTaskDetailPanel
+                task={selectedScheduledTask}
+                machineTitle={selectedScheduledMachineTitle}
+                selectedRun={selectedScheduledRun}
+                taskRuns={selectedScheduledTaskRuns}
+                isEditing={scheduledEditing}
+                editState={scheduledEditState}
+                isPending={scheduledPending}
+                onEditStateChange={setScheduledEditState}
+                onSetEditing={setScheduledEditing}
+                onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
+                onCancelTask={cancelScheduledTask}
+                onDeleteTask={deleteScheduledTask}
+                onUpdateTask={updateScheduledTask}
+                onSelectRun={(runId) => {
+                  setSelectedScheduledRunId(runId);
+                  selectWorkspaceScheduledRun(runId);
+                }}
+                onOpenRunSession={(sessionId) => {
+                  setScheduledInteractiveSessionId((current) =>
+                    current === sessionId ? null : sessionId,
+                  );
+                }}
+                scheduledSessionInteractive={
+                  selectedScheduledRun?.sessionId === scheduledInteractiveSessionId
+                }
+              />
             )}
 
             <ConfirmDialog
