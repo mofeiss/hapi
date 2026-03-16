@@ -60,9 +60,12 @@ describe('buildCodexStartConfig', () => {
         });
 
         expect(config.config).toEqual({
-            mcp_servers: mcpServers
+            mcp_servers: mcpServers,
+            developer_instructions: expect.any(String)
         });
-        expect(config.config?.developer_instructions).not.toBe(codexSystemPrompt);
+        expect(String(config.config?.developer_instructions)).not.toContain('functions.hapi__change_title');
+        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_create');
+        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_list');
     });
 
     it('injects scheduled task guidance for regular sessions', () => {

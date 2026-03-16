@@ -15,7 +15,9 @@ import type { SessionTriggerMetadata } from '@/api/types';
  */
 export const TITLE_INSTRUCTION = trimIdent(`
     Based on this message, call functions.hapi__change_title to change chat session title that would represent the current task. If chat idea would change dramatically - call this function again to update the title.
+`);
 
+export const SCHEDULED_GUIDANCE_INSTRUCTION = trimIdent(`
     When using HAPI scheduled task tools, ALWAYS distinguish task creation success from task execution status.
 
     If "functions.hapi__schedule_create" returns success, the task has been created successfully. Focus on the delivery confirmation returned by the tool, such as taskId, nextRunAt, cron, and related scheduled-task metadata, and report that result to the user immediately.
@@ -26,7 +28,12 @@ export const TITLE_INSTRUCTION = trimIdent(`
 `);
 
 export function buildCodexSystemPrompt(trigger?: SessionTriggerMetadata): string {
-    return trigger?.type === 'scheduled-task' ? '' : TITLE_INSTRUCTION;
+    const sections = [
+        ...(trigger?.type === 'scheduled-task' ? [] : [TITLE_INSTRUCTION]),
+        SCHEDULED_GUIDANCE_INSTRUCTION
+    ];
+
+    return sections.join('\n\n');
 }
 
 /**

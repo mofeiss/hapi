@@ -5,9 +5,11 @@ import { shouldIncludeCoAuthoredBy } from "./claudeSettings";
 /**
  * Base system prompt shared across all configurations
  */
-const BASE_SYSTEM_PROMPT = (() => trimIdent(`
+const TITLE_SYSTEM_PROMPT = (() => trimIdent(`
     ALWAYS when you start a new chat - you must call a tool "mcp__hapi__change_title" to set a chat title. When you think chat title is not relevant anymore - call the tool again to change it. When chat name is too generic and you have a change to make it more specific - call the tool again to change it. This title is needed to easily find the chat in the future. Help human.
+`))();
 
+const SCHEDULED_GUIDANCE_PROMPT = (() => trimIdent(`
     When using HAPI scheduled task tools, ALWAYS distinguish task creation success from task execution status.
 
     If "mcp__hapi__schedule_create" returns success, the task has been created successfully. Focus on the delivery confirmation returned by the tool, such as taskId, nextRunAt, cron, and related scheduled-task metadata, and report that result to the user immediately.
@@ -43,8 +45,10 @@ export function buildClaudeSystemPrompt(trigger?: SessionTriggerMetadata): strin
   const sections: string[] = [];
 
   if (shouldInjectTitlePrompt(trigger)) {
-    sections.push(BASE_SYSTEM_PROMPT);
+    sections.push(TITLE_SYSTEM_PROMPT);
   }
+
+  sections.push(SCHEDULED_GUIDANCE_PROMPT);
 
   if (includeCoAuthored) {
     sections.push(CO_AUTHORED_CREDITS);

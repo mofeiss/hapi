@@ -34,7 +34,10 @@ describe('appServerConfig', () => {
             }
         });
 
-        expect(params.baseInstructions).toBeUndefined();
+        expect(params.baseInstructions).toBeDefined();
+        expect(String(params.baseInstructions)).not.toContain('functions.hapi__change_title');
+        expect(String(params.baseInstructions)).toContain('functions.hapi__schedule_create');
+        expect(String(params.baseInstructions)).toContain('functions.hapi__schedule_list');
         expect(params.config).toEqual({
             'mcp_servers.hapi': {
                 command: 'node',
