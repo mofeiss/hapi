@@ -1646,8 +1646,8 @@ function ScheduledTaskDetailPanel({
         onUpdateTask={onUpdateTask}
       />
 
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
+      <div className={`min-h-0 min-w-0 flex-1 overflow-x-hidden ${detailMode === "session" ? "overflow-y-hidden" : "overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"}`}>
+        <div className={`mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3 ${detailMode === "session" ? "h-full min-h-0" : ""}`}>
           <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
             <div className="flex items-center gap-3 min-w-0">
               <ToggleGroup
@@ -2021,14 +2021,14 @@ function ScheduledTaskDetailPanel({
           ) : null}
 
           {detailMode === "session" ? (
-            <div className="overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
+            <div className="min-h-0 flex flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
               {!selectedRun?.sessionId ? (
                 <div className="px-4 py-6 text-sm text-[var(--app-hint)]">
                   {t("scheduled.detail.mode.sessionDisabled")}
                 </div>
               ) : (
                 <>
-                  <div className="h-[760px] min-w-0 bg-[var(--app-bg)]">
+                  <div className="min-h-0 min-w-0 flex-1 bg-[var(--app-bg)]">
                     <EmbeddedSessionView
                       sessionId={selectedRun.sessionId as string}
                       onBack={() => handleSelectRun(null)}
