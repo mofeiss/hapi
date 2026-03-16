@@ -693,6 +693,8 @@ function getScheduledRunResultSummaryLabel(
   return translated === summaryKey ? resultSummary : translated;
 }
 
+type ScheduledDetailMode = "overview" | "runs" | "session";
+
 function getScheduledSessionPermissionLabel(
   permission: ScheduledTask["scheduledSessionPermission"],
   t: ReturnType<typeof useTranslation>["t"],
@@ -725,6 +727,25 @@ function getScheduledTaskOutcomeToneClassName(
   return "bg-rose-500/10 text-rose-700 dark:text-rose-300";
 }
 
+function getScheduledNextRunTipMessage(
+  task: ScheduledTask,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  if (typeof task.nextRunAt === "number") {
+    return `${t("scheduled.detail.nextRun")}: ${formatScheduledDateTime(task.nextRunAt)}`;
+  }
+
+  if (task.paused) {
+    return t("scheduled.detail.nextRunTipPaused");
+  }
+
+  if (task.scheduleType === "once") {
+    return t("scheduled.detail.nextRunTipOnceFinished");
+  }
+
+  return t("scheduled.detail.nextRunTipUnavailable");
+}
+
 function ScheduledRunsPager(props: {
   task: ScheduledTask;
   runs: ScheduledTaskRun[];
@@ -733,6 +754,8 @@ function ScheduledRunsPager(props: {
 }) {
   const { t } = useTranslation();
   const middleButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const nextRunTipRef = useRef<HTMLDivElement | null>(null);
+  const [nextRunTipOpen, setNextRunTipOpen] = useState(false);
   const runSquareClassName = "relative flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--app-bg)]";
   const navButtonClassName = "flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--app-secondary-bg)] text-[var(--app-fg)] disabled:cursor-not-allowed disabled:opacity-35";
 
@@ -765,24 +788,54 @@ function ScheduledRunsPager(props: {
     });
   }, [effectiveSelectedRun]);
 
+  useEffect(() => {
+    if (!nextRunTipOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!nextRunTipRef.current?.contains(event.target as Node)) {
+        setNextRunTipOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNextRunTipOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [nextRunTipOpen]);
+
+  const nextRunTipMessage = getScheduledNextRunTipMessage(props.task, t);
+
   if (sortedRuns.length === 0) {
     return (
       <div className="space-y-3 py-1">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-[var(--app-fg)]">
-            0 {t("scheduled.detail.runs")}
-          </h2>
-          <ScheduledTaskStatusTag
-            task={props.task}
-            labelOverride={
-              props.task.paused
-                ? t("scheduled.list.status.paused")
-                : formatScheduledDateTime(props.task.nextRunAt)
-            }
-            icon={
-              props.task.paused ? undefined : <ClockIcon className="h-3.5 w-3.5" />
-            }
-          />
+        <div className="flex items-center justify-end">
+          <div ref={nextRunTipRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setNextRunTipOpen((open) => !open)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+              aria-label={t("scheduled.detail.nextRun")}
+              aria-expanded={nextRunTipOpen}
+            >
+              <ClockIcon className="h-4 w-4" />
+            </button>
+            {nextRunTipOpen ? (
+              <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-64 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm leading-6 text-[var(--app-fg)] shadow-[0_18px_48px_rgba(15,23,42,0.14)]">
+                {nextRunTipMessage}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="text-sm text-[var(--app-hint)]">
           {t("scheduled.detail.runsEmpty")}
@@ -791,26 +844,9 @@ function ScheduledRunsPager(props: {
     );
   }
 
-  const isActiveTask = !props.task.paused;
-
   return (
     <div className="space-y-3 py-1">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-[var(--app-fg)]">
-          {sortedRuns.length} {t("scheduled.detail.runs")}
-        </h2>
-        <ScheduledTaskStatusTag
-          task={props.task}
-          labelOverride={
-            props.task.paused
-              ? t("scheduled.list.status.paused")
-              : formatScheduledDateTime(props.task.nextRunAt)
-          }
-          icon={isActiveTask ? <ClockIcon className="h-3.5 w-3.5" /> : undefined}
-        />
-      </div>
-
-      <div className="flex items-center overflow-hidden rounded-[12px] border border-[var(--app-border)]">
+      <div className="flex items-center overflow-visible rounded-[12px] border border-[var(--app-border)]">
         <button
           type="button"
           onClick={() => {
@@ -820,7 +856,7 @@ function ScheduledRunsPager(props: {
             }
           }}
           disabled={!canGoPrevious}
-          className={`${navButtonClassName} border-r border-[var(--app-border)]`}
+          className={`${navButtonClassName} overflow-hidden rounded-l-[12px] border-r border-[var(--app-border)]`}
           aria-label={t("scheduled.detail.previousRun")}
           title={t("scheduled.detail.previousRun")}
         >
@@ -907,6 +943,26 @@ function ScheduledRunsPager(props: {
             <path d="m9 18 6-6-6-6" />
           </svg>
         </button>
+
+        <div
+          ref={nextRunTipRef}
+          className="relative rounded-r-[12px] border-l border-[var(--app-border)]"
+        >
+          <button
+            type="button"
+            onClick={() => setNextRunTipOpen((open) => !open)}
+            className={`${navButtonClassName} overflow-hidden rounded-r-[12px]`}
+            aria-label={t("scheduled.detail.nextRun")}
+            aria-expanded={nextRunTipOpen}
+          >
+            <ClockIcon className="h-4 w-4" />
+          </button>
+          {nextRunTipOpen ? (
+            <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-64 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-sm leading-6 text-[var(--app-fg)] shadow-[0_18px_48px_rgba(15,23,42,0.14)]">
+              {nextRunTipMessage}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -1443,10 +1499,33 @@ function ScheduledTaskDetailPanel({
 }) {
   const { t } = useTranslation();
   const [promptExpanded, setPromptExpanded] = useState(false);
+  const [detailMode, setDetailMode] = useState<ScheduledDetailMode>("overview");
   const configValueSlotClassName =
     "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
   const configReadOnlyValueClassName =
     "block min-h-[19px] w-full overflow-hidden whitespace-nowrap text-right text-sm leading-[19px] text-[var(--app-fg)]";
+  const sessionModeDisabled = !selectedRun?.sessionId;
+
+  useEffect(() => {
+    if (detailMode === "session" && sessionModeDisabled) {
+      setDetailMode(taskRuns.length > 0 ? "runs" : "overview");
+    }
+  }, [detailMode, sessionModeDisabled, taskRuns.length]);
+
+  const handleSelectRun = useCallback((runId: string | null) => {
+    onSelectRun(runId);
+    if (runId && detailMode === "overview") {
+      setDetailMode("runs");
+    }
+  }, [detailMode, onSelectRun]);
+
+  const handleToggleInteractive = useCallback(() => {
+    if (!selectedRun?.sessionId) {
+      return;
+    }
+    onOpenRunSession(selectedRun.sessionId as string);
+    setDetailMode("session");
+  }, [onOpenRunSession, selectedRun?.sessionId]);
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -1472,6 +1551,45 @@ function ScheduledTaskDetailPanel({
         }}
       >
         <div className="mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3">
+          <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <ToggleGroup
+                value={detailMode}
+                onValueChange={(value) => {
+                  if (value === "session" && sessionModeDisabled) {
+                    return;
+                  }
+                  setDetailMode(value as ScheduledDetailMode);
+                }}
+                aria-label={t("scheduled.detail.modeSwitcher")}
+              >
+                <ToggleGroupItem value="overview">
+                  {t("scheduled.detail.mode.overview")}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="runs">
+                  {t("scheduled.detail.mode.runs")}
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="session"
+                  className={sessionModeDisabled ? "opacity-50 cursor-not-allowed" : ""}
+                >
+                  {t("scheduled.detail.mode.session")}
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              <div className="max-w-[38rem] text-sm text-[var(--app-hint)]">
+                {detailMode === "overview"
+                  ? t("scheduled.detail.mode.overviewHint")
+                  : detailMode === "runs"
+                    ? t("scheduled.detail.mode.runsHint")
+                    : sessionModeDisabled
+                      ? t("scheduled.detail.mode.sessionDisabled")
+                      : t("scheduled.detail.mode.sessionHint")}
+              </div>
+            </div>
+          </div>
+
+          {detailMode === "overview" ? (
           <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-2">
             <div>
               <div>
@@ -1567,185 +1685,205 @@ function ScheduledTaskDetailPanel({
               </div>
             </div>
           </div>
+          ) : null}
 
-          <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
-            <div className="px-4 py-3">
+          {detailMode === "runs" ? (
+            <>
               <ScheduledRunsPager
                 task={task}
                 runs={taskRuns}
                 selectedRunId={selectedRun?.id ?? null}
-                onSelectRun={onSelectRun}
+                onSelectRun={handleSelectRun}
               />
-            </div>
 
-            <div className="border-t border-[var(--app-border)] px-4 py-4">
-              {!selectedRun ? (
-                <div className="text-sm text-[var(--app-hint)]">
-                  {t("scheduled.detail.pickRun")}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-base font-semibold text-[var(--app-fg)]">
-                      {t("scheduled.detail.selectedRun")}
-                    </h2>
-                    <ScheduledRunStatusBadge status={selectedRun.status} />
+              <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
+                {!selectedRun ? (
+                  <div className="text-sm text-[var(--app-hint)]">
+                    {t("scheduled.detail.pickRun")}
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.triggered")}
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-base font-semibold text-[var(--app-fg)]">
+                        {t("scheduled.detail.selectedRun")}
+                      </h2>
+                      <ScheduledRunStatusBadge status={selectedRun.status} />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                          {t("scheduled.detail.triggered")}
+                        </div>
+                        <div className="mt-1 text-sm text-[var(--app-fg)]">
+                          {formatScheduledDateTime(selectedRun.triggeredAt)}
+                        </div>
                       </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {formatScheduledDateTime(selectedRun.triggeredAt)}
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                          {t("scheduled.detail.runId")}
+                        </div>
+                        <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
+                          {selectedRun.id}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                          {t("scheduled.detail.finished")}
+                        </div>
+                        <div className="mt-1 text-sm text-[var(--app-fg)]">
+                          {formatScheduledDateTime(selectedRun.finishedAt)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                          {t("scheduled.detail.session")}
+                        </div>
+                        <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
+                          {selectedRun.sessionId ?? "-"}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.runId")}
+                    {selectedRun.error ? (
+                      <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>
+                        {selectedRun.error}
                       </div>
-                      <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
-                        {selectedRun.id}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.finished")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {formatScheduledDateTime(selectedRun.finishedAt)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.session")}
-                      </div>
-                      <div className="mt-1 break-all text-sm text-[var(--app-fg)]">
-                        {selectedRun.sessionId ?? "-"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.outcomeStatus")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {selectedRun.taskOutcome
-                          ? getScheduledTaskOutcomeStatusLabel(
-                              selectedRun.taskOutcome.status,
-                              t,
-                            )
-                          : "-"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                        {t("scheduled.detail.outcomeReportedAt")}
-                      </div>
-                      <div className="mt-1 text-sm text-[var(--app-fg)]">
-                        {formatScheduledDateTime(
-                          selectedRun.taskOutcome?.reportedAt,
+                    ) : null}
+                    {selectedRun.resultSummary ? (
+                      <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>
+                        {getScheduledRunResultSummaryLabel(
+                          selectedRun.resultSummary,
+                          t,
                         )}
                       </div>
-                    </div>
+                    ) : null}
+                    {selectedRun.taskOutcome ? (
+                      <div className="space-y-4 pt-1">
+                        <div className="border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" />
+
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                            {t("scheduled.detail.outcome")}
+                          </div>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${getScheduledTaskOutcomeToneClassName(selectedRun.taskOutcome.status)}`}
+                          >
+                            {getScheduledTaskOutcomeStatusLabel(
+                              selectedRun.taskOutcome.status,
+                              t,
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="text-sm text-[var(--app-fg)]">
+                          {selectedRun.taskOutcome.summary}
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                              {t("scheduled.detail.outcomeStatus")}
+                            </div>
+                            <div className="mt-1 text-sm text-[var(--app-fg)]">
+                              {getScheduledTaskOutcomeStatusLabel(
+                                selectedRun.taskOutcome.status,
+                                t,
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                              {t("scheduled.detail.outcomeReportedAt")}
+                            </div>
+                            <div className="mt-1 text-sm text-[var(--app-fg)]">
+                              {formatScheduledDateTime(
+                                selectedRun.taskOutcome.reportedAt,
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                              {t("scheduled.detail.needsUserIntervention")}
+                            </div>
+                            <div className="mt-1 text-sm text-[var(--app-fg)]">
+                              {selectedRun.taskOutcome.needsUserIntervention
+                                ? t("common.yes")
+                                : t("common.no")}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
+                              {t("scheduled.detail.permanentFailureLikely")}
+                            </div>
+                            <div className="mt-1 text-sm text-[var(--app-fg)]">
+                              {selectedRun.taskOutcome.permanentFailureLikely
+                                ? t("common.yes")
+                                : t("common.no")}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
-                  {selectedRun.error ? (
-                    <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>
-                      {selectedRun.error}
-                    </div>
-                  ) : null}
-                  {selectedRun.taskOutcome ? (
-                    <div className="space-y-3 rounded-2xl border border-[var(--app-border)] px-4 py-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                            <span>{t("scheduled.detail.outcome")}</span>
-                            <button
-                              type="button"
-                              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[var(--app-border)] text-[10px] normal-case tracking-normal text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
-                              title={t("scheduled.detail.outcomeSummaryHint")}
-                              aria-label={t("scheduled.detail.outcomeSummaryHint")}
-                            >
-                              i
-                            </button>
-                          </div>
-                        </div>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${getScheduledTaskOutcomeToneClassName(selectedRun.taskOutcome.status)}`}
-                        >
-                          {getScheduledTaskOutcomeStatusLabel(
-                            selectedRun.taskOutcome.status,
-                            t,
-                          )}
-                        </span>
-                      </div>
+                )}
+              </div>
+            </>
+          ) : null}
 
-                      <div className="text-sm text-[var(--app-fg)]">
-                        {selectedRun.taskOutcome.summary}
-                      </div>
-
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <div>
-                          <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                            {t("scheduled.detail.needsUserIntervention")}
-                          </div>
-                          <div className="mt-1 text-sm text-[var(--app-fg)]">
-                            {selectedRun.taskOutcome.needsUserIntervention
-                              ? t("common.yes")
-                              : t("common.no")}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
-                            {t("scheduled.detail.permanentFailureLikely")}
-                          </div>
-                          <div className="mt-1 text-sm text-[var(--app-fg)]">
-                            {selectedRun.taskOutcome.permanentFailureLikely
-                              ? t("common.yes")
-                              : t("common.no")}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                  {selectedRun.resultSummary ? (
-                    <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>
-                      {getScheduledRunResultSummaryLabel(
-                        selectedRun.resultSummary,
-                        t,
-                      )}
-                    </div>
-                  ) : null}
+          {detailMode === "session" ? (
+            <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)]">
+              {!selectedRun?.sessionId ? (
+                <div className="px-4 py-6 text-sm text-[var(--app-hint)]">
+                  {t("scheduled.detail.mode.sessionDisabled")}
                 </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+                    <div className="min-w-0">
+                      <h2 className="text-base font-semibold text-[var(--app-fg)]">
+                        {t("scheduled.detail.sessionView")}
+                      </h2>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--app-hint)]">
+                        <span>{t(`scheduled.runStatus.${selectedRun.status}`)}</span>
+                        <span>·</span>
+                        <span>{formatScheduledDateTime(selectedRun.triggeredAt)}</span>
+                        {selectedRun.taskOutcome ? (
+                          <>
+                            <span>·</span>
+                            <span>{getScheduledTaskOutcomeStatusLabel(selectedRun.taskOutcome.status, t)}</span>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleToggleInteractive}
+                      className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
+                    >
+                      {scheduledSessionInteractive
+                        ? t("scheduled.detail.exitInteractive")
+                        : t("scheduled.detail.enterInteractive")}
+                    </button>
+                  </div>
+
+                  {selectedRun.taskOutcome?.summary ? (
+                    <div className="border-t border-[var(--app-border)] px-4 py-3 text-sm text-[var(--app-hint)]">
+                      {selectedRun.taskOutcome.summary}
+                    </div>
+                  ) : null}
+
+                  <div className="h-[760px] min-w-0 bg-[var(--app-bg)] border-t border-[var(--app-border)]">
+                    <EmbeddedSessionView
+                      sessionId={selectedRun.sessionId as string}
+                      onBack={() => handleSelectRun(null)}
+                      headerTitleOverride={task.title}
+                      streamOnly={!scheduledSessionInteractive}
+                    />
+                  </div>
+                </>
               )}
             </div>
-
-            {selectedRun?.sessionId ? (
-              <div className="border-t border-[var(--app-border)]">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-                  <h2 className="text-base font-semibold text-[var(--app-fg)]">
-                    {t("scheduled.detail.sessionView")}
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() => onOpenRunSession(selectedRun.sessionId as string)}
-                    className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)]"
-                  >
-                    {scheduledSessionInteractive
-                      ? t("scheduled.detail.exitInteractive")
-                      : t("scheduled.detail.enterInteractive")}
-                  </button>
-                </div>
-                <div className="h-[760px] min-w-0 bg-[var(--app-bg)]">
-                  <EmbeddedSessionView
-                    sessionId={selectedRun.sessionId as string}
-                    onBack={() => onSelectRun(null)}
-                    headerTitleOverride={task.title}
-                    streamOnly={!scheduledSessionInteractive}
-                  />
-                </div>
-              </div>
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </div>
     </div>
