@@ -1996,7 +1996,7 @@ function ScheduledTaskDetailPanel({
                 </div>
               ) : (
                 <>
-                  <div className="h-[760px] min-w-0 bg-[var(--app-bg)] border-t border-[var(--app-border)]">
+                  <div className="h-[760px] min-w-0 bg-[var(--app-bg)]">
                     <EmbeddedSessionView
                       sessionId={selectedRun.sessionId as string}
                       onBack={() => handleSelectRun(null)}
