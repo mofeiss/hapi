@@ -711,7 +711,7 @@ export async function startRunner(): Promise<void> {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              text: buildScheduledPrompt(task, run),
+              text: buildScheduledPrompt(task),
               meta: {
                 sentFrom: 'runner-scheduler'
               }
