@@ -82,7 +82,8 @@ function formatTranscriptMessage(
         }
         return buildAssistantCopyText(message.content, {
             metadata: options.metadata,
-            locale: options.locale
+            locale: options.locale,
+            includeToolJson: true
         })
     }
 

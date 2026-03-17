@@ -13,7 +13,8 @@ function createToolBlock(
     name: string,
     input: unknown,
     children: ToolCallBlock['children'] = [],
-    state: ToolCallBlock['tool']['state'] = 'completed'
+    state: ToolCallBlock['tool']['state'] = 'completed',
+    result: unknown = null
 ): ToolCallBlock {
     return {
         kind: 'tool-call',
@@ -28,7 +29,8 @@ function createToolBlock(
             createdAt: 1,
             startedAt: 1,
             completedAt: state === 'completed' || state === 'error' ? 2 : null,
-            description: null
+            description: null,
+            result
         },
         children
     }
@@ -106,6 +108,40 @@ describe('buildAssistantCopyText', () => {
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
             '```Tool_Call\n✓ View src/app.ts file\n✗ Run command bun test web\n```'
+        )
+    })
+
+    it('can include raw tool input and result json for transcript copy', () => {
+        const parts: AssistantCopyPart[] = [
+            {
+                type: 'tool-call',
+                artifact: createToolBlock(
+                    'read-1',
+                    'Read',
+                    { file_path: '/workspace/src/app.ts' },
+                    [],
+                    'completed',
+                    { content: 'export const ok = true\n' }
+                )
+            }
+        ]
+
+        expect(buildAssistantCopyText(parts, { metadata, locale: 'en', includeToolJson: true })).toBe(
+            [
+                '```Tool_Call',
+                '✓ View src/app.ts file',
+                '<Input>',
+                '{',
+                '  "file_path": "/workspace/src/app.ts"',
+                '}',
+                '</Input>',
+                '<Result>',
+                '{',
+                '  "content": "export const ok = true\\n"',
+                '}',
+                '</Result>',
+                '```'
+            ].join('\n')
         )
     })
 })

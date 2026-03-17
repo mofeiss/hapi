@@ -59,6 +59,7 @@ describe('buildLoadedTranscriptCopyText', () => {
                         name: 'Read',
                         state: 'completed',
                         input: { file_path: '/workspace/CLAUDE.md' },
+                        result: { content: '# heading\n' },
                         createdAt: 1,
                         startedAt: 1,
                         completedAt: 2,
@@ -78,7 +79,21 @@ describe('buildLoadedTranscriptCopyText', () => {
             [
                 '<UserPrompt>\nRename the file.\n</UserPrompt>',
                 '```Reasoning\nCheck the current file name.\n```',
-                '```Tool_Call\n✓ View CLAUDE.md file\n```'
+                [
+                    '```Tool_Call',
+                    '✓ View CLAUDE.md file',
+                    '<Input>',
+                    '{',
+                    '  "file_path": "/workspace/CLAUDE.md"',
+                    '}',
+                    '</Input>',
+                    '<Result>',
+                    '{',
+                    '  "content": "# heading\\n"',
+                    '}',
+                    '</Result>',
+                    '```'
+                ].join('\n')
             ].join('\n\n')
         )
     })
@@ -142,6 +157,7 @@ describe('buildLoadedTranscriptCopyText', () => {
                         name: 'mcp__hapi__change_title',
                         state: 'completed',
                         input: { title: '创建一次性任务查询 Node 版本' },
+                        result: { success: true },
                         createdAt: 1,
                         startedAt: 1,
                         completedAt: 2,
@@ -160,7 +176,99 @@ describe('buildLoadedTranscriptCopyText', () => {
         })).toBe(
             [
                 '<UserPrompt>\n创建一个一次性任务。\n</UserPrompt>',
-                '```Tool_Call\n✓ MCP: HAPI Change Title | 创建一次性任务查询 Node 版本\n```'
+                [
+                    '```Tool_Call',
+                    '✓ MCP: HAPI Change Title | 创建一次性任务查询 Node 版本',
+                    '<Input>',
+                    '{',
+                    '  "title": "创建一次性任务查询 Node 版本"',
+                    '}',
+                    '</Input>',
+                    '<Result>',
+                    '{',
+                    '  "success": true',
+                    '}',
+                    '</Result>',
+                    '```'
+                ].join('\n')
+            ].join('\n\n')
+        )
+    })
+
+    it('includes raw json for nested tool calls inside steps', () => {
+        const messages: TestMessage[] = [
+            createMessage({
+                id: 'user:u1',
+                role: 'user',
+                content: [{ type: 'text', text: '检查并运行测试。' }],
+                custom: { kind: 'user' }
+            }),
+            createMessage({
+                id: 'assistant:a1',
+                role: 'assistant',
+                content: [{ type: 'tool-call', artifact: {
+                    kind: 'tool-call',
+                    id: 'steps-1',
+                    localId: null,
+                    createdAt: 1,
+                    tool: {
+                        id: 'steps-1',
+                        name: 'Steps',
+                        state: 'completed',
+                        input: { count: 2 },
+                        result: null,
+                        createdAt: 1,
+                        startedAt: 1,
+                        completedAt: 2,
+                        description: null
+                    },
+                    children: [
+                        {
+                            kind: 'tool-call',
+                            id: 'read-1',
+                            localId: null,
+                            createdAt: 1,
+                            tool: {
+                                id: 'read-1',
+                                name: 'Read',
+                                state: 'completed',
+                                input: { file_path: '/workspace/package.json' },
+                                result: { content: '{"name":"hapi"}' },
+                                createdAt: 1,
+                                startedAt: 1,
+                                completedAt: 2,
+                                description: null
+                            },
+                            children: []
+                        }
+                    ]
+                } }],
+                custom: { kind: 'assistant' }
+            })
+        ]
+
+        expect(buildLoadedTranscriptCopyText(messages, {
+            metadata,
+            locale: 'en',
+            t: (key) => key
+        })).toBe(
+            [
+                '<UserPrompt>\n检查并运行测试。\n</UserPrompt>',
+                [
+                    '```Tool Calls | 2 calls',
+                    '- ✓ View package.json file',
+                    '<Input>',
+                    '{',
+                    '  "file_path": "/workspace/package.json"',
+                    '}',
+                    '</Input>',
+                    '<Result>',
+                    '{',
+                    '  "content": "{\\"name\\":\\"hapi\\"}"',
+                    '}',
+                    '</Result>',
+                    '```'
+                ].join('\n')
             ].join('\n\n')
         )
     })

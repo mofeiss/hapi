@@ -11,6 +11,12 @@ export type AssistantCopyPart = {
     artifact?: unknown
 }
 
+type AssistantCopyOptions = {
+    metadata: SessionMetadataSummary | null
+    locale: Locale
+    includeToolJson?: boolean
+}
+
 function isTextPart(part: AssistantCopyPart): part is AssistantCopyPart & { type: 'text'; text: string } {
     return part.type === 'text' && typeof part.text === 'string'
 }
@@ -40,6 +46,22 @@ function formatFence(label: string, content: string): string {
         `\`\`\`${label}`,
         trimmed,
         '```'
+    ].join('\n')
+}
+
+function stringifyToolPayload(value: unknown): string {
+    if (value === undefined) return 'undefined'
+
+    const serialized = JSON.stringify(value, null, 2)
+    if (typeof serialized === 'string') return serialized
+    return 'null'
+}
+
+function formatToolPayloadTag(tag: 'Input' | 'Result', value: unknown): string {
+    return [
+        `<${tag}>`,
+        stringifyToolPayload(value),
+        `</${tag}>`
     ].join('\n')
 }
 
@@ -110,7 +132,8 @@ function formatVisibleAuxiliaryBlock(child: ChatBlock): string {
 function formatStepsChildren(
     children: ChatBlock[],
     metadata: SessionMetadataSummary | null,
-    locale: Locale
+    locale: Locale,
+    includeToolJson: boolean
 ): string[] {
     const sections: string[] = []
 
@@ -122,7 +145,7 @@ function formatStepsChildren(
         }
 
         if (child.kind === 'tool-call') {
-            const nested = formatToolBlockForCopy(child, metadata, locale, true)
+            const nested = formatToolBlockForCopy(child, metadata, locale, true, includeToolJson)
             if (nested) sections.push(nested)
             continue
         }
@@ -138,17 +161,25 @@ function formatToolBlockForCopy(
     block: ToolCallBlock,
     metadata: SessionMetadataSummary | null,
     locale: Locale,
-    nestedInSteps: boolean
+    nestedInSteps: boolean,
+    includeToolJson: boolean
 ): string {
     const summary = formatToolSummary(block, metadata, locale)
     if (!summary) return ''
 
     if (block.tool.name !== 'Steps') {
         const prefixedSummary = `${formatToolStatePrefix(block.tool.state)} ${summary}`
-        return nestedInSteps ? `- ${prefixedSummary}` : prefixedSummary
+        const heading = nestedInSteps ? `- ${prefixedSummary}` : prefixedSummary
+        if (!includeToolJson) return heading
+
+        return [
+            heading,
+            formatToolPayloadTag('Input', block.tool.input),
+            formatToolPayloadTag('Result', block.tool.result)
+        ].join('\n')
     }
 
-    const childSections = formatStepsChildren(block.children, metadata, locale)
+    const childSections = formatStepsChildren(block.children, metadata, locale, includeToolJson)
     if (childSections.length === 0) return summary
 
     return [
@@ -160,10 +191,11 @@ function formatToolBlockForCopy(
 function formatToolPart(
     part: AssistantCopyPart & { type: 'tool-call' },
     metadata: SessionMetadataSummary | null,
-    locale: Locale
+    locale: Locale,
+    includeToolJson: boolean
 ): string {
     if (isToolCallBlock(part.artifact)) {
-        return formatToolBlockForCopy(part.artifact, metadata, locale, false)
+        return formatToolBlockForCopy(part.artifact, metadata, locale, false, includeToolJson)
     }
 
     return formatFallbackToolSummary(part.toolName)
@@ -181,10 +213,7 @@ function isTopLevelStepsToolPart(
 
 export function buildAssistantCopyText(
     parts: readonly AssistantCopyPart[],
-    options: {
-        metadata: SessionMetadataSummary | null
-        locale: Locale
-    }
+    options: AssistantCopyOptions
 ): string {
     const sections: string[] = []
     let idx = 0
@@ -212,7 +241,7 @@ export function buildAssistantCopyText(
                 const current = parts[idx]
                 if (!isToolCallPart(current)) break
                 toolParts.push(current)
-                const tool = formatToolPart(current, options.metadata, options.locale)
+                const tool = formatToolPart(current, options.metadata, options.locale, options.includeToolJson ?? false)
                 if (tool) toolSections.push(tool)
                 idx += 1
             }
@@ -220,7 +249,7 @@ export function buildAssistantCopyText(
             const toolBlock = topLevelSteps
                 ? formatFence(
                     formatToolSummary(topLevelSteps, options.metadata, options.locale),
-                    formatStepsChildren(topLevelSteps.children, options.metadata, options.locale).join('\n')
+                    formatStepsChildren(topLevelSteps.children, options.metadata, options.locale, options.includeToolJson ?? false).join('\n')
                 )
                 : formatFence('Tool_Call', toolSections.join('\n'))
             if (toolBlock) sections.push(toolBlock)
