@@ -222,6 +222,22 @@ Rules:
 - do not verify new scheduler/runner behavior against the online stable hub
 - prefer `hapidev` for hub+web and `hapidevcli` for CLI/runner/session testing
 
+## Incident forensics / evidence chain
+
+Use when user asks to analyze a broken session, pasted chat records/tool traces, reports "fake alive", "resume failed", "frontend/CLI disconnected", or similar historical faults.
+
+- default stance: evidence first; do not guess; do not present "probably" root cause without artifacts
+- first reconstruct timeline from user-provided chat records, screenshots, tool traces, session title, cwd, prompt keywords, approximate time, agent flavor
+- then locate matching HAPI logs under `~/.hapidev/logs/`; use timestamp, pid, session title keywords, session id, and nearby activity times to narrow candidates
+- read the relevant log file(s) before proposing causes; for long incidents, read both the failing log and one nearby successful comparison log if available
+- if session identity is unclear, inspect HAPI SQLite state in `~/.hapidev/hapi.db`; check `sessions`, relevant metadata fields like `claudeSessionId` / `codexSessionId`, active flags, updated timestamps, and whether merge/resume changed ids
+- when Claude is involved, inspect local Claude history under `~/.claude/projects/...` and related `sessions-index.json` entries; use first prompt keywords, cwd-derived project directory, session id, and timestamps to match the right `.jsonl`
+- when Codex is involved, inspect corresponding local Codex session history/state if available in the user environment; use the same evidence-chain approach rather than assuming hub-side state is complete
+- if the user pasted chat records, tool cards, or prompt fragments, treat those as search keys to correlate logs, DB rows, and local agent history into one timeline
+- explicitly separate confirmed facts from open questions; cite which file/log/DB artifact supports each conclusion
+- prefer proving or disproving each candidate cause with logs/DB/session history over adding more speculative mitigations
+- if evidence is missing because logs were deleted or rotated, say so clearly and pivot to remaining sources (`hapi.db`, local agent history, gateway traces, archived logs, Trash) instead of guessing
+
 ## Key source dirs
 
 ### CLI (`cli/src/`)
