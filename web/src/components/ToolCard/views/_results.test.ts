@@ -105,7 +105,7 @@ describe('sanitizeReadResultText', () => {
 })
 
 describe('CodexBash result rendering', () => {
-    it('renders stdout content instead of falling back to raw json metadata', () => {
+    it('falls back to raw json result rendering', () => {
         const ResultView = getToolResultViewComponent('CodexBash')
 
         render(
@@ -125,8 +125,8 @@ describe('CodexBash result rendering', () => {
             )
         )
 
-        expect(screen.getByText('export const value = 1;')).toBeInTheDocument()
-        expect(screen.queryByText(/"cwd": "\/workspace"/)).not.toBeInTheDocument()
+        expect(screen.getByText(/"cwd": "\/workspace"/)).toBeInTheDocument()
+        expect(screen.getByText(/"stdout": "export const value = 1;\\n"/)).toBeInTheDocument()
     })
 })
 

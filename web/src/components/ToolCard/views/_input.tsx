@@ -20,7 +20,6 @@ type ParamRow = {
 function normalizeCoreToolName(toolName: string): string {
     if (toolName === 'ask_user_question') return 'AskUserQuestion'
     if (toolName === 'exit_plan_mode') return 'ExitPlanMode'
-    if (toolName === 'CodexBash') return 'Bash'
     return toolName
 }
 
@@ -79,10 +78,6 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
     const input = block.tool.input
     const result = block.tool.result
 
-    if (toolName === 'Bash' && typeof input === 'string') {
-        return [{ name: 'command', value: truncate(toSingleLine(input), 200) }]
-    }
-
     if (!isObject(input) && !isTodoToolName(toolName)) return null
     const inputObj = isObject(input) ? input : null
 
@@ -103,13 +98,6 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
             pushRow(rows, 'glob', getInputScalar(inputObj, ['glob']))
             pushRow(rows, 'output_mode', getInputScalar(inputObj, ['output_mode']))
             pushRow(rows, 'head_limit', getInputScalar(inputObj, ['head_limit']))
-            break
-        }
-        case 'Bash': {
-            const command = getInputCommand(inputObj)
-            pushRow(rows, 'command', command ? truncate(command, 200) : null)
-            pushRow(rows, 'cwd', getInputPath(inputObj, metadata, ['cwd', 'path']))
-            pushRow(rows, 'timeout_ms', getInputScalar(inputObj, ['timeout_ms', 'timeout']))
             break
         }
         case 'Agent': {
@@ -325,6 +313,10 @@ function renderNotebookEditInput(block: ToolCallBlock, metadata: SessionMetadata
 export function renderToolInputContent(block: ToolCallBlock, metadata: SessionMetadataSummary | null): ReactNode {
     const toolName = block.tool.name
     const input = block.tool.input
+
+    if (toolName === 'Bash' || toolName === 'CodexBash' || toolName === 'exec_command') {
+        return <CodeBlock code={safeStringify(input)} language="json" />
+    }
 
     if (toolName === 'Task' && isObject(input) && typeof input.prompt === 'string') {
         return <MarkdownRenderer content={input.prompt} />

@@ -640,54 +640,6 @@ const AskUserQuestionResultView: ToolViewComponent = (props: ToolViewProps) => {
     return <MarkdownResultView {...props} />
 }
 
-const BashResultView: ToolViewComponent = (props: ToolViewProps) => {
-    const result = props.block.tool.result
-
-    if (result === undefined || result === null) {
-        return <div className="text-sm text-[var(--app-hint)]">{placeholderForState(props.block.tool.state)}</div>
-    }
-
-    if (typeof result === 'string') {
-        const display = sanitizeToolResultText(result)
-        return (
-            <>
-                <CodeBlock code={display} language="text" />
-                <RawJsonDevOnly value={result} />
-            </>
-        )
-    }
-
-    const stdio = extractStdoutStderr(result)
-    if (stdio) {
-        return (
-            <>
-                <div className="flex flex-col gap-2">
-                    {stdio.stdout ? <CodeBlock code={stdio.stdout} language="text" /> : null}
-                    {stdio.stderr ? <CodeBlock code={stdio.stderr} language="text" /> : null}
-                </div>
-                <RawJsonDevOnly value={result} />
-            </>
-        )
-    }
-
-    const text = extractTextFromResult(result)
-    if (text) {
-        return (
-            <>
-                {renderText(text, { mode: 'code', language: 'text' })}
-                <RawJsonDevOnly value={result} />
-            </>
-        )
-    }
-
-    return (
-        <>
-            <div className="text-sm text-[var(--app-hint)]">(no output)</div>
-            <RawJsonDevOnly value={result} />
-        </>
-    )
-}
-
 const MarkdownResultView: ToolViewComponent = (props: ToolViewProps) => {
     const result = props.block.tool.result
 
@@ -1406,8 +1358,8 @@ const GenericResultView: ToolViewComponent = (props: ToolViewProps) => {
 
 export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     Task: MarkdownResultView,
-    Bash: BashResultView,
-    CodexBash: BashResultView,
+    Bash: RawResultView,
+    CodexBash: RawResultView,
     Glob: LineListResultView,
     Grep: LineListResultView,
     LS: LineListResultView,
