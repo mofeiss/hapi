@@ -503,6 +503,48 @@ describe('AppServerEventConverter', () => {
         }]);
     });
 
+    it('falls back unknown item lifecycle notifications into generic tool events', () => {
+        const converter = new AppServerEventConverter();
+
+        const started = converter.handleNotification('item/started', {
+            item: {
+                id: 'custom-1',
+                type: 'webSearch',
+                query: 'codex fallback rendering',
+                provider: 'example'
+            }
+        });
+        expect(started).toEqual([{
+            type: 'generic_tool_call_begin',
+            call_id: 'custom-1',
+            tool_name: 'webSearch',
+            input: {
+                query: 'codex fallback rendering',
+                provider: 'example'
+            }
+        }]);
+
+        const completed = converter.handleNotification('item/completed', {
+            item: {
+                id: 'custom-1',
+                type: 'webSearch',
+                status: 'completed',
+                result: {
+                    hits: 3
+                }
+            }
+        });
+        expect(completed).toEqual([{
+            type: 'generic_tool_call_end',
+            call_id: 'custom-1',
+            tool_name: 'webSearch',
+            output: {
+                hits: 3
+            },
+            is_error: false
+        }]);
+    });
+
     it('maps wrapper agent reasoning message', () => {
         const converter = new AppServerEventConverter();
 

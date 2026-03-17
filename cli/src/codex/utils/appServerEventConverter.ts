@@ -76,6 +76,60 @@ function extractChanges(value: unknown): Record<string, unknown> | null {
     return null;
 }
 
+function buildGenericToolName(item: Record<string, unknown>, itemType: string): string {
+    const explicitName = asString(item.toolName ?? item.tool_name ?? item.name ?? item.title);
+    if (explicitName) return explicitName;
+
+    const rawType = asString(item.type ?? item.itemType ?? item.kind) ?? itemType;
+    return rawType;
+}
+
+function buildGenericToolInput(item: Record<string, unknown>): Record<string, unknown> {
+    const input: Record<string, unknown> = { ...item };
+    delete input.id;
+    delete input.itemId;
+    delete input.item_id;
+    delete input.type;
+    delete input.itemType;
+    delete input.kind;
+    delete input.result;
+    delete input.output;
+    delete input.content;
+    delete input.stdout;
+    delete input.stderr;
+    delete input.error;
+    delete input.exitCode;
+    delete input.exit_code;
+    delete input.exitcode;
+    return input;
+}
+
+function buildGenericToolOutput(item: Record<string, unknown>): unknown {
+    if ('result' in item) return item.result;
+    if ('output' in item) return item.output;
+    if ('content' in item) return item.content;
+    if ('stdout' in item || 'stderr' in item || 'error' in item) {
+        return {
+            ...(typeof item.stdout === 'string' ? { stdout: item.stdout } : {}),
+            ...(typeof item.stderr === 'string' ? { stderr: item.stderr } : {}),
+            ...(typeof item.error === 'string' ? { error: item.error } : {})
+        };
+    }
+    return item;
+}
+
+function inferGenericToolError(item: Record<string, unknown>): boolean {
+    const success = asBoolean(item.success ?? item.ok ?? item.applied);
+    if (success !== null) return !success;
+
+    const status = asString(item.status)?.toLowerCase();
+    if (status === 'failed' || status === 'error' || status === 'canceled' || status === 'cancelled') {
+        return true;
+    }
+
+    return typeof item.error === 'string' && item.error.length > 0;
+}
+
 function normalizePlanStatus(value: unknown): 'pending' | 'in_progress' | 'completed' | null {
     const raw = asString(value);
     if (!raw) return null;
@@ -895,6 +949,27 @@ export class AppServerEventConverter {
 
                 return events;
             }
+
+            const toolName = buildGenericToolName(item, itemType);
+
+            if (method === 'item/started') {
+                events.push({
+                    type: 'generic_tool_call_begin',
+                    call_id: itemId,
+                    tool_name: toolName,
+                    input: buildGenericToolInput(item)
+                });
+                return events;
+            }
+
+            events.push({
+                type: 'generic_tool_call_end',
+                call_id: itemId,
+                tool_name: toolName,
+                output: buildGenericToolOutput(item),
+                is_error: inferGenericToolError(item)
+            });
+            return events;
         }
 
         logger.debug('[AppServerEventConverter] Unhandled notification', { method, params });

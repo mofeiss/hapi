@@ -86,4 +86,34 @@ describe('normalizeAgentRecord codex reasoning alignment', () => {
 
         expect(normalized).toBeNull()
     })
+
+    it('preserves Codex tool result error state for generic fallback cards', () => {
+        const normalized = normalizeAgentRecord('m4', null, 4, {
+            type: 'codex',
+            data: {
+                type: 'tool-call-result',
+                id: 'codex-generic-error',
+                callId: 'call-generic-1',
+                is_error: true,
+                output: {
+                    error: 'permission denied'
+                }
+            }
+        })
+
+        expect(normalized?.role).toBe('agent')
+        if (!normalized || normalized.role !== 'agent') return
+        expect(normalized.content).toEqual([
+            {
+                type: 'tool-result',
+                tool_use_id: 'call-generic-1',
+                content: {
+                    error: 'permission denied'
+                },
+                is_error: true,
+                uuid: 'codex-generic-error',
+                parentUUID: null
+            }
+        ])
+    })
 })
