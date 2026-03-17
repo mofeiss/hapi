@@ -1167,6 +1167,8 @@ const TodoWriteResultView: ToolViewComponent = (props: ToolViewProps) => {
     )
 }
 
+const TodoSingleRenderResultView: ToolViewComponent = () => null
+
 const ListMcpResourcesResultView: ToolViewComponent = (props: ToolViewProps) => {
     const { input, result, state } = props.block.tool
     const entries = extractMcpResourceListEntries(result)
@@ -1420,7 +1422,7 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     WebSearch: MarkdownResultView,
     NotebookRead: ReadResultView,
     NotebookEdit: NotebookEditResultView,
-    TodoWrite: TodoWriteResultView,
+    TodoWrite: TodoSingleRenderResultView,
     TaskOutput: RawResultView,
     TaskStop: RawResultView,
     EnterPlanMode: EnterPlanModeResultView,

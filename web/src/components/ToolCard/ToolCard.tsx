@@ -453,6 +453,7 @@ function ToolCardInner(props: ToolCardProps) {
         isQuestionToolWithAnswers
         && !isAskUserQuestionMalformed
     )
+    const usesSingleTodoRender = toolName === 'TodoWrite'
     const useAskUserQuestionPendingLayout = Boolean(
         isAskUserQuestion
         && permission?.status === 'pending'
@@ -501,21 +502,36 @@ function ToolCardInner(props: ToolCardProps) {
                 ) : (
                     <div className="flex flex-col gap-3">
                         <div>
-                            <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
-                            {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
-                                <FullToolView
-                                    block={props.block}
-                                    metadata={props.metadata}
-                                    api={props.api}
-                                    sessionId={props.sessionId}
-                                    disabled={props.disabled}
-                                    onDone={props.onDone}
-                                />
+                            {usesSingleTodoRender ? (
+                                FullToolView ? (
+                                    <FullToolView
+                                        block={props.block}
+                                        metadata={props.metadata}
+                                        api={props.api}
+                                        sessionId={props.sessionId}
+                                        disabled={props.disabled}
+                                        onDone={props.onDone}
+                                    />
+                                ) : null
                             ) : (
-                                renderToolInputContent(props.block, props.metadata)
+                                <>
+                                    <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.input')}</div>
+                                    {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
+                                        <FullToolView
+                                            block={props.block}
+                                            metadata={props.metadata}
+                                            api={props.api}
+                                            sessionId={props.sessionId}
+                                            disabled={props.disabled}
+                                            onDone={props.onDone}
+                                        />
+                                    ) : (
+                                        renderToolInputContent(props.block, props.metadata)
+                                    )}
+                                </>
                             )}
                         </div>
-                        {!isQuestionToolWithStructuredAnswers ? (
+                        {!isQuestionToolWithStructuredAnswers && !usesSingleTodoRender ? (
                             <div>
                                 <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                                 <ResultToolView block={props.block} metadata={props.metadata} />
@@ -650,23 +666,38 @@ function ToolCardInner(props: ToolCardProps) {
                     ) : (
                         <>
                             <div>
-                                <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
-                                    {isQuestionToolWithStructuredAnswers ? t('tool.questionsAnswers') : t('tool.input')}
-                                </div>
-                                {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
-                                    <FullToolView
-                                        block={props.block}
-                                        metadata={props.metadata}
-                                        api={props.api}
-                                        sessionId={props.sessionId}
-                                        disabled={props.disabled}
-                                        onDone={props.onDone}
-                                    />
+                                {usesSingleTodoRender ? (
+                                    FullToolView ? (
+                                        <FullToolView
+                                            block={props.block}
+                                            metadata={props.metadata}
+                                            api={props.api}
+                                            sessionId={props.sessionId}
+                                            disabled={props.disabled}
+                                            onDone={props.onDone}
+                                        />
+                                    ) : null
                                 ) : (
-                                    renderToolInputContent(props.block, props.metadata)
+                                    <>
+                                        <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">
+                                            {isQuestionToolWithStructuredAnswers ? t('tool.questionsAnswers') : t('tool.input')}
+                                        </div>
+                                        {FullToolView && !isAskUserQuestionMalformed && !isAskUserQuestion ? (
+                                            <FullToolView
+                                                block={props.block}
+                                                metadata={props.metadata}
+                                                api={props.api}
+                                                sessionId={props.sessionId}
+                                                disabled={props.disabled}
+                                                onDone={props.onDone}
+                                            />
+                                        ) : (
+                                            renderToolInputContent(props.block, props.metadata)
+                                        )}
+                                    </>
                                 )}
                             </div>
-                            {!isQuestionToolWithStructuredAnswers ? (
+                            {!isQuestionToolWithStructuredAnswers && !usesSingleTodoRender ? (
                                 <div>
                                     <div className="mb-1 text-[11px] font-medium text-[var(--app-hint)]">{t('tool.result')}</div>
                                     <ResultToolView block={props.block} metadata={props.metadata} />

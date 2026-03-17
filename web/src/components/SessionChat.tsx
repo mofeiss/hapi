@@ -747,6 +747,10 @@ export function SessionChat(props: {
         () => composerTodos.some((todo) => todo.status !== 'completed'),
         [composerTodos]
     )
+    const shouldShowComposerTodoPanel = useMemo(
+        () => composerTodos.some((todo) => todo.status !== 'completed'),
+        [composerTodos]
+    )
     const [composerTodoExpanded, setComposerTodoExpanded] = useState(composerTodoDefaultExpanded)
 
     useEffect(() => {
@@ -1050,7 +1054,7 @@ export function SessionChat(props: {
                                             className="relative z-10 min-w-0 flex-1 self-end px-0 pb-2"
                                         />
 
-                                        {composerTodos.length > 0 ? (
+                                        {shouldShowComposerTodoPanel ? (
                                             <>
                                                 <div aria-hidden="true" className="min-w-0 max-w-[min(58%,32rem)] flex-1 self-end">
                                                     <div className="invisible h-0 w-full max-w-full overflow-hidden pl-1 pr-4 sm:pl-2 sm:pr-5">
