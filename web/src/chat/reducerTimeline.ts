@@ -231,21 +231,6 @@ export function reduceTimeline(
                 }
 
                 if (c.type === 'tool-call') {
-                    if (isChangeTitleToolName(c.name)) {
-                        const title = context.titleChangesByToolUseId.get(c.id) ?? extractTitleFromChangeTitleInput(c.input)
-                        if (title && !context.emittedTitleChangeToolUseIds.has(c.id)) {
-                            context.emittedTitleChangeToolUseIds.add(c.id)
-                            blocks.push({
-                                kind: 'agent-event',
-                                id: `${msg.id}:${idx}`,
-                                createdAt: msg.createdAt,
-                                event: { type: 'title-changed', title },
-                                meta: msg.meta
-                            })
-                        }
-                        continue
-                    }
-
                     const normalizedToolName = normalizeToolNameAsSkillRead(c.name, c.input)
                     const permission = context.permissionsById.get(c.id)?.permission
 
@@ -282,17 +267,7 @@ export function reduceTimeline(
                 if (c.type === 'tool-result') {
                     const title = context.titleChangesByToolUseId.get(c.tool_use_id) ?? null
                     if (title) {
-                        if (!context.emittedTitleChangeToolUseIds.has(c.tool_use_id)) {
-                            context.emittedTitleChangeToolUseIds.add(c.tool_use_id)
-                            blocks.push({
-                                kind: 'agent-event',
-                                id: `${msg.id}:${idx}`,
-                                createdAt: msg.createdAt,
-                                event: { type: 'title-changed', title },
-                                meta: msg.meta
-                            })
-                        }
-                        continue
+                        context.emittedTitleChangeToolUseIds.add(c.tool_use_id)
                     }
 
                     const permissionEntry = context.permissionsById.get(c.tool_use_id)

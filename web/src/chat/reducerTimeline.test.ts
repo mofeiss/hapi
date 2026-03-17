@@ -34,6 +34,52 @@ function createTaskMessage(taskMessageId: string, prompt: string): TracedMessage
 }
 
 describe('reduceTimeline sidechain prompt handling', () => {
+    it('keeps change_title as a tool call instead of converting it into an event', () => {
+        const root: TracedMessage[] = [
+            {
+                id: 'title-tool-call',
+                localId: null,
+                createdAt: 1,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-call',
+                    id: 'title-tool-1',
+                    name: 'mcp__hapi__change_title',
+                    input: { title: '创建一次性任务查询 Node 版本' },
+                    description: null,
+                    uuid: 'title-tool-uuid',
+                    parentUUID: null
+                }]
+            },
+            {
+                id: 'title-tool-result',
+                localId: null,
+                createdAt: 2,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-result',
+                    tool_use_id: 'title-tool-1',
+                    content: { ok: true },
+                    is_error: false,
+                    uuid: 'title-tool-result-uuid',
+                    parentUUID: null
+                }]
+            }
+        ]
+
+        const result = reduceTimeline(root, createReducerContext(new Map()))
+
+        expect(result.blocks).toHaveLength(1)
+        expect(result.blocks[0]?.kind).toBe('tool-call')
+        if (result.blocks[0]?.kind !== 'tool-call') return
+
+        expect(result.blocks[0].tool.name).toBe('mcp__hapi__change_title')
+        expect(result.blocks[0].tool.state).toBe('completed')
+        expect(result.blocks[0].tool.input).toEqual({ title: '创建一次性任务查询 Node 版本' })
+    })
+
     it('does not render prompt echo as duplicated assistant text inside Task details', () => {
         const prompt = '分析日志并总结错误原因'
         const taskMessageId = 'task-msg-1'

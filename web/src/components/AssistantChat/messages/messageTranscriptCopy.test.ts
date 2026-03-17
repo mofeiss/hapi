@@ -120,4 +120,48 @@ describe('buildLoadedTranscriptCopyText', () => {
             ].join('\n\n')
         )
     })
+
+    it('keeps change_title output as a tool call in transcript copy', () => {
+        const messages: TestMessage[] = [
+            createMessage({
+                id: 'user:u1',
+                role: 'user',
+                content: [{ type: 'text', text: '创建一个一次性任务。' }],
+                custom: { kind: 'user' }
+            }),
+            createMessage({
+                id: 'tool:title-1',
+                role: 'assistant',
+                content: [{ type: 'tool-call', artifact: {
+                    kind: 'tool-call',
+                    id: 'title-1',
+                    localId: null,
+                    createdAt: 1,
+                    tool: {
+                        id: 'title-1',
+                        name: 'mcp__hapi__change_title',
+                        state: 'completed',
+                        input: { title: '创建一次性任务查询 Node 版本' },
+                        createdAt: 1,
+                        startedAt: 1,
+                        completedAt: 2,
+                        description: null
+                    },
+                    children: []
+                } }],
+                custom: { kind: 'tool', toolCallId: 'title-1' }
+            })
+        ]
+
+        expect(buildLoadedTranscriptCopyText(messages, {
+            metadata,
+            locale: 'en',
+            t: (key) => key
+        })).toBe(
+            [
+                '<UserPrompt>\n创建一个一次性任务。\n</UserPrompt>',
+                '```Tool_Call\n✓ MCP: HAPI Change Title | 创建一次性任务查询 Node 版本\n```'
+            ].join('\n\n')
+        )
+    })
 })
