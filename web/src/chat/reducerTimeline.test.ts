@@ -370,4 +370,83 @@ describe('reduceTimeline sidechain prompt handling', () => {
             status: 'completed'
         })
     })
+
+    it('keeps write_stdin as a separate tool call instead of merging it into CodexBash', () => {
+        const root: TracedMessage[] = [
+            {
+                id: 'bash-call',
+                localId: null,
+                createdAt: 1,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-call',
+                    id: 'cmd-1',
+                    name: 'CodexBash',
+                    input: {
+                        command: 'python -i',
+                        cwd: '/workspace'
+                    },
+                    description: null,
+                    uuid: 'bash-call-uuid',
+                    parentUUID: null
+                }]
+            },
+            {
+                id: 'stdin-call',
+                localId: null,
+                createdAt: 2,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-call',
+                    id: 'write_stdin:cmd-1',
+                    name: 'write_stdin',
+                    input: {
+                        stdin: 'print(1)\n',
+                        call_id: 'cmd-1'
+                    },
+                    description: null,
+                    uuid: 'stdin-call-uuid',
+                    parentUUID: null
+                }]
+            },
+            {
+                id: 'stdin-result',
+                localId: null,
+                createdAt: 3,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'tool-result',
+                    tool_use_id: 'write_stdin:cmd-1',
+                    content: {
+                        status: 'completed',
+                        stdin: 'print(1)\n',
+                        call_id: 'cmd-1'
+                    },
+                    is_error: false,
+                    uuid: 'stdin-result-uuid',
+                    parentUUID: null
+                }]
+            }
+        ]
+
+        const result = reduceTimeline(root, createReducerContext(new Map()))
+        expect(result.blocks).toHaveLength(2)
+
+        expect(result.blocks[0]?.kind).toBe('tool-call')
+        expect(result.blocks[1]?.kind).toBe('tool-call')
+        if (result.blocks[0]?.kind !== 'tool-call' || result.blocks[1]?.kind !== 'tool-call') {
+            throw new Error('Expected tool-call blocks')
+        }
+
+        expect(result.blocks[0].tool.name).toBe('CodexBash')
+        expect(result.blocks[1].tool.name).toBe('write_stdin')
+        expect(result.blocks[1].tool.state).toBe('completed')
+        expect(result.blocks[1].tool.input).toEqual({
+            stdin: 'print(1)\n',
+            call_id: 'cmd-1'
+        })
+    })
 })

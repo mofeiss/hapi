@@ -178,6 +178,10 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 .trim();
         };
 
+        const buildSyntheticNestedToolCallId = (kind: string, parentCallId: string): string => {
+            return `${kind}:${parentCallId}`;
+        };
+
         const permissionHandler = new CodexPermissionHandler(session.client, {
             onRequest: ({ id, toolName, input }) => {
                 const inputRecord = input && typeof input === 'object' ? input as Record<string, unknown> : {};
@@ -339,14 +343,16 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             }
 
             if (msgType === 'terminal_interaction') {
-                const callId = asString(msg.call_id ?? msg.callId) ?? randomUUID();
+                const parentCallId = asString(msg.call_id ?? msg.callId) ?? randomUUID();
+                const callId = buildSyntheticNestedToolCallId('write_stdin', parentCallId);
                 startSyntheticTool('write_stdin', callId, {
                     stdin: msg.stdin ?? '',
-                    call_id: callId
+                    call_id: parentCallId
                 });
                 finishSyntheticTool(callId, {
                     status: 'completed',
-                    stdin: msg.stdin ?? ''
+                    stdin: msg.stdin ?? '',
+                    call_id: parentCallId
                 });
                 return;
             }
