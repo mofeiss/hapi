@@ -135,6 +135,93 @@ function ScheduledTaskIcon(props: { className?: string }) {
   );
 }
 
+function EmptySelectionIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <rect x="4" y="5" width="16" height="14" rx="3" />
+      <path d="M8 9h8" />
+      <path d="M8 13h5" />
+      <circle cx="17" cy="13" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function SessionTabIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function EmptyListState(props: {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  descriptionNode?: React.ReactNode;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  const hasDescription = Boolean(props.description || props.descriptionNode);
+
+  return (
+    <div className="flex h-full min-h-[320px] w-full items-center justify-center overflow-visible px-6 py-10">
+      <div className="mx-auto flex max-w-sm flex-col items-center text-center">
+        <div className="relative mb-5 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-hint)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--app-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--app-bg)_90%,var(--app-secondary-bg))] opacity-95">
+            <div className="opacity-60">{props.icon}</div>
+          </div>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <h3 className="text-[15px] font-semibold leading-[1.15] tracking-[-0.01em] text-[var(--app-fg)]">
+            {props.title}
+          </h3>
+          {props.descriptionNode ? props.descriptionNode : props.description ? (
+            <p className="text-sm leading-6 text-[var(--app-hint)]">
+              {props.description}
+            </p>
+          ) : null}
+          {props.actionLabel && props.onAction ? (
+            <button
+              type="button"
+              onClick={props.onAction}
+              className="relative mt-1 inline-flex h-10 items-center justify-center overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-secondary-bg)] px-4 text-sm font-semibold text-[var(--app-fg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.26)] transition-colors hover:bg-[var(--app-bg)] active:bg-[var(--app-subtle-bg)]"
+            >
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 right-3 top-0 h-px rounded-full bg-[linear-gradient(90deg,transparent,var(--app-liquid-line),transparent)] opacity-90"
+              />
+              <span className="relative z-[1]">{props.actionLabel}</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditIcon(props: { className?: string }) {
   return (
     <svg
@@ -2390,6 +2477,7 @@ function SessionsPage() {
   const [newSessionMachineId, setNewSessionMachineId] = useState<string | null>(
     null,
   );
+  const [newSessionInitialPrompt, setNewSessionInitialPrompt] = useState("");
   const [scheduledGroupCollapseOverrides, setScheduledGroupCollapseOverrides] =
     useState<Map<string, boolean>>(() => {
       try {
@@ -2417,6 +2505,13 @@ function SessionsPage() {
 
   const normalizedSessionSearch = sessionSearch.trim().toLowerCase();
   const hasSessionSearch = sessionSearch.length > 0;
+  const hasAnySessions = sessions.length > 0;
+  const showSessionsEmptyState =
+    !isLoading &&
+    !error &&
+    !normalizedSessionSearch &&
+    !filterOnlineOnly &&
+    !hasAnySessions;
 
   const displaySessions = useMemo(() => {
     return sessions.filter((session) => {
@@ -3296,6 +3391,7 @@ function SessionsPage() {
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
     setNewSessionMachineId(null);
+    setNewSessionInitialPrompt("");
     selectWorkspaceOverlay("newSession");
 
     if (!narrowViewport) {
@@ -3307,6 +3403,28 @@ function SessionsPage() {
 
     setNewSessionOpen(true);
   }, [narrowViewport, navigate]);
+
+  const openNewSessionOverlayWithPrompt = useCallback(
+    (prompt: string) => {
+      const trimmedPrompt = prompt.trim();
+      setSettingsOpen(false);
+      setToolbarMenuOpen(false);
+      setNewSessionMachineId(null);
+      setNewSessionInitialPrompt(trimmedPrompt);
+      selectWorkspaceTab("sessions");
+      selectWorkspaceOverlay("newSession");
+
+      if (!narrowViewport) {
+        setNewSessionOpen(true);
+        setActiveSessionId(null);
+        navigate({ to: "/" });
+        return;
+      }
+
+      setNewSessionOpen(true);
+    },
+    [narrowViewport, navigate],
+  );
 
   const openNewSessionForHost = useCallback(
     (host: string) => {
@@ -3775,6 +3893,19 @@ function SessionsPage() {
     visibleNewSessionOverlay,
   ]);
 
+  const mobileNewSessionVisible = narrowViewport && visibleNewSessionOverlay;
+  const mobileSessionsDetailVisible =
+    narrowViewport && isSessionsTab && activeSessionId !== null && !hasOverlay;
+  const mobileScheduledDetailVisible =
+    narrowViewport &&
+    isScheduledTab &&
+    Boolean(selectedScheduledTaskId) &&
+    !hasOverlay;
+  const mobileTabDetailVisible =
+    mobileNewSessionVisible ||
+    mobileSessionsDetailVisible ||
+    mobileScheduledDetailVisible;
+
   useAppKeyboardShortcuts({
     isMobileViewport: narrowViewport,
     canToggleMobileSessionPane:
@@ -3791,18 +3922,6 @@ function SessionsPage() {
     onToggleMobileSessionPane: toggleMobileSessionPane,
   });
 
-  const mobileNewSessionVisible = narrowViewport && visibleNewSessionOverlay;
-  const mobileSessionsDetailVisible =
-    narrowViewport && isSessionsTab && activeSessionId !== null && !hasOverlay;
-  const mobileScheduledDetailVisible =
-    narrowViewport &&
-    isScheduledTab &&
-    Boolean(selectedScheduledTaskId) &&
-    !hasOverlay;
-  const mobileTabDetailVisible =
-    mobileNewSessionVisible ||
-    mobileSessionsDetailVisible ||
-    mobileScheduledDetailVisible;
   const effectiveCollapsed = collapsed;
   const scheduledIndexVisible = !selectedScheduledTaskId;
   const leftPanelVisible = narrowViewport
@@ -4051,10 +4170,12 @@ function SessionsPage() {
                       <NewSessionPanel
                         onClose={() => {
                           setNewSessionOpen(false);
+                          setNewSessionInitialPrompt("");
                           selectWorkspaceOverlay("none");
                         }}
                         onOpenSettings={openSettingsOverlay}
                         initialMachineId={newSessionMachineId}
+                        initialPrompt={newSessionInitialPrompt}
                       />
                     </div>
                   ) : mobileSessionsDetailVisible && activeSessionId ? (
@@ -4124,9 +4245,29 @@ function SessionsPage() {
                           {!scheduledLoading &&
                           !scheduledError &&
                           scheduledGroups.length === 0 ? (
-                            <div className="px-0 py-3 text-sm text-[var(--app-hint)]">
-                              No scheduled tasks yet.
-                            </div>
+                            <EmptyListState
+                              icon={<ScheduledTaskIcon className="h-8 w-8" />}
+                              title={t("scheduled.list.emptyTitle")}
+                              descriptionNode={
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openNewSessionOverlayWithPrompt(
+                                      t("scheduled.list.examplePrompt"),
+                                    )
+                                  }
+                                  className="text-sm italic leading-6 text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)]"
+                                >
+                                  "{t("scheduled.list.examplePrompt")}" 
+                                </button>
+                              }
+                              actionLabel={t("scheduled.list.tryIt")}
+                              onAction={() =>
+                                openNewSessionOverlayWithPrompt(
+                                  t("scheduled.list.examplePrompt"),
+                                )
+                              }
+                            />
                           ) : null}
                           {scheduledGroups.length > 0 ? (
                             <div className="max-h-full min-h-0 overflow-hidden rounded-md border border-[var(--app-subtle-solid-bg)]">
@@ -4316,6 +4457,16 @@ function SessionsPage() {
                       <div className="flex w-full items-start justify-center py-1 text-center text-sm text-[var(--app-hint)]">
                         {t("sessions.search.noMatch")}
                       </div>
+                    </div>
+                  ) : showSessionsEmptyState ? (
+                    <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-3 py-3">
+                      <EmptyListState
+                        icon={<SessionTabIcon className="h-8 w-8" />}
+                        title={t("sessions.emptyTitle")}
+                        description={t("sessions.empty")}
+                        actionLabel={narrowViewport ? t("sessions.new") : undefined}
+                        onAction={narrowViewport ? openNewSessionOverlay : undefined}
+                      />
                     </div>
                   ) : (
                     <div className="flex h-full min-h-0 flex-col py-3">
@@ -4547,6 +4698,24 @@ function SessionsPage() {
               : "hapi:skip-confirm:delete"
           }
         />
+
+        <ConfirmDialog
+          isOpen={scheduledDeleteTarget !== null}
+          onClose={() => setScheduledDeleteTarget(null)}
+          title={t("scheduled.deleteDialog.title")}
+          description={t("scheduled.deleteDialog.description", {
+            name: scheduledDeleteTarget?.title ?? "",
+          })}
+          confirmLabel={t("scheduled.deleteDialog.confirm")}
+          confirmingLabel={t("scheduled.deleteDialog.confirming")}
+          onConfirm={async () => {
+            if (!scheduledDeleteTarget) return;
+            await deleteScheduledTask(scheduledDeleteTarget.id);
+            setScheduledDeleteTarget(null);
+          }}
+          isPending={scheduledPending}
+          destructive
+        />
       </div>
 
       {/* Drag handle (PC only, when not collapsed) */}
@@ -4710,18 +4879,22 @@ function SessionsPage() {
             <NewSessionPanel
               onClose={() => {
                 setNewSessionOpen(false);
+                setNewSessionInitialPrompt("");
                 selectWorkspaceOverlay("none");
               }}
               onOpenSettings={openSettingsOverlay}
               initialMachineId={newSessionMachineId}
+              initialPrompt={newSessionInitialPrompt}
             />
           </div>
         ) : isScheduledTab && !narrowViewport ? (
           <div className="hidden min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden lg:flex">
             {!selectedScheduledTask ? (
-              <div className="flex h-full items-center justify-center px-6 text-sm text-[var(--app-hint)]">
-                {t("scheduled.detail.empty")}
-              </div>
+              <EmptyListState
+                icon={<EmptySelectionIcon className="h-8 w-8" />}
+                title={t("scheduled.detail.emptyTitle")}
+                description={t("scheduled.detail.empty")}
+              />
             ) : (
               <ScheduledTaskDetailPanel
                 task={selectedScheduledTask}
@@ -4756,23 +4929,6 @@ function SessionsPage() {
               />
             )}
 
-            <ConfirmDialog
-              isOpen={scheduledDeleteTarget !== null}
-              onClose={() => setScheduledDeleteTarget(null)}
-              title={t("scheduled.deleteDialog.title")}
-              description={t("scheduled.deleteDialog.description", {
-                name: scheduledDeleteTarget?.title ?? "",
-              })}
-              confirmLabel={t("scheduled.deleteDialog.confirm")}
-              confirmingLabel={t("scheduled.deleteDialog.confirming")}
-              onConfirm={async () => {
-                if (!scheduledDeleteTarget) return;
-                await deleteScheduledTask(scheduledDeleteTarget.id);
-                setScheduledDeleteTarget(null);
-              }}
-              isPending={scheduledPending}
-              destructive
-            />
           </div>
         ) : (
           <>
@@ -4948,6 +5104,7 @@ function NewSessionPanel(props: {
   onClose: () => void;
   onOpenSettings?: () => void;
   initialMachineId?: string | null;
+  initialPrompt?: string;
 }) {
   const { api } = useAppContext();
   const navigate = useNavigate();
@@ -4998,6 +5155,7 @@ function NewSessionPanel(props: {
       onSuccess={handleSuccess}
       onOpenSettings={props.onOpenSettings}
       initialMachineId={props.initialMachineId}
+      initialPrompt={props.initialPrompt}
     />
   );
 }

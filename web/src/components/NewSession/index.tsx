@@ -228,6 +228,7 @@ export function NewSession(props: {
     onCancel: () => void
     onOpenSettings?: () => void
     initialMachineId?: string | null
+    initialPrompt?: string
 }) {
     const { t } = useTranslation()
     const { haptic } = usePlatform()
@@ -817,6 +818,7 @@ export function NewSession(props: {
 
                                         <HappyComposer
                                             embedded
+                                            initialText={props.initialPrompt}
                                             disabled={isPending}
                                             sendDisabled={!canCreateBase}
                                             permissionMode={effectivePermissionMode}

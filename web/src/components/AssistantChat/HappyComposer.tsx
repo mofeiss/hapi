@@ -44,6 +44,7 @@ function joinVoiceDraft(prefix: string, transcript: string): string {
 }
 
 export function HappyComposer(props: {
+    initialText?: string
     disabled?: boolean
     sendDisabled?: boolean
     embedded?: boolean
@@ -99,6 +100,7 @@ export function HappyComposer(props: {
     const { t } = useTranslation()
     const {
         disabled = false,
+        initialText,
         sendDisabled = false,
         embedded = false,
         placeholder,
@@ -238,6 +240,13 @@ export function HappyComposer(props: {
         }
         voiceSessionPreparedRef.current = false
     }, [voiceStatus])
+
+    useEffect(() => {
+        if (typeof initialText !== 'string') {
+            return
+        }
+        api.composer().setText(initialText)
+    }, [api, initialText])
 
     useEffect(() => {
         if (!onTranscript) return
