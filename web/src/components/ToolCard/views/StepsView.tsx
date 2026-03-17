@@ -21,7 +21,7 @@ import {
 } from '@/components/ToolCard/askUserQuestion'
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
 import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
-import { getToolPresentation } from '@/components/ToolCard/knownTools'
+import { getToolDisplayText, getToolPresentation } from '@/components/ToolCard/knownTools'
 import { isResultOnlyToolName } from '@/components/ToolCard/toolRenderModes'
 import { isViewportNearBottom } from '@/components/AssistantChat/scrollBehavior'
 import { useTranslation } from '@/lib/use-translation'
@@ -630,6 +630,7 @@ function StepNode(props: {
         metadata: props.metadata ?? null,
         locale
     }), [props.block, props.metadata, locale])
+    const display = getToolDisplayText(props.metadata ?? null, props.block.tool.name, presentation)
 
     const childTools = props.block.children.filter((child): child is ToolCallBlock => child.kind === 'tool-call')
     const otherChildren = props.block.children.filter((child) => child.kind !== 'tool-call')
@@ -661,10 +662,10 @@ function StepNode(props: {
                     <StepStatusIcon state={props.block.tool.state} />
                 </span>
                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">
-                    <span className="text-sm text-[var(--app-hint)] opacity-90">{presentation.title}</span>
-                    {presentation.subtitle ? (
+                    <span className="text-sm text-[var(--app-hint)] opacity-90">{display.title}</span>
+                    {display.subtitle ? (
                         <span className="ml-2 font-mono text-xs text-[var(--app-hint)]">
-                            {presentation.subtitle}
+                            {display.subtitle}
                         </span>
                     ) : null}
                 </span>

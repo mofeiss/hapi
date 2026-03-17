@@ -110,4 +110,90 @@ describe('ToolCard Agent header', () => {
         expect(screen.getByText('派发子代理处理 读取并总结 RTK 文档')).toBeInTheDocument()
         expect(container.querySelector('span[title="读取并总结 RTK 文档"]')).toBeNull()
     })
+
+    it('renders raw tool name for codex sessions', () => {
+        render(
+            createElement(
+                I18nProvider,
+                null,
+                createElement(ToolCard, {
+                    api: {} as never,
+                    sessionId: 'session-1',
+                    metadata: {
+                        path: '/workspace',
+                        host: 'local',
+                        flavor: 'codex'
+                    },
+                    disabled: false,
+                    onDone: vi.fn(),
+                    block: {
+                        kind: 'tool-call',
+                        id: 'bash-tool-1',
+                        localId: null,
+                        createdAt: 1,
+                        tool: {
+                            id: 'bash-tool-1',
+                            name: 'Bash',
+                            state: 'completed',
+                            input: {
+                                command: 'pwd'
+                            },
+                            createdAt: 1,
+                            startedAt: 1,
+                            completedAt: 2,
+                            description: null,
+                            result: null
+                        },
+                        children: []
+                    }
+                })
+            )
+        )
+
+        expect(screen.getByText('Bash')).toBeInTheDocument()
+        expect(screen.getByText('执行命令 pwd')).toBeInTheDocument()
+    })
+
+    it('preserves preview subtitle for read-like tools in codex sessions', () => {
+        render(
+            createElement(
+                I18nProvider,
+                null,
+                createElement(ToolCard, {
+                    api: {} as never,
+                    sessionId: 'session-1',
+                    metadata: {
+                        path: '/workspace',
+                        host: 'local',
+                        flavor: 'codex'
+                    },
+                    disabled: false,
+                    onDone: vi.fn(),
+                    block: {
+                        kind: 'tool-call',
+                        id: 'read-tool-1',
+                        localId: null,
+                        createdAt: 1,
+                        tool: {
+                            id: 'read-tool-1',
+                            name: 'Read',
+                            state: 'completed',
+                            input: {
+                                file_path: '/workspace/src/main.ts'
+                            },
+                            createdAt: 1,
+                            startedAt: 1,
+                            completedAt: 2,
+                            description: null,
+                            result: null
+                        },
+                        children: []
+                    }
+                })
+            )
+        )
+
+        expect(screen.getByText('Read')).toBeInTheDocument()
+        expect(screen.getByText('查看 src/main.ts 文件')).toBeInTheDocument()
+    })
 })

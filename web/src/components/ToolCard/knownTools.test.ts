@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getStandardToolTitle, getToolPresentation } from '@/components/ToolCard/knownTools'
+import { getStandardToolTitle, getToolDisplayText, getToolPresentation } from '@/components/ToolCard/knownTools'
 
 const CORE_TOOLS = [
     'Read',
@@ -310,5 +310,98 @@ describe('getToolPresentation', () => {
 
         expect(presentation.title).toBe('派发子代理处理 分析日志')
         expect(presentation.subtitle).toBeNull()
+    })
+
+    it('preserves preview text as subtitle when raw tool names are enabled', () => {
+        const presentation = getToolPresentation({
+            toolName: 'Read',
+            input: { file_path: 'src/main.ts' },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: {
+                path: '/workspace',
+                host: 'local',
+                flavor: 'codex'
+            },
+            locale: 'zh-CN'
+        })
+
+        expect(getToolDisplayText(
+            {
+                path: '/workspace',
+                host: 'local',
+                flavor: 'codex'
+            },
+            'Read',
+            presentation
+        )).toEqual({
+            title: 'Read',
+            subtitle: '查看 src/main.ts 文件'
+        })
+    })
+
+    it('moves skill preview title into subtitle when raw tool names are enabled', () => {
+        const presentation = getToolPresentation({
+            toolName: 'SkillRead',
+            input: {
+                skill_name: 'agent-browser',
+                path: '/Users/ofeiss/.hapi/skills/agent-browser/SKILL.md'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: {
+                path: '/Users/ofeiss/project/hapi',
+                host: 'local',
+                flavor: 'claude'
+            },
+            locale: 'zh-CN'
+        })
+
+        expect(getToolDisplayText(
+            {
+                path: '/Users/ofeiss/project/hapi',
+                host: 'local',
+                flavor: 'claude'
+            },
+            'SkillRead',
+            presentation
+        )).toEqual({
+            title: 'SkillRead',
+            subtitle: '调用技能 agent-browser'
+        })
+    })
+
+    it('preserves explicit computed subtitle for bash-like tools when raw tool names are enabled', () => {
+        const presentation = getToolPresentation({
+            toolName: 'CodexBash',
+            input: {
+                command: 'pwd',
+                cwd: '/workspace'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: {
+                path: '/workspace',
+                host: 'local',
+                flavor: 'codex'
+            },
+            locale: 'zh-CN'
+        })
+
+        expect(getToolDisplayText(
+            {
+                path: '/workspace',
+                host: 'local',
+                flavor: 'codex'
+            },
+            'CodexBash',
+            presentation
+        )).toEqual({
+            title: 'CodexBash',
+            subtitle: '执行命令 pwd'
+        })
     })
 })

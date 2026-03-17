@@ -11,7 +11,7 @@ import { LazyRainbowText } from '@/components/LazyRainbowText'
 import { MessageStatusIndicator } from '@/components/AssistantChat/messages/MessageStatusIndicator'
 import { ApiErrorNotice, isApiErrorText } from '@/components/AssistantChat/messages/ApiErrorNotice'
 import { ToolCard } from '@/components/ToolCard/ToolCard'
-import { getStandardToolTitle } from '@/components/ToolCard/knownTools'
+import { shouldDisplayRawToolName } from '@/components/ToolCard/knownTools'
 import { useHappyChatContext } from '@/components/AssistantChat/context'
 import { CliOutputBlock } from '@/components/CliOutputBlock'
 import { cn } from '@/lib/utils'
@@ -324,7 +324,7 @@ export function HappyToolMessage(props: ToolCallMessagePartProps) {
     const ctx = useHappyChatContext()
     const { t } = useTranslation()
     const artifact = props.artifact
-    const displayToolName = getStandardToolTitle(props.toolName) ?? props.toolName
+    const displayToolName = props.toolName
 
     if (!isToolCallBlock(artifact)) {
         const argsText = typeof props.argsText === 'string' ? props.argsText.trim() : ''

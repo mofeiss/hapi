@@ -1,6 +1,6 @@
 import { isObject } from '@hapi/protocol'
 import type { ChatBlock, ToolCallBlock } from '@/chat/types'
-import { getStandardToolTitle, getToolPresentation } from '@/components/ToolCard/knownTools'
+import { getToolDisplayText, getToolPresentation } from '@/components/ToolCard/knownTools'
 import type { Locale } from '@/lib/i18n-context'
 import type { SessionMetadataSummary } from '@/types/api'
 
@@ -106,14 +106,16 @@ function formatToolSummary(
         locale
     })
 
-    return presentation.subtitle
-        ? `${presentation.title} | ${presentation.subtitle}`
-        : presentation.title
+    const display = getToolDisplayText(metadata, block.tool.name, presentation)
+
+    return display.subtitle
+        ? `${display.title} | ${display.subtitle}`
+        : display.title
 }
 
-function formatFallbackToolSummary(toolName: string | undefined): string {
+function formatFallbackToolSummary(toolName: string | undefined, metadata: SessionMetadataSummary | null): string {
     if (!toolName) return ''
-    return getStandardToolTitle(toolName) ?? toolName
+    return toolName
 }
 
 function formatVisibleAuxiliaryBlock(child: ChatBlock): string {
@@ -198,7 +200,7 @@ function formatToolPart(
         return formatToolBlockForCopy(part.artifact, metadata, locale, false, includeToolJson)
     }
 
-    return formatFallbackToolSummary(part.toolName)
+    return formatFallbackToolSummary(part.toolName, metadata)
 }
 
 function isTopLevelStepsToolPart(

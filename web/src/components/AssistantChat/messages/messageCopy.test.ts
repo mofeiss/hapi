@@ -144,4 +144,21 @@ describe('buildAssistantCopyText', () => {
             ].join('\n')
         )
     })
+
+    it('uses raw tool names in copy text for codex sessions', () => {
+        const parts: AssistantCopyPart[] = [
+            { type: 'tool-call', artifact: createToolBlock('read-1', 'Read', { file_path: '/workspace/src/app.ts' }) },
+            { type: 'tool-call', artifact: createToolBlock('bash-1', 'Bash', { command: 'bun test web' }, [], 'error') }
+        ]
+
+        expect(buildAssistantCopyText(parts, {
+            metadata: {
+                ...metadata,
+                flavor: 'codex'
+            },
+            locale: 'en'
+        })).toBe(
+            '```Tool_Call\n✓ Read | View src/app.ts file\n✗ Bash | Run command bun test web\n```'
+        )
+    })
 })

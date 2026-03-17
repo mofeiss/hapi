@@ -20,6 +20,11 @@ export type ToolPresentation = {
     minimal: boolean
 }
 
+export type ToolDisplayText = {
+    title: string
+    subtitle: string | null
+}
+
 function countLines(text: string): number {
     return text.split('\n').length
 }
@@ -152,6 +157,34 @@ export function getStandardToolTitle(toolName: string): string | null {
     if (known) return known
     if (toolName.startsWith('mcp__')) return formatMCPTitle(toolName)
     return null
+}
+
+export function shouldDisplayRawToolName(metadata: SessionMetadataSummary | null): boolean {
+    return metadata?.flavor === 'claude' || metadata?.flavor === 'codex'
+}
+
+export function getToolDisplayText(
+    metadata: SessionMetadataSummary | null,
+    toolName: string,
+    presentation: ToolPresentation
+): ToolDisplayText {
+    if (!shouldDisplayRawToolName(metadata)) {
+        return {
+            title: presentation.title,
+            subtitle: presentation.subtitle
+        }
+    }
+
+    const subtitle = presentation.subtitle ?? (
+        presentation.title !== toolName
+            ? presentation.title
+            : null
+    )
+
+    return {
+        title: toolName,
+        subtitle
+    }
 }
 
 function getInputPathSubtitle(input: unknown, metadata: SessionMetadataSummary | null): string | null {

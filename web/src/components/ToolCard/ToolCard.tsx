@@ -15,7 +15,7 @@ import {
     parseAskUserQuestionInput
 } from '@/components/ToolCard/askUserQuestion'
 import { isRequestUserInputToolName } from '@/components/ToolCard/requestUserInput'
-import { getToolPresentation } from '@/components/ToolCard/knownTools'
+import { getToolDisplayText, getToolPresentation } from '@/components/ToolCard/knownTools'
 import { getToolFullViewComponent, getToolViewComponent } from '@/components/ToolCard/views/_all'
 import { renderToolInputContent } from '@/components/ToolCard/views/_input'
 import { getToolResultViewComponent } from '@/components/ToolCard/views/_results'
@@ -61,12 +61,13 @@ function formatTaskChildLabel(child: ToolCallBlock, metadata: SessionMetadataSum
         metadata,
         locale
     })
+    const display = getToolDisplayText(metadata, child.tool.name, presentation)
 
-    if (presentation.subtitle) {
-        return truncate(`${presentation.title}: ${presentation.subtitle}`, 140)
+    if (display.subtitle) {
+        return truncate(`${display.title}: ${display.subtitle}`, 140)
     }
 
-    return presentation.title
+    return display.title
 }
 
 function TaskStateIcon(props: { state: ToolCallBlock['tool']['state'] }) {
@@ -304,10 +305,11 @@ function ToolCardInner(props: ToolCardProps) {
     ])
 
     const toolName = props.block.tool.name
-    const toolTitle = presentation.title
+    const display = getToolDisplayText(props.metadata, toolName, presentation)
+    const toolTitle = display.title
     const subtitle = toolName === 'Agent'
-        ? presentation.subtitle
-        : (presentation.subtitle ?? props.block.tool.description)
+        ? display.subtitle
+        : (display.subtitle ?? props.block.tool.description)
     const taskSummary = renderTaskSummary(props.block, props.metadata, locale)
     const runningFrom = props.block.tool.startedAt ?? props.block.tool.createdAt
     const showInline = !presentation.minimal && toolName !== 'Task'
