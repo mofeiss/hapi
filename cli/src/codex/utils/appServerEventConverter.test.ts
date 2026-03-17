@@ -369,6 +369,40 @@ describe('AppServerEventConverter', () => {
         }]);
     });
 
+    it('deduplicates overlapping plan update notifications for the same payload', () => {
+        const converter = new AppServerEventConverter();
+
+        const first = converter.handleNotification('codex/event/plan_update', {
+            id: 'turn-plan-dup',
+            msg: {
+                explanation: 'same plan',
+                plan: [
+                    { step: 'first', status: 'completed' },
+                    { step: 'second', status: 'in_progress' }
+                ]
+            }
+        });
+        const duplicate = converter.handleNotification('turn/plan/updated', {
+            turnId: 'turn-plan-dup',
+            explanation: 'same plan',
+            plan: [
+                { step: 'first', status: 'completed' },
+                { step: 'second', status: 'inProgress' }
+            ]
+        });
+
+        expect(first).toEqual([{
+            type: 'plan_update',
+            turn_id: 'turn-plan-dup',
+            explanation: 'same plan',
+            todos: [
+                { content: 'first', status: 'completed' },
+                { content: 'second', status: 'in_progress' }
+            ]
+        }]);
+        expect(duplicate).toEqual([]);
+    });
+
     it('maps wrapper MCP tool lifecycle events', () => {
         const converter = new AppServerEventConverter();
 

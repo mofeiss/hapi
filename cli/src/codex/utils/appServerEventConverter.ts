@@ -104,6 +104,16 @@ function normalizePlanItems(value: unknown): Array<{ content: string; status: 'p
         .filter((item): item is { content: string; status: 'pending' | 'in_progress' | 'completed' } => item !== null);
 }
 
+function createPlanFingerprint(
+    explanation: string | null,
+    todos: Array<{ content: string; status: 'pending' | 'in_progress' | 'completed' }>
+): string {
+    const todoFingerprint = todos
+        .map((todo) => `${todo.status}:${todo.content}`)
+        .join('|');
+    return `${explanation ?? ''}::${todoFingerprint}`;
+}
+
 function buildMcpToolName(server: string, tool: string): string {
     if (server === 'codex' && tool === 'list_mcp_resources') {
         return 'ListMcpResourcesTool';
@@ -167,6 +177,7 @@ export class AppServerEventConverter {
     private readonly fileChangeMeta = new Map<string, Record<string, unknown>>();
     private readonly execCommandBeginScores = new Map<string, number>();
     private readonly execCommandEndScores = new Map<string, number>();
+    private lastPlanFingerprint: string | null = null;
 
     private shouldEmitExecCommandBegin(callId: string, score: number): boolean {
         const previous = this.execCommandBeginScores.get(callId);
@@ -442,6 +453,11 @@ export class AppServerEventConverter {
             const explanation = asString(source.explanation ?? paramsRecord.explanation);
             const todos = normalizePlanItems(source.plan ?? paramsRecord.plan);
             if (todos.length > 0 || explanation) {
+                const fingerprint = createPlanFingerprint(explanation, todos);
+                if (this.lastPlanFingerprint === fingerprint) {
+                    return events;
+                }
+                this.lastPlanFingerprint = fingerprint;
                 events.push({
                     type: 'plan_update',
                     ...(turnId ? { turn_id: turnId } : {}),
@@ -896,5 +912,6 @@ export class AppServerEventConverter {
         this.fileChangeMeta.clear();
         this.execCommandBeginScores.clear();
         this.execCommandEndScores.clear();
+        this.lastPlanFingerprint = null;
     }
 }
