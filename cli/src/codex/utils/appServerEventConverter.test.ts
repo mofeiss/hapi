@@ -344,6 +344,143 @@ describe('AppServerEventConverter', () => {
         }]);
     });
 
+    it('maps plan updates into normalized todos', () => {
+        const converter = new AppServerEventConverter();
+
+        const events = converter.handleNotification('turn/plan/updated', {
+            turnId: 'turn-plan-1',
+            explanation: 'demo plan',
+            plan: [
+                { step: 'first', status: 'inProgress' },
+                { step: 'second', status: 'pending' },
+                { step: 'third', status: 'completed' }
+            ]
+        });
+
+        expect(events).toEqual([{
+            type: 'plan_update',
+            turn_id: 'turn-plan-1',
+            explanation: 'demo plan',
+            todos: [
+                { content: 'first', status: 'in_progress' },
+                { content: 'second', status: 'pending' },
+                { content: 'third', status: 'completed' }
+            ]
+        }]);
+    });
+
+    it('maps wrapper MCP tool lifecycle events', () => {
+        const converter = new AppServerEventConverter();
+
+        const started = converter.handleNotification('codex/event/mcp_tool_call_begin', {
+            msg: {
+                call_id: 'mcp-1',
+                invocation: {
+                    server: 'searxng',
+                    tool: 'read_mcp_resource',
+                    arguments: {
+                        server: 'searxng',
+                        uri: 'help://usage-guide'
+                    }
+                }
+            }
+        });
+        expect(started).toEqual([{
+            type: 'mcp_tool_call_begin',
+            call_id: 'mcp-1',
+            tool_name: 'ReadMcpResourceTool',
+            input: {
+                server: 'searxng',
+                uri: 'help://usage-guide'
+            }
+        }]);
+
+        const completed = converter.handleNotification('codex/event/mcp_tool_call_end', {
+            msg: {
+                call_id: 'mcp-1',
+                invocation: {
+                    server: 'searxng',
+                    tool: 'read_mcp_resource',
+                    arguments: {
+                        server: 'searxng',
+                        uri: 'help://usage-guide'
+                    }
+                },
+                result: {
+                    Ok: {
+                        content: [{ type: 'text', text: 'guide' }],
+                        isError: false
+                    }
+                }
+            }
+        });
+        expect(completed).toEqual([{
+            type: 'mcp_tool_call_end',
+            call_id: 'mcp-1',
+            tool_name: 'ReadMcpResourceTool',
+            output: {
+                content: [{ type: 'text', text: 'guide' }],
+                isError: false
+            },
+            is_error: false
+        }]);
+    });
+
+    it('maps image view and terminal interaction wrapper events', () => {
+        const converter = new AppServerEventConverter();
+
+        const imageStarted = converter.handleNotification('codex/event/view_image_tool_call', {
+            msg: {
+                call_id: 'img-1',
+                path: '/tmp/demo.png'
+            }
+        });
+        expect(imageStarted).toEqual([{
+            type: 'image_view_begin',
+            call_id: 'img-1',
+            path: '/tmp/demo.png'
+        }]);
+
+        const imageCompleted = converter.handleNotification('item/completed', {
+            item: {
+                id: 'img-1',
+                type: 'imageView',
+                path: '/tmp/demo.png'
+            }
+        });
+        expect(imageCompleted).toEqual([{
+            type: 'image_view_end',
+            call_id: 'img-1',
+            output: {
+                path: '/tmp/demo.png'
+            }
+        }]);
+
+        const terminalInteraction = converter.handleNotification('codex/event/terminal_interaction', {
+            msg: {
+                call_id: 'stdin-1',
+                stdin: 'hello\n'
+            }
+        });
+        expect(terminalInteraction).toEqual([{
+            type: 'terminal_interaction',
+            call_id: 'stdin-1',
+            stdin: 'hello\n'
+        }]);
+    });
+
+    it('maps wrapper agent reasoning message', () => {
+        const converter = new AppServerEventConverter();
+
+        const events = converter.handleNotification('codex/event/agent_reasoning', {
+            msg: {
+                text: 'thinking deeply'
+            }
+        });
+
+        expect(events).toEqual([{ type: 'agent_reasoning', text: 'thinking deeply' }]);
+    });
+
     it('maps codex token count wrapper event', () => {
         const converter = new AppServerEventConverter();
 

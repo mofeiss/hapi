@@ -2,6 +2,12 @@ import type { ChatBlock } from '@/chat/types'
 import type { TodoItem } from '@/types/api'
 import { isObject } from '@hapi/protocol'
 
+const TODO_TOOL_NAMES = new Set(['TodoWrite', 'functions.update_plan'])
+
+export function isTodoToolName(toolName: string): boolean {
+    return TODO_TOOL_NAMES.has(toolName)
+}
+
 export type TodoViewItem = {
     id: string
     content: string
@@ -84,7 +90,7 @@ export function findLatestTodoToolTodos(blocks: readonly ChatBlock[]): TodoViewI
         for (const block of entries) {
             if (block.kind !== 'tool-call') continue
 
-            if (block.tool.name === 'TodoWrite') {
+            if (isTodoToolName(block.tool.name)) {
                 const todos = extractToolTodos(block.tool.input, block.tool.result)
                 if (todos.length > 0 && block.createdAt >= latestCreatedAt) {
                     latestCreatedAt = block.createdAt

@@ -1423,6 +1423,7 @@ export const toolResultViewRegistry: Record<string, ToolViewComponent> = {
     NotebookRead: ReadResultView,
     NotebookEdit: NotebookEditResultView,
     TodoWrite: TodoSingleRenderResultView,
+    'functions.update_plan': TodoSingleRenderResultView,
     TaskOutput: RawResultView,
     TaskStop: RawResultView,
     EnterPlanMode: EnterPlanModeResultView,

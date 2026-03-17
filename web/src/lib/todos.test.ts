@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { ChatBlock } from '@/chat/types'
-import { extractToolTodos, findLatestTodoToolTodos } from '@/lib/todos'
+import { extractToolTodos, findLatestTodoToolTodos, isTodoToolName } from '@/lib/todos'
 
 describe('extractToolTodos', () => {
+    it('recognizes update_plan as a todo tool', () => {
+        expect(isTodoToolName('TodoWrite')).toBe(true)
+        expect(isTodoToolName('functions.update_plan')).toBe(true)
+        expect(isTodoToolName('Bash')).toBe(false)
+    })
+
     it('prefers structured todos from tool input', () => {
         const todos = extractToolTodos(
             {
@@ -41,7 +47,7 @@ describe('extractToolTodos', () => {
 })
 
 describe('findLatestTodoToolTodos', () => {
-    it('finds the newest TodoWrite payload across nested blocks', () => {
+    it('finds the newest todo payload across nested blocks', () => {
         const blocks: ChatBlock[] = [
             {
                 kind: 'tool-call',
@@ -89,7 +95,7 @@ describe('findLatestTodoToolTodos', () => {
                 createdAt: 3,
                 tool: {
                     id: 'todo-new',
-                    name: 'TodoWrite',
+                    name: 'functions.update_plan',
                     state: 'completed',
                     input: {
                         todos: [

@@ -194,6 +194,26 @@ describe('getToolPresentation', () => {
         expect(enPresentation.subtitle).toBe('1 tasks, 0 completed')
     })
 
+    it('treats functions.update_plan like TodoWrite', () => {
+        const presentation = getToolPresentation({
+            toolName: 'functions.update_plan',
+            input: {
+                todos: [
+                    { id: '1', content: 'Implement task panel', status: 'in_progress', priority: 'high' }
+                ]
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'en'
+        })
+
+        expect(presentation.title).toBe('Update todo list')
+        expect(presentation.subtitle).toBe('1 tasks, 0 completed')
+        expect(presentation.minimal).toBe(false)
+    })
+
     it('localizes Task default title', () => {
         const zhPresentation = getToolPresentation({
             toolName: 'Task',

@@ -76,6 +76,86 @@ function extractChanges(value: unknown): Record<string, unknown> | null {
     return null;
 }
 
+function normalizePlanStatus(value: unknown): 'pending' | 'in_progress' | 'completed' | null {
+    const raw = asString(value);
+    if (!raw) return null;
+
+    const normalized = raw.toLowerCase().replace(/[\s-]/g, '_');
+    if (normalized === 'inprogress') return 'in_progress';
+    if (normalized === 'pending' || normalized === 'in_progress' || normalized === 'completed') {
+        return normalized;
+    }
+    return null;
+}
+
+function extractPlanItems(value: unknown): Array<Record<string, unknown>> {
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is Record<string, unknown> => Boolean(asRecord(item)));
+}
+
+function normalizePlanItems(value: unknown): Array<{ content: string; status: 'pending' | 'in_progress' | 'completed' }> {
+    return extractPlanItems(value)
+        .map((item) => {
+            const content = asString(item.content ?? item.step ?? item.title ?? item.text);
+            const status = normalizePlanStatus(item.status);
+            if (!content || !status) return null;
+            return { content, status };
+        })
+        .filter((item): item is { content: string; status: 'pending' | 'in_progress' | 'completed' } => item !== null);
+}
+
+function buildMcpToolName(server: string, tool: string): string {
+    if (server === 'codex' && tool === 'list_mcp_resources') {
+        return 'ListMcpResourcesTool';
+    }
+    if (tool === 'read_mcp_resource') {
+        return 'ReadMcpResourceTool';
+    }
+    return `mcp__${server}__${tool}`;
+}
+
+function extractMcpInvocation(value: unknown): { server: string; tool: string; arguments: Record<string, unknown> } | null {
+    const invocation = asRecord(value);
+    if (!invocation) return null;
+
+    const server = asString(invocation.server);
+    const tool = asString(invocation.tool);
+    if (!server || !tool) return null;
+
+    const args = asRecord(invocation.arguments) ?? {};
+    return { server, tool, arguments: args };
+}
+
+function extractMcpResult(value: unknown): { output: unknown; is_error: boolean } {
+    const resultRecord = asRecord(value);
+    if (!resultRecord) {
+        return { output: value, is_error: false };
+    }
+
+    if (Object.prototype.hasOwnProperty.call(resultRecord, 'Ok')) {
+        const ok = resultRecord.Ok;
+        const okRecord = asRecord(ok);
+        return {
+            output: okRecord ?? ok,
+            is_error: Boolean(okRecord && asBoolean(okRecord.isError))
+        };
+    }
+
+    if (Object.prototype.hasOwnProperty.call(resultRecord, 'Err')) {
+        const err = resultRecord.Err;
+        const errRecord = asRecord(err);
+        return {
+            output: errRecord ?? err,
+            is_error: true
+        };
+    }
+
+    return {
+        output: resultRecord,
+        is_error: Boolean(asBoolean(resultRecord.isError))
+    };
+}
+
 export class AppServerEventConverter {
     private readonly agentMessageBuffers = new Map<string, string>();
     private readonly agentMessageSources = new Map<string, 'raw' | 'wrapper'>();
@@ -341,8 +421,97 @@ export class AppServerEventConverter {
             || method === 'codex/event/item_completed'
             || method === 'codex/event/agent_message_delta'
             || method === 'codex/event/user_message'
+            || method === 'codex/event/exec_command_output_delta'
         ) {
             // These wrapper notifications are informative duplicates for flows we already track.
+            return events;
+        }
+
+        if (method === 'codex/event/agent_reasoning') {
+            const source = wrappedMsg ?? paramsRecord;
+            const text = asString(source.text ?? source.message ?? source.content);
+            if (text) {
+                events.push({ type: 'agent_reasoning', text });
+            }
+            return events;
+        }
+
+        if (method === 'codex/event/plan_update' || method === 'turn/plan/updated') {
+            const source = wrappedMsg ?? paramsRecord;
+            const turnId = asString(source.turn_id ?? source.turnId ?? paramsRecord.turnId ?? paramsRecord.turn_id ?? paramsRecord.id);
+            const explanation = asString(source.explanation ?? paramsRecord.explanation);
+            const todos = normalizePlanItems(source.plan ?? paramsRecord.plan);
+            if (todos.length > 0 || explanation) {
+                events.push({
+                    type: 'plan_update',
+                    ...(turnId ? { turn_id: turnId } : {}),
+                    ...(explanation ? { explanation } : {}),
+                    todos
+                });
+            }
+            return events;
+        }
+
+        if (method === 'codex/event/mcp_tool_call_begin') {
+            const source = wrappedMsg ?? paramsRecord;
+            const callId = asString(source.call_id ?? source.callId ?? source.id);
+            const invocation = extractMcpInvocation(source.invocation);
+            if (!callId || !invocation) return events;
+
+            events.push({
+                type: 'mcp_tool_call_begin',
+                call_id: callId,
+                tool_name: buildMcpToolName(invocation.server, invocation.tool),
+                input: {
+                    server: invocation.server,
+                    ...invocation.arguments
+                }
+            });
+            return events;
+        }
+
+        if (method === 'codex/event/mcp_tool_call_end') {
+            const source = wrappedMsg ?? paramsRecord;
+            const callId = asString(source.call_id ?? source.callId ?? source.id);
+            const invocation = extractMcpInvocation(source.invocation);
+            if (!callId || !invocation) return events;
+            const result = extractMcpResult(source.result);
+
+            events.push({
+                type: 'mcp_tool_call_end',
+                call_id: callId,
+                tool_name: buildMcpToolName(invocation.server, invocation.tool),
+                output: result.output,
+                is_error: result.is_error
+            });
+            return events;
+        }
+
+        if (method === 'codex/event/terminal_interaction' || method === 'item/commandExecution/terminalInteraction') {
+            const source = wrappedMsg ?? paramsRecord;
+            const callId = asString(source.call_id ?? source.callId ?? source.id ?? source.itemId ?? source.item_id);
+            const stdin = asString(source.stdin ?? source.text ?? source.input);
+            if (!callId) return events;
+
+            events.push({
+                type: 'terminal_interaction',
+                call_id: callId,
+                ...(stdin ? { stdin } : {})
+            });
+            return events;
+        }
+
+        if (method === 'codex/event/view_image_tool_call') {
+            const source = wrappedMsg ?? paramsRecord;
+            const callId = asString(source.call_id ?? source.callId ?? source.id);
+            const imagePath = asString(source.path);
+            if (!callId || !imagePath) return events;
+
+            events.push({
+                type: 'image_view_begin',
+                call_id: callId,
+                path: imagePath
+            });
             return events;
         }
 
@@ -534,6 +703,70 @@ export class AppServerEventConverter {
                     }
                     this.reasoningBuffers.delete(itemId);
                 }
+                return events;
+            }
+
+            if (itemType === 'mcptoolcall') {
+                if (method === 'item/started') {
+                    const server = asString(item.server);
+                    const tool = asString(item.tool);
+                    if (!server || !tool) {
+                        return events;
+                    }
+
+                    events.push({
+                        type: 'mcp_tool_call_begin',
+                        call_id: itemId,
+                        tool_name: buildMcpToolName(server, tool),
+                        input: {
+                            server,
+                            ...(asRecord(item.arguments) ?? {})
+                        }
+                    });
+                }
+
+                if (method === 'item/completed') {
+                    const server = asString(item.server);
+                    const tool = asString(item.tool);
+                    if (!server || !tool) {
+                        return events;
+                    }
+
+                    const result = extractMcpResult(item.result ?? item.output);
+                    events.push({
+                        type: 'mcp_tool_call_end',
+                        call_id: itemId,
+                        tool_name: buildMcpToolName(server, tool),
+                        output: result.output,
+                        is_error: result.is_error
+                    });
+                }
+
+                return events;
+            }
+
+            if (itemType === 'imageview') {
+                const imagePath = asString(item.path);
+                if (!imagePath) {
+                    return events;
+                }
+
+                if (method === 'item/started') {
+                    events.push({
+                        type: 'image_view_begin',
+                        call_id: itemId,
+                        path: imagePath
+                    });
+                }
+
+                if (method === 'item/completed') {
+                    events.push({
+                        type: 'image_view_end',
+                        call_id: itemId,
+                        output: { path: imagePath }
+                    });
+                }
+
                 return events;
             }
 

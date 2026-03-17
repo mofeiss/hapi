@@ -232,6 +232,35 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         let readySentForCurrentTurn = false;
         const currentTurnFailureMessages = new Set<string>();
         const currentTurnWarningMessages = new Set<string>();
+        const pendingSyntheticTools = new Set<string>();
+
+        const startSyntheticTool = (name: string, callId: string, input: unknown) => {
+            if (pendingSyntheticTools.has(callId)) {
+                return;
+            }
+            pendingSyntheticTools.add(callId);
+            session.sendCodexMessage({
+                type: 'tool-call',
+                name,
+                callId,
+                input,
+                id: randomUUID()
+            });
+        };
+
+        const finishSyntheticTool = (callId: string, output: unknown, isError: boolean = false) => {
+            if (!pendingSyntheticTools.has(callId)) {
+                return;
+            }
+            pendingSyntheticTools.delete(callId);
+            session.sendCodexMessage({
+                type: 'tool-call-result',
+                callId,
+                output,
+                is_error: isError,
+                id: randomUUID()
+            });
+        };
 
         const handleCodexEvent = (msg: Record<string, unknown>) => {
             const msgType = asString(msg.type);
@@ -258,6 +287,67 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
 
             if (msgType === 'task_complete' || msgType === 'turn_aborted' || msgType === 'task_failed') {
                 this.currentTurnId = null;
+            }
+
+            if (msgType === 'plan_update') {
+                const callId = asString(msg.turn_id ?? msg.turnId) ?? randomUUID();
+                const explanation = asString(msg.explanation);
+                const todos = Array.isArray(msg.todos) ? msg.todos : [];
+                startSyntheticTool('functions.update_plan', callId, {
+                    ...(explanation ? { explanation } : {}),
+                    todos
+                });
+                finishSyntheticTool(callId, {
+                    ...(explanation ? { explanation } : {}),
+                    newTodos: todos
+                });
+                return;
+            }
+
+            if (msgType === 'mcp_tool_call_begin') {
+                const callId = asString(msg.call_id ?? msg.callId);
+                const toolName = asString(msg.tool_name ?? msg.toolName);
+                if (callId && toolName) {
+                    startSyntheticTool(toolName, callId, msg.input ?? {});
+                }
+                return;
+            }
+
+            if (msgType === 'mcp_tool_call_end') {
+                const callId = asString(msg.call_id ?? msg.callId);
+                if (callId) {
+                    finishSyntheticTool(callId, msg.output, Boolean(msg.is_error));
+                }
+                return;
+            }
+
+            if (msgType === 'terminal_interaction') {
+                const callId = asString(msg.call_id ?? msg.callId) ?? randomUUID();
+                startSyntheticTool('write_stdin', callId, {
+                    stdin: msg.stdin ?? '',
+                    call_id: callId
+                });
+                finishSyntheticTool(callId, {
+                    status: 'completed',
+                    stdin: msg.stdin ?? ''
+                });
+                return;
+            }
+
+            if (msgType === 'image_view_begin') {
+                const callId = asString(msg.call_id ?? msg.callId);
+                if (callId) {
+                    startSyntheticTool('view_image', callId, { path: msg.path });
+                }
+                return;
+            }
+
+            if (msgType === 'image_view_end') {
+                const callId = asString(msg.call_id ?? msg.callId);
+                if (callId) {
+                    finishSyntheticTool(callId, msg.output ?? {});
+                }
+                return;
             }
 
             if (!useAppServer) {
@@ -347,6 +437,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                     turnInFlight = false;
                     setThinking(false, msgType);
                 }
+                pendingSyntheticTools.clear();
                 diffProcessor.reset();
                 appServerEventConverter?.reset();
             }

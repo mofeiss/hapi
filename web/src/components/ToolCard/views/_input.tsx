@@ -8,6 +8,7 @@ import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 import { getToolParamFieldPosition, ToolParamField } from '@/components/ToolCard/ToolParamField'
 import { resolveNotebookEditDiffData } from '@/components/ToolCard/views/notebookEditDiff'
 import { extractSkillReadData } from '@/lib/skillRead'
+import { isTodoToolName } from '@/lib/todos'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
 import { resolveDisplayPath } from '@/utils/path'
 
@@ -81,7 +82,7 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
         return [{ name: 'command', value: truncate(toSingleLine(input), 200) }]
     }
 
-    if (!isObject(input) && toolName !== 'TodoWrite') return null
+    if (!isObject(input) && !isTodoToolName(toolName)) return null
     const inputObj = isObject(input) ? input : null
 
     const rows: ParamRow[] = []
@@ -118,7 +119,8 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
             }
             break
         }
-        case 'TodoWrite': {
+        case 'TodoWrite':
+        case 'functions.update_plan': {
             const todos = inputObj && Array.isArray(inputObj.todos)
                 ? inputObj.todos.filter(isObject)
                 : []

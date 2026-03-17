@@ -4,7 +4,7 @@ import type { Locale } from '@/lib/i18n-context'
 import { isObject } from '@hapi/protocol'
 import { BulbIcon, ClipboardIcon, EyeIcon, FileDiffIcon, GlobeIcon, PencilIcon, PuzzleIcon, QuestionIcon, RocketIcon, SearchIcon, TerminalIcon, WrenchIcon } from '@/components/ToolCard/icons'
 import { ChecklistIcon } from '@/components/TodoPanel'
-import { extractToolTodos, getTodoStats } from '@/lib/todos'
+import { extractToolTodos, getTodoStats, isTodoToolName } from '@/lib/todos'
 import { basename, resolveDisplayPath } from '@/utils/path'
 import { getInputStringAny, truncate } from '@/lib/toolInputUtils'
 import { extractAgentTopic } from '@/lib/agentTool'
@@ -65,9 +65,12 @@ const STANDARD_TOOL_TITLES: Record<string, string> = {
     Bash: 'Bash',
     Agent: 'Agent',
     TodoWrite: 'TodoWrite',
+    'functions.update_plan': 'UpdatePlan',
     AskUserQuestion: 'AskUserQuestion',
     ask_user_question: 'AskUserQuestion',
     request_user_input: 'RequestUserInput',
+    write_stdin: 'WriteStdin',
+    view_image: 'ViewImage',
     Skill: 'Skill',
     SkillRead: 'SkillRead',
     WebFetch: 'WebFetch',
@@ -89,6 +92,7 @@ const STANDARD_TOOL_TITLES: Record<string, string> = {
     CodexBash: 'CodexBash',
     CodexPermission: 'CodexPermission',
     shell_command: 'ShellCommand',
+    parallel: 'Parallel',
     CodexReasoning: 'CodexReasoning',
     CodexPatch: 'CodexPatch',
     CodexDiff: 'CodexDiff',
@@ -218,6 +222,7 @@ const CORE_TOOL_NAMES = new Set<string>([
     'Bash',
     'Agent',
     'TodoWrite',
+    'functions.update_plan',
     'AskUserQuestion',
     'Skill',
     'SkillRead',
@@ -232,7 +237,9 @@ const CORE_TOOL_NAMES = new Set<string>([
     'TeamDelete',
     'SendMessage',
     'ListMcpResourcesTool',
-    'ReadMcpResourceTool'
+    'ReadMcpResourceTool',
+    'write_stdin',
+    'view_image'
 ])
 
 function normalizeCoreToolName(toolName: string): string {
@@ -313,7 +320,8 @@ function getCoreToolNarrative(opts: ToolOpts): string | null {
             if (topic) return zh ? `派发子代理处理 ${truncate(topic, 60)}` : `dispatch sub-agent for ${truncate(topic, 60)}`
             return zh ? '派发子代理' : 'dispatch sub-agent'
         }
-        case 'TodoWrite': {
+        case 'TodoWrite':
+        case 'functions.update_plan': {
             const todos = isObject(opts.input) && Array.isArray(opts.input.todos) ? opts.input.todos : null
             if (todos && todos.length > 0) return zh ? `更新任务列表（${todos.length} 项）` : `update todo list (${todos.length} items)`
             const newTodos = isObject(opts.result) && Array.isArray(opts.result.newTodos) ? opts.result.newTodos : null
@@ -396,6 +404,16 @@ function getCoreToolNarrative(opts: ToolOpts): string | null {
             const server = getInputStringAny(opts.input, ['server'])
             if (server) return zh ? `列出 ${server} 的 MCP 资源` : `list MCP resources from ${server}`
             return zh ? '列出 MCP 资源' : 'list MCP resources'
+        }
+        case 'write_stdin': {
+            const stdin = getInputStringAny(opts.input, ['stdin'])
+            if (stdin) return zh ? `向运行中的命令写入 ${stdin.length} 个字符` : `write ${stdin.length} chars to running command`
+            return zh ? '向运行中的命令写入输入' : 'write input to running command'
+        }
+        case 'view_image': {
+            const imagePath = getInputStringAny(opts.input, ['path'])
+            if (imagePath) return zh ? `查看图片 ${truncate(imagePath, 60)}` : `view image ${truncate(imagePath, 60)}`
+            return zh ? '查看图片' : 'view image'
         }
         case 'ReadMcpResourceTool': {
             const server = getInputStringAny(opts.input, ['server'])
@@ -615,6 +633,23 @@ export const knownTools: Record<string, {
             return true
         }
     },
+    'functions.update_plan': {
+        icon: () => <ChecklistIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => opts.locale === 'zh-CN' ? '更新任务列表' : 'Update todo list',
+        subtitle: (opts) => {
+            const todos = extractToolTodos(opts.input, opts.result)
+            if (todos.length === 0) return null
+            const stats = getTodoStats(todos)
+            return formatTodoCompactSummary(opts.locale, stats.total, stats.completed)
+        },
+        minimal: (opts) => {
+            const todos = isObject(opts.input) && Array.isArray(opts.input.todos) ? opts.input.todos : null
+            if (todos && todos.length > 0) return false
+            const newTodos = isObject(opts.result) && Array.isArray(opts.result.newTodos) ? opts.result.newTodos : null
+            if (newTodos && newTodos.length > 0) return false
+            return true
+        }
+    },
     CodexReasoning: {
         icon: () => <BulbIcon className={DEFAULT_ICON_CLASS} />,
         title: (opts) => getInputStringAny(opts.input, ['title']) ?? 'Reasoning',
@@ -709,6 +744,31 @@ export const knownTools: Record<string, {
         subtitle: () => null,
         minimal: true
     },
+    write_stdin: {
+        icon: () => <TerminalIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => opts.locale === 'zh-CN' ? '写入标准输入' : 'Write stdin',
+        subtitle: (opts) => {
+            const stdin = getInputStringAny(opts.input, ['stdin'])
+            return stdin ? truncate(stdin, 120) : null
+        },
+        minimal: true
+    },
+    view_image: {
+        icon: () => <EyeIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => opts.locale === 'zh-CN' ? '查看图片' : 'View image',
+        subtitle: (opts) => getInputStringAny(opts.input, ['path']),
+        minimal: true
+    },
+    parallel: {
+        icon: () => <ClipboardIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => opts.locale === 'zh-CN' ? '并行工具调用' : 'Parallel tool calls',
+        subtitle: (opts) => {
+            const count = isObject(opts.input) && Array.isArray(opts.input.tool_uses) ? opts.input.tool_uses.length : 0
+            if (count <= 0) return null
+            return opts.locale === 'zh-CN' ? `${count} 个并行调用` : `${count} parallel calls`
+        },
+        minimal: true
+    },
     request_user_input: {
         icon: () => <QuestionIcon className={DEFAULT_ICON_CLASS} />,
         title: (opts) => {
@@ -783,7 +843,7 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
     }
 
     const standardTitle = getStandardToolTitle(toolOpts.toolName)
-    const coreRichTitle = toolOpts.toolName === 'TodoWrite' ? null : getCoreToolRichTitle(toolOpts)
+    const coreRichTitle = isTodoToolName(toolOpts.toolName) ? null : getCoreToolRichTitle(toolOpts)
 
     if (toolOpts.toolName.startsWith('mcp__')) {
         return {
@@ -798,7 +858,7 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
     if (known) {
         const minimal = typeof known.minimal === 'function' ? known.minimal(toolOpts) : (known.minimal ?? false)
         const computedTitle = known.title(toolOpts)
-        const preferComputedTitle = toolOpts.toolName === 'Steps' || toolOpts.toolName === 'Task' || toolOpts.toolName === 'TodoWrite'
+        const preferComputedTitle = toolOpts.toolName === 'Steps' || toolOpts.toolName === 'Task' || isTodoToolName(toolOpts.toolName)
         let subtitle = known.subtitle ? known.subtitle(toolOpts) : null
         if (coreRichTitle) {
             subtitle = null
