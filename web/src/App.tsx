@@ -35,6 +35,23 @@ type ToastEvent = Extract<SyncEvent, { type: 'toast' }>
 const REQUIRE_SERVER_URL = requireHubUrlForLogin()
 const READY_FOR_INPUT_TITLE = 'Ready for input'
 
+function isErrorLikeToast(event: ToastEvent): boolean {
+    const text = `${event.data.title} ${event.data.body}`.toLowerCase()
+    return [
+        'error',
+        'failed',
+        'failure',
+        'denied',
+        'exception',
+        'timeout',
+        'invalid',
+        '错误',
+        '失败',
+        '异常',
+        '超时'
+    ].some((keyword) => text.includes(keyword))
+}
+
 function isBrowserViewActive(): boolean {
     if (typeof document === 'undefined' || typeof window === 'undefined') {
         return false
@@ -245,7 +262,9 @@ function AppInner() {
             title: event.data.title,
             body: event.data.body,
             sessionId: event.data.sessionId,
-            url: event.data.url
+            url: event.data.url,
+            variant: isErrorLikeToast(event) ? 'error' : 'default',
+            blocking: isErrorLikeToast(event)
         })
     }, [addToast])
 

@@ -258,6 +258,7 @@ export default {
   'button.confirm': '确认',
   'button.close': '关闭',
   'button.dismiss': '忽略',
+  'button.view': '查看',
   'button.copy': '复制',
   'button.copyAll': '复制全部',
   'button.edit': '编辑',

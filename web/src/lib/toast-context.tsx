@@ -6,6 +6,8 @@ export type Toast = {
     body: string
     sessionId: string
     url: string
+    variant?: 'default' | 'error'
+    blocking?: boolean
 }
 
 export type ToastContextValue = {
@@ -15,7 +17,6 @@ export type ToastContextValue = {
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null)
-const TOAST_DURATION_MS = 6000
 
 function createToastId(): string {
     if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -26,34 +27,15 @@ function createToastId(): string {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([])
-    const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-
-    useEffect(() => {
-        return () => {
-            for (const timer of timersRef.current.values()) {
-                clearTimeout(timer)
-            }
-            timersRef.current.clear()
-        }
-    }, [])
 
     const removeToast = useCallback((id: string) => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id))
-        const timer = timersRef.current.get(id)
-        if (timer) {
-            clearTimeout(timer)
-            timersRef.current.delete(id)
-        }
     }, [])
 
     const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
         const id = createToastId()
         setToasts((prev) => [...prev, { id, ...toast }])
-        const timer = setTimeout(() => {
-            removeToast(id)
-        }, TOAST_DURATION_MS)
-        timersRef.current.set(id, timer)
-    }, [removeToast])
+    }, [])
 
     const value = useMemo<ToastContextValue>(() => ({
         toasts,

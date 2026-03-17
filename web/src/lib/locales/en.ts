@@ -267,6 +267,7 @@ export default {
   "button.confirm": "Confirm",
   "button.close": "Close",
   "button.dismiss": "Dismiss",
+  "button.view": "View",
   "button.copy": "Copy",
   "button.copyAll": "Copy all",
   "button.edit": "Edit",
