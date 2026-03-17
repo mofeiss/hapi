@@ -118,4 +118,30 @@ describe('SSEManager namespace filtering', () => {
         expect(received).toHaveLength(1)
         expect(received[0]?.id).toBe('visible')
     })
+
+    it('delivers scheduled events to all-subscriptions even without matching sessionId', () => {
+        const manager = new SSEManager(0, new VisibilityTracker())
+        const received: SyncEvent[] = []
+
+        manager.subscribe({
+            id: 'alpha',
+            namespace: 'alpha',
+            all: true,
+            sessionId: 'session-1',
+            send: (event) => {
+                received.push(event)
+            },
+            sendHeartbeat: () => {}
+        })
+
+        manager.broadcast({
+            type: 'scheduled-task-updated',
+            taskId: 'task-1',
+            machineId: 'machine-1',
+            namespace: 'alpha'
+        })
+
+        expect(received).toHaveLength(1)
+        expect(received[0]?.type).toBe('scheduled-task-updated')
+    })
 })

@@ -251,7 +251,7 @@ function AppInner() {
 
     const eventSubscription = useMemo(() => {
         if (selectedSessionId) {
-            return { sessionId: selectedSessionId }
+            return { all: true, sessionId: selectedSessionId }
         }
         return { all: true }
     }, [selectedSessionId])
