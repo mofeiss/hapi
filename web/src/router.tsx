@@ -3372,6 +3372,9 @@ function SessionsPage() {
     if (!narrowViewport) {
       setNewSessionOpen((prev) => {
         const next = !prev;
+        if (next) {
+          selectWorkspaceTab("sessions");
+        }
         selectWorkspaceOverlay(next ? "newSession" : "none");
         return next;
       });
@@ -3392,6 +3395,7 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
     setNewSessionMachineId(null);
     setNewSessionInitialPrompt("");
+    selectWorkspaceTab("sessions");
     selectWorkspaceOverlay("newSession");
 
     if (!narrowViewport) {
@@ -3437,6 +3441,7 @@ function SessionsPage() {
       setSettingsOpen(false);
       setToolbarMenuOpen(false);
       setNewSessionMachineId(matchedMachine?.id ?? null);
+      selectWorkspaceTab("sessions");
       selectWorkspaceOverlay("newSession");
 
       if (!narrowViewport) {
