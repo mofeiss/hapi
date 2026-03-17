@@ -26,6 +26,7 @@ import { isResultOnlyToolName } from '@/components/ToolCard/toolRenderModes'
 import { isViewportNearBottom } from '@/components/AssistantChat/scrollBehavior'
 import { useTranslation } from '@/lib/use-translation'
 import { cn } from '@/lib/utils'
+import { isTodoToolName } from '@/lib/todos'
 
 type FlatQuestionAnswers = Record<string, string[]>
 type AskUserQuestionPendingCandidateType = 'permission' | 'optimistic'
@@ -383,7 +384,7 @@ function StepNodeDetails(props: {
         isQuestionToolWithAnswers
         && !isAskUserQuestionMalformed
     )
-    const usesSingleTodoRender = toolName === 'TodoWrite'
+    const usesSingleTodoRender = isTodoToolName(toolName)
     const isActiveAskUserQuestionPendingNode = Boolean(
         isAskUserQuestion && props.block.id === props.activeAskUserQuestionPendingId
     )

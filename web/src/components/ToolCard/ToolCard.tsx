@@ -24,6 +24,7 @@ import { isViewportNearBottom } from '@/components/AssistantChat/scrollBehavior'
 import { usePointerFocusRing } from '@/hooks/usePointerFocusRing'
 import { truncate } from '@/lib/toolInputUtils'
 import { cn } from '@/lib/utils'
+import { isTodoToolName } from '@/lib/todos'
 import { useTranslation } from '@/lib/use-translation'
 import type { Locale } from '@/lib/i18n-context'
 
@@ -453,7 +454,7 @@ function ToolCardInner(props: ToolCardProps) {
         isQuestionToolWithAnswers
         && !isAskUserQuestionMalformed
     )
-    const usesSingleTodoRender = toolName === 'TodoWrite'
+    const usesSingleTodoRender = isTodoToolName(toolName)
     const useAskUserQuestionPendingLayout = Boolean(
         isAskUserQuestion
         && permission?.status === 'pending'

@@ -290,9 +290,9 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             }
 
             if (msgType === 'plan_update') {
-                const callId = asString(msg.turn_id ?? msg.turnId) ?? randomUUID();
                 const explanation = asString(msg.explanation);
                 const todos = Array.isArray(msg.todos) ? msg.todos : [];
+                const callId = randomUUID();
                 startSyntheticTool('functions.update_plan', callId, {
                     ...(explanation ? { explanation } : {}),
                     todos

@@ -22,6 +22,54 @@ beforeEach(() => {
     })
 })
 
+describe('ToolCard Todo rendering', () => {
+    it('renders functions.update_plan like TodoWrite without Input and Result headings', () => {
+        render(
+            createElement(
+                I18nProvider,
+                null,
+                createElement(ToolCard, {
+                    api: {} as never,
+                    sessionId: 'session-1',
+                    metadata: null,
+                    disabled: false,
+                    onDone: vi.fn(),
+                    block: {
+                        kind: 'tool-call',
+                        id: 'plan-tool-1',
+                        localId: null,
+                        createdAt: 1,
+                        tool: {
+                            id: 'plan-tool-1',
+                            name: 'functions.update_plan',
+                            state: 'completed',
+                            input: {
+                                todos: [
+                                    { id: '1', content: '修复 update_plan 渲染', status: 'in_progress', priority: 'high' }
+                                ]
+                            },
+                            createdAt: 1,
+                            startedAt: 1,
+                            completedAt: 2,
+                            description: null,
+                            result: {
+                                newTodos: [
+                                    { id: '1', content: '修复 update_plan 渲染', status: 'in_progress', priority: 'high' }
+                                ]
+                            }
+                        },
+                        children: []
+                    }
+                })
+            )
+        )
+
+        expect(screen.queryByText('Input')).not.toBeInTheDocument()
+        expect(screen.queryByText('Result')).not.toBeInTheDocument()
+        expect(screen.getByText('修复 update_plan 渲染')).toBeInTheDocument()
+    })
+})
+
 describe('ToolCard Agent header', () => {
     it('does not reuse description as subtitle when title already contains the topic', () => {
         const { container } = render(
