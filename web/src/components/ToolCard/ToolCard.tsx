@@ -164,6 +164,36 @@ function StatusIcon(props: { state: ToolCallBlock['tool']['state'] }) {
     )
 }
 
+function WarningStatusIcon() {
+    return (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M8 4.6v4.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="8" cy="11.4" r="0.8" fill="currentColor" />
+        </svg>
+    )
+}
+
+function resolveDisplayState(block: ToolCallBlock): ToolCallBlock['tool']['state'] | 'warning' {
+    if (block.tool.name !== 'Steps') {
+        return block.tool.state
+    }
+
+    const toolChildren = block.children.filter((child): child is ToolCallBlock => child.kind === 'tool-call')
+    if (toolChildren.length === 0) {
+        return block.tool.state
+    }
+
+    const errorCount = toolChildren.filter((child) => child.tool.state === 'error').length
+    if (errorCount === 0) {
+        return block.tool.state
+    }
+    if (errorCount === toolChildren.length) {
+        return 'error'
+    }
+    return 'warning'
+}
+
 function statusColorClass(state: ToolCallBlock['tool']['state']): string {
     if (state === 'completed') return 'text-emerald-600'
     if (state === 'error') return 'text-red-600'
@@ -292,11 +322,12 @@ function ToolCardInner(props: ToolCardProps) {
     const isAskUserQuestion = isAskUserQuestionToolName(toolName)
     const isRequestUserInput = isRequestUserInputToolName(toolName)
     const isQuestionTool = isAskUserQuestion || isRequestUserInput
+    const isScheduledSession = props.metadata?.trigger?.type === 'scheduled-task'
     const defaultExpanded = Boolean(
         isAskUserQuestion
         || (isQuestionTool && permission?.status === 'pending')
         || hasPendingPermission
-        || toolName === 'Steps'
+        || (toolName === 'Steps' && !isScheduledSession)
     )
     const [expanded, setExpanded] = useState(defaultExpanded)
     const cardRef = useRef<HTMLDivElement | null>(null)
@@ -308,7 +339,10 @@ function ToolCardInner(props: ToolCardProps) {
     ))
     const hasBodyContent = hasInlineDetails || showsPermissionFooter
     const canExpand = hasInlineDetails || showsPermissionFooter
-    const stateColor = statusColorClass(props.block.tool.state)
+    const displayState = resolveDisplayState(props.block)
+    const stateColor = displayState === 'warning'
+        ? 'text-amber-600'
+        : statusColorClass(props.block.tool.state)
     const disclosureRailClassName = toolName === 'Steps' ? 'pl-[14px]' : undefined
     const { suppressFocusRing, onTriggerPointerDown, onTriggerKeyDown, onTriggerBlur } = usePointerFocusRing()
 
@@ -365,7 +399,9 @@ function ToolCardInner(props: ToolCardProps) {
                     </span>
                 ) : null}
                 <span className={cn('shrink-0', stateColor)}>
-                    <StatusIcon state={props.block.tool.state} />
+                    {displayState === 'warning'
+                        ? <WarningStatusIcon />
+                        : <StatusIcon state={displayState} />}
                 </span>
                 <div className="min-w-0 flex items-baseline gap-1.5 overflow-hidden">
                     <span className="shrink-0 text-sm leading-tight text-[var(--app-hint)] opacity-90">

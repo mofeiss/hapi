@@ -3,6 +3,7 @@ import type {
     ScheduledTask,
     ScheduledTaskRun,
     Session,
+    SessionTriggerMetadata,
     SessionSummary,
     SyncEvent as ProtocolSyncEvent,
     WorktreeMetadata
@@ -35,6 +36,7 @@ export type SessionMetadataSummary = {
     model?: string
     reasoningEffort?: CodexReasoningEffort
     worktree?: WorktreeMetadata
+    trigger?: SessionTriggerMetadata
 }
 
 export type MessageStatus = 'sending' | 'sent' | 'failed'

@@ -1,5 +1,5 @@
 import type { ModelMode } from './modes'
-import type { ReasoningEffort, Session, WorktreeMetadata } from './schemas'
+import type { ReasoningEffort, Session, SessionTriggerMetadata, WorktreeMetadata } from './schemas'
 
 export type SessionSummaryMetadata = {
     name?: string
@@ -11,6 +11,7 @@ export type SessionSummaryMetadata = {
     model?: string
     reasoningEffort?: ReasoningEffort
     worktree?: WorktreeMetadata
+    trigger?: SessionTriggerMetadata
 }
 
 export type SessionSummary = {
@@ -38,7 +39,8 @@ export function toSessionSummary(session: Session): SessionSummary {
         flavor: session.metadata.flavor ?? null,
         model: session.metadata.model,
         reasoningEffort: session.metadata.reasoningEffort,
-        worktree: session.metadata.worktree
+        worktree: session.metadata.worktree,
+        trigger: session.metadata.trigger
     } : null
 
     const todoProgress = session.todos?.length ? {
