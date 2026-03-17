@@ -38,6 +38,27 @@ function isCodexReasoningToolResult(data: Record<string, unknown>): boolean {
     return 'status' in output && 'content' in output
 }
 
+function extractCodexReasoningTitle(data: Record<string, unknown>): string | null {
+    const output = isObject(data.output) ? data.output : null
+    if (!output) return null
+
+    return asString(output.title)
+        ?? asString(output.reasoning_title)
+        ?? asString(output.reasoningTitle)
+        ?? null
+}
+
+function buildCodexReasoningText(data: Record<string, unknown>): string | null {
+    const output = isObject(data.output) ? data.output : null
+    const contentText = asString(output?.content)
+    if (!contentText || contentText.trim().length === 0) return null
+
+    const title = extractCodexReasoningTitle(data)?.trim()
+    if (!title) return contentText
+
+    return `**${title}**\n\n${contentText}`
+}
+
 function normalizeAssistantOutput(
     messageId: string,
     localId: string | null,
@@ -313,27 +334,13 @@ export function normalizeAgentRecord(
         if (!data || typeof data.type !== 'string') return null
 
         if (data.type === 'tool-call' && asString(data.name) === 'CodexReasoning') {
-            const title = isObject(data.input) ? asString(data.input.title) : null
-            return {
-                id: messageId,
-                localId,
-                createdAt,
-                role: 'agent',
-                isSidechain: false,
-                content: [{
-                    type: 'reasoning',
-                    text: title ?? 'Reasoning',
-                    uuid: asString(data.id) ?? messageId,
-                    parentUUID: null
-                }],
-                meta
-            }
+            return null
         }
 
         if (data.type === 'tool-call-result' && typeof data.callId === 'string') {
             const output = isObject(data.output) ? data.output : null
             const status = asString(output?.status)
-            const contentText = asString(output?.content)
+            const contentText = buildCodexReasoningText(data)
             if (status !== 'canceled' && contentText && contentText.trim().length > 0) {
                 return {
                     id: messageId,

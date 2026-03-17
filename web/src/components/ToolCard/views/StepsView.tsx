@@ -26,6 +26,7 @@ import { isResultOnlyToolName } from '@/components/ToolCard/toolRenderModes'
 import { isViewportNearBottom } from '@/components/AssistantChat/scrollBehavior'
 import { useTranslation } from '@/lib/use-translation'
 import { cn } from '@/lib/utils'
+import { getReasoningRenderText, summarizeReasoning } from '@/lib/reasoning'
 import { isTodoToolName } from '@/lib/todos'
 
 type FlatQuestionAnswers = Record<string, string[]>
@@ -259,14 +260,6 @@ function useAnchoredStepToggle() {
     return { nodeRef, toggleWithAnchor }
 }
 
-function summarizeReasoning(text: string): string {
-    return text
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .join(' ')
-}
-
 function StepReasoningNode(props: { block: AgentReasoningBlock }) {
     const [open, setOpen] = useState(false)
     const { nodeRef, toggleWithAnchor } = useAnchoredStepToggle()
@@ -303,7 +296,7 @@ function StepReasoningNode(props: { block: AgentReasoningBlock }) {
             {open ? (
                 <DisclosureRail level="inner">
                     <div className="text-[var(--app-hint)] opacity-80 [&_.aui-md]:text-xs [&_.aui-md]:leading-4 [&_.aui-md_p]:my-0">
-                        <MarkdownRenderer content={props.block.text} />
+                        <MarkdownRenderer content={getReasoningRenderText(props.block.text)} />
                     </div>
                 </DisclosureRail>
             ) : null}

@@ -1,9 +1,10 @@
 import { useState, useEffect, type FC, type PropsWithChildren, type TransitionEvent } from 'react'
-import { useMessage, type ReasoningGroupProps } from '@assistant-ui/react'
+import { TextMessagePartProvider, useMessage, type ReasoningGroupProps } from '@assistant-ui/react'
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown'
 import { DisclosureChevron, DisclosureRail, OUTER_DISCLOSURE_ITEM_CLASS } from '@/components/Disclosure'
 import { cn } from '@/lib/utils'
 import { defaultComponents, MARKDOWN_BLOCK_SPACING_CLASSNAME, MARKDOWN_PLUGINS } from '@/components/assistant-ui/markdown-text'
+import { getReasoningRenderText, summarizeReasoning } from '@/lib/reasoning'
 
 type ReasoningMessagePart = {
     type: 'reasoning'
@@ -43,14 +44,6 @@ function ShimmerDot() {
     )
 }
 
-function summarizeReasoning(text: string): string {
-    return text
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-        .join(' ')
-}
-
 /**
  * Renders individual reasoning message part content with markdown support.
  */
@@ -80,6 +73,7 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
         .map((part) => part.text)
         .join('\n')
     const preview = summarizeReasoning(reasoningText)
+    const renderText = getReasoningRenderText(reasoningText)
     const isStreaming = message.status?.type === 'running'
         && message.content.length > 0
         && message.content[message.content.length - 1]?.type === 'reasoning'
@@ -146,7 +140,15 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
                 )}
             >
                 <DisclosureRail level="outer">
-                    {children}
+                    <div className="aui-reasoning-content min-w-0 max-w-full break-words text-xs text-[var(--app-hint)] opacity-80">
+                        <TextMessagePartProvider text={renderText}>
+                            <MarkdownTextPrimitive
+                                remarkPlugins={MARKDOWN_PLUGINS}
+                                components={defaultComponents}
+                                className={MARKDOWN_BLOCK_SPACING_CLASSNAME}
+                            />
+                        </TextMessagePartProvider>
+                    </div>
                 </DisclosureRail>
             </div>
         </div>

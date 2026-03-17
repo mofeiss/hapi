@@ -22,6 +22,7 @@ export interface ReasoningToolResult {
     type: 'tool-call-result';
     callId: string;
     output: {
+        title?: string;
         content?: string;
         status?: 'completed' | 'canceled';
     };
@@ -174,6 +175,7 @@ export class ReasoningProcessor {
                 type: 'tool-call-result',
                 callId: this.currentCallId,
                 output: {
+                    ...(title ? { title } : {}),
                     content: content,
                     status: 'completed'
                 },
@@ -223,6 +225,7 @@ export class ReasoningProcessor {
                 type: 'tool-call-result',
                 callId: this.currentCallId,
                 output: {
+                    ...(this.currentTitle ? { title: this.currentTitle } : {}),
                     content: this.contentBuffer || '',
                     status: status
                 },
