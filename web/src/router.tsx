@@ -1655,7 +1655,7 @@ function ScheduledTaskDetailPanel({
       <div className={`min-h-0 min-w-0 flex-1 overflow-x-hidden ${detailMode === "session" ? "overflow-y-hidden" : "overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"}`}>
         <div className={`mx-auto flex w-full min-w-0 max-w-content flex-col gap-4 px-3 py-3 ${detailMode === "session" ? "h-full min-h-0" : ""}`}>
           <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-3">
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex min-w-0 items-center gap-3 overflow-hidden">
               <ToggleGroup
                 value={detailMode}
                 onValueChange={(value) => {
@@ -1665,7 +1665,7 @@ function ScheduledTaskDetailPanel({
                   setDetailMode(value as ScheduledDetailMode);
                 }}
                 aria-label={t("scheduled.detail.modeSwitcher")}
-                className="rounded-xl"
+                className="min-w-0 shrink-0 rounded-xl"
               >
                 <ToggleGroupItem value="overview" className="rounded-lg px-2.5 py-1.5">
                   {t("scheduled.detail.mode.overview")}
@@ -1688,7 +1688,7 @@ function ScheduledTaskDetailPanel({
                     setSessionSubMode(value as ScheduledSessionSubMode);
                   }}
                   aria-label="Scheduled session mode"
-                  className="rounded-xl"
+                  className="min-w-0 shrink-0 overflow-hidden rounded-xl"
                 >
                   <ToggleGroupItem value="view" className="rounded-lg px-2.5 py-1.5">
                     View
