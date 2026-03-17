@@ -109,6 +109,11 @@ export type AgentStateCompletedRequest = z.infer<typeof AgentStateCompletedReque
 
 export const AgentStateSchema = z.object({
     controlledByUser: z.boolean().nullish(),
+    runtimeUnavailable: z.object({
+        reason: z.string(),
+        detectedAt: z.number(),
+        recoverable: z.boolean().optional()
+    }).nullish(),
     requests: z.record(z.string(), AgentStateRequestSchema).nullish(),
     completedRequests: z.record(z.string(), AgentStateCompletedRequestSchema).nullish()
 })

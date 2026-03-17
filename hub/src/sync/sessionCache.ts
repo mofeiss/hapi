@@ -401,6 +401,19 @@ export class SessionCache {
             changed = true
         }
 
+        const resumeTokenKeys = [
+            'claudeSessionId',
+            'codexSessionId',
+            'geminiSessionId',
+            'opencodeSessionId'
+        ] as const
+        for (const key of resumeTokenKeys) {
+            if (typeof oldObj[key] === 'string' && typeof newObj[key] !== 'string') {
+                merged[key] = oldObj[key]
+                changed = true
+            }
+        }
+
         if (typeof oldObj.path === 'string' && typeof newObj.path !== 'string') {
             merged.path = oldObj.path
             changed = true

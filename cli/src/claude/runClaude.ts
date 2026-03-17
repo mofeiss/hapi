@@ -200,6 +200,23 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
     };
     publishModelMetadata();
     session.onUserMessage((message) => {
+        if (sessionInfo.agentState?.runtimeUnavailable) {
+            sessionInfo.agentState = {
+                ...sessionInfo.agentState,
+                runtimeUnavailable: undefined
+            } as AgentState;
+        }
+
+        session.updateAgentState((currentState) => {
+            if (!currentState.runtimeUnavailable) {
+                return currentState;
+            }
+            return {
+                ...currentState,
+                runtimeUnavailable: undefined
+            };
+        });
+
         const sessionPermissionMode = currentSessionRef.current?.getPermissionMode();
         if (sessionPermissionMode && isPermissionModeAllowedForFlavor(sessionPermissionMode, 'claude')) {
             currentPermissionMode = sessionPermissionMode as PermissionMode;

@@ -391,6 +391,27 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                             logger.debug(`[remote]: Completion event: ${message}`);
                             session.client.sendSessionEvent({ type: 'message', message });
                         },
+                        onExecutionError: async (result) => {
+                            const rawErrors = (result as { errors?: unknown[] }).errors;
+                            const errors = Array.isArray(rawErrors)
+                                ? rawErrors.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+                                : [];
+                            const reason = errors[0] ?? 'Claude execution failed unexpectedly';
+
+                            session.client.sendSessionEvent({
+                                type: 'message',
+                                message: `Claude resume failed: ${reason}`
+                            });
+
+                            await session.client.updateAgentState((currentState) => ({
+                                ...currentState,
+                                runtimeUnavailable: {
+                                    reason,
+                                    detectedAt: Date.now(),
+                                    recoverable: true
+                                }
+                            }));
+                        },
                         onSessionReset: () => {
                             logger.debug('[remote]: Session reset');
                             session.clearSessionId();

@@ -546,6 +546,7 @@ export default {
   'misc.typeMessage': "输入 'continue' 继续...",
   'misc.typeAMessage': '输入消息...',
   'misc.offline': '离线',
+  'misc.unavailable': '不可交互',
   'misc.permissionRequired': '需要权限',
   'misc.percentLeft': '剩余 {percent}%',
   'misc.idle': '空闲中',

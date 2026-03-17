@@ -76,6 +76,16 @@ function isSessionPermissionSynced(
   return currentBasePermissionMode === expectedBase;
 }
 
+function isRuntimeUnavailable(session: {
+  agentState?: {
+    runtimeUnavailable?: {
+      reason?: string;
+    } | null;
+  } | null;
+} | null | undefined): boolean {
+  return Boolean(session?.agentState?.runtimeUnavailable);
+}
+
 export function EmbeddedSessionView({
   sessionId,
   onBack,
@@ -244,7 +254,7 @@ export function EmbeddedSessionView({
     sessionId,
     {
       resolveSessionId: async (currentSessionId) => {
-        if (!api || !session || session.active) {
+        if (!api || !session || (session.active && !isRuntimeUnavailable(session))) {
           return currentSessionId;
         }
         try {

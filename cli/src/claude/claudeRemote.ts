@@ -1,5 +1,5 @@
 import { EnhancedMode, PermissionMode } from "./loop";
-import { query, type QueryOptions as Options, type SDKMessage, type SDKSystemMessage, AbortError, SDKUserMessage } from '@/claude/sdk'
+import { query, type QueryOptions as Options, type SDKMessage, type SDKResultMessage, type SDKSystemMessage, AbortError, SDKUserMessage } from '@/claude/sdk'
 import { claudeCheckSession } from "./utils/claudeCheckSession";
 import { join } from 'node:path';
 import { parseSpecialCommand } from "@/parsers/specialCommands";
@@ -35,7 +35,8 @@ export async function claudeRemote(opts: {
     onThinkingChange?: (thinking: boolean) => void,
     onMessage: (message: SDKMessage) => void,
     onCompletionEvent?: (message: string) => void,
-    onSessionReset?: () => void
+    onSessionReset?: () => void,
+    onExecutionError?: (result: SDKResultMessage) => Promise<void> | void
 }) {
 
     // Check if session is valid
@@ -188,7 +189,16 @@ export async function claudeRemote(opts: {
 
             // Handle result messages
             if (message.type === 'result') {
+                const resultMessage = message as SDKResultMessage;
                 updateThinking(false);
+
+                if (resultMessage.subtype === 'error_during_execution') {
+                    logger.debug('[claudeRemote] Execution error result received, exiting claudeRemote without ready state');
+                    await opts.onExecutionError?.(resultMessage);
+                    messages.end();
+                    return;
+                }
+
                 logger.debug('[claudeRemote] Result received, exiting claudeRemote');
 
                 // Send completion messages

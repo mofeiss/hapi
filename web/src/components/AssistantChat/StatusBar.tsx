@@ -32,6 +32,15 @@ function getConnectionStatus(
         }
     }
 
+    if (agentState?.runtimeUnavailable) {
+        return {
+            text: t('misc.unavailable'),
+            color: 'text-rose-500',
+            dotColor: 'bg-rose-500',
+            isPulsing: false
+        }
+    }
+
     if (hasPermissions) {
         return {
             text: t('misc.permissionRequired'),

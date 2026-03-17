@@ -151,6 +151,7 @@ export function SessionChat(props: {
     const { addToast } = useToast()
     const { haptic } = usePlatform()
     const sessionInactive = !props.session.active
+    const runtimeUnavailable = Boolean(props.session.agentState?.runtimeUnavailable)
     const normalizedCacheRef = useRef<Map<string, { source: DecryptedMessage; normalized: NormalizedMessage | null }>>(new Map())
     const blocksByIdRef = useRef<Map<string, ChatBlock>>(new Map())
     const [forceScrollToken, setForceScrollToken] = useState(0)
@@ -955,11 +956,11 @@ export function SessionChat(props: {
     }, [props.session.thinking, messageQueue.flushNow, abortSession, props.onRefresh, addToast, props.session.id, t])
 
     const attachmentAdapter = useMemo(() => {
-        if (!props.session.active) {
+        if (!props.session.active || runtimeUnavailable) {
             return undefined
         }
         return createAttachmentAdapter(props.api, props.session.id)
-    }, [props.api, props.session.id, props.session.active])
+    }, [props.api, props.session.id, props.session.active, runtimeUnavailable])
 
     const runtime = useHappyRuntime({
         session: props.session,
@@ -1045,7 +1046,7 @@ export function SessionChat(props: {
                                 <div className="mx-auto w-full max-w-content">
                                     <div className="relative flex min-w-0 items-end gap-3">
                                         <StatusBar
-                                            active={props.session.active}
+                                            active={props.session.active && !runtimeUnavailable}
                                             thinking={props.session.thinking}
                                             agentState={props.session.agentState}
                                             contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}

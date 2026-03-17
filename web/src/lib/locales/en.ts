@@ -572,6 +572,7 @@ export default {
   "misc.typeMessage": "Type 'continue' to resume...",
   "misc.typeAMessage": "Type a message...",
   "misc.offline": "offline",
+  "misc.unavailable": "unavailable",
   "misc.permissionRequired": "permission required",
   "misc.percentLeft": "{percent}% left",
   "misc.idle": "idle",
