@@ -20,6 +20,7 @@ type ParamRow = {
 function normalizeCoreToolName(toolName: string): string {
     if (toolName === 'ask_user_question') return 'AskUserQuestion'
     if (toolName === 'exit_plan_mode') return 'ExitPlanMode'
+    if (toolName === 'CodexBash') return 'Bash'
     return toolName
 }
 

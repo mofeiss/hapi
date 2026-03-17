@@ -130,6 +130,22 @@ describe('getToolPresentation', () => {
         expect(presentation.subtitle).toBeNull()
     })
 
+    it('treats CodexBash like Bash for presentation', () => {
+        const presentation = getToolPresentation({
+            toolName: 'CodexBash',
+            input: { command: 'pwd', cwd: '/workspace' },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'zh-CN'
+        })
+
+        expect(presentation.title).toBe('执行命令 pwd')
+        expect(presentation.subtitle).toBeNull()
+        expect(presentation.minimal).toBe(true)
+    })
+
     it('renders semantic write title with char count', () => {
         const presentation = getToolPresentation({
             toolName: 'Write',

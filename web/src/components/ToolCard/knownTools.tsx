@@ -210,7 +210,8 @@ type ToolOpts = {
 const CORE_TOOL_NAME_ALIASES: Record<string, string> = {
     ask_user_question: 'AskUserQuestion',
     exit_plan_mode: 'ExitPlanMode',
-    SkillRead: 'Skill'
+    SkillRead: 'Skill',
+    CodexBash: 'Bash'
 }
 
 const CORE_TOOL_NAMES = new Set<string>([
@@ -480,35 +481,6 @@ export const knownTools: Record<string, {
         title: (opts) => {
             const path = getInputStringAny(opts.input, ['path'])
             return path ? resolveDisplayPath(path, opts.metadata) : 'List files'
-        },
-        minimal: true
-    },
-    CodexBash: {
-        icon: (opts) => {
-            if (isObject(opts.input) && Array.isArray(opts.input.parsed_cmd) && opts.input.parsed_cmd.length > 0) {
-                const first = opts.input.parsed_cmd[0]
-                const type = isObject(first) ? first.type : null
-                if (type === 'read') return <EyeIcon className={DEFAULT_ICON_CLASS} />
-                if (type === 'write') return <FileDiffIcon className={DEFAULT_ICON_CLASS} />
-            }
-            return <TerminalIcon className={DEFAULT_ICON_CLASS} />
-        },
-        title: (opts) => {
-            if (isObject(opts.input) && Array.isArray(opts.input.parsed_cmd) && opts.input.parsed_cmd.length === 1) {
-                const parsed = opts.input.parsed_cmd[0]
-                if (isObject(parsed) && parsed.type === 'read' && typeof parsed.name === 'string') {
-                    return resolveDisplayPath(parsed.name, opts.metadata)
-                }
-            }
-            return opts.description ?? 'Terminal'
-        },
-        subtitle: (opts) => {
-            const command = getInputStringAny(opts.input, ['command', 'cmd'])
-            if (command) return command
-            if (isObject(opts.input) && Array.isArray(opts.input.command)) {
-                return opts.input.command.filter((part) => typeof part === 'string').join(' ')
-            }
-            return null
         },
         minimal: true
     },
