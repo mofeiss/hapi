@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
+import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol'
 
 import type { WebAppEnv } from '../middleware/auth'
 import type { SyncEngine } from '../../sync/syncEngine'
@@ -64,6 +65,23 @@ async function runnerPost<T>(path: string, body: unknown): Promise<T> {
 
 function filterScheduledPayloadByMachine<T extends { machineId: string }>(items: T[], machineIds: Set<string>): T[] {
     return items.filter((item) => machineIds.has(item.machineId))
+}
+
+async function getScheduledTaskSnapshot(taskId: string): Promise<{
+    task: ScheduledTask | null
+    runs: ScheduledTaskRun[]
+}> {
+    const { tasks } = await runnerPost<{ tasks: ScheduledTask[] }>('/scheduler/tasks/list', {})
+    const task = tasks.find((entry) => entry.id === taskId) ?? null
+    if (!task) {
+        return { task: null, runs: [] }
+    }
+
+    const { runs } = await runnerPost<{ runs: ScheduledTaskRun[] }>('/scheduler/runs/list', {})
+    return {
+        task,
+        runs: runs.filter((run) => run.taskId === taskId)
+    }
 }
 
 export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): Hono<WebAppEnv> {
@@ -176,7 +194,11 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
         }
 
         try {
+            const snapshot = await getScheduledTaskSnapshot(parsed.data.taskId)
             const result = await runnerPost<{ deleted: unknown | null }>('/scheduler/tasks/delete', parsed.data)
+            if (snapshot.task) {
+                await engine.deleteScheduledTaskSessions(snapshot.task, snapshot.runs)
+            }
             return c.json(result)
         } catch (error) {
             const message = error instanceof Error && error.message ? error.message : 'Runner request failed'

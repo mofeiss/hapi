@@ -8,6 +8,7 @@
  */
 
 import type { DecryptedMessage, ModelMode, PermissionMode, Session, SyncEvent } from '@hapi/protocol/types'
+import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol'
 import type { Server } from 'socket.io'
 import type { Store } from '../store'
 import type { RpcRegistry } from '../socket/rpcRegistry'
@@ -289,6 +290,23 @@ export class SyncEngine {
 
     async deleteSession(sessionId: string): Promise<void> {
         await this.sessionCache.deleteSession(sessionId)
+    }
+
+    async deleteScheduledTaskSessions(task: Pick<ScheduledTask, 'createdBySessionId' | 'namespace'>, runs: readonly Pick<ScheduledTaskRun, 'sessionId'>[]): Promise<void> {
+        const preservedSessionId = task.createdBySessionId ?? null
+        const sessionIds = new Set<string>()
+
+        for (const run of runs) {
+            const sessionId = run.sessionId
+            if (!sessionId || sessionId === preservedSessionId) {
+                continue
+            }
+            sessionIds.add(sessionId)
+        }
+
+        for (const sessionId of sessionIds) {
+            this.sessionCache.deleteSessionByNamespace(sessionId, task.namespace)
+        }
     }
 
     async applySessionConfig(

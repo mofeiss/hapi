@@ -293,6 +293,24 @@ export class SessionCache {
         this.publisher.emit({ type: 'session-removed', sessionId, namespace: session.namespace })
     }
 
+    deleteSessionByNamespace(sessionId: string, namespace: string): boolean {
+        const session = this.sessions.get(sessionId) ?? this.refreshSession(sessionId)
+        if (!session || session.namespace !== namespace || session.active) {
+            return false
+        }
+
+        const deleted = this.store.sessions.deleteSession(sessionId, namespace)
+        if (!deleted) {
+            return false
+        }
+
+        this.sessions.delete(sessionId)
+        this.lastBroadcastAtBySessionId.delete(sessionId)
+        this.todoBackfillAttemptedSessionIds.delete(sessionId)
+        this.publisher.emit({ type: 'session-removed', sessionId, namespace })
+        return true
+    }
+
     async mergeSessions(oldSessionId: string, newSessionId: string, namespace: string): Promise<void> {
         if (oldSessionId === newSessionId) {
             return
