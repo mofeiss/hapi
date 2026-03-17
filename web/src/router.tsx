@@ -1441,6 +1441,8 @@ function ScheduledTaskHeader(props: {
 function ScheduledTaskDetailPanel({
   task,
   machineTitle,
+  createdBySessionTitle,
+  createdBySessionFlavor,
   selectedRun,
   taskRuns,
   latestRun,
@@ -1456,9 +1458,12 @@ function ScheduledTaskDetailPanel({
   onSelectRun,
   onSetRunSessionInteractive,
   scheduledSessionInteractive,
+  onOpenCreatedBySession,
 }: {
   task: ScheduledTask;
   machineTitle: string;
+  createdBySessionTitle: string | null;
+  createdBySessionFlavor: string | null;
   selectedRun: ScheduledTaskRun | null;
   taskRuns: ScheduledTaskRun[];
   latestRun: ScheduledTaskRun | undefined;
@@ -1476,6 +1481,7 @@ function ScheduledTaskDetailPanel({
   onSelectRun: (runId: string | null) => void;
   onSetRunSessionInteractive: (sessionId: string, interactive: boolean) => void;
   scheduledSessionInteractive: boolean;
+  onOpenCreatedBySession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
   const [promptExpanded, setPromptExpanded] = useState(false);
@@ -1712,7 +1718,7 @@ function ScheduledTaskDetailPanel({
                 {[
                   {
                     key: "machine",
-                    label: "Machine",
+                    label: t("scheduled.detail.machine"),
                     value: machineTitle,
                   },
                   {
@@ -1795,6 +1801,31 @@ function ScheduledTaskDetailPanel({
                     key: "created",
                     label: t("scheduled.detail.created"),
                     value: createdAtLabel ?? "-",
+                  },
+                  {
+                    key: "created-by-session",
+                    label: t("scheduled.detail.createdFromSession"),
+                    valueNode: task.createdBySessionId ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenCreatedBySession(task.createdBySessionId as string)}
+                        className="ml-auto inline-flex max-w-full items-center justify-end gap-1.5 text-right text-sm leading-[19px] text-[var(--app-link)] underline decoration-[color:color-mix(in_srgb,var(--app-link)_65%,transparent)] underline-offset-2 hover:decoration-[color:var(--app-link)]"
+                        title={task.createdBySessionId}
+                      >
+                        <AgentFlavorStatusIcon
+                          flavor={createdBySessionFlavor}
+                          active
+                          sizeClassName="h-3.5 w-3.5"
+                        />
+                        <span className="block min-w-0 truncate">
+                          {createdBySessionTitle ?? `SESSION ID ${task.createdBySessionId}`}
+                        </span>
+                      </button>
+                    ) : (
+                      <span className={configReadOnlyValueClassName}>
+                        {t("scheduled.detail.createdFromSessionMissing")}
+                      </span>
+                    ),
                   },
                 ].map((item, index) => (
                   <>
@@ -2448,6 +2479,24 @@ function SessionsPage() {
     );
     return getMachineTitle(machine ?? null);
   }, [machines, selectedScheduledTask]);
+  const selectedScheduledCreatedBySessionTitle = useMemo(() => {
+    if (!selectedScheduledTask?.createdBySessionId) {
+      return null;
+    }
+    const sourceSession = sessions.find(
+      (session) => session.id === selectedScheduledTask.createdBySessionId,
+    );
+    return sourceSession ? getSessionTitle(sourceSession) : null;
+  }, [selectedScheduledTask, sessions]);
+  const selectedScheduledCreatedBySessionFlavor = useMemo(() => {
+    if (!selectedScheduledTask?.createdBySessionId) {
+      return null;
+    }
+    const sourceSession = sessions.find(
+      (session) => session.id === selectedScheduledTask.createdBySessionId,
+    );
+    return sourceSession?.metadata?.flavor ?? null;
+  }, [selectedScheduledTask, sessions]);
 
   const scheduledRunsByTaskId = useMemo(() => {
     const map = new Map<string, ScheduledTaskRun[]>();
@@ -4028,6 +4077,8 @@ function SessionsPage() {
                     <ScheduledTaskDetailPanel
                       task={selectedScheduledTask}
                       machineTitle={selectedScheduledMachineTitle}
+                      createdBySessionTitle={selectedScheduledCreatedBySessionTitle}
+                      createdBySessionFlavor={selectedScheduledCreatedBySessionFlavor}
                       selectedRun={selectedScheduledRun}
                       taskRuns={selectedScheduledTaskRuns}
                       latestRun={latestScheduledRunByTaskId.get(selectedScheduledTask.id)}
@@ -4046,6 +4097,9 @@ function SessionsPage() {
                       }}
                       onSetRunSessionInteractive={(sessionId, interactive) => {
                         setScheduledInteractiveSessionId(interactive ? sessionId : null);
+                      }}
+                      onOpenCreatedBySession={(sessionId) => {
+                        openWorkspaceSession(sessionId, "chat");
                       }}
                       scheduledSessionInteractive={
                         selectedScheduledRun?.sessionId === scheduledInteractiveSessionId
@@ -4672,6 +4726,8 @@ function SessionsPage() {
               <ScheduledTaskDetailPanel
                 task={selectedScheduledTask}
                 machineTitle={selectedScheduledMachineTitle}
+                createdBySessionTitle={selectedScheduledCreatedBySessionTitle}
+                createdBySessionFlavor={selectedScheduledCreatedBySessionFlavor}
                 selectedRun={selectedScheduledRun}
                 taskRuns={selectedScheduledTaskRuns}
                 latestRun={latestScheduledRunByTaskId.get(selectedScheduledTask.id)}
@@ -4690,6 +4746,9 @@ function SessionsPage() {
                 }}
                 onSetRunSessionInteractive={(sessionId, interactive) => {
                   setScheduledInteractiveSessionId(interactive ? sessionId : null);
+                }}
+                onOpenCreatedBySession={(sessionId) => {
+                  openWorkspaceSession(sessionId, "chat");
                 }}
                 scheduledSessionInteractive={
                   selectedScheduledRun?.sessionId === scheduledInteractiveSessionId
