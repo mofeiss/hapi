@@ -164,6 +164,7 @@ export function HappyAssistantMessage() {
     const allCopyText = buildLoadedTranscriptCopyText(
         transcriptMessages as Parameters<typeof buildLoadedTranscriptCopyText>[0],
         {
+            sessionId: ctx.sessionId,
             metadata: ctx.metadata,
             locale,
             t,

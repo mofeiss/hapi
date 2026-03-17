@@ -45,6 +45,20 @@ export const SessionTriggerMetadataSchema = z.discriminatedUnion('type', [
 
 export type SessionTriggerMetadata = z.infer<typeof SessionTriggerMetadataSchema>
 
+export const SessionForensicsSchema = z.object({
+    hapiHomeDir: z.string().optional(),
+    hapiLogsDir: z.string().optional(),
+    resolvedHapiLogFile: z.string().optional(),
+    agentSessionSearchRoot: z.string().optional(),
+    resolvedAgentSessionFile: z.string().optional(),
+    claudeProjectPath: z.string().optional(),
+    claudeSessionId: z.string().optional(),
+    codexSessionsRoot: z.string().optional(),
+    codexSessionId: z.string().optional()
+})
+
+export type SessionForensics = z.infer<typeof SessionForensicsSchema>
+
 export const MetadataSchema = z.object({
     path: z.string(),
     host: z.string(),
@@ -74,7 +88,8 @@ export const MetadataSchema = z.object({
     model: z.string().optional(),
     reasoningEffort: ReasoningEffortSchema.optional(),
     worktree: WorktreeMetadataSchema.optional(),
-    trigger: SessionTriggerMetadataSchema.optional()
+    trigger: SessionTriggerMetadataSchema.optional(),
+    forensics: SessionForensicsSchema.optional()
 })
 
 export type Metadata = z.infer<typeof MetadataSchema>

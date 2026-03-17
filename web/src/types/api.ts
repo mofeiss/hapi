@@ -37,6 +37,19 @@ export type SessionMetadataSummary = {
     reasoningEffort?: CodexReasoningEffort
     worktree?: WorktreeMetadata
     trigger?: SessionTriggerMetadata
+    claudeSessionId?: string
+    codexSessionId?: string
+    forensics?: {
+        hapiHomeDir?: string
+        hapiLogsDir?: string
+        resolvedHapiLogFile?: string
+        agentSessionSearchRoot?: string
+        resolvedAgentSessionFile?: string
+        claudeProjectPath?: string
+        claudeSessionId?: string
+        codexSessionsRoot?: string
+        codexSessionId?: string
+    }
 }
 
 export type MessageStatus = 'sending' | 'sent' | 'failed'

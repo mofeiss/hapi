@@ -5,6 +5,7 @@ import { z } from 'zod'
 import type { SyncEngine, Session } from '../../sync/syncEngine'
 import type { WebAppEnv } from '../middleware/auth'
 import { requireSessionFromParam, requireSyncEngine } from './guards'
+import { attachSessionForensics } from '../sessionForensics'
 
 const permissionModeSchema = z.object({
     mode: PermissionModeSchema,
@@ -72,7 +73,7 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
         return c.json({ sessions })
     })
 
-    app.get('/sessions/:id', (c) => {
+    app.get('/sessions/:id', async (c) => {
         const engine = requireSyncEngine(c, getSyncEngine)
         if (engine instanceof Response) {
             return engine
@@ -83,7 +84,9 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
             return sessionResult
         }
 
-        return c.json({ session: sessionResult.session })
+        const session = await attachSessionForensics(engine, sessionResult.session)
+
+        return c.json({ session })
     })
 
     app.post('/sessions/:id/resume', async (c) => {

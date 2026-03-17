@@ -3,7 +3,7 @@ import { MessageCopyButton } from '@/components/AssistantChat/messages/MessageCo
 import { HappyAssistantMessageInline, MessageTurnDurationBadge } from '@/components/AssistantChat/messages/AssistantMessage'
 import { HappySystemMessageInline } from '@/components/AssistantChat/messages/SystemMessage'
 import { useHappyChatContext } from '@/components/AssistantChat/context'
-import { buildLoadedTranscriptCopyText } from '@/components/AssistantChat/messages/messageTranscriptCopy'
+import { buildLoadedTranscriptCopyText, buildTranscriptText } from '@/components/AssistantChat/messages/messageTranscriptCopy'
 import { getAssistantTurnDurationInfo } from '@/components/AssistantChat/messages/messageDuration'
 import { useTranslation } from '@/lib/use-translation'
 
@@ -42,13 +42,14 @@ export function HappyAgentTurnGroup(props: { indices: number[] }) {
         : null
     const isCurrentTurnTailVisible = turnDurationInfo !== null
         && turnDurationInfo.turnEndIndex === threadMessagesLength - 1
-    const turnCopyText = buildLoadedTranscriptCopyText(turnMessages, {
+    const turnCopyText = buildTranscriptText(turnMessages, {
         metadata: ctx.metadata,
         locale,
         t,
         editedMessageTextById: ctx.editedMessageTextById
     })
     const allCopyText = buildLoadedTranscriptCopyText(transcriptMessages, {
+        sessionId: ctx.sessionId,
         metadata: ctx.metadata,
         locale,
         t,
