@@ -622,11 +622,6 @@ export const knownTools: Record<string, {
             return true
         }
     },
-    CodexReasoning: {
-        icon: () => <BulbIcon className={DEFAULT_ICON_CLASS} />,
-        title: (opts) => getInputStringAny(opts.input, ['title']) ?? 'Reasoning',
-        minimal: true
-    },
     CodexPatch: {
         icon: () => <FileDiffIcon className={DEFAULT_ICON_CLASS} />,
         title: () => 'Apply changes',

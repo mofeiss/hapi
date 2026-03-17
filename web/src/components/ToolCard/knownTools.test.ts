@@ -146,6 +146,21 @@ describe('getToolPresentation', () => {
         expect(presentation.minimal).toBe(true)
     })
 
+    it('falls back to generic tool presentation for CodexReasoning', () => {
+        const presentation = getToolPresentation({
+            toolName: 'CodexReasoning',
+            input: { title: 'Inspecting workspace state' },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'zh-CN'
+        })
+
+        expect(presentation.title).toBe('CodexReasoning')
+        expect(presentation.subtitle).toBe('Inspecting workspace state')
+    })
+
     it('renders semantic write title with char count', () => {
         const presentation = getToolPresentation({
             toolName: 'Write',

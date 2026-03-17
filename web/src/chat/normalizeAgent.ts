@@ -31,6 +31,13 @@ function normalizeAgentEvent(value: unknown): AgentEvent | null {
     return value as AgentEvent
 }
 
+function isCodexReasoningToolResult(data: Record<string, unknown>): boolean {
+    if (data.type !== 'tool-call-result') return false
+    const output = isObject(data.output) ? data.output : null
+    if (!output) return false
+    return 'status' in output && 'content' in output
+}
+
 function normalizeAssistantOutput(
     messageId: string,
     localId: string | null,
@@ -304,6 +311,49 @@ export function normalizeAgentRecord(
     if (content.type === 'codex') {
         const data = isObject(content.data) ? content.data : null
         if (!data || typeof data.type !== 'string') return null
+
+        if (data.type === 'tool-call' && asString(data.name) === 'CodexReasoning') {
+            const title = isObject(data.input) ? asString(data.input.title) : null
+            return {
+                id: messageId,
+                localId,
+                createdAt,
+                role: 'agent',
+                isSidechain: false,
+                content: [{
+                    type: 'reasoning',
+                    text: title ?? 'Reasoning',
+                    uuid: asString(data.id) ?? messageId,
+                    parentUUID: null
+                }],
+                meta
+            }
+        }
+
+        if (data.type === 'tool-call-result' && typeof data.callId === 'string') {
+            const output = isObject(data.output) ? data.output : null
+            const status = asString(output?.status)
+            const contentText = asString(output?.content)
+            if (status !== 'canceled' && contentText && contentText.trim().length > 0) {
+                return {
+                    id: messageId,
+                    localId,
+                    createdAt,
+                    role: 'agent',
+                    isSidechain: false,
+                    content: [{
+                        type: 'reasoning',
+                        text: contentText,
+                        uuid: asString(data.id) ?? messageId,
+                        parentUUID: null
+                    }],
+                    meta
+                }
+            }
+            if (isCodexReasoningToolResult(data)) {
+                return null
+            }
+        }
 
         if (data.type === 'message' && typeof data.message === 'string') {
             return {
