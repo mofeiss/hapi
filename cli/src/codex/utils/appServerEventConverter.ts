@@ -169,12 +169,6 @@ function createPlanFingerprint(
 }
 
 function buildMcpToolName(server: string, tool: string): string {
-    if (server === 'codex' && tool === 'list_mcp_resources') {
-        return 'ListMcpResourcesTool';
-    }
-    if (tool === 'read_mcp_resource') {
-        return 'ReadMcpResourceTool';
-    }
     return `mcp__${server}__${tool}`;
 }
 

@@ -422,7 +422,7 @@ describe('AppServerEventConverter', () => {
         expect(started).toEqual([{
             type: 'mcp_tool_call_begin',
             call_id: 'mcp-1',
-            tool_name: 'ReadMcpResourceTool',
+            tool_name: 'mcp__searxng__read_mcp_resource',
             input: {
                 server: 'searxng',
                 uri: 'help://usage-guide'
@@ -451,7 +451,7 @@ describe('AppServerEventConverter', () => {
         expect(completed).toEqual([{
             type: 'mcp_tool_call_end',
             call_id: 'mcp-1',
-            tool_name: 'ReadMcpResourceTool',
+            tool_name: 'mcp__searxng__read_mcp_resource',
             output: {
                 content: [{ type: 'text', text: 'guide' }],
                 isError: false

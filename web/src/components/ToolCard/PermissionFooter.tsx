@@ -12,7 +12,7 @@ function isToolAllowedForSession(toolName: string, toolInput: unknown, allowedTo
     if (!allowedTools || allowedTools.length === 0) return false
     if (allowedTools.includes(toolName)) return true
 
-    if (toolName === 'Bash' || toolName === 'CodexBash') {
+    if (toolName === 'Bash' || toolName === 'CodexBash' || toolName === 'exec_command') {
         const command = getInputStringAny(toolInput, ['command', 'cmd'])
         if (command) {
             return allowedTools.includes(`Bash(${command})`)
@@ -150,7 +150,7 @@ export function PermissionFooter(props: {
     const approveForSession = async () => {
         if (!canAllowForSession || loading || loadingAllEdits || loadingForSession) return
         setLoadingForSession(true)
-        const isBashTool = toolName === 'Bash' || toolName === 'CodexBash'
+        const isBashTool = toolName === 'Bash' || toolName === 'CodexBash' || toolName === 'exec_command'
         const command = isBashTool ? getInputStringAny(props.tool.input, ['command', 'cmd']) : null
         const toolIdentifier = isBashTool && command ? `Bash(${command})` : toolName
         await run(() => props.api.approvePermission(props.sessionId, permission.id, { allowTools: [toolIdentifier] }), 'success')

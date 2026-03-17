@@ -23,7 +23,7 @@ beforeEach(() => {
 })
 
 describe('ToolCard Todo rendering', () => {
-    it('renders functions.update_plan like TodoWrite without Input and Result headings', () => {
+    it('renders update_plan like TodoWrite without Input and Result headings', () => {
         render(
             createElement(
                 I18nProvider,
@@ -41,7 +41,7 @@ describe('ToolCard Todo rendering', () => {
                         createdAt: 1,
                         tool: {
                             id: 'plan-tool-1',
-                            name: 'functions.update_plan',
+                            name: 'update_plan',
                             state: 'completed',
                             input: {
                                 todos: [

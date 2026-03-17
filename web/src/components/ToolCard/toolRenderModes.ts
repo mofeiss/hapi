@@ -13,7 +13,7 @@ const RESULT_ONLY_TOOLS = new Set<string>([
 export function isResultOnlyToolName(toolName: string, input?: unknown, result?: unknown): boolean {
     if (RESULT_ONLY_TOOLS.has(toolName)) return true
 
-    if (toolName === 'ListMcpResourcesTool') {
+    if (toolName === 'ListMcpResourcesTool' || toolName === 'mcp__codex__list_mcp_resources') {
         return shouldUseGroupedMcpResourceListLayout(input) && extractMcpResourceServerGroups(result) !== null
     }
 

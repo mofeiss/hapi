@@ -104,16 +104,16 @@ describe('sanitizeReadResultText', () => {
     })
 })
 
-describe('CodexBash result rendering', () => {
+describe('exec_command result rendering', () => {
     it('falls back to raw json result rendering', () => {
-        const ResultView = getToolResultViewComponent('CodexBash')
+        const ResultView = getToolResultViewComponent('exec_command')
 
         render(
             createElement(
                 I18nProvider,
                 null,
                 createElement(ResultView, {
-                    block: createToolBlock('CodexBash', {
+                    block: createToolBlock('exec_command', {
                         command: '/bin/zsh -lc "sed -n 1,20p file.ts"',
                         cwd: '/workspace',
                         stdout: 'export const value = 1;\n',
@@ -385,7 +385,7 @@ describe('shouldUseGroupedMcpResourceListLayout', () => {
 })
 
 describe('isResultOnlyToolName', () => {
-    it('treats ListMcpResourcesTool as result-only when input is empty object and json parses into grouped resources', () => {
+    it('treats mcp__codex__list_mcp_resources as result-only when input is empty object and json parses into grouped resources', () => {
         const result = [
             {
                 name: 'Server Configuration',
@@ -394,10 +394,10 @@ describe('isResultOnlyToolName', () => {
             }
         ]
 
-        expect(isResultOnlyToolName('ListMcpResourcesTool', {}, result)).toBe(true)
+        expect(isResultOnlyToolName('mcp__codex__list_mcp_resources', {}, result)).toBe(true)
     })
 
-    it('does not treat ListMcpResourcesTool as result-only when input contains server filter', () => {
+    it('does not treat mcp__codex__list_mcp_resources as result-only when input contains server filter', () => {
         const result = [
             {
                 name: 'Server Configuration',
@@ -406,10 +406,10 @@ describe('isResultOnlyToolName', () => {
             }
         ]
 
-        expect(isResultOnlyToolName('ListMcpResourcesTool', { server: 'searxng' }, result)).toBe(false)
+        expect(isResultOnlyToolName('mcp__codex__list_mcp_resources', { server: 'searxng' }, result)).toBe(false)
     })
 
-    it('falls back to non-result-only when ListMcpResourcesTool result is not parseable json', () => {
-        expect(isResultOnlyToolName('ListMcpResourcesTool', {}, 'not-json')).toBe(false)
+    it('falls back to non-result-only when mcp__codex__list_mcp_resources result is not parseable json', () => {
+        expect(isResultOnlyToolName('mcp__codex__list_mcp_resources', {}, 'not-json')).toBe(false)
     })
 })

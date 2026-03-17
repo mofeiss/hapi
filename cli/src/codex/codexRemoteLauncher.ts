@@ -297,7 +297,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 const explanation = asString(msg.explanation);
                 const todos = Array.isArray(msg.todos) ? msg.todos : [];
                 const callId = randomUUID();
-                startSyntheticTool('functions.update_plan', callId, {
+                startSyntheticTool('update_plan', callId, {
                     ...(explanation ? { explanation } : {}),
                     todos
                 });
@@ -516,7 +516,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
 
                     session.sendCodexMessage({
                         type: 'tool-call',
-                        name: 'CodexBash',
+                        name: 'exec_command',
                         callId: callId,
                         input: inputs,
                         id: randomUUID()
@@ -555,7 +555,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
 
                     session.sendCodexMessage({
                         type: 'tool-call',
-                        name: 'CodexPatch',
+                        name: 'apply_patch',
                         callId: callId,
                         input: {
                             auto_approved: msg.auto_approved ?? msg.autoApproved,

@@ -50,7 +50,7 @@ export function registerAppServerPermissionHandlers(args: {
 
         const result = await permissionHandler.handleToolCall(
             toolCallId,
-            'CodexBash',
+            'exec_command',
             {
                 message: reason,
                 command,
@@ -69,7 +69,7 @@ export function registerAppServerPermissionHandlers(args: {
 
         const result = await permissionHandler.handleToolCall(
             toolCallId,
-            'CodexPatch',
+            'apply_patch',
             {
                 message: reason,
                 grantRoot

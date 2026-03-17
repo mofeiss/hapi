@@ -262,7 +262,7 @@ describe('reduceTimeline sidechain prompt handling', () => {
         expect(result.blocks[1].text).toContain('/Users/ofeiss/project/hapi')
     })
 
-    it('merges duplicate CodexBash payloads and preserves richer output', () => {
+    it('merges duplicate exec_command payloads and preserves richer output', () => {
         const root: TracedMessage[] = [
             {
                 id: 'tool-call-rich',
@@ -273,7 +273,7 @@ describe('reduceTimeline sidechain prompt handling', () => {
                 content: [{
                     type: 'tool-call',
                     id: 'call-1',
-                    name: 'CodexBash',
+                    name: 'exec_command',
                     input: {
                         command: '/bin/zsh -lc rg -n "todo|fixme" .',
                         cwd: '/workspace',
@@ -295,7 +295,7 @@ describe('reduceTimeline sidechain prompt handling', () => {
                 content: [{
                     type: 'tool-call',
                     id: 'call-1',
-                    name: 'CodexBash',
+                    name: 'exec_command',
                     input: {
                         command: '/bin/zsh -lc "rg -n \\"todo|fixme\\" ."',
                         cwd: '/workspace'
@@ -371,7 +371,7 @@ describe('reduceTimeline sidechain prompt handling', () => {
         })
     })
 
-    it('keeps write_stdin as a separate tool call instead of merging it into CodexBash', () => {
+    it('keeps write_stdin as a separate tool call instead of merging it into exec_command', () => {
         const root: TracedMessage[] = [
             {
                 id: 'bash-call',
@@ -382,7 +382,7 @@ describe('reduceTimeline sidechain prompt handling', () => {
                 content: [{
                     type: 'tool-call',
                     id: 'cmd-1',
-                    name: 'CodexBash',
+                    name: 'exec_command',
                     input: {
                         command: 'python -i',
                         cwd: '/workspace'
@@ -441,7 +441,7 @@ describe('reduceTimeline sidechain prompt handling', () => {
             throw new Error('Expected tool-call blocks')
         }
 
-        expect(result.blocks[0].tool.name).toBe('CodexBash')
+        expect(result.blocks[0].tool.name).toBe('exec_command')
         expect(result.blocks[1].tool.name).toBe('write_stdin')
         expect(result.blocks[1].tool.state).toBe('completed')
         expect(result.blocks[1].tool.input).toEqual({

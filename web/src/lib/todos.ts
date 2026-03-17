@@ -2,7 +2,7 @@ import type { ChatBlock } from '@/chat/types'
 import type { TodoItem } from '@/types/api'
 import { isObject } from '@hapi/protocol'
 
-const TODO_TOOL_NAMES = new Set(['TodoWrite', 'functions.update_plan'])
+const TODO_TOOL_NAMES = new Set(['TodoWrite', 'functions.update_plan', 'update_plan'])
 
 export function isTodoToolName(toolName: string): boolean {
     return TODO_TOOL_NAMES.has(toolName)

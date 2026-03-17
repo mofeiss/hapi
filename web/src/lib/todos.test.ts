@@ -6,6 +6,7 @@ describe('extractToolTodos', () => {
     it('recognizes update_plan as a todo tool', () => {
         expect(isTodoToolName('TodoWrite')).toBe(true)
         expect(isTodoToolName('functions.update_plan')).toBe(true)
+        expect(isTodoToolName('update_plan')).toBe(true)
         expect(isTodoToolName('Bash')).toBe(false)
     })
 
@@ -92,13 +93,13 @@ describe('findLatestTodoToolTodos', () => {
                 kind: 'tool-call',
                 id: 'todo-new',
                 localId: null,
-                createdAt: 3,
-                tool: {
-                    id: 'todo-new',
-                    name: 'functions.update_plan',
-                    state: 'completed',
-                    input: {
-                        todos: [
+                    createdAt: 3,
+                    tool: {
+                        id: 'todo-new',
+                        name: 'update_plan',
+                        state: 'completed',
+                        input: {
+                            todos: [
                             { id: 'new', content: 'New todo', status: 'in_progress', priority: 'high' }
                         ]
                     },

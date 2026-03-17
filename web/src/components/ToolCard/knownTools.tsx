@@ -71,11 +71,15 @@ const STANDARD_TOOL_TITLES: Record<string, string> = {
     Agent: 'Agent',
     TodoWrite: 'TodoWrite',
     'functions.update_plan': 'UpdatePlan',
+    update_plan: 'UpdatePlan',
     AskUserQuestion: 'AskUserQuestion',
     ask_user_question: 'AskUserQuestion',
     request_user_input: 'RequestUserInput',
+    exec_command: 'ExecCommand',
     write_stdin: 'WriteStdin',
     view_image: 'ViewImage',
+    ListMcpResourcesTool: 'ListMcpResourcesTool',
+    ReadMcpResourceTool: 'ReadMcpResourceTool',
     Skill: 'Skill',
     SkillRead: 'SkillRead',
     WebFetch: 'WebFetch',
@@ -91,8 +95,11 @@ const STANDARD_TOOL_TITLES: Record<string, string> = {
     TeamCreate: 'TeamCreate',
     TeamDelete: 'TeamDelete',
     SendMessage: 'SendMessage',
-    ListMcpResourcesTool: 'ListMcpResourcesTool',
-    ReadMcpResourceTool: 'ReadMcpResourceTool',
+    'mcp__codex__list_mcp_resources': 'MCP: Codex ListMcpResources',
+    'mcp__codex__list_mcp_resource_templates': 'MCP: Codex ListMcpResourceTemplates',
+    list_mcp_resources: 'ListMcpResources',
+    list_mcp_resource_templates: 'ListMcpResourceTemplates',
+    read_mcp_resource: 'ReadMcpResource',
     LS: 'LS',
     CodexBash: 'CodexBash',
     CodexPermission: 'CodexPermission',
@@ -100,6 +107,7 @@ const STANDARD_TOOL_TITLES: Record<string, string> = {
     parallel: 'Parallel',
     CodexReasoning: 'CodexReasoning',
     CodexPatch: 'CodexPatch',
+    apply_patch: 'ApplyPatch',
     CodexDiff: 'CodexDiff',
     hapi__change_title: 'MCP: HAPI Change Title',
     mcp__hapi__change_title: 'MCP: HAPI Change Title',
@@ -244,7 +252,8 @@ const CORE_TOOL_NAME_ALIASES: Record<string, string> = {
     ask_user_question: 'AskUserQuestion',
     exit_plan_mode: 'ExitPlanMode',
     SkillRead: 'Skill',
-    CodexBash: 'Bash'
+    CodexBash: 'Bash',
+    exec_command: 'Bash'
 }
 
 const CORE_TOOL_NAMES = new Set<string>([
@@ -257,6 +266,7 @@ const CORE_TOOL_NAMES = new Set<string>([
     'Agent',
     'TodoWrite',
     'functions.update_plan',
+    'update_plan',
     'AskUserQuestion',
     'Skill',
     'SkillRead',
@@ -270,8 +280,7 @@ const CORE_TOOL_NAMES = new Set<string>([
     'TeamCreate',
     'TeamDelete',
     'SendMessage',
-    'ListMcpResourcesTool',
-    'ReadMcpResourceTool',
+    'exec_command',
     'write_stdin',
     'view_image'
 ])
@@ -355,7 +364,8 @@ function getCoreToolNarrative(opts: ToolOpts): string | null {
             return zh ? '派发子代理' : 'dispatch sub-agent'
         }
         case 'TodoWrite':
-        case 'functions.update_plan': {
+        case 'functions.update_plan':
+        case 'update_plan': {
             const todos = isObject(opts.input) && Array.isArray(opts.input.todos) ? opts.input.todos : null
             if (todos && todos.length > 0) return zh ? `更新任务列表（${todos.length} 项）` : `update todo list (${todos.length} items)`
             const newTodos = isObject(opts.result) && Array.isArray(opts.result.newTodos) ? opts.result.newTodos : null
@@ -434,8 +444,20 @@ function getCoreToolNarrative(opts: ToolOpts): string | null {
             if (content) return zh ? `发送 ${content.length} 个字符的消息` : `send message with ${content.length} chars`
             return zh ? '发送消息' : 'send message'
         }
-        case 'ListMcpResourcesTool': {
+        case 'exec_command': {
+            const command = getInputStringAny(opts.input, ['command', 'cmd'])
+            if (command) return zh ? `执行命令 ${truncate(command, 60)}` : `run command ${truncate(command, 60)}`
+            return zh ? '执行命令' : 'run command'
+        }
+        case 'ListMcpResourcesTool':
+        case 'mcp__codex__list_mcp_resources':
+        case 'list_mcp_resources':
+        case 'list_mcp_resource_templates': {
             const server = getInputStringAny(opts.input, ['server'])
+            if (opts.toolName === 'list_mcp_resource_templates') {
+                if (server) return zh ? `列出 ${server} 的 MCP 资源模板` : `list MCP resource templates from ${server}`
+                return zh ? '列出 MCP 资源模板' : 'list MCP resource templates'
+            }
             if (server) return zh ? `列出 ${server} 的 MCP 资源` : `list MCP resources from ${server}`
             return zh ? '列出 MCP 资源' : 'list MCP resources'
         }
@@ -449,7 +471,10 @@ function getCoreToolNarrative(opts: ToolOpts): string | null {
             if (imagePath) return zh ? `查看图片 ${truncate(imagePath, 60)}` : `view image ${truncate(imagePath, 60)}`
             return zh ? '查看图片' : 'view image'
         }
-        case 'ReadMcpResourceTool': {
+        case 'ReadMcpResourceTool':
+        case 'read_mcp_resource':
+        case 'mcp__searxng__read_mcp_resource':
+        case 'mcp__codex__read_mcp_resource': {
             const server = getInputStringAny(opts.input, ['server'])
             const uri = getInputStringAny(opts.input, ['uri'])
             if (server && uri) return zh ? `读取 ${server} 的资源 ${truncate(uri, 60)}` : `read ${server} resource ${truncate(uri, 60)}`
@@ -655,7 +680,40 @@ export const knownTools: Record<string, {
             return true
         }
     },
+    update_plan: {
+        icon: () => <ChecklistIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => opts.locale === 'zh-CN' ? '更新任务列表' : 'Update todo list',
+        subtitle: (opts) => {
+            const todos = extractToolTodos(opts.input, opts.result)
+            if (todos.length === 0) return null
+            const stats = getTodoStats(todos)
+            return formatTodoCompactSummary(opts.locale, stats.total, stats.completed)
+        },
+        minimal: (opts) => {
+            const todos = isObject(opts.input) && Array.isArray(opts.input.todos) ? opts.input.todos : null
+            if (todos && todos.length > 0) return false
+            const newTodos = isObject(opts.result) && Array.isArray(opts.result.newTodos) ? opts.result.newTodos : null
+            if (newTodos && newTodos.length > 0) return false
+            return true
+        }
+    },
     CodexPatch: {
+        icon: () => <FileDiffIcon className={DEFAULT_ICON_CLASS} />,
+        title: () => 'Apply changes',
+        subtitle: (opts) => {
+            if (isObject(opts.input) && isObject(opts.input.changes)) {
+                const files = Object.keys(opts.input.changes)
+                if (files.length === 0) return null
+                const first = files[0]
+                const display = resolveDisplayPath(first, opts.metadata)
+                const name = basename(display)
+                return files.length > 1 ? `${name} (+${files.length - 1})` : name
+            }
+            return null
+        },
+        minimal: true
+    },
+    apply_patch: {
         icon: () => <FileDiffIcon className={DEFAULT_ICON_CLASS} />,
         title: () => 'Apply changes',
         subtitle: (opts) => {

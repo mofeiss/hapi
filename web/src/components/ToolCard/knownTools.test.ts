@@ -22,6 +22,7 @@ const CORE_TOOLS = [
     'TeamCreate',
     'TeamDelete',
     'SendMessage',
+    'exec_command',
     'ListMcpResourcesTool',
     'ReadMcpResourceTool'
 ] as const
@@ -74,6 +75,9 @@ const MCP_TOOLS = [
     'mcp__plugin_context7_context7__query-docs',
     'mcp__searxng__searxng_web_search',
     'mcp__searxng__web_url_read',
+    'mcp__codex__list_mcp_resources',
+    'mcp__codex__list_mcp_resource_templates',
+    'mcp__searxng__read_mcp_resource',
     'mcp__websearch-serpapi__search'
 ] as const
 
@@ -130,9 +134,9 @@ describe('getToolPresentation', () => {
         expect(presentation.subtitle).toBeNull()
     })
 
-    it('treats CodexBash like Bash for presentation', () => {
+    it('treats exec_command like Bash for presentation', () => {
         const presentation = getToolPresentation({
-            toolName: 'CodexBash',
+            toolName: 'exec_command',
             input: { command: 'pwd', cwd: '/workspace' },
             result: null,
             childrenCount: 0,
@@ -375,7 +379,7 @@ describe('getToolPresentation', () => {
 
     it('preserves explicit computed subtitle for bash-like tools when raw tool names are enabled', () => {
         const presentation = getToolPresentation({
-            toolName: 'CodexBash',
+            toolName: 'exec_command',
             input: {
                 command: 'pwd',
                 cwd: '/workspace'
@@ -397,10 +401,10 @@ describe('getToolPresentation', () => {
                 host: 'local',
                 flavor: 'codex'
             },
-            'CodexBash',
+            'exec_command',
             presentation
         )).toEqual({
-            title: 'CodexBash',
+            title: 'exec_command',
             subtitle: '执行命令 pwd'
         })
     })

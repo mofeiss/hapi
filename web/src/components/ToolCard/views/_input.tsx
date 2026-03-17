@@ -197,12 +197,16 @@ function extractCoreToolParamRows(block: ToolCallBlock, metadata: SessionMetadat
             }
             break
         }
-        case 'ListMcpResourcesTool': {
+        case 'ListMcpResourcesTool':
+        case 'mcp__codex__list_mcp_resources':
+        case 'mcp__codex__list_mcp_resource_templates': {
             pushRow(rows, 'server', getInputScalar(inputObj, ['server']))
             pushRow(rows, 'cursor', getInputScalar(inputObj, ['cursor']))
             break
         }
-        case 'ReadMcpResourceTool': {
+        case 'ReadMcpResourceTool':
+        case 'mcp__searxng__read_mcp_resource':
+        case 'mcp__codex__read_mcp_resource': {
             pushRow(rows, 'server', getInputScalar(inputObj, ['server']))
             pushRow(rows, 'uri', getInputScalar(inputObj, ['uri']))
             break
