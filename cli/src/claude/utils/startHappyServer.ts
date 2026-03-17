@@ -10,7 +10,6 @@ import { AddressInfo } from "node:net";
 import { z } from "zod";
 import { logger } from "@/ui/logger";
 import { ApiSessionClient } from "@/api/apiSession";
-import { randomUUID } from "node:crypto";
 import { registerScheduleTools } from '@/mcp/tools/scheduleTools';
 import type { SessionTriggerMetadata } from '@/api/types';
 
@@ -23,12 +22,13 @@ export async function startHappyServer(client: ApiSessionClient) {
     const handler = async (title: string) => {
         logger.debug('[hapiMCP] Changing title to:', title);
         try {
-            // Send title as a summary message, similar to title generator
-            client.sendClaudeSessionMessage({
-                type: 'summary',
-                summary: title,
-                leafUuid: randomUUID()
-            });
+            client.updateMetadata((metadata) => ({
+                ...metadata,
+                summary: {
+                    text: title,
+                    updatedAt: Date.now()
+                }
+            }));
             
             return { success: true };
         } catch (error) {
