@@ -79,6 +79,12 @@ import {
 } from "@/lib/pending-session-initial-message-store";
 import { resolveDraftAttachmentMetadata } from "@/lib/draftAttachments";
 import {
+  readStorageItem,
+  readStorageJson,
+  writeStorageItem,
+  writeStorageJson,
+} from "@/lib/storage";
+import {
   clearPendingSessionMode,
   setPendingSessionMode,
   usePendingSessionMode,
@@ -1574,21 +1580,13 @@ function ScheduledTaskDetailPanel({
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [outcomeExpanded, setOutcomeExpanded] = useState(false);
   const [detailMode, setDetailMode] = useState<ScheduledDetailMode>(() => {
-    if (typeof window === "undefined") {
-      return "overview";
-    }
-
-    const stored = window.localStorage.getItem(SCHEDULED_DETAIL_MODE_STORAGE_KEY);
+    const stored = readStorageItem("session", SCHEDULED_DETAIL_MODE_STORAGE_KEY);
     return stored === "overview" || stored === "runs" || stored === "session"
       ? stored
       : "overview";
   });
   const [sessionSubMode, setSessionSubMode] = useState<ScheduledSessionSubMode>(() => {
-    if (typeof window === "undefined") {
-      return "view";
-    }
-
-    const stored = window.localStorage.getItem(SCHEDULED_SESSION_SUB_MODE_STORAGE_KEY);
+    const stored = readStorageItem("session", SCHEDULED_SESSION_SUB_MODE_STORAGE_KEY);
     return stored === "view" || stored === "active" ? stored : "view";
   });
   const [runSummaryTipOpen, setRunSummaryTipOpen] = useState(false);
@@ -1632,17 +1630,11 @@ function ScheduledTaskDetailPanel({
   }, [detailMode, selectedRun, sessionModeDisabled, taskRuns.length]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(SCHEDULED_DETAIL_MODE_STORAGE_KEY, detailMode);
+    writeStorageItem("session", SCHEDULED_DETAIL_MODE_STORAGE_KEY, detailMode);
   }, [detailMode]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(SCHEDULED_SESSION_SUB_MODE_STORAGE_KEY, sessionSubMode);
+    writeStorageItem("session", SCHEDULED_SESSION_SUB_MODE_STORAGE_KEY, sessionSubMode);
   }, [sessionSubMode]);
 
   useEffect(() => {
@@ -2480,14 +2472,11 @@ function SessionsPage() {
   const [newSessionInitialPrompt, setNewSessionInitialPrompt] = useState("");
   const [scheduledGroupCollapseOverrides, setScheduledGroupCollapseOverrides] =
     useState<Map<string, boolean>>(() => {
-      try {
-        const stored = localStorage.getItem(
-          "hapi:panel:scheduled-group-collapsed",
-        );
-        if (stored) return new Map(JSON.parse(stored) as [string, boolean][]);
-      } catch {
-        /* ignore */
-      }
+      const stored = readStorageJson<[string, boolean][]>(
+        "session",
+        "hapi:panel:scheduled-group-collapsed",
+      );
+      if (stored) return new Map(stored);
       return new Map();
     });
 
@@ -2645,14 +2634,11 @@ function SessionsPage() {
       setScheduledGroupCollapseOverrides((prev) => {
         const next = new Map(prev);
         next.set(machineId, !isCollapsed);
-        try {
-          localStorage.setItem(
-            "hapi:panel:scheduled-group-collapsed",
-            JSON.stringify([...next.entries()]),
-          );
-        } catch {
-          /* ignore */
-        }
+        writeStorageJson(
+          "session",
+          "hapi:panel:scheduled-group-collapsed",
+          [...next.entries()],
+        );
         return next;
       });
     },
@@ -2694,14 +2680,11 @@ function SessionsPage() {
         }
       }
       if (changed) {
-        try {
-          localStorage.setItem(
-            "hapi:panel:scheduled-group-collapsed",
-            JSON.stringify([...next.entries()]),
-          );
-        } catch {
-          /* ignore */
-        }
+        writeStorageJson(
+          "session",
+          "hapi:panel:scheduled-group-collapsed",
+          [...next.entries()],
+        );
       }
       return changed ? next : prev;
     });
@@ -2769,12 +2752,12 @@ function SessionsPage() {
 
   // Panel resize state (persisted to localStorage)
   const [panelWidth, setPanelWidth] = useState(() => {
-    const stored = localStorage.getItem("hapi:panel:leftWidth");
+    const stored = readStorageItem("session", "hapi:panel:leftWidth");
     return stored ? Math.max(DESKTOP_SIDEBAR_MIN_WIDTH, Number(stored)) : 420;
   });
 
   const [collapsed, setCollapsed] = useState(() => {
-    return localStorage.getItem("hapi:panel:collapsed") === "true";
+    return readStorageItem("session", "hapi:panel:collapsed") === "true";
   });
 
   const { widescreen } = useWidescreen();
@@ -3826,7 +3809,7 @@ function SessionsPage() {
             maxW,
           ),
         );
-        localStorage.setItem("hapi:panel:leftWidth", String(finalWidth));
+        writeStorageItem("session", "hapi:panel:leftWidth", String(finalWidth));
       };
 
       el.addEventListener("pointermove", onMove);
@@ -3839,7 +3822,7 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
     setCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem("hapi:panel:collapsed", String(next));
+      writeStorageItem("session", "hapi:panel:collapsed", String(next));
       return next;
     });
   }, []);

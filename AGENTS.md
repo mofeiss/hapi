@@ -62,6 +62,14 @@ Bun workspaces; `shared` consumed by cli, hub, web.
 - 新增组件或新增界面文案时，必须同时适配中文和英文语义；特定术语、产品名、协议名、库名、代码标识等保持英文，不要强行翻译
 - 提交说明必须遵循当前仓库最近历史风格；默认使用 Conventional Commit 风格的 `type(scope): summary`，如 `fix(web): ...`、`feat(cli): ...`；不要写随意的自然语言标题，不要把同一件事拆成多条噪音式小提交
 
+## Web storage policy
+
+- Web persisted state must be classified before implementation: `sessionStorage` for per-tab workspace context, `localStorage` for cross-tab user preferences/config/history, or no persistence.
+- Per-tab workspace context must use `sessionStorage`. Examples: selected session/task, current subview, workspace overlay, sidebar collapsed state, sidebar width, grouped list expand/collapse state, other page-local viewing context.
+- Cross-tab preferences/config/history must use `localStorage`. Examples: theme, locale, keyboard shortcuts, hub URL, access token, recent paths, new session defaults, dismiss/skip-confirm preferences.
+- Do not add new `localStorage` keys for workspace selection state or page-local layout state unless user explicitly asks for cross-tab sharing.
+- Prefer shared helpers in `web/src/lib/storage.ts` over raw direct `localStorage` / `sessionStorage` access for new persisted UI state.
+
 ## Web notes
 
 Current web shape; keep this section updated when layout/navigation model shifts.
@@ -70,7 +78,7 @@ Current web shape; keep this section updated when layout/navigation model shifts
 
 - Web now behaves like a workspace-style single app shell, not a set of isolated pages.
 - Primary workspace tabs: `sessions` and `scheduled`.
-- Workspace state persisted in `localStorage` key `hapi:workspace-state`.
+- Workspace state persisted per browser tab in `sessionStorage` key `hapi:workspace-state`.
 - Session subviews inside workspace: `chat`, `files`, `terminal`.
 - Workspace overlays: `none`, `settings`, `newSession`.
 - Route layer still exposes compat URLs: `/sessions`, `/sessions/$sessionId`, `/sessions/$sessionId/files`, `/sessions/$sessionId/terminal`, `/sessions/$sessionId/file`, `/sessions/new`, `/scheduled`.
@@ -86,7 +94,7 @@ Current web shape; keep this section updated when layout/navigation model shifts
 
 ### Current desktop/mobile layout
 
-- Desktop layout has resizable left sidebar; minimum width `375px`; width persisted in local storage from router shell.
+- Desktop layout has resizable left sidebar; minimum width `375px`; width persisted per browser tab in session storage from router shell.
 - Desktop can collapse sidebar into icon strip; collapsed strip still exposes tab switcher plus header utility actions.
 - Widescreen mode persisted in `localStorage` key `hapi:widescreen`; used for session detail area density/layout.
 - Mobile/narrow mode behaves like drill-down panels: list/index hidden while detail/overlay visible.

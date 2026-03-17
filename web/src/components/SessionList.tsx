@@ -12,6 +12,7 @@ import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import { useToast } from "@/lib/toast-context";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 import { formatTimestamp } from "@/lib/dateTime";
+import { readStorageJson, writeStorageJson } from "@/lib/storage";
 
 export type SessionGroup = {
   host: string;
@@ -534,12 +535,11 @@ export function SessionList(props: {
   const [collapseOverrides, setCollapseOverrides] = useState<
     Map<string, boolean>
   >(() => {
-    try {
-      const stored = localStorage.getItem("hapi:panel:group-collapsed");
-      if (stored) return new Map(JSON.parse(stored) as [string, boolean][]);
-    } catch {
-      /* ignore */
-    }
+    const stored = readStorageJson<[string, boolean][]>(
+      "session",
+      "hapi:panel:group-collapsed",
+    );
+    if (stored) return new Map(stored);
     return new Map();
   });
   const isGroupCollapsed = (group: SessionGroup): boolean => {
@@ -574,14 +574,7 @@ export function SessionList(props: {
     setCollapseOverrides((prev) => {
       const next = new Map(prev);
       next.set(host, !isCollapsed);
-      try {
-        localStorage.setItem(
-          "hapi:panel:group-collapsed",
-          JSON.stringify([...next.entries()]),
-        );
-      } catch {
-        /* ignore */
-      }
+      writeStorageJson("session", "hapi:panel:group-collapsed", [...next.entries()]);
       return next;
     });
   };
@@ -600,14 +593,7 @@ export function SessionList(props: {
         }
       }
       if (changed) {
-        try {
-          localStorage.setItem(
-            "hapi:panel:group-collapsed",
-            JSON.stringify([...next.entries()]),
-          );
-        } catch {
-          /* ignore */
-        }
+        writeStorageJson("session", "hapi:panel:group-collapsed", [...next.entries()]);
       }
       return changed ? next : prev;
     });

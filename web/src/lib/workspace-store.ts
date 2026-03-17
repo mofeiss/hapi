@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { readStorageJson, writeStorageJson } from '@/lib/storage'
 
 export type WorkspaceTab = 'sessions' | 'scheduled'
 export type SessionSubview = 'chat' | 'files' | 'terminal'
@@ -37,40 +38,23 @@ function isWorkspaceOverlay(value: unknown): value is WorkspaceOverlay {
 }
 
 function readPersistedState(): WorkspaceState {
-    if (typeof window === 'undefined') {
+    const parsed = readStorageJson<Partial<WorkspaceState>>('session', STORAGE_KEY)
+    if (!parsed) {
         return DEFAULT_STATE
     }
 
-    try {
-        const raw = window.localStorage.getItem(STORAGE_KEY)
-        if (!raw) {
-            return DEFAULT_STATE
-        }
-
-        const parsed = JSON.parse(raw) as Partial<WorkspaceState>
-        return {
-            tab: isWorkspaceTab(parsed.tab) ? parsed.tab : DEFAULT_STATE.tab,
-            overlay: isWorkspaceOverlay(parsed.overlay) ? parsed.overlay : DEFAULT_STATE.overlay,
-            selectedSessionId: typeof parsed.selectedSessionId === 'string' ? parsed.selectedSessionId : null,
-            sessionSubview: isSessionSubview(parsed.sessionSubview) ? parsed.sessionSubview : DEFAULT_STATE.sessionSubview,
-            selectedScheduledTaskId: typeof parsed.selectedScheduledTaskId === 'string' ? parsed.selectedScheduledTaskId : null,
-            selectedScheduledRunId: typeof parsed.selectedScheduledRunId === 'string' ? parsed.selectedScheduledRunId : null,
-        }
-    } catch {
-        return DEFAULT_STATE
+    return {
+        tab: isWorkspaceTab(parsed.tab) ? parsed.tab : DEFAULT_STATE.tab,
+        overlay: isWorkspaceOverlay(parsed.overlay) ? parsed.overlay : DEFAULT_STATE.overlay,
+        selectedSessionId: typeof parsed.selectedSessionId === 'string' ? parsed.selectedSessionId : null,
+        sessionSubview: isSessionSubview(parsed.sessionSubview) ? parsed.sessionSubview : DEFAULT_STATE.sessionSubview,
+        selectedScheduledTaskId: typeof parsed.selectedScheduledTaskId === 'string' ? parsed.selectedScheduledTaskId : null,
+        selectedScheduledRunId: typeof parsed.selectedScheduledRunId === 'string' ? parsed.selectedScheduledRunId : null,
     }
 }
 
 function persistState(nextState: WorkspaceState): void {
-    if (typeof window === 'undefined') {
-        return
-    }
-
-    try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState))
-    } catch {
-        // Ignore storage failures so the workspace remains usable.
-    }
+    writeStorageJson('session', STORAGE_KEY, nextState)
 }
 
 let state: WorkspaceState = readPersistedState()
