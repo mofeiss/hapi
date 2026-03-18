@@ -408,4 +408,27 @@ describe('getToolPresentation', () => {
             subtitle: '执行命令 pwd'
         })
     })
+
+    it('always preserves raw MCP tool names even without session metadata', () => {
+        const presentation = getToolPresentation({
+            toolName: 'mcp__codex__list_mcp_resources',
+            input: {
+                server: 'searxng'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'zh-CN'
+        })
+
+        expect(getToolDisplayText(
+            null,
+            'mcp__codex__list_mcp_resources',
+            presentation
+        )).toEqual({
+            title: 'list_mcp_resources',
+            subtitle: 'searxng'
+        })
+    })
 })

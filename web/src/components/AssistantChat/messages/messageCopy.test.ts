@@ -58,7 +58,7 @@ describe('buildAssistantCopyText', () => {
             [
                 'Done.',
                 '```Reasoning\nInspect src/app.ts\nCheck types\n```',
-                '```Tool_Call\n✓ View src/app.ts file\n```'
+                '```Tool_Call\n✓ Read | View src/app.ts file\n```'
             ].join('\n\n')
         )
     })
@@ -80,7 +80,7 @@ describe('buildAssistantCopyText', () => {
         ]
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
-            '```Tool Calls | 2 calls\n- ✓ View src/app.ts file\n- Reasoning: Need to verify after edit\n- ⋯ Run command bun test web\n```'
+            '```Steps | 2 calls\n- ✓ Read | View src/app.ts file\n- Reasoning: Need to verify after edit\n- ⋯ Bash | Run command bun test web\n```'
         )
     })
 
@@ -96,7 +96,7 @@ describe('buildAssistantCopyText', () => {
         ]
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
-            '```Tool_Call\n✓ Write 5 chars to src/app.ts\n```'
+            '```Tool_Call\n✓ Write | Write 5 chars to src/app.ts\n```'
         )
     })
 
@@ -107,7 +107,7 @@ describe('buildAssistantCopyText', () => {
         ]
 
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en' })).toBe(
-            '```Tool_Call\n✓ View src/app.ts file\n✗ Run command bun test web\n```'
+            '```Tool_Call\n✓ Read | View src/app.ts file\n✗ Bash | Run command bun test web\n```'
         )
     })
 
@@ -129,7 +129,7 @@ describe('buildAssistantCopyText', () => {
         expect(buildAssistantCopyText(parts, { metadata, locale: 'en', includeToolJson: true })).toBe(
             [
                 '```Tool_Call',
-                '✓ View src/app.ts file',
+                '✓ Read | View src/app.ts file',
                 '<Input>',
                 '{',
                 '  "file_path": "/workspace/src/app.ts"',
