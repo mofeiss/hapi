@@ -3,6 +3,7 @@ export const queryKeys = {
     session: (sessionId: string) => ['session', sessionId] as const,
     messages: (sessionId: string) => ['messages', sessionId] as const,
     machines: ['machines'] as const,
+    runtimeConfig: ['runtime-config'] as const,
     scheduledTasks: ['scheduled-tasks'] as const,
     agentModels: (machineId: string, agent: string) => ['agent-models', machineId, agent] as const,
     gitStatus: (sessionId: string) => ['git-status', sessionId] as const,

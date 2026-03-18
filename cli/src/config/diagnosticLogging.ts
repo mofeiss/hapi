@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { configuration } from '@/configuration'
+import { getDiagnosticLoggingRuntimeOverride } from './diagnosticLoggingRuntime'
 
 type DiagnosticLoggingSource = 'env' | 'file' | 'default'
 
@@ -60,6 +61,11 @@ function resolveDiagnosticLogging(): { enabled: boolean; source: DiagnosticLoggi
 }
 
 export function isDiagnosticLoggingEnabled(): boolean {
+    const runtimeOverride = getDiagnosticLoggingRuntimeOverride()
+    if (runtimeOverride !== null) {
+        return runtimeOverride
+    }
+
     if (cachedEnabled !== null) {
         return cachedEnabled
     }

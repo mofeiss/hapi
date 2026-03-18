@@ -4128,6 +4128,7 @@ function SessionsPage() {
 
                 <div className="flex shrink-0 items-center gap-0.5 self-center pl-1">
                   <HeaderActionGroup
+                    api={api}
                     isDark={isDark}
                     onToggleTheme={toggleTheme}
                     onOpenSettings={toggleSettingsOverlay}
@@ -4761,6 +4762,7 @@ function SessionsPage() {
               </ToggleGroupItem>
             </ToggleGroup>
             <HeaderActionGroup
+              api={api}
               onOpenNewSession={toggleNewSessionOverlay}
               className="flex flex-col items-center gap-1"
               compactIcons
@@ -4843,6 +4845,7 @@ function SessionsPage() {
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
           <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
             <HeaderActionGroup
+              api={api}
               isDark={isDark}
               onToggleTheme={toggleTheme}
               className="flex flex-col items-center gap-1"

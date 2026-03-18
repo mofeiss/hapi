@@ -17,6 +17,7 @@ import type {
     ScheduledTasksResponse,
     PushUnsubscribePayload,
     PushVapidPublicKeyResponse,
+    RuntimeConfigResponse,
     SlashCommandsResponse,
     SkillsResponse,
     SpawnResponse,
@@ -211,6 +212,17 @@ export class ApiClient {
 
     async getPushVapidPublicKey(): Promise<PushVapidPublicKeyResponse> {
         return await this.request<PushVapidPublicKeyResponse>('/api/push/vapid-public-key')
+    }
+
+    async getRuntimeConfig(): Promise<RuntimeConfigResponse> {
+        return await this.request<RuntimeConfigResponse>('/api/runtime-config')
+    }
+
+    async setDiagnosticLogging(enabled: boolean): Promise<RuntimeConfigResponse> {
+        return await this.request<RuntimeConfigResponse>('/api/runtime-config/diagnostic-logging', {
+            method: 'POST',
+            body: JSON.stringify({ enabled })
+        })
     }
 
     async subscribePushNotifications(payload: PushSubscriptionPayload): Promise<void> {

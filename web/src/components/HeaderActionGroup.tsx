@@ -1,4 +1,5 @@
 import { PageHeaderUtilityControls } from '@/components/PageHeaderUtilityControls'
+import type { ApiClient } from '@/api/client'
 import { useTranslation } from '@/lib/use-translation'
 
 function TerminalIcon(props: { className?: string }) {
@@ -120,6 +121,7 @@ function QuickCloneChatIcon(props: { className?: string }) {
 const iconButtonClassName = 'flex h-[30px] w-[30px] items-center justify-center rounded-full text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]'
 
 type HeaderActionGroupProps = {
+    api?: ApiClient | null
     isDark?: boolean
     onToggleTheme?: () => void
     onOpenSettings?: () => void
@@ -192,6 +194,7 @@ export function HeaderActionGroup(props: HeaderActionGroupProps) {
 
             {(!props.hideThemeControls && props.onToggleTheme) || (!props.hideSettingsButton && props.onOpenSettings) ? (
                 <PageHeaderUtilityControls
+                    api={props.api}
                     isDark={Boolean(props.isDark)}
                     onToggleTheme={props.hideThemeControls ? undefined : props.onToggleTheme}
                     onOpenSettings={props.hideSettingsButton ? undefined : props.onOpenSettings}

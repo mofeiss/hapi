@@ -23,6 +23,10 @@ const pathsExistsSchema = z.object({
     paths: z.array(z.string().min(1)).max(1000)
 })
 
+const diagnosticLoggingSchema = z.object({
+    enabled: z.boolean()
+})
+
 export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Hono<WebAppEnv> {
     const app = new Hono<WebAppEnv>()
 
@@ -35,6 +39,31 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         const namespace = c.get('namespace')
         const machines = engine.getOnlineMachinesByNamespace(namespace)
         return c.json({ machines })
+    })
+
+    app.get('/runtime-config', (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ error: 'Not connected' }, 503)
+        }
+
+        return c.json({ diagnosticLogging: engine.getDiagnosticLoggingConfig() })
+    })
+
+    app.post('/runtime-config/diagnostic-logging', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ error: 'Not connected' }, 503)
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = diagnosticLoggingSchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ error: 'Invalid body' }, 400)
+        }
+
+        await engine.setDiagnosticLoggingConfig(parsed.data.enabled)
+        return c.json({ diagnosticLogging: engine.getDiagnosticLoggingConfig() })
     })
 
     app.post('/machines/:id/spawn', async (c) => {

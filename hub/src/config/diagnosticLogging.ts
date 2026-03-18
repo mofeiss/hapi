@@ -1,5 +1,5 @@
-import { configuration } from '../configuration'
+import { getDiagnosticLoggingRuntimeValue } from './diagnosticLoggingRuntime'
 
 export function isDiagnosticLoggingEnabled(): boolean {
-    return configuration.diagnosticLogging
+    return getDiagnosticLoggingRuntimeValue()
 }

@@ -28,6 +28,13 @@ import {
 } from './rpcGateway'
 import { SessionCache } from './sessionCache'
 import { configuration } from '../configuration'
+import {
+    getDiagnosticLoggingInitialValue,
+    getDiagnosticLoggingRuntimeValue,
+    hasDiagnosticLoggingRuntimeOverride,
+    onDiagnosticLoggingRuntimeChange,
+    setDiagnosticLoggingRuntimeValue
+} from '../config/diagnosticLoggingRuntime'
 
 export type { Session, SyncEvent } from '@hapi/protocol/types'
 export type { Machine } from './machineCache'
@@ -53,6 +60,7 @@ export class SyncEngine {
     private readonly messageService: MessageService
     private readonly rpcGateway: RpcGateway
     private inactivityTimer: NodeJS.Timeout | null = null
+    private readonly unsubscribeDiagnosticLoggingRuntimeChange: (() => void) | null
 
     constructor(
         store: Store,
@@ -67,9 +75,13 @@ export class SyncEngine {
         this.rpcGateway = new RpcGateway(io, rpcRegistry)
         this.reloadAll()
         this.inactivityTimer = setInterval(() => this.expireInactive(), 5_000)
+        this.unsubscribeDiagnosticLoggingRuntimeChange = onDiagnosticLoggingRuntimeChange((enabled) => {
+            void this.handleDiagnosticLoggingRuntimeChanged(enabled)
+        })
     }
 
     stop(): void {
+        this.unsubscribeDiagnosticLoggingRuntimeChange?.()
         if (this.inactivityTimer) {
             clearInterval(this.inactivityTimer)
             this.inactivityTimer = null
@@ -126,27 +138,79 @@ export class SyncEngine {
     }
 
     getMachines(): Machine[] {
-        return this.machineCache.getMachines()
+        return this.machineCache.getMachines().map((machine) => this.decorateMachine(machine))
     }
 
     getMachinesByNamespace(namespace: string): Machine[] {
-        return this.machineCache.getMachinesByNamespace(namespace)
+        return this.machineCache.getMachinesByNamespace(namespace).map((machine) => this.decorateMachine(machine))
     }
 
     getMachine(machineId: string): Machine | undefined {
-        return this.machineCache.getMachine(machineId)
+        const machine = this.machineCache.getMachine(machineId)
+        return machine ? this.decorateMachine(machine) : undefined
     }
 
     getMachineByNamespace(machineId: string, namespace: string): Machine | undefined {
-        return this.machineCache.getMachineByNamespace(machineId, namespace)
+        const machine = this.machineCache.getMachineByNamespace(machineId, namespace)
+        return machine ? this.decorateMachine(machine) : undefined
     }
 
     getOnlineMachines(): Machine[] {
-        return this.machineCache.getOnlineMachines()
+        return this.machineCache.getOnlineMachines().map((machine) => this.decorateMachine(machine))
     }
 
     getOnlineMachinesByNamespace(namespace: string): Machine[] {
-        return this.machineCache.getOnlineMachinesByNamespace(namespace)
+        return this.machineCache.getOnlineMachinesByNamespace(namespace).map((machine) => this.decorateMachine(machine))
+    }
+
+    getDiagnosticLoggingConfig(): {
+        enabled: boolean
+        initial: boolean
+        overridden: boolean
+    } {
+        return {
+            enabled: getDiagnosticLoggingRuntimeValue(),
+            initial: getDiagnosticLoggingInitialValue(),
+            overridden: hasDiagnosticLoggingRuntimeOverride()
+        }
+    }
+
+    async setDiagnosticLoggingConfig(enabled: boolean): Promise<void> {
+        const changed = setDiagnosticLoggingRuntimeValue(enabled)
+        console.log(`[Hub] Diagnostic logging runtime override: ${enabled ? 'enabled' : 'disabled'}${changed ? '' : ' (unchanged, re-synced)'}`)
+        if (!changed) {
+            await this.syncDiagnosticLoggingToConnectedClients(enabled)
+            return
+        }
+    }
+
+    private decorateMachine(machine: Machine): Machine {
+        const config = this.getDiagnosticLoggingConfig()
+        return {
+            ...machine,
+            runtimeConfig: {
+                diagnosticLogging: config.enabled,
+                diagnosticLoggingInitial: config.initial,
+                diagnosticLoggingOverridden: config.overridden
+            }
+        }
+    }
+
+    private async handleDiagnosticLoggingRuntimeChanged(enabled: boolean): Promise<void> {
+        await this.syncDiagnosticLoggingToConnectedClients(enabled)
+        for (const machine of this.machineCache.getMachines()) {
+            this.eventPublisher.emit({ type: 'machine-updated', machineId: machine.id, data: { runtimeConfig: { diagnosticLogging: enabled } } })
+        }
+    }
+
+    private async syncDiagnosticLoggingToConnectedClients(enabled: boolean): Promise<void> {
+        const machineIds = this.machineCache.getOnlineMachines().map((machine) => machine.id)
+        const sessionIds = this.sessionCache.getActiveSessions().map((session) => session.id)
+
+        await Promise.allSettled([
+            ...machineIds.map(async (machineId) => await this.rpcGateway.setMachineDiagnosticLogging(machineId, enabled)),
+            ...sessionIds.map(async (sessionId) => await this.rpcGateway.setSessionDiagnosticLogging(sessionId, enabled))
+        ])
     }
 
     getMessagesPage(sessionId: string, options: { limit: number; beforeSeq: number | null }): {

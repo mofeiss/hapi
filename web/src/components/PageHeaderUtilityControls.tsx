@@ -1,4 +1,6 @@
 import { useCallback } from 'react'
+import type { ApiClient } from '@/api/client'
+import { DiagnosticLoggingToggle } from '@/components/DiagnosticLoggingToggle'
 import { QuickLanguageToggle } from '@/components/QuickLanguageToggle'
 import { useTranslation } from '@/lib/use-translation'
 
@@ -66,6 +68,7 @@ function MoonIcon() {
 }
 
 export function PageHeaderUtilityControls(props: {
+    api?: ApiClient | null
     isDark: boolean
     onToggleTheme?: () => void
     onOpenSettings?: () => void
@@ -105,6 +108,7 @@ export function PageHeaderUtilityControls(props: {
                     {props.isDark ? <SunIcon /> : <MoonIcon />}
                 </button>
             ) : null}
+            <DiagnosticLoggingToggle api={props.api ?? null} buttonClassName={buttonClassName} />
             {!props.hideSettingsButton && (props.onOpenSettings || props.useFallbackSettingsEvent) ? (
                 <button
                     type="button"

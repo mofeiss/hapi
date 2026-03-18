@@ -68,6 +68,17 @@ export type Machine = {
         happyCliVersion: string
         displayName?: string
     } | null
+    runtimeConfig?: {
+        diagnosticLogging: boolean
+        diagnosticLoggingInitial: boolean
+        diagnosticLoggingOverridden: boolean
+    }
+}
+
+export type DiagnosticLoggingRuntimeConfig = {
+    enabled: boolean
+    initial: boolean
+    overridden: boolean
 }
 
 export type AuthResponse = {
@@ -93,6 +104,7 @@ export type MessagesResponse = {
 }
 
 export type MachinesResponse = { machines: Machine[] }
+export type RuntimeConfigResponse = { diagnosticLogging: DiagnosticLoggingRuntimeConfig }
 export type MachinePathsExistsResponse = { exists: Record<string, boolean> }
 export type ScheduledTasksResponse = { tasks: ScheduledTask[]; runs: ScheduledTaskRun[] }
 

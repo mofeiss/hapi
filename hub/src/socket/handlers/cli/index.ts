@@ -9,6 +9,7 @@ import { registerMachineHandlers } from './machineHandlers'
 import { registerRpcHandlers } from './rpcHandlers'
 import { registerSessionHandlers } from './sessionHandlers'
 import { cleanupTerminalHandlers, registerTerminalHandlers } from './terminalHandlers'
+import { getDiagnosticLoggingRuntimeValue } from '../../../config/diagnosticLoggingRuntime'
 
 type SessionAlivePayload = {
     sid: string
@@ -120,6 +121,22 @@ export function registerCliHandlers(socket: CliSocketWithData, deps: CliHandlers
     socket.on('ping', (callback: () => void) => {
         callback()
     })
+
+    const scopedSessionId = typeof sessionId === 'string' ? sessionId : null
+    const scopedMachineId = typeof machineId === 'string' ? machineId : null
+    const enabled = getDiagnosticLoggingRuntimeValue()
+    if (scopedSessionId) {
+        socket.emit('rpc-request', {
+            method: `${scopedSessionId}:set-diagnostic-logging`,
+            params: JSON.stringify({ enabled })
+        }, () => {})
+    }
+    if (scopedMachineId) {
+        socket.emit('rpc-request', {
+            method: `${scopedMachineId}:set-diagnostic-logging`,
+            params: JSON.stringify({ enabled })
+        }, () => {})
+    }
 
     socket.on('disconnect', () => {
         rpcRegistry.unregisterAll(socket)

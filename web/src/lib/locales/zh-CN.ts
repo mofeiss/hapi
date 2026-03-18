@@ -234,6 +234,8 @@ export default {
   // Theme
   'theme.switchToLight': '亮色模式',
   'theme.switchToDark': '暗色模式',
+  'debug.enableDiagnosticLogging': '开启诊断日志',
+  'debug.disableDiagnosticLogging': '关闭诊断日志',
 
   // Filter
   'filter.onlineOnly': '仅显示在线',

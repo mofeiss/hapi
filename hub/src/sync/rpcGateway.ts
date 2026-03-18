@@ -195,6 +195,14 @@ export class RpcGateway {
         return await this.machineRpc(machineId, 'agent-models', { agent }) as RpcAgentModelsResponse
     }
 
+    async setMachineDiagnosticLogging(machineId: string, enabled: boolean): Promise<void> {
+        await this.machineRpc(machineId, 'set-diagnostic-logging', { enabled })
+    }
+
+    async setSessionDiagnosticLogging(sessionId: string, enabled: boolean): Promise<void> {
+        await this.sessionRpc(sessionId, 'set-diagnostic-logging', { enabled })
+    }
+
     async getGitStatus(sessionId: string, cwd?: string): Promise<RpcCommandResponse> {
         return await this.sessionRpc(sessionId, 'git-status', { cwd }) as RpcCommandResponse
     }

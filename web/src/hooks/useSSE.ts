@@ -145,6 +145,7 @@ export function useSSE(options: {
 
             if (event.type === 'machine-updated') {
                 void queryClient.invalidateQueries({ queryKey: queryKeys.machines })
+                void queryClient.invalidateQueries({ queryKey: queryKeys.runtimeConfig })
             }
 
             if (

@@ -33,6 +33,11 @@ export interface Machine {
     metadataVersion: number
     runnerState: unknown | null
     runnerStateVersion: number
+    runtimeConfig?: {
+        diagnosticLogging: boolean
+        diagnosticLoggingInitial: boolean
+        diagnosticLoggingOverridden: boolean
+    }
 }
 
 export class MachineCache {

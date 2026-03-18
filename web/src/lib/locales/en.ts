@@ -241,6 +241,8 @@ export default {
   // Theme
   "theme.switchToLight": "Light Mode",
   "theme.switchToDark": "Dark Mode",
+  "debug.enableDiagnosticLogging": "Enable diagnostic logging",
+  "debug.disableDiagnosticLogging": "Disable diagnostic logging",
 
   // Filter
   "filter.onlineOnly": "Show online only",
