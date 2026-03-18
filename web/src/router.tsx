@@ -5289,6 +5289,7 @@ function SessionsPage() {
                       toggleSettingsOverlay();
                     }}
                     onOpenNewSession={toggleNewSessionOverlay}
+                    subscribeToSessionEvents={false}
                   />
                 )}
               </div>
@@ -5393,6 +5394,7 @@ function SessionView({
   onOpenSettings,
   onOpenNewSession,
   headerTitleOverride,
+  subscribeToSessionEvents = true,
 }: {
   sessionId: string;
   onBack: () => void;
@@ -5402,6 +5404,7 @@ function SessionView({
   onOpenSettings?: () => void;
   onOpenNewSession?: () => void;
   headerTitleOverride?: string | null;
+  subscribeToSessionEvents?: boolean;
 }) {
   return (
     <EmbeddedSessionView
@@ -5414,6 +5417,7 @@ function SessionView({
       onToggleTheme={onToggleTheme}
       onOpenSettings={onOpenSettings}
       onOpenNewSession={onOpenNewSession}
+      subscribeToSessionEvents={subscribeToSessionEvents}
     />
   );
 }

@@ -101,6 +101,7 @@ export function EmbeddedSessionView({
   headerHideQuickNewButton = false,
   headerHideWidescreenButton = false,
   headerHideSubtitleRow = false,
+  subscribeToSessionEvents = true,
   streamOnly = false,
   initialScrollAnchor = "bottom",
 }: {
@@ -117,6 +118,7 @@ export function EmbeddedSessionView({
   headerHideQuickNewButton?: boolean;
   headerHideWidescreenButton?: boolean;
   headerHideSubtitleRow?: boolean;
+  subscribeToSessionEvents?: boolean;
   streamOnly?: boolean;
   initialScrollAnchor?: "top" | "bottom";
 }) {
@@ -132,7 +134,7 @@ export function EmbeddedSessionView({
   const modeSyncKeyRef = useRef<string | null>(null);
 
   useSSE({
-    enabled: Boolean(api && token && sessionId),
+    enabled: Boolean(api && token && sessionId && subscribeToSessionEvents),
     token,
     baseUrl,
     subscription: { sessionId },
