@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
     createRunnerScheduledTask,
     updateRunnerScheduledTask,
-    cancelRunnerScheduledTask,
+    archiveRunnerScheduledTask,
     deleteRunnerScheduledTask,
     listRunnerScheduledTasks,
     listRunnerScheduledTaskRuns,
@@ -11,7 +11,7 @@ const {
 } = vi.hoisted(() => ({
     createRunnerScheduledTask: vi.fn(),
     updateRunnerScheduledTask: vi.fn(),
-    cancelRunnerScheduledTask: vi.fn(),
+    archiveRunnerScheduledTask: vi.fn(),
     deleteRunnerScheduledTask: vi.fn(),
     listRunnerScheduledTasks: vi.fn(),
     listRunnerScheduledTaskRuns: vi.fn(),
@@ -21,7 +21,7 @@ const {
 vi.mock('@/runner/controlClient', () => ({
     createRunnerScheduledTask,
     updateRunnerScheduledTask,
-    cancelRunnerScheduledTask,
+    archiveRunnerScheduledTask,
     deleteRunnerScheduledTask,
     listRunnerScheduledTasks,
     listRunnerScheduledTaskRuns,
@@ -57,6 +57,10 @@ function createClient(trigger?: any) {
     } as any
 }
 
+function parseToolResult(result: any) {
+    return JSON.parse(String(result.content[0]?.text))
+}
+
 describe('registerScheduleTools', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -68,12 +72,15 @@ describe('registerScheduleTools', () => {
 
         expect(toolNames).toEqual([
             'schedule_create',
-            'schedule_update',
+            'schedule_list',
+            'schedule_get',
+            'schedule_run_list',
+            'schedule_run_get',
+            'schedule_delete',
+            'schedule_edit',
             'schedule_pause',
             'schedule_resume',
-            'schedule_cancel',
-            'schedule_list',
-            'schedule_delete'
+            'schedule_archive'
         ])
         expect(toolNames).not.toContain('schedule_report_outcome')
     })
@@ -104,31 +111,29 @@ describe('registerScheduleTools', () => {
         }))
 
         expect(toolNames).toEqual([
-            'schedule_update',
+            'schedule_edit',
             'schedule_pause',
             'schedule_resume',
-            'schedule_cancel',
+            'schedule_archive',
             'schedule_report_outcome'
         ])
-        expect(toolNames).not.toContain('schedule_create')
-        expect(toolNames).not.toContain('schedule_list')
-        expect(toolNames).not.toContain('schedule_delete')
 
-        const updateResult = await tools.get('schedule_update')!.handler({ taskId: 'task-2', paused: true })
-        expect(updateResult.isError).toBe(true)
-        expect(String(updateResult.content[0]?.text)).toContain('self-control sessions may only manage their own task (task-1)')
+        const updateResult = await tools.get('schedule_edit')!.handler({ taskId: 'task-2', title: 'x' })
+        const parsed = parseToolResult(updateResult)
+        expect(parsed.ok).toBe(false)
+        expect(parsed.code).toBe('schedule.self_control_forbidden')
         expect(updateRunnerScheduledTask).not.toHaveBeenCalled()
     })
 
-    it('allows self_control sessions to update their own task', async () => {
+    it('allows self_control sessions to edit their own task', async () => {
         const { server, tools } = createMcpServerMock()
         updateRunnerScheduledTask.mockResolvedValue({
             id: 'task-1',
-            createdAt: 1,
             updatedAt: 2,
+            scheduleType: 'cron',
             scheduledSessionPermission: 'self_control',
-            model: 'sonnet',
-            paused: true
+            timezone: 'Asia/Shanghai',
+            cron: '*/5 * * * *'
         })
 
         await registerScheduleTools(server as any, createClient({
@@ -140,39 +145,29 @@ describe('registerScheduleTools', () => {
             iteration: 3
         }))
 
-        const updateResult = await tools.get('schedule_update')!.handler({ taskId: 'task-1', paused: true })
-        expect(updateResult.isError).toBe(false)
-        expect(updateRunnerScheduledTask).toHaveBeenCalledWith({ taskId: 'task-1', paused: true, runAt: undefined, cron: undefined, title: undefined, prompt: undefined, agentFlavor: undefined, model: undefined, scheduleType: undefined, targetDirectory: undefined, timezone: undefined, scheduledSessionPermission: undefined })
-    })
-
-    it('exposes full scheduler controls and outcome reporting for system_control sessions', async () => {
-        const { server } = createMcpServerMock()
-        const toolNames = await registerScheduleTools(server as any, createClient({
-            type: 'scheduled-task',
+        const updateResult = await tools.get('schedule_edit')!.handler({ taskId: 'task-1', cron: '*/5 * * * *' })
+        const parsed = parseToolResult(updateResult)
+        expect(parsed.ok).toBe(true)
+        expect(updateRunnerScheduledTask).toHaveBeenCalledWith({
             taskId: 'task-1',
-            runId: 'run-1',
-            scheduleType: 'cron',
-            scheduledSessionPermission: 'system_control',
-            iteration: 4
-        }))
-
-        expect(toolNames).toEqual([
-            'schedule_create',
-            'schedule_update',
-            'schedule_pause',
-            'schedule_resume',
-            'schedule_cancel',
-            'schedule_list',
-            'schedule_delete',
-            'schedule_report_outcome'
-        ])
+            title: undefined,
+            prompt: undefined,
+            agentFlavor: undefined,
+            model: undefined,
+            scheduleType: undefined,
+            runAt: undefined,
+            cron: '*/5 * * * *',
+            targetDirectory: undefined,
+            timezone: undefined,
+            scheduledSessionPermission: undefined
+        })
     })
 
     it('reports outcome for any scheduled session using the current run id', async () => {
         const { server, tools } = createMcpServerMock()
         reportRunnerScheduledTaskOutcome.mockResolvedValue({
             id: 'run-1',
-            taskOutcome: {
+            outcome: {
                 status: 'blocked',
                 summary: 'Need credentials',
                 needsUserIntervention: true,
@@ -197,7 +192,8 @@ describe('registerScheduleTools', () => {
             permanentFailureLikely: false
         })
 
-        expect(result.isError).toBe(false)
+        const parsed = parseToolResult(result)
+        expect(parsed.ok).toBe(true)
         expect(reportRunnerScheduledTaskOutcome).toHaveBeenCalledTimes(1)
         expect(reportRunnerScheduledTaskOutcome.mock.calls[0][0]).toMatchObject({
             runId: 'run-1',

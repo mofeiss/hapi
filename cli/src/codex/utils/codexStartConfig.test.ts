@@ -102,13 +102,8 @@ describe('buildCodexStartConfig', () => {
         expect(String(config.config?.developer_instructions)).toContain('## Scheduled Task Creation');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_create');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_list');
-        expect(String(config.config?.developer_instructions)).toContain('If the user already clearly specifies the permission through direct names or equivalent admin/business wording, do not ask again.');
-        expect(String(config.config?.developer_instructions)).toContain('"lowest permission", "minimal privilege", or "aware permission" => aware');
-        expect(String(config.config?.developer_instructions)).toContain('"self-maintained" or "self-managing" => self_control');
-        expect(String(config.config?.developer_instructions)).toContain('"minimal privilege"');
-        expect(String(config.config?.developer_instructions)).toContain('"self-managing"');
-        expect(String(config.config?.developer_instructions)).toContain('"full scheduler access"');
-        expect(String(config.config?.developer_instructions)).toContain('number them as 1/2/3');
+        expect(String(config.config?.developer_instructions)).toContain('If the user does not specify a permission level, default to aware.');
+        expect(String(config.config?.developer_instructions)).toContain('Only use self_control or system_control when the user explicitly asks');
         expect(String(config.config?.developer_instructions)).toContain('task creation success from task execution status');
     });
 
@@ -129,6 +124,7 @@ describe('buildCodexStartConfig', () => {
         });
 
         expect(String(config.config?.developer_instructions)).toContain('You may use HAPI scheduler tools only for your own task (task-1).');
+        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_archive');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_report_outcome');
         expect(String(config.config?.developer_instructions)).toContain('Your permission level is self_control.');
         expect(String(config.config?.developer_instructions)).not.toContain('functions.hapi__change_title');
@@ -151,7 +147,8 @@ describe('buildCodexStartConfig', () => {
             }
         });
 
-        expect(String(config.config?.developer_instructions)).toContain('You may use the full HAPI scheduler toolset, including creating new scheduled tasks and managing existing ones.');
+        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_archive');
+        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_run_get');
         expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_report_outcome');
         expect(String(config.config?.developer_instructions)).toContain('Your permission level is system_control.');
         expect(String(config.config?.developer_instructions)).toContain('prevent repeated pointless failures');

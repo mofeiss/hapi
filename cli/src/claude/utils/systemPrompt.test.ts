@@ -10,13 +10,8 @@ describe('claude system prompt', () => {
         expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__change_title')
         expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__schedule_create')
         expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__schedule_list')
-        expect(buildClaudeSystemPrompt()).toContain('If the user already clearly specifies the permission through direct names or equivalent admin/business wording, do not ask again.')
-        expect(buildClaudeSystemPrompt()).toContain('"lowest permission", "minimal privilege", or "aware permission" => aware')
-        expect(buildClaudeSystemPrompt()).toContain('"self-maintained" or "self-managing" => self_control')
-        expect(buildClaudeSystemPrompt()).toContain('"minimal privilege"')
-        expect(buildClaudeSystemPrompt()).toContain('"self-managing"')
-        expect(buildClaudeSystemPrompt()).toContain('"full scheduler access"')
-        expect(buildClaudeSystemPrompt()).toContain('number them as 1/2/3')
+        expect(buildClaudeSystemPrompt()).toContain('If the user does not specify a permission level, default to aware.')
+        expect(buildClaudeSystemPrompt()).toContain('Only use self_control or system_control when the user explicitly asks')
         expect(buildClaudeSystemPrompt()).toContain('task creation success from task execution status')
     })
 
@@ -76,6 +71,7 @@ describe('claude system prompt', () => {
         })
 
         expect(prompt).toContain('You may use HAPI scheduler tools only for your own task (task-1).')
+        expect(prompt).toContain('mcp__hapi__schedule_archive')
         expect(prompt).toContain('mcp__hapi__schedule_report_outcome')
         expect(prompt).toContain('Your permission level is self_control.')
         expect(prompt).not.toContain('mcp__hapi__change_title')
@@ -92,7 +88,8 @@ describe('claude system prompt', () => {
             iteration: 5
         })
 
-        expect(prompt).toContain('You may use the full HAPI scheduler toolset, including creating new scheduled tasks and managing existing ones.')
+        expect(prompt).toContain('mcp__hapi__schedule_archive')
+        expect(prompt).toContain('mcp__hapi__schedule_run_get')
         expect(prompt).toContain('mcp__hapi__schedule_report_outcome')
         expect(prompt).toContain('Your permission level is system_control.')
         expect(prompt).toContain('prevent repeated pointless failures')
