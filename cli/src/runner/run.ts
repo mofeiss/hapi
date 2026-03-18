@@ -219,6 +219,19 @@ export async function startRunner(): Promise<void> {
     // Session spawning awaiter system
     const pidToAwaiter = new Map<number, (session: TrackedSession) => void>();
 
+    const waitForSessionActive = async (apiClient: ApiClient, sessionId: string, timeoutMs: number = 15_000): Promise<void> => {
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < timeoutMs) {
+        const session = await apiClient.getSession(sessionId);
+        if (session.active) {
+          logger.debug(`[RUNNER RUN] Session became active: ${sessionId}`);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      throw new Error(`Timed out waiting for session to become active: ${sessionId}`);
+    };
+
     // Helper functions
     const getCurrentChildren = () => Array.from(pidToTrackedSession.values());
 
@@ -699,6 +712,8 @@ export async function startRunner(): Promise<void> {
               : `Scheduled task requires directory approval: ${spawnResult.directory}`
           );
         }
+
+        await waitForSessionActive(api, spawnResult.sessionId);
 
         const apiToken = getAuthToken();
 
