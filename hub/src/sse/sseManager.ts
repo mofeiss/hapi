@@ -2,6 +2,31 @@ import type { SyncEvent } from '../sync/syncEngine'
 import type { VisibilityState } from '../visibility/visibilityTracker'
 import type { VisibilityTracker } from '../visibility/visibilityTracker'
 
+function summarizeForDebug(value: unknown, depth: number = 0): unknown {
+    if (depth > 4) return '[MaxDepth]'
+    if (value === null || value === undefined) return value
+    if (typeof value === 'string') {
+        return value.length > 240 ? `${value.slice(0, 240)}... [truncated ${value.length}]` : value
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') return value
+    if (Array.isArray(value)) {
+        const items = value.slice(0, 8).map((item) => summarizeForDebug(item, depth + 1))
+        if (value.length > 8) items.push(`[+${value.length - 8} more]`)
+        return items
+    }
+    if (typeof value === 'object') {
+        const record = value as Record<string, unknown>
+        const out: Record<string, unknown> = {}
+        for (const [key, nested] of Object.entries(record).slice(0, 20)) {
+            out[key] = summarizeForDebug(nested, depth + 1)
+        }
+        const extraKeys = Object.keys(record).length - Object.keys(out).length
+        if (extraKeys > 0) out.__extraKeys = extraKeys
+        return out
+    }
+    return String(value)
+}
+
 export type SSESubscription = {
     id: string
     namespace: string
@@ -108,6 +133,17 @@ export class SSEManager {
         for (const connection of this.connections.values()) {
             if (!this.shouldSend(connection, event)) {
                 continue
+            }
+
+            if (process.env.DEBUG) {
+                console.debug('[TRACE HUB SSE] broadcast.deliver', {
+                    connectionId: connection.id,
+                    namespace: connection.namespace,
+                    sessionId: connection.sessionId,
+                    machineId: connection.machineId,
+                    eventType: event.type,
+                    summary: summarizeForDebug(event)
+                })
             }
 
             void Promise.resolve(connection.send(event)).catch(() => {

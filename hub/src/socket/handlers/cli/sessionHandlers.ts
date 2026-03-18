@@ -8,6 +8,31 @@ import { extractTodoWriteTodosFromMessageContent } from '../../../sync/todos'
 import type { CliSocketWithData } from '../../socketTypes'
 import type { AccessErrorReason, AccessResult } from './types'
 
+function summarizeForDebug(value: unknown, depth: number = 0): unknown {
+    if (depth > 4) return '[MaxDepth]'
+    if (value === null || value === undefined) return value
+    if (typeof value === 'string') {
+        return value.length > 240 ? `${value.slice(0, 240)}... [truncated ${value.length}]` : value
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') return value
+    if (Array.isArray(value)) {
+        const items = value.slice(0, 8).map((item) => summarizeForDebug(item, depth + 1))
+        if (value.length > 8) items.push(`[+${value.length - 8} more]`)
+        return items
+    }
+    if (typeof value === 'object') {
+        const record = value as Record<string, unknown>
+        const out: Record<string, unknown> = {}
+        for (const [key, nested] of Object.entries(record).slice(0, 20)) {
+            out[key] = summarizeForDebug(nested, depth + 1)
+        }
+        const extraKeys = Object.keys(record).length - Object.keys(out).length
+        if (extraKeys > 0) out.__extraKeys = extraKeys
+        return out
+    }
+    return String(value)
+}
+
 type SessionAlivePayload = {
     sid: string
     time: number
@@ -80,6 +105,16 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
             })()
             : raw
 
+        if (process.env.DEBUG) {
+            console.debug('[TRACE HUB SOCKET<-CLI] message.received', {
+                sessionId: sid,
+                localId: localId ?? null,
+                messageId: messageId ?? null,
+                namespace: socket.data.namespace ?? null,
+                summary: summarizeForDebug(content)
+            })
+        }
+
         const sessionAccess = resolveSessionAccess(sid)
         if (!sessionAccess.ok) {
             emitAccessError('session', sid, sessionAccess.reason)
@@ -91,6 +126,16 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
             localId,
             id: messageId
         })
+
+        if (process.env.DEBUG) {
+            console.debug('[TRACE HUB STORE] message.upserted', {
+                sessionId: sid,
+                storedMessageId: msg.id,
+                seq: msg.seq,
+                localId: msg.localId ?? null,
+                summary: summarizeForDebug(msg.content)
+            })
+        }
 
         const todos = extractTodoWriteTodosFromMessageContent(content)
         if (todos) {
@@ -117,6 +162,15 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
             }
         }
         socket.to(`session:${sid}`).emit('update', update)
+
+        if (process.env.DEBUG) {
+            console.debug('[TRACE HUB SOCKET->WEB] update.emitted', {
+                sessionId: sid,
+                updateId: update.id,
+                seq: update.seq,
+                summary: summarizeForDebug(update.body)
+            })
+        }
 
         onWebappEvent?.({
             type: 'message-received',

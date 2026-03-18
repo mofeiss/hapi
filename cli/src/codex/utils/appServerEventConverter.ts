@@ -5,6 +5,31 @@ type ConvertedEvent = {
     [key: string]: unknown;
 };
 
+function summarizeForDebug(value: unknown, depth: number = 0): unknown {
+    if (depth > 4) return '[MaxDepth]';
+    if (value === null || value === undefined) return value;
+    if (typeof value === 'string') {
+        return value.length > 240 ? `${value.slice(0, 240)}... [truncated ${value.length}]` : value;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') return value;
+    if (Array.isArray(value)) {
+        const items = value.slice(0, 8).map((item) => summarizeForDebug(item, depth + 1));
+        if (value.length > 8) items.push(`[+${value.length - 8} more]`);
+        return items;
+    }
+    if (typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        const out: Record<string, unknown> = {};
+        for (const [key, nested] of Object.entries(record).slice(0, 20)) {
+            out[key] = summarizeForDebug(nested, depth + 1);
+        }
+        const extraKeys = Object.keys(record).length - Object.keys(out).length;
+        if (extraKeys > 0) out.__extraKeys = extraKeys;
+        return out;
+    }
+    return String(value);
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
     if (!value || typeof value !== 'object') {
         return null;
@@ -169,6 +194,14 @@ function createPlanFingerprint(
 }
 
 function buildMcpToolName(server: string, tool: string): string {
+    if (tool.startsWith('mcp__')) {
+        return tool;
+    }
+
+    if (server === 'codex') {
+        return tool;
+    }
+
     return `mcp__${server}__${tool}`;
 }
 
@@ -342,6 +375,13 @@ export class AppServerEventConverter {
         const events: ConvertedEvent[] = [];
         const paramsRecord = asRecord(params) ?? {};
         const wrappedMsg = asRecord(paramsRecord.msg);
+
+        if (process.env.DEBUG) {
+            logger.debug('[TRACE CODEX CONVERTER] incoming', {
+                method,
+                params: summarizeForDebug(params)
+            });
+        }
 
         if (method === 'thread/started' || method === 'thread/resumed') {
             const thread = asRecord(paramsRecord.thread) ?? paramsRecord;
@@ -967,6 +1007,12 @@ export class AppServerEventConverter {
         }
 
         logger.debug('[AppServerEventConverter] Unhandled notification', { method, params });
+        if (process.env.DEBUG) {
+            logger.debug('[TRACE CODEX CONVERTER] outgoing', {
+                method,
+                events: summarizeForDebug(events)
+            });
+        }
         return events;
     }
 

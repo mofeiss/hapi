@@ -171,6 +171,40 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             }
         };
 
+        const summarizeForDebug = (value: unknown, depth: number = 0): unknown => {
+            if (depth > 4) return '[MaxDepth]';
+            if (value === null || value === undefined) return value;
+            if (typeof value === 'string') {
+                return value.length > 240 ? `${value.slice(0, 240)}... [truncated ${value.length}]` : value;
+            }
+            if (typeof value === 'number' || typeof value === 'boolean') return value;
+            if (Array.isArray(value)) {
+                const items = value.slice(0, 8).map((item) => summarizeForDebug(item, depth + 1));
+                if (value.length > 8) items.push(`[+${value.length - 8} more]`);
+                return items;
+            }
+            if (typeof value === 'object') {
+                const record = value as Record<string, unknown>;
+                const out: Record<string, unknown> = {};
+                for (const [key, nested] of Object.entries(record).slice(0, 20)) {
+                    out[key] = summarizeForDebug(nested, depth + 1);
+                }
+                const extraKeys = Object.keys(record).length - Object.keys(out).length;
+                if (extraKeys > 0) out.__extraKeys = extraKeys;
+                return out;
+            }
+            return String(value);
+        };
+
+        const traceAppServerMessage = (stage: string, payload: unknown): void => {
+            if (!process.env.DEBUG) return;
+            logger.debug(`[TRACE CODEX APP-SERVER] ${stage}`, {
+                sessionId: session.client.sessionId,
+                codexSessionId: session.sessionId ?? null,
+                summary: summarizeForDebug(payload)
+            });
+        };
+
         const normalizeFailureFingerprint = (message: string): string => {
             return message
                 .replace(/,\s*cf-ray:[^,]+/gi, '')
@@ -270,6 +304,8 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             const msgType = asString(msg.type);
             if (!msgType) return;
 
+            traceAppServerMessage('incoming', msg);
+
             if (msgType === 'thread_started') {
                 const threadId = asString(msg.thread_id ?? msg.threadId);
                 if (threadId) {
@@ -312,6 +348,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 const callId = asString(msg.call_id ?? msg.callId);
                 const toolName = asString(msg.tool_name ?? msg.toolName);
                 if (callId && toolName) {
+                    traceAppServerMessage('normalized.mcp_tool_call_begin', { callId, toolName, input: msg.input ?? {} });
                     startSyntheticTool(toolName, callId, msg.input ?? {});
                 }
                 return;
@@ -320,6 +357,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             if (msgType === 'mcp_tool_call_end') {
                 const callId = asString(msg.call_id ?? msg.callId);
                 if (callId) {
+                    traceAppServerMessage('normalized.mcp_tool_call_end', { callId, output: msg.output, is_error: Boolean(msg.is_error) });
                     finishSyntheticTool(callId, msg.output, Boolean(msg.is_error));
                 }
                 return;
@@ -329,6 +367,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 const callId = asString(msg.call_id ?? msg.callId);
                 const toolName = asString(msg.tool_name ?? msg.toolName) ?? 'unknown';
                 if (callId) {
+                    traceAppServerMessage('normalized.generic_tool_call_begin', { callId, toolName, input: msg.input ?? {} });
                     startSyntheticTool(toolName, callId, msg.input ?? {});
                 }
                 return;
@@ -337,6 +376,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             if (msgType === 'generic_tool_call_end') {
                 const callId = asString(msg.call_id ?? msg.callId);
                 if (callId) {
+                    traceAppServerMessage('normalized.generic_tool_call_end', { callId, output: msg.output, is_error: Boolean(msg.is_error) });
                     finishSyntheticTool(callId, msg.output, Boolean(msg.is_error));
                 }
                 return;
