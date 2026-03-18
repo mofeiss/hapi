@@ -50,11 +50,12 @@ function getScheduledRunResultSummaryLabel(resultSummary: string, t: ReturnType<
     return translated === summaryKey ? resultSummary : translated
 }
 
-function getScheduledTaskStatusText(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string {
-    if (task.phase === 'paused') return t('scheduled.list.status.paused')
-    if (task.displayStatus === 'failed') return t('scheduled.list.status.failed')
-    if (task.displayStatus === 'completed') return t('scheduled.list.status.succeeded')
-    return t('scheduled.list.status.active')
+function getScheduledTaskDisplayStatusText(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string {
+    return t(`scheduled.list.status.${task.displayStatus}`)
+}
+
+function getScheduledTaskPhaseText(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string {
+    return t(`scheduled.list.phase.${task.phase}`)
 }
 
 function getScheduledWorkspacePauseValidationMessage(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string | null {
@@ -207,14 +208,16 @@ function ScheduledTaskListItem(props: {
                         <div className="truncate text-sm font-medium text-[var(--app-fg)]">{props.task.title}</div>
                         <div className="mt-1 truncate text-xs text-[var(--app-hint)]">{props.task.targetDirectory}</div>
                     </div>
-                    <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + (props.task.phase === 'paused' ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')}>
-                        {getScheduledTaskStatusText(props.task, t)}
+                    <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + (props.task.displayStatus === 'failed' ? 'bg-rose-500/10 text-rose-600' : props.task.displayStatus === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : props.task.displayStatus === 'healthy' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-[var(--app-subtle-bg)] text-[var(--app-fg)]')}>
+                        {getScheduledTaskDisplayStatusText(props.task, t)}
                     </span>
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--app-hint)]">
                     <span>{props.task.scheduleType}</span>
                     <span>·</span>
                     <span>{props.task.agentFlavor}</span>
+                    <span>·</span>
+                    <span>{getScheduledTaskPhaseText(props.task, t)}</span>
                     <span>·</span>
                     <span>next {formatDateTime(props.task.nextRunAt)}</span>
                 </div>
@@ -519,7 +522,8 @@ export function ScheduledWorkspace(props: {
                             </div>
 
                             <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
-                                <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Status</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedTask.displayStatus} / {selectedTask.phase}</div></div>
+                                <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Display Status</div><div className="mt-1 text-sm text-[var(--app-fg)]">{getScheduledTaskDisplayStatusText(selectedTask, t)}</div></div>
+                                <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Task Phase</div><div className="mt-1 text-sm text-[var(--app-fg)]">{getScheduledTaskPhaseText(selectedTask, t)}</div></div>
                                 <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Schedule</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedTask.scheduleType}</div></div>
                                 <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Agent</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedTask.agentFlavor}</div></div>
                                 <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Created</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatDateTime(selectedTask.createdAt)}</div></div>

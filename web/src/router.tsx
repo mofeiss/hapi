@@ -786,13 +786,6 @@ function getScheduledTaskStatusTag(task: ScheduledTask): {
   label: string;
   className: string;
 } {
-  if (task.phase === "paused") {
-    return {
-      label: "scheduled.list.status.paused",
-      className: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
-    };
-  }
-
   if (task.displayStatus === "failed") {
     return {
       label: "scheduled.list.status.failed",
@@ -802,22 +795,36 @@ function getScheduledTaskStatusTag(task: ScheduledTask): {
 
   if (task.displayStatus === "completed") {
     return {
-      label: "scheduled.list.status.succeeded",
+      label: "scheduled.list.status.completed",
+      className: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+    };
+  }
+
+  if (task.displayStatus === "healthy") {
+    return {
+      label: "scheduled.list.status.healthy",
       className: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
     };
   }
 
   return {
-    label: task.phase === "archived" ? "scheduled.list.status.active" : "scheduled.list.status.active",
+    label: "scheduled.list.status.ready",
     className: "bg-[var(--app-subtle-bg)] text-[var(--app-fg)]",
   };
 }
 
-function getScheduledTaskStatusText(
+function getScheduledTaskDisplayStatusText(
   task: ScheduledTask,
   t: ReturnType<typeof useTranslation>["t"],
 ): string {
   return t(getScheduledTaskStatusTag(task).label);
+}
+
+function getScheduledTaskPhaseText(
+  task: ScheduledTask,
+  t: ReturnType<typeof useTranslation>["t"],
+): string {
+  return t(`scheduled.list.phase.${task.phase}`);
 }
 
 function ScheduledTaskStatusTag(props: {
@@ -1256,7 +1263,8 @@ function buildScheduledOverviewCopyText(
 ): string {
   const lines = [
     "<scheduled-task-overview>",
-    formatScheduledFieldForCopy(t("scheduled.detail.status"), getScheduledTaskStatusText(task, t)),
+    formatScheduledFieldForCopy(t("scheduled.detail.displayStatus"), getScheduledTaskDisplayStatusText(task, t)),
+    formatScheduledFieldForCopy(t("scheduled.detail.taskPhase"), getScheduledTaskPhaseText(task, t)),
     formatScheduledFieldForCopy(t("scheduled.detail.machine"), machineTitle),
     formatScheduledFieldForCopy(`${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`, `${task.agentFlavor} / ${task.model ?? "-"}`),
     formatScheduledFieldForCopy(t("scheduled.detail.prompt"), task.prompt),
@@ -2106,6 +2114,16 @@ function ScheduledTaskDetailPanel({
             <div>
               <div>
                 {[
+                  {
+                    key: "display-status",
+                    label: t("scheduled.detail.displayStatus"),
+                    valueNode: <ScheduledTaskStatusTag task={task} />,
+                  },
+                  {
+                    key: "task-phase",
+                    label: t("scheduled.detail.taskPhase"),
+                    value: getScheduledTaskPhaseText(task, t),
+                  },
                   {
                     key: "machine",
                     label: t("scheduled.detail.machine"),
@@ -4697,7 +4715,7 @@ function SessionsPage() {
                                               task.scheduleType === "cron"
                                                 ? t("scheduled.list.kind.cron")
                                                 : t("scheduled.list.kind.once");
-                                            const statusText = getScheduledTaskStatusText(
+                                            const statusText = getScheduledTaskDisplayStatusText(
                                               task,
                                               t,
                                             );
