@@ -141,6 +141,30 @@ function ScheduledTaskIcon(props: { className?: string }) {
   );
 }
 
+function ScheduledRunsEmptyIcon(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={props.className}
+    >
+      <path d="M4 7h16" />
+      <path d="M7 4v6" />
+      <path d="M17 4v6" />
+      <rect x="4" y="6" width="16" height="14" rx="3" />
+      <path d="M8 12h4" />
+      <path d="M8 16h8" />
+    </svg>
+  );
+}
+
 function EmptySelectionIcon(props: { className?: string }) {
   return (
     <svg
@@ -222,6 +246,35 @@ function EmptyListState(props: {
               <span className="relative z-[1]">{props.actionLabel}</span>
             </button>
           ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScheduledRunsEmptyState(props: {
+  title: string;
+  description: string;
+  hint: string;
+}) {
+  return (
+    <div className="flex min-h-[280px] w-full items-center justify-center px-4 py-8">
+      <div className="mx-auto flex max-w-md flex-col items-center text-center">
+        <div className="relative mb-5 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[var(--app-secondary-bg)] text-[var(--app-hint)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--app-border)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--app-bg)_90%,var(--app-secondary-bg))] opacity-95">
+            <ScheduledRunsEmptyIcon className="h-7 w-7 opacity-60" />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <h3 className="text-[15px] font-semibold leading-[1.15] tracking-[-0.01em] text-[var(--app-fg)]">
+            {props.title}
+          </h3>
+          <p className="text-sm leading-6 text-[var(--app-hint)]">
+            {props.description}
+          </p>
+          <div className="inline-flex max-w-full items-center justify-center rounded-2xl border border-dashed border-[color:color-mix(in_srgb,var(--app-border)_85%,transparent)] bg-[color:color-mix(in_srgb,var(--app-secondary-bg)_72%,transparent)] px-4 py-3 text-left text-sm italic leading-6 text-[var(--app-hint)]">
+            {props.hint}
+          </div>
         </div>
       </div>
     </div>
@@ -913,12 +966,67 @@ function ScheduledRunsPager(props: {
   if (sortedRuns.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-end">
-          <div ref={nextRunTipRef} className="relative">
+        <div className="flex items-center overflow-visible rounded-2xl border border-[var(--app-border)]">
+          <button
+            type="button"
+            disabled
+            className={`${navButtonClassName} overflow-hidden rounded-l-2xl border-r border-[var(--app-border)]`}
+            aria-label={t("scheduled.detail.previousRun")}
+            title={t("scheduled.detail.previousRun")}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="h-4 w-4"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
+
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="flex h-8 min-w-full items-center overflow-hidden bg-[var(--app-bg)]" />
+          </div>
+
+          <button
+            type="button"
+            disabled
+            className={`${navButtonClassName} border-l border-[var(--app-border)]`}
+            aria-label={t("scheduled.detail.nextRunRecord")}
+            title={t("scheduled.detail.nextRunRecord")}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="h-4 w-4"
+            >
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+
+          <div
+            ref={nextRunTipRef}
+            className="relative rounded-r-2xl border-l border-[var(--app-border)]"
+          >
             <button
               type="button"
               onClick={() => setNextRunTipOpen((open) => !open)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-bg)] text-[var(--app-hint)] hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+              className={`${navButtonClassName} overflow-hidden rounded-r-2xl`}
               aria-label={t("scheduled.detail.nextRun")}
               aria-expanded={nextRunTipOpen}
             >
@@ -930,9 +1038,6 @@ function ScheduledRunsPager(props: {
               </div>
             ) : null}
           </div>
-        </div>
-        <div className="text-sm text-[var(--app-hint)]">
-          {t("scheduled.detail.runsEmpty")}
         </div>
       </div>
     );
@@ -1946,9 +2051,11 @@ function ScheduledTaskDetailPanel({
 
               <div className="rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] px-4 py-4">
                 {!selectedRun ? (
-                  <div className="text-sm text-[var(--app-hint)]">
-                    {t("scheduled.detail.pickRun")}
-                  </div>
+                  <ScheduledRunsEmptyState
+                    title={t("scheduled.detail.runsEmpty")}
+                    description={t("scheduled.detail.pickRun")}
+                    hint={`\"${t("scheduled.list.examplePrompt")}\"`}
+                  />
                 ) : (
                   <div>
                     {[
