@@ -212,15 +212,19 @@ Stable local config may silently point to the online stable hub.
 Use these isolated aliases instead:
 
 ```bash
-alias hapidev='cd /Users/ofeiss/project/hapi && HAPI_HOME=~/.hapidev HAPI_DIAGNOSTIC_LOGGING=true bun run dev'
-alias hapidevcli='cd /Users/ofeiss/project/hapi/cli && HAPI_HOME=~/.hapidev HAPI_DIAGNOSTIC_LOGGING=true bun src/index.ts'
+alias hapi_dev_hub='cd /Users/ofeiss/project/hapi && HAPI_HOME=~/.hapidev HAPI_DIAGNOSTIC_LOGGING=true bun run dev'
+alias hapi_dev_cli='cd /Users/ofeiss/project/hapi/cli && HAPI_HOME=~/.hapidev HAPI_DIAGNOSTIC_LOGGING=true bun src/index.ts'
+alias hapi_dev_cli_stop='hapi_dev_cli runner stop'
+alias hapi_dev_cli_restart='hapi_dev_cli runner stop && hapi_dev_cli runner start'
 ```
 
 Rules:
 - local debug for this repo should default to `HAPI_HOME=~/.hapidev`
 - do not read/write stable runner state under `~/.hapi` unless user explicitly asks
 - do not verify new scheduler/runner behavior against the online stable hub
-- prefer `hapidev` for hub+web and `hapidevcli` for CLI/runner/session testing
+- prefer `hapi_dev_hub` for hub+web and `hapi_dev_cli` for CLI/runner/session testing
+- use `hapi_dev_cli_stop` when you only need to stop the isolated runner
+- use `hapi_dev_cli_restart` when you specifically need a quick isolated runner restart
 
 ## Incident forensics / evidence chain
 
