@@ -194,12 +194,18 @@ function createPlanFingerprint(
     return `${explanation ?? ''}::${todoFingerprint}`;
 }
 
+const CODEX_NATIVE_MCP_TOOL_NAMES = new Set([
+    'list_mcp_resources',
+    'list_mcp_resource_templates',
+    'read_mcp_resource'
+]);
+
 function buildMcpToolName(server: string, tool: string): string {
     if (tool.startsWith('mcp__')) {
         return tool;
     }
 
-    if (server === 'codex') {
+    if (CODEX_NATIVE_MCP_TOOL_NAMES.has(tool)) {
         return tool;
     }
 

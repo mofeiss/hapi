@@ -422,7 +422,7 @@ describe('AppServerEventConverter', () => {
         expect(started).toEqual([{
             type: 'mcp_tool_call_begin',
             call_id: 'mcp-1',
-            tool_name: 'mcp__searxng__read_mcp_resource',
+            tool_name: 'read_mcp_resource',
             input: {
                 server: 'searxng',
                 uri: 'help://usage-guide'
@@ -451,12 +451,65 @@ describe('AppServerEventConverter', () => {
         expect(completed).toEqual([{
             type: 'mcp_tool_call_end',
             call_id: 'mcp-1',
-            tool_name: 'mcp__searxng__read_mcp_resource',
+            tool_name: 'read_mcp_resource',
             output: {
                 content: [{ type: 'text', text: 'guide' }],
                 isError: false
             },
             is_error: false
+        }]);
+    });
+
+    it('preserves codex-native MCP resource tool names without extra wrapping', () => {
+        const converter = new AppServerEventConverter();
+
+        const started = converter.handleNotification('codex/event/mcp_tool_call_begin', {
+            msg: {
+                call_id: 'mcp-native-1',
+                invocation: {
+                    server: 'codex',
+                    tool: 'list_mcp_resources',
+                    arguments: {
+                        server: 'searxng'
+                    }
+                }
+            }
+        });
+
+        expect(started).toEqual([{
+            type: 'mcp_tool_call_begin',
+            call_id: 'mcp-native-1',
+            tool_name: 'list_mcp_resources',
+            input: {
+                server: 'searxng'
+            }
+        }]);
+    });
+
+    it('preserves fully-qualified MCP tool names for actual MCP server tools', () => {
+        const converter = new AppServerEventConverter();
+
+        const started = converter.handleNotification('codex/event/mcp_tool_call_begin', {
+            msg: {
+                call_id: 'mcp-server-1',
+                invocation: {
+                    server: 'hapi',
+                    tool: 'change_title',
+                    arguments: {
+                        title: 'demo'
+                    }
+                }
+            }
+        });
+
+        expect(started).toEqual([{
+            type: 'mcp_tool_call_begin',
+            call_id: 'mcp-server-1',
+            tool_name: 'mcp__hapi__change_title',
+            input: {
+                server: 'hapi',
+                title: 'demo'
+            }
         }]);
     });
 
