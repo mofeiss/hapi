@@ -139,8 +139,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         const mcpClient = this.mcpClient;
         const appServerClient = this.appServerClient;
         const appServerEventConverter = useAppServer ? new AppServerEventConverter() : null;
-        const streamAssistantMessagesToHub = !isDiagnosticLoggingEnabled();
-        const diagnosticPartialUpdateMinIntervalMs = 120;
+        const partialUpdateMinIntervalMs = 200;
 
         const normalizeCommand = (value: unknown): string | undefined => {
             if (typeof value === 'string') {
@@ -551,14 +550,9 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                         return;
                     }
 
-                    if (streamAssistantMessagesToHub) {
-                        session.sendCodexMessage(partial.message, { messageId: partial.messageId });
-                        return;
-                    }
-
                     const now = Date.now();
                     const lastSentAt = this.lastPartialMessageSentAtById.get(partial.messageId) ?? 0;
-                    if (now - lastSentAt >= diagnosticPartialUpdateMinIntervalMs) {
+                    if (now - lastSentAt >= partialUpdateMinIntervalMs) {
                         this.lastPartialMessageSentAtById.set(partial.messageId, now);
                         session.sendCodexMessage(partial.message, { messageId: partial.messageId });
                     }

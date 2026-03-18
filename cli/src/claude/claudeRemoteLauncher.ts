@@ -114,8 +114,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
             cwd: session.path,
             version: process.env.npm_package_version
         }, permissionHandler.getResponses());
-        const streamAssistantMessagesToHub = !isDiagnosticLoggingEnabled();
-        const diagnosticPartialUpdateMinIntervalMs = 120;
+        const partialUpdateMinIntervalMs = 200;
         const partialAssistantStreams = new PartialAssistantStreamTracker({
             cwd: session.path,
             sessionId: () => session.sessionId || 'unknown',
@@ -159,15 +158,11 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
             if (message.type === 'stream_event') {
                 const partial = partialAssistantStreams.consume(message as SDKStreamEventMessage);
                 if (partial) {
-                    if (streamAssistantMessagesToHub) {
+                    const now = Date.now();
+                    const lastSentAt = this.lastPartialMessageSentAtById.get(partial.messageId) ?? 0;
+                    if (now - lastSentAt >= partialUpdateMinIntervalMs) {
+                        this.lastPartialMessageSentAtById.set(partial.messageId, now);
                         enqueueClaudeMessage(partial.logMessage, { messageId: partial.messageId });
-                    } else {
-                        const now = Date.now();
-                        const lastSentAt = this.lastPartialMessageSentAtById.get(partial.messageId) ?? 0;
-                        if (now - lastSentAt >= diagnosticPartialUpdateMinIntervalMs) {
-                            this.lastPartialMessageSentAtById.set(partial.messageId, now);
-                            enqueueClaudeMessage(partial.logMessage, { messageId: partial.messageId });
-                        }
                     }
                 }
                 return;
