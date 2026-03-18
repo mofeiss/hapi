@@ -786,22 +786,29 @@ function getScheduledTaskStatusTag(task: ScheduledTask): {
   label: string;
   className: string;
 } {
-  if (task.paused) {
+  if (task.phase === "paused") {
     return {
       label: "scheduled.list.status.paused",
       className: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
     };
   }
 
-  if (task.status === "active") {
+  if (task.displayStatus === "failed") {
     return {
-      label: "scheduled.list.status.running",
+      label: "scheduled.list.status.failed",
+      className: "bg-red-500/12 text-red-700 dark:text-red-300",
+    };
+  }
+
+  if (task.displayStatus === "completed") {
+    return {
+      label: "scheduled.list.status.succeeded",
       className: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
     };
   }
 
   return {
-    label: "scheduled.list.status.active",
+    label: task.phase === "archived" ? "scheduled.list.status.active" : "scheduled.list.status.active",
     className: "bg-[var(--app-subtle-bg)] text-[var(--app-fg)]",
   };
 }
@@ -889,7 +896,7 @@ function getScheduledNextRunTipMessage(
     return `${t("scheduled.detail.nextRun")}: ${formatScheduledDateTime(task.nextRunAt)}`;
   }
 
-  if (task.paused) {
+  if (task.phase === "paused") {
     return t("scheduled.detail.nextRunTipPaused");
   }
 
@@ -1178,7 +1185,7 @@ function getScheduledResumeValidationMessage(
   task: ScheduledTask,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string | null {
-  if (!task.paused) {
+  if (task.phase !== "paused") {
     return null;
   }
 
@@ -1217,7 +1224,7 @@ function getScheduledPauseValidationMessage(
   task: ScheduledTask,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string | null {
-  if (task.paused) {
+  if (task.phase === "paused") {
     return null;
   }
 
@@ -1382,7 +1389,7 @@ function ScheduledTaskListRow(props: {
   isPending: boolean;
   onSelect: () => void;
   onTogglePaused: () => void;
-  onCancelTask: () => void;
+  onArchiveTask: () => void;
   onDeleteTask: () => void;
 }) {
   const { t } = useTranslation();
@@ -1445,7 +1452,7 @@ function ScheduledTaskListRow(props: {
           <div className="flex shrink-0 items-center gap-1 text-sm">
             <span
               className={
-                props.task.paused
+                props.task.phase === "paused"
                   ? "text-amber-600"
                   : props.latestRun?.status === "failed"
                     ? "text-red-600"
@@ -1500,12 +1507,12 @@ function ScheduledTaskListRow(props: {
         onClose={() => setMenuOpen(false)}
         paused={Boolean(props.task.paused)}
         canTogglePaused={canScheduledTaskTogglePaused(props.task) && !props.isPending}
-        togglePausedTitle={props.task.paused
+        togglePausedTitle={props.task.phase === "paused"
           ? (getScheduledResumeValidationMessage(props.task, t) ?? t("scheduled.action.resume"))
           : (getScheduledPauseValidationMessage(props.task, t) ?? t("scheduled.action.pause"))}
-        canCancel={props.task.phase !== "archived" && !props.isPending}
+        canArchive={props.task.phase !== "archived" && !props.isPending}
         onTogglePaused={props.onTogglePaused}
-        onCancel={props.onCancelTask}
+        onArchive={props.onArchiveTask}
         onDelete={props.onDeleteTask}
         anchorPoint={menuAnchorPoint}
       />
@@ -1573,7 +1580,7 @@ function ScheduledTaskStatusIcon(props: {
     );
   }
 
-  if (props.task.paused) {
+  if (props.task.phase === "paused") {
     return (
       <svg
         className={props.className}
@@ -1611,7 +1618,7 @@ function ScheduledTaskHeader(props: {
   >;
   onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
   onTogglePaused: () => Promise<unknown> | void;
-  onCancelTask: (taskId: string) => Promise<unknown> | void;
+  onArchiveTask: (taskId: string) => Promise<unknown> | void;
   onDeleteTask: (taskId: string) => Promise<unknown> | void;
   onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
 }) {
@@ -1629,12 +1636,12 @@ function ScheduledTaskHeader(props: {
     pauseLocked &&
     props.task.scheduleType === "once" &&
     hasScheduledTaskExecuted(props.task);
-  const pauseDisabledReason = props.task.paused
+  const pauseDisabledReason = props.task.phase === "paused"
     ? getScheduledResumeValidationMessage(props.task, t)
     : getScheduledPauseValidationMessage(props.task, t);
   const pauseButtonTitle = pauseLocked
     ? (pauseDisabledReason ?? t("scheduled.validation.unknown"))
-    : props.task.paused
+    : props.task.phase === "paused"
       ? t("scheduled.action.resume")
       : t("scheduled.action.pause");
 
@@ -1713,7 +1720,7 @@ function ScheduledTaskHeader(props: {
                   >
                     <path d="M20 6 9 17l-5-5" />
                   </svg>
-                ) : props.task.paused ? (
+                ) : props.task.phase === "paused" ? (
                   <PlayIcon className="h-[17px] w-[17px]" />
                 ) : (
                   <PauseIcon className="h-[17px] w-[17px]" />
@@ -1723,13 +1730,13 @@ function ScheduledTaskHeader(props: {
                 type="button"
                 disabled={
                   props.isPending ||
-                  props.task.status !== "active" ||
-                  props.task.paused
+                  props.task.phase === "archived" ||
+                  props.task.phase === "paused"
                 }
-                onClick={() => void props.onCancelTask(props.task.id)}
+                onClick={() => void props.onArchiveTask(props.task.id)}
                 className={headerIconButtonClassName}
-                title={t("scheduled.action.cancel")}
-                aria-label={t("scheduled.action.cancel")}
+                title={t("scheduled.action.archive")}
+                aria-label={t("scheduled.action.archive")}
               >
                 <StopIcon className="h-4 w-4" />
               </button>
@@ -1812,7 +1819,7 @@ function ScheduledTaskDetailPanel({
   onEditStateChange,
   onSetEditing,
   onTogglePaused,
-  onCancelTask,
+  onArchiveTask,
   onDeleteTask,
   onUpdateTask,
   onSelectRun,
@@ -1835,7 +1842,7 @@ function ScheduledTaskDetailPanel({
   >;
   onSetEditing: React.Dispatch<React.SetStateAction<boolean>>;
   onTogglePaused: () => Promise<unknown> | void;
-  onCancelTask: (taskId: string) => Promise<unknown> | void;
+  onArchiveTask: (taskId: string) => Promise<unknown> | void;
   onDeleteTask: (taskId: string) => Promise<unknown> | void;
   onUpdateTask: (body: Record<string, unknown>) => Promise<unknown> | void;
   onSelectRun: (runId: string | null) => void;
@@ -1868,7 +1875,7 @@ function ScheduledTaskDetailPanel({
     () => formatTimestamp(task.createdAt),
     [task.createdAt],
   );
-  const scheduledTaskIconToneClassName = task.paused
+  const scheduledTaskIconToneClassName = task.phase === "paused"
     ? "text-amber-600"
     : latestRun?.status === "failed"
         ? "text-red-600"
@@ -2018,7 +2025,7 @@ function ScheduledTaskDetailPanel({
         onEditStateChange={onEditStateChange}
         onSetEditing={onSetEditing}
         onTogglePaused={onTogglePaused}
-        onCancelTask={onCancelTask}
+        onArchiveTask={onArchiveTask}
         onDeleteTask={onDeleteTask}
         onUpdateTask={onUpdateTask}
       />
@@ -2668,7 +2675,7 @@ function CollapsedScheduledItem(props: {
   isPending: boolean;
   onSelect: (taskId: string, runId?: string | null) => void;
   onTogglePaused: () => void;
-  onCancelTask: () => void;
+  onArchiveTask: () => void;
   onDeleteTask: () => void;
 }) {
   const { t } = useTranslation();
@@ -2678,7 +2685,7 @@ function CollapsedScheduledItem(props: {
   const title = props.task.title.trim();
   const initial = getSessionInitial(title || "S");
   const pauseLocked = isScheduledTaskPauseLocked(props.task);
-  const toneClass = props.task.paused
+  const toneClass = props.task.phase === "paused"
     ? "bg-amber-500/15 text-amber-600"
     : pauseLocked
       ? "bg-slate-500/15 text-slate-500"
@@ -2723,12 +2730,12 @@ function CollapsedScheduledItem(props: {
         onClose={() => setMenuOpen(false)}
         paused={Boolean(props.task.paused)}
         canTogglePaused={!pauseLocked && !props.isPending}
-        togglePausedTitle={props.task.paused
+        togglePausedTitle={props.task.phase === "paused"
           ? (getScheduledResumeValidationMessage(props.task, t) ?? t("scheduled.action.resume"))
           : (getScheduledPauseValidationMessage(props.task, t) ?? t("scheduled.action.pause"))}
-        canCancel={props.task.phase !== "archived" && !props.isPending}
+        canArchive={props.task.phase !== "archived" && !props.isPending}
         onTogglePaused={props.onTogglePaused}
-        onCancel={props.onCancelTask}
+        onArchive={props.onArchiveTask}
         onDelete={props.onDeleteTask}
         anchorPoint={menuAnchorPoint}
       />
@@ -3496,12 +3503,12 @@ function SessionsPage() {
 
   const handleScheduledTogglePaused = useCallback(
     async (task: ScheduledTask) => {
-      const validationMessage = task.paused
+      const validationMessage = task.phase === "paused"
         ? getScheduledResumeValidationMessage(task, t)
         : getScheduledPauseValidationMessage(task, t);
       if (validationMessage) {
         addToast({
-          title: task.paused
+          title: task.phase === "paused"
             ? t("scheduled.action.resume")
             : t("scheduled.action.pause"),
           body: validationMessage,
@@ -3514,12 +3521,12 @@ function SessionsPage() {
       try {
         await updateScheduledTask({
           taskId: task.id,
-          paused: !task.paused,
+          phase: task.phase === "paused" ? "enabled" : "paused",
         });
       } catch (error) {
         const message = getScheduledErrorMessage(error, t);
         addToast({
-          title: task.paused
+          title: task.phase === "paused"
             ? t("scheduled.action.resume")
             : t("scheduled.action.pause"),
           body: message,
@@ -4518,7 +4525,7 @@ function SessionsPage() {
                       onEditStateChange={setScheduledEditState}
                       onSetEditing={setScheduledEditing}
                       onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
-                      onCancelTask={archiveScheduledTask}
+                      onArchiveTask={archiveScheduledTask}
                       onDeleteTask={deleteScheduledTask}
                       onUpdateTask={updateScheduledTask}
                       onSelectRun={(runId) => {
@@ -4696,7 +4703,7 @@ function SessionsPage() {
                                             );
                                             const createdAtLabel =
                                               formatTimestamp(task.createdAt);
-                                            const iconToneClass = task.paused
+                                            const iconToneClass = task.phase === "paused"
                                               ? "text-amber-600"
                                               : latestRun?.status === "failed"
                                                   ? "text-red-600"
@@ -4730,7 +4737,7 @@ function SessionsPage() {
                                                   );
                                                 }}
                                                 onTogglePaused={() => void handleScheduledTogglePaused(task)}
-                                                onCancelTask={() => {
+                                                onArchiveTask={() => {
                                                   void archiveScheduledTask(
                                                     task.id,
                                                   );
@@ -5132,7 +5139,7 @@ function SessionsPage() {
                           openWorkspaceScheduledTask(taskId, runId ?? null);
                         }}
                         onTogglePaused={() => void handleScheduledTogglePaused(task)}
-                        onCancelTask={() => {
+                        onArchiveTask={() => {
                           void archiveScheduledTask(task.id);
                         }}
                         onDeleteTask={() => {
@@ -5219,7 +5226,7 @@ function SessionsPage() {
                 onEditStateChange={setScheduledEditState}
                 onSetEditing={setScheduledEditing}
                 onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
-                onCancelTask={archiveScheduledTask}
+                onArchiveTask={archiveScheduledTask}
                 onDeleteTask={deleteScheduledTask}
                 onUpdateTask={updateScheduledTask}
                 onSelectRun={(runId) => {

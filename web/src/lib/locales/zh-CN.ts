@@ -150,7 +150,7 @@ export default {
   'scheduled.action.edit': '编辑',
   'scheduled.action.pause': '暂停',
   'scheduled.action.resume': '恢复',
-  'scheduled.action.cancel': '取消',
+  'scheduled.action.archive': '归档',
   'scheduled.action.delete': '删除',
   'scheduled.action.save': '保存',
   'scheduled.action.cancelEdit': '取消编辑',

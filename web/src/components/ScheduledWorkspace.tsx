@@ -51,7 +51,10 @@ function getScheduledRunResultSummaryLabel(resultSummary: string, t: ReturnType<
 }
 
 function getScheduledTaskStatusText(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string {
-    return task.paused ? t('scheduled.list.status.paused') : t('scheduled.list.status.running')
+    if (task.phase === 'paused') return t('scheduled.list.status.paused')
+    if (task.displayStatus === 'failed') return t('scheduled.list.status.failed')
+    if (task.displayStatus === 'completed') return t('scheduled.list.status.succeeded')
+    return t('scheduled.list.status.active')
 }
 
 function getScheduledWorkspacePauseValidationMessage(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string | null {
@@ -161,7 +164,7 @@ function ScheduledTaskListItem(props: {
     isPending: boolean
     onSelect: () => void
     onTogglePaused: () => void
-    onCancel: () => void
+    onArchive: () => void
     onDelete: () => void
 }) {
     const { t } = useTranslation()
@@ -229,9 +232,9 @@ function ScheduledTaskListItem(props: {
                 paused={Boolean(props.task.paused)}
                 canTogglePaused={canTogglePaused}
                 togglePausedTitle={togglePausedTitle}
-                canCancel={props.task.status === 'active' && !props.task.paused && !props.isPending}
+                canArchive={props.task.phase !== 'archived' && !props.isPending}
                 onTogglePaused={props.onTogglePaused}
-                onCancel={props.onCancel}
+                onArchive={props.onArchive}
                 onDelete={props.onDelete}
                 anchorPoint={menuAnchorPoint}
             />
@@ -466,7 +469,7 @@ export function ScheduledWorkspace(props: {
                                                 openWorkspaceScheduledTask(task.id, latestRun?.id ?? null)
                                             }}
                                             onTogglePaused={() => void updateScheduledTask({ taskId: task.id, paused: !task.paused })}
-                                            onCancel={() => void archiveScheduledTask(task.id)}
+                                            onArchive={() => void archiveScheduledTask(task.id)}
                                             onDelete={() => setDeleteTaskId(task.id)}
                                         />
                                     )

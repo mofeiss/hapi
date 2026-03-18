@@ -151,7 +151,7 @@ export default {
   "scheduled.action.edit": "Edit",
   "scheduled.action.pause": "Pause",
   "scheduled.action.resume": "Resume",
-  "scheduled.action.cancel": "Cancel",
+  "scheduled.action.archive": "Archive",
   "scheduled.action.delete": "Delete",
   "scheduled.action.save": "Save",
   "scheduled.action.cancelEdit": "Cancel Edit",

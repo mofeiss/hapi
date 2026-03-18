@@ -16,9 +16,9 @@ type ScheduledTaskActionMenuProps = {
     paused: boolean
     canTogglePaused: boolean
     togglePausedTitle?: string
-    canCancel: boolean
+    canArchive: boolean
     onTogglePaused: () => void
-    onCancel: () => void
+    onArchive: () => void
     onDelete: () => void
     anchorPoint: { x: number; y: number }
     menuId?: string
@@ -113,9 +113,9 @@ export function ScheduledTaskActionMenu(props: ScheduledTaskActionMenuProps) {
         paused,
         canTogglePaused,
         togglePausedTitle,
-        canCancel,
+        canArchive,
         onTogglePaused,
-        onCancel,
+        onArchive,
         onDelete,
         anchorPoint,
         menuId,
@@ -251,16 +251,16 @@ export function ScheduledTaskActionMenu(props: ScheduledTaskActionMenuProps) {
                 <button
                     type="button"
                     role="menuitem"
-                    className={`${baseItemClassName} ${canCancel ? 'hover:bg-[var(--app-subtle-bg)]' : 'cursor-not-allowed opacity-50'}`}
+                    className={`${baseItemClassName} ${canArchive ? 'hover:bg-[var(--app-subtle-bg)]' : 'cursor-not-allowed opacity-50'}`}
                     onClick={() => {
-                        if (!canCancel) return
+                        if (!canArchive) return
                         onClose()
-                        onCancel()
+                        onArchive()
                     }}
-                    disabled={!canCancel}
+                    disabled={!canArchive}
                 >
                     <StopIcon className="text-[var(--app-hint)]" />
-                    {t('scheduled.action.cancel')}
+                    {t('scheduled.action.archive')}
                 </button>
                 <button
                     type="button"
