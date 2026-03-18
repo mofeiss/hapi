@@ -122,7 +122,6 @@ export async function createRunnerScheduledTask(input: {
   runAt?: number;
   cron?: string;
   timezone?: string;
-  paused?: boolean;
   scheduledSessionPermission: 'aware' | 'self_control' | 'system_control';
   allowOverlap?: boolean;
   catchUpPolicy?: 'once_within_window' | 'skip';
@@ -143,7 +142,7 @@ export async function updateRunnerScheduledTask(input: {
   runAt?: number;
   cron?: string;
   timezone?: string;
-  paused?: boolean;
+  phase?: 'enabled' | 'paused' | 'archived';
   scheduledSessionPermission?: 'aware' | 'self_control' | 'system_control';
   allowOverlap?: boolean;
   catchUpPolicy?: 'once_within_window' | 'skip';
@@ -177,8 +176,8 @@ export async function listRunnerScheduledTaskRuns(): Promise<ScheduledTaskRun[]>
   return result.runs || [];
 }
 
-export async function cancelRunnerScheduledTask(taskId: string): Promise<ScheduledTask | null> {
-  const result = await runnerPost('/scheduler/tasks/cancel', { taskId });
+export async function archiveRunnerScheduledTask(taskId: string): Promise<ScheduledTask | null> {
+  const result = await runnerPost('/scheduler/tasks/archive', { taskId });
   return result.task ?? null;
 }
 

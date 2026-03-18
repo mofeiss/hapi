@@ -2,22 +2,19 @@ import { CronExpressionParser } from 'cron-parser'
 import type { ScheduledTask } from '@hapi/protocol'
 
 export function resolveNextRunAt(task: ScheduledTask, now: number): number | undefined {
-  if (task.status === 'canceled') {
+  if (task.phase !== 'enabled') {
     return undefined
   }
 
   if (task.scheduleType === 'once') {
-    const runAt = task.scheduleSpec.runAt
+    const runAt = task.runAt
     if (typeof runAt !== 'number') {
-      return undefined
-    }
-    if (task.status === 'completed') {
       return undefined
     }
     return runAt
   }
 
-  const expression = task.scheduleSpec.cron?.trim()
+  const expression = task.cron?.trim()
   if (!expression) {
     return undefined
   }
@@ -34,9 +31,10 @@ export function resolveNextRunAt(task: ScheduledTask, now: number): number | und
 }
 
 export function isTaskDue(task: ScheduledTask, now: number): boolean {
-  if (task.paused || task.status !== 'active') {
+  if (task.phase !== 'enabled') {
     return false
   }
 
-  return typeof task.nextRunAt === 'number' && task.nextRunAt <= now
+  const nextRunAt = resolveNextRunAt(task, now)
+  return typeof nextRunAt === 'number' && nextRunAt <= now
 }

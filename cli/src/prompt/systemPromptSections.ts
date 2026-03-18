@@ -4,6 +4,14 @@ import type { SessionTriggerMetadata } from '@/api/types'
 export type PromptToolRefs = {
     scheduleCreate: string
     scheduleList: string
+    scheduleGet: string
+    scheduleEdit: string
+    schedulePause: string
+    scheduleResume: string
+    scheduleArchive: string
+    scheduleDelete: string
+    scheduleRunList: string
+    scheduleRunGet: string
     scheduleReportOutcome: string
 }
 
@@ -13,7 +21,7 @@ export function buildScheduleCreationSection(tools: PromptToolRefs): string {
 
         When using HAPI scheduled task tools, ALWAYS distinguish task creation success from task execution status.
 
-        If "${tools.scheduleCreate}" returns success, the task has already been created successfully. The creation result is expressed by the tool response itself. Focus on the returned delivery confirmation, such as taskId, nextRunAt, cron, scheduledSessionPermission, and related scheduled-task metadata, and report that result to the user immediately.
+        If "${tools.scheduleCreate}" returns success, the task has already been created successfully. The creation result is expressed by the tool response itself. Focus on the returned delivery confirmation, such as taskId, scheduleType, phase, cron, runAt, timezone, and scheduledSessionPermission, and report that result to the user immediately.
 
         By default, the user cares about whether the task was scheduled successfully, not about later execution results. In non-essential cases, do not call "${tools.scheduleList}" after creation just to gather extra status details.
 
@@ -24,21 +32,9 @@ export function buildScheduleCreationSection(tools: PromptToolRefs): string {
         2. self_control: the future scheduled session may control only its own task.
         3. system_control: the future scheduled session may control the full scheduler system.
 
-        When the user asks to create a scheduled or looping task, you MUST determine which scheduled session permission type the user wants before creating the task.
+        If the user does not specify a permission level, default to aware.
 
-        If the user already clearly specifies the permission through direct names or equivalent admin/business wording, do not ask again. Treat statements such as "lowest permission", "minimal privilege", "aware permission", "self-maintained", "self-managing", "highest permission", "full scheduler access", or "scheduler system permission" as sufficient when the intent is clear.
-
-        Use these mappings:
-        - "lowest permission", "minimal privilege", or "aware permission" => aware
-        - "self-maintained" or "self-managing" => self_control
-        - "highest permission", "full scheduler access", or "scheduler system permission" => system_control
-
-        Only ask a follow-up question when the user has not provided enough permission-related meaning to resolve the choice confidently.
-
-        If you must ask, explain the three permission levels from least to most privilege, number them as 1/2/3, and allow the user to reply with either the number or the permission name:
-        1. aware
-        2. self_control
-        3. system_control
+        Only use self_control or system_control when the user explicitly asks for those stronger scheduler-control capabilities.
     `)
 }
 
@@ -64,6 +60,8 @@ export function buildScheduledSessionEnvironmentSection(trigger: Extract<Session
 
         ${iterationText}
 
+        For one-time tasks, "consumed" is derived from whether at least one run record exists. Do not look for an old task status field such as pending, active, or completed.
+
         If the task is blocked, missing required information, or continuing would only repeat useless attempts, stop making unproductive attempts and clearly state that user intervention is required.
     `)
 }
@@ -73,6 +71,11 @@ export function buildScheduledOutcomeReportingSection(tools: PromptToolRefs): st
         ## Scheduled Run Outcome Reporting
 
         Because this is a scheduled session, you MUST use "${tools.scheduleReportOutcome}" to report the final business outcome of this run.
+
+        Keep these layers separate:
+        - run.status describes whether the run execution itself succeeded or failed.
+        - outcome.status describes the business result of the run.
+        - task phase is separate scheduler configuration lifecycle state.
 
         Do not rely on plain text alone to report completion status. The tool report is the authoritative signal for whether this scheduled run actually completed its task.
 
@@ -126,7 +129,9 @@ export function buildScheduledPermissionControlSection(
 
             You may use HAPI scheduler tools only for your own task (${trigger.taskId}).
 
-            Use scheduler tools when needed to adapt your own future executions, for example pausing your own task, resuming it later, canceling it, or updating its prompt/schedule if that is necessary to keep the unattended workflow healthy.
+            Available task-control tools include "${tools.scheduleGet}", "${tools.scheduleEdit}", "${tools.schedulePause}", "${tools.scheduleResume}", "${tools.scheduleArchive}", "${tools.scheduleRunList}", and "${tools.scheduleRunGet}".
+
+            Use scheduler tools when needed to adapt your own future executions, for example pausing your own task, resuming it later, archiving it, or updating its prompt/schedule if that is necessary to keep the unattended workflow healthy.
 
             You must not attempt to manage other scheduled tasks.
         `)
@@ -137,7 +142,7 @@ export function buildScheduledPermissionControlSection(
 
         Your permission level is system_control.
 
-        You may use the full HAPI scheduler toolset, including creating new scheduled tasks and managing existing ones.
+        You may use the full HAPI scheduler toolset, including "${tools.scheduleCreate}", "${tools.scheduleList}", "${tools.scheduleGet}", "${tools.scheduleEdit}", "${tools.schedulePause}", "${tools.scheduleResume}", "${tools.scheduleArchive}", "${tools.scheduleDelete}", "${tools.scheduleRunList}", and "${tools.scheduleRunGet}".
 
         You may control your own task (${trigger.taskId}) and the wider scheduler system when it is necessary to fulfill the unattended workflow safely.
 

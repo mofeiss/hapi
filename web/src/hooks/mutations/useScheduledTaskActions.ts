@@ -4,19 +4,19 @@ import type { ApiClient } from '@/api/client'
 import { queryKeys } from '@/lib/query-keys'
 
 export function useScheduledTaskActions(api: ApiClient | null): {
-    cancelScheduledTask: (taskId: string) => Promise<void>
+    archiveScheduledTask: (taskId: string) => Promise<void>
     deleteScheduledTask: (taskId: string) => Promise<void>
     updateScheduledTask: (body: Record<string, unknown>) => Promise<void>
     isPending: boolean
 } {
     const queryClient = useQueryClient()
 
-    const cancelMutation = useMutation({
+    const archiveMutation = useMutation({
         mutationFn: async (taskId: string) => {
             if (!api) {
                 throw new Error('API unavailable')
             }
-            await api.cancelScheduledTask(taskId)
+            await api.archiveScheduledTask(taskId)
         },
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: queryKeys.scheduledTasks })
@@ -48,9 +48,9 @@ export function useScheduledTaskActions(api: ApiClient | null): {
     })
 
     return {
-        cancelScheduledTask: cancelMutation.mutateAsync,
+        archiveScheduledTask: archiveMutation.mutateAsync,
         updateScheduledTask: updateMutation.mutateAsync,
         deleteScheduledTask: deleteMutation.mutateAsync,
-        isPending: cancelMutation.isPending || updateMutation.isPending || deleteMutation.isPending
+        isPending: archiveMutation.isPending || updateMutation.isPending || deleteMutation.isPending
     }
 }

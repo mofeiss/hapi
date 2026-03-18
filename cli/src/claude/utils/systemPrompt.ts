@@ -36,6 +36,14 @@ export function buildClaudeSystemPrompt(trigger?: SessionTriggerMetadata): strin
     const tools = {
         scheduleCreate: 'mcp__hapi__schedule_create',
         scheduleList: 'mcp__hapi__schedule_list',
+        scheduleGet: 'mcp__hapi__schedule_get',
+        scheduleEdit: 'mcp__hapi__schedule_edit',
+        schedulePause: 'mcp__hapi__schedule_pause',
+        scheduleResume: 'mcp__hapi__schedule_resume',
+        scheduleArchive: 'mcp__hapi__schedule_archive',
+        scheduleDelete: 'mcp__hapi__schedule_delete',
+        scheduleRunList: 'mcp__hapi__schedule_run_list',
+        scheduleRunGet: 'mcp__hapi__schedule_run_get',
         scheduleReportOutcome: 'mcp__hapi__schedule_report_outcome'
     } as const
 

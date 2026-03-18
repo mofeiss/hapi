@@ -17,6 +17,14 @@ export function buildCodexSystemPrompt(trigger?: SessionTriggerMetadata): string
     const tools = {
         scheduleCreate: 'functions.hapi__schedule_create',
         scheduleList: 'functions.hapi__schedule_list',
+        scheduleGet: 'functions.hapi__schedule_get',
+        scheduleEdit: 'functions.hapi__schedule_edit',
+        schedulePause: 'functions.hapi__schedule_pause',
+        scheduleResume: 'functions.hapi__schedule_resume',
+        scheduleArchive: 'functions.hapi__schedule_archive',
+        scheduleDelete: 'functions.hapi__schedule_delete',
+        scheduleRunList: 'functions.hapi__schedule_run_list',
+        scheduleRunGet: 'functions.hapi__schedule_run_get',
         scheduleReportOutcome: 'functions.hapi__schedule_report_outcome'
     } as const
     const sections = [

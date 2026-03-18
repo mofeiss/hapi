@@ -2,12 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CronExpressionParser } from "cron-parser";
 import {
-  canScheduledTaskTogglePaused,
-  getScheduledTaskPauseValidationCode,
-  hasScheduledTaskExecuted,
-  isScheduledTaskPauseLocked,
-} from "@hapi/protocol";
-import {
   Link,
   Navigate,
   Outlet,
@@ -63,6 +57,12 @@ import {
   getScheduledRunFillClassName,
   getScheduledRunStatusToneClassName,
 } from "@/lib/scheduled-run-status";
+import {
+  canScheduledTaskTogglePaused,
+  getScheduledTaskPauseValidationCode,
+  hasScheduledTaskExecuted,
+  isScheduledTaskPauseLocked,
+} from "@/lib/scheduled-task-compat";
 import { formatTimestamp } from "@/lib/dateTime";
 import { normalizeProjectPath } from "@/utils/path";
 import type {
@@ -1197,7 +1197,7 @@ function getScheduledResumeValidationMessage(
     return null;
   }
 
-  const expression = task.scheduleSpec.cron?.trim();
+  const expression = task.scheduleSpec?.cron?.trim();
   if (!expression) {
     return t("scheduled.validation.cronInvalid");
   }
@@ -1256,7 +1256,7 @@ function buildScheduledOverviewCopyText(
     formatScheduledFieldForCopy(t("scheduled.detail.directory"), task.targetDirectory),
     formatScheduledFieldForCopy(t("scheduled.detail.permission"), getScheduledSessionPermissionLabel(task.scheduledSessionPermission, t)),
     formatScheduledFieldForCopy(t("scheduled.detail.scheduleType"), task.scheduleType === "cron" ? t("scheduled.list.kind.cron") : t("scheduled.list.kind.once")),
-    formatScheduledFieldForCopy(task.scheduleType === "cron" ? t("scheduled.detail.cron") : t("scheduled.detail.runAt"), task.scheduleType === "cron" ? (task.scheduleSpec.cron ?? "-") : (formatScheduledDateTime(task.scheduleSpec.runAt) ?? "-")),
+    formatScheduledFieldForCopy(task.scheduleType === "cron" ? t("scheduled.detail.cron") : t("scheduled.detail.runAt"), task.scheduleType === "cron" ? (task.scheduleSpec?.cron ?? "-") : (formatScheduledDateTime(task.scheduleSpec?.runAt) ?? "-")),
     formatScheduledFieldForCopy(t("scheduled.detail.created"), createdAtLabel),
     formatScheduledFieldForCopy(t("scheduled.detail.taskId"), task.id),
     formatScheduledFieldForCopy(t("scheduled.detail.createdFromSession"), task.createdBySessionId ? (createdBySessionTitle ?? `SESSION ID ${task.createdBySessionId}`) : t("scheduled.detail.createdFromSessionMissing")),
@@ -1283,21 +1283,12 @@ function buildScheduledRunsCopyText(
   const total = taskRuns.length
   const succeeded = taskRuns.filter((run) => run.status === "succeeded").length
   const failed = taskRuns.filter((run) => run.status === "failed").length
-  const running = taskRuns.filter((run) => run.status === "running").length
-  const queued = taskRuns.filter((run) => run.status === "queued").length
-  const canceled = taskRuns.filter((run) => run.status === "canceled").length
-  const missed = taskRuns.filter((run) => run.status === "missed").length
-
   const lines = [
     "<scheduled-task-runs>",
     "<runs-summary>",
     formatScheduledFieldForCopy(t("scheduled.detail.runs"), `${total}`),
     formatScheduledFieldForCopy(`${t("scheduled.runStatus.succeeded")}`, `${succeeded}`),
     formatScheduledFieldForCopy(`${t("scheduled.runStatus.failed")}`, `${failed}`),
-    formatScheduledFieldForCopy(`${t("scheduled.runStatus.running")}`, `${running}`),
-    formatScheduledFieldForCopy(`${t("scheduled.runStatus.queued")}`, `${queued}`),
-    formatScheduledFieldForCopy(`${t("scheduled.runStatus.canceled")}`, `${canceled}`),
-    formatScheduledFieldForCopy(`${t("scheduled.runStatus.missed")}`, `${missed}`),
     "</runs-summary>",
   ]
 
@@ -1458,9 +1449,7 @@ function ScheduledTaskListRow(props: {
                   ? "text-amber-600"
                   : props.latestRun?.status === "failed"
                     ? "text-red-600"
-                    : props.latestRun?.status === "running"
-                      ? "text-sky-600"
-                      : props.latestRun?.status === "succeeded"
+                    : props.latestRun?.status === "succeeded"
                         ? "text-emerald-600"
                         : "text-[var(--app-hint)]"
               }
@@ -1509,14 +1498,12 @@ function ScheduledTaskListRow(props: {
       <ScheduledTaskActionMenu
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
-        paused={props.task.paused}
+        paused={Boolean(props.task.paused)}
         canTogglePaused={canScheduledTaskTogglePaused(props.task) && !props.isPending}
         togglePausedTitle={props.task.paused
           ? (getScheduledResumeValidationMessage(props.task, t) ?? t("scheduled.action.resume"))
           : (getScheduledPauseValidationMessage(props.task, t) ?? t("scheduled.action.pause"))}
-        canCancel={
-          props.task.status === "active" && !props.task.paused && !props.isPending
-        }
+        canCancel={props.task.phase !== "archived" && !props.isPending}
         onTogglePaused={props.onTogglePaused}
         onCancel={props.onCancelTask}
         onDelete={props.onDeleteTask}
@@ -1532,23 +1519,6 @@ function ScheduledTaskStatusIcon(props: {
   className?: string;
 }) {
   const pauseLocked = isScheduledTaskPauseLocked(props.task);
-
-  if (props.latestRun?.status === "running") {
-    return (
-      <svg
-        className={`${props.className ?? "h-3.5 w-3.5"} animate-spin`}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-      </svg>
-    );
-  }
 
   if (props.latestRun?.status === "failed") {
     return (
@@ -1900,9 +1870,7 @@ function ScheduledTaskDetailPanel({
   );
   const scheduledTaskIconToneClassName = task.paused
     ? "text-amber-600"
-    : latestRun?.status === "running"
-      ? "text-sky-600"
-      : latestRun?.status === "failed"
+    : latestRun?.status === "failed"
         ? "text-red-600"
         : latestRun?.status === "succeeded"
           ? "text-emerald-600"
@@ -2210,8 +2178,8 @@ function ScheduledTaskDetailPanel({
                         : t("scheduled.detail.runAt"),
                     value:
                       task.scheduleType === "cron"
-                        ? (task.scheduleSpec.cron ?? "-")
-                        : formatScheduledDateTime(task.scheduleSpec.runAt),
+                        ? (task.scheduleSpec?.cron ?? "-")
+                        : formatScheduledDateTime(task.scheduleSpec?.runAt),
                   },
                   {
                     key: "created",
@@ -2714,9 +2682,7 @@ function CollapsedScheduledItem(props: {
     ? "bg-amber-500/15 text-amber-600"
     : pauseLocked
       ? "bg-slate-500/15 text-slate-500"
-    : props.latestRun?.status === "running"
-      ? "bg-sky-500/15 text-sky-600"
-      : props.latestRun?.status === "failed"
+    : props.latestRun?.status === "failed"
         ? "bg-red-500/15 text-red-600"
         : props.latestRun?.status === "succeeded"
           ? "bg-emerald-500/15 text-emerald-600"
@@ -2755,14 +2721,12 @@ function CollapsedScheduledItem(props: {
       <ScheduledTaskActionMenu
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
-        paused={props.task.paused}
+        paused={Boolean(props.task.paused)}
         canTogglePaused={!pauseLocked && !props.isPending}
         togglePausedTitle={props.task.paused
           ? (getScheduledResumeValidationMessage(props.task, t) ?? t("scheduled.action.resume"))
           : (getScheduledPauseValidationMessage(props.task, t) ?? t("scheduled.action.pause"))}
-        canCancel={
-          props.task.status === "active" && !props.task.paused && !props.isPending
-        }
+        canCancel={props.task.phase !== "archived" && !props.isPending}
         onTogglePaused={props.onTogglePaused}
         onCancel={props.onCancelTask}
         onDelete={props.onDeleteTask}
@@ -2788,7 +2752,7 @@ function SessionsPage() {
     error: scheduledError,
   } = useScheduledTasks(api);
   const {
-    cancelScheduledTask,
+    archiveScheduledTask,
     deleteScheduledTask,
     updateScheduledTask,
     isPending: scheduledPending,
@@ -2884,7 +2848,7 @@ function SessionsPage() {
         task.targetDirectory,
         task.agentFlavor,
         task.model,
-        task.scheduleSpec.cron,
+        task.scheduleSpec?.cron,
         task.machineId,
       ]
         .filter(Boolean)
@@ -2943,7 +2907,7 @@ function SessionsPage() {
       map.get(run.taskId)?.push(run);
     }
     for (const taskRuns of map.values()) {
-      taskRuns.sort((left, right) => right.triggeredAt - left.triggeredAt);
+      taskRuns.sort((left, right) => (right.triggeredAt ?? right.scheduledFor) - (left.triggeredAt ?? left.scheduledFor));
     }
     return map;
   }, [scheduledRuns]);
@@ -2968,7 +2932,7 @@ function SessionsPage() {
     const map = new Map<string, ScheduledTaskRun>();
     for (const run of scheduledRuns) {
       const existing = map.get(run.taskId);
-      if (!existing || run.triggeredAt > existing.triggeredAt) {
+      if (!existing || (run.triggeredAt ?? run.scheduledFor) > (existing.triggeredAt ?? existing.scheduledFor)) {
         map.set(run.taskId, run);
       }
     }
@@ -4554,7 +4518,7 @@ function SessionsPage() {
                       onEditStateChange={setScheduledEditState}
                       onSetEditing={setScheduledEditing}
                       onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
-                      onCancelTask={cancelScheduledTask}
+                      onCancelTask={archiveScheduledTask}
                       onDeleteTask={deleteScheduledTask}
                       onUpdateTask={updateScheduledTask}
                       onSelectRun={(runId) => {
@@ -4734,9 +4698,7 @@ function SessionsPage() {
                                               formatTimestamp(task.createdAt);
                                             const iconToneClass = task.paused
                                               ? "text-amber-600"
-                                              : latestRun?.status === "running"
-                                                ? "text-sky-600"
-                                                : latestRun?.status === "failed"
+                                              : latestRun?.status === "failed"
                                                   ? "text-red-600"
                                                   : latestRun?.status ===
                                                       "succeeded"
@@ -4769,7 +4731,7 @@ function SessionsPage() {
                                                 }}
                                                 onTogglePaused={() => void handleScheduledTogglePaused(task)}
                                                 onCancelTask={() => {
-                                                  void cancelScheduledTask(
+                                                  void archiveScheduledTask(
                                                     task.id,
                                                   );
                                                 }}
@@ -5171,7 +5133,7 @@ function SessionsPage() {
                         }}
                         onTogglePaused={() => void handleScheduledTogglePaused(task)}
                         onCancelTask={() => {
-                          void cancelScheduledTask(task.id);
+                          void archiveScheduledTask(task.id);
                         }}
                         onDeleteTask={() => {
                           setScheduledDeleteTarget(task);
@@ -5257,7 +5219,7 @@ function SessionsPage() {
                 onEditStateChange={setScheduledEditState}
                 onSetEditing={setScheduledEditing}
                 onTogglePaused={() => handleScheduledTogglePaused(selectedScheduledTask)}
-                onCancelTask={cancelScheduledTask}
+                onCancelTask={archiveScheduledTask}
                 onDeleteTask={deleteScheduledTask}
                 onUpdateTask={updateScheduledTask}
                 onSelectRun={(runId) => {

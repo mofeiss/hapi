@@ -1,7 +1,8 @@
 import type {
     DecryptedMessage as ProtocolDecryptedMessage,
-    ScheduledTask,
-    ScheduledTaskRun,
+    ScheduledTaskDerived,
+    ScheduledTask as ProtocolScheduledTask,
+    ScheduledTaskRun as ProtocolScheduledTaskRun,
     Session,
     SessionTriggerMetadata,
     SessionSummary,
@@ -14,8 +15,7 @@ export type {
     AttachmentMetadata,
     ModelMode,
     PermissionMode,
-    ScheduledTask,
-    ScheduledTaskRun,
+    ScheduledTaskDerived,
     Session,
     SessionSummary,
     SessionSummaryMetadata,
@@ -107,6 +107,28 @@ export type MachinesResponse = { machines: Machine[] }
 export type RuntimeConfigResponse = { diagnosticLogging: DiagnosticLoggingRuntimeConfig }
 export type MachinePathsExistsResponse = { exists: Record<string, boolean> }
 export type ScheduledTasksResponse = { tasks: ScheduledTask[]; runs: ScheduledTaskRun[] }
+
+export type ScheduledTask = ProtocolScheduledTask & {
+    derived: ScheduledTaskDerived
+    nextRunAt?: number
+    lastRunAt?: number
+    displayStatus: ScheduledTaskDerived['displayStatus']
+    latestRunStatus?: ScheduledTaskDerived['latestRunStatus']
+    // Web compat aliases while scheduler redesign is in progress.
+    paused?: boolean
+    status?: 'active' | 'archived' | 'failed' | 'completed'
+    scheduleSpec?: {
+        runAt?: number
+        cron?: string
+    }
+}
+
+export type ScheduledTaskRun = ProtocolScheduledTaskRun & {
+    taskOutcome?: ProtocolScheduledTaskRun['outcome']
+    error?: string
+}
+
+export type ScheduledTaskView = ScheduledTask
 
 export type SpawnResponse =
     | { type: 'success'; sessionId: string }

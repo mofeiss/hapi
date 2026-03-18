@@ -3,11 +3,12 @@ import { MODEL_MODES, PERMISSION_MODES } from './modes'
 import {
     ScheduledAgentFlavorSchema,
     ScheduledCatchUpPolicySchema,
+    ScheduledTaskDisplayStatusSchema,
+    ScheduledTaskPhaseSchema,
     ScheduledRunStrategySchema,
     ScheduledSessionPermissionSchema,
     ScheduledTaskOutcomeStatusSchema,
     ScheduledTaskRunStatusSchema,
-    ScheduledTaskStatusSchema,
     ScheduledTaskTypeSchema
 } from './scheduler'
 
@@ -170,32 +171,26 @@ export type DecryptedMessage = z.infer<typeof DecryptedMessageSchema>
 export const ScheduledTaskSchema = z.object({
     id: z.string(),
     namespace: z.string(),
-    machineId: z.string(),
-    createdBySessionId: z.string().optional(),
     title: z.string(),
     prompt: z.string(),
+    machineId: z.string(),
+    createdBySessionId: z.string().optional(),
     agentFlavor: ScheduledAgentFlavorSchema,
-    targetDirectory: z.string(),
     permissionMode: z.string().optional(),
     basePermissionMode: z.string().optional(),
     model: z.string().optional(),
     reasoningEffort: ReasoningEffortSchema.optional(),
+    targetDirectory: z.string(),
     runStrategy: ScheduledRunStrategySchema,
     scheduleType: ScheduledTaskTypeSchema,
-    scheduleSpec: z.object({
-        runAt: z.number().optional(),
-        cron: z.string().optional()
-    }),
+    runAt: z.number().optional(),
+    cron: z.string().optional(),
     timezone: z.string(),
-    nextRunAt: z.number().optional(),
-    lastRunAt: z.number().optional(),
-    status: ScheduledTaskStatusSchema,
-    paused: z.boolean(),
+    phase: ScheduledTaskPhaseSchema,
     scheduledSessionPermission: ScheduledSessionPermissionSchema,
     allowOverlap: z.boolean(),
     catchUpPolicy: ScheduledCatchUpPolicySchema,
     maxSkewMs: z.number().int().nonnegative(),
-    lastError: z.string().optional(),
     createdAt: z.number(),
     updatedAt: z.number()
 })
@@ -217,19 +212,32 @@ export const ScheduledTaskRunSchema = z.object({
     taskId: z.string(),
     machineId: z.string(),
     scheduledFor: z.number(),
-    triggeredAt: z.number(),
+    triggeredAt: z.number().optional(),
     startedAt: z.number().optional(),
     finishedAt: z.number().optional(),
     status: ScheduledTaskRunStatusSchema,
     sessionId: z.string().optional(),
-    error: z.string().optional(),
+    errorMessage: z.string().optional(),
     resultSummary: z.string().optional(),
-    taskOutcome: ScheduledTaskOutcomeSchema.optional(),
-    createdAt: z.number(),
-    updatedAt: z.number()
+    outcome: ScheduledTaskOutcomeSchema.optional(),
+    createdAt: z.number().optional(),
+    updatedAt: z.number().optional()
 })
 
 export type ScheduledTaskRun = z.infer<typeof ScheduledTaskRunSchema>
+
+export const ScheduledTaskDerivedSchema = z.object({
+    consumed: z.boolean(),
+    runCount: z.number().int().nonnegative(),
+    lastRunAt: z.number().optional(),
+    nextRunAt: z.number().optional(),
+    latestRunId: z.string().optional(),
+    latestRunStatus: ScheduledTaskRunStatusSchema.optional(),
+    latestRunOutcomeStatus: ScheduledTaskOutcomeStatusSchema.optional(),
+    displayStatus: ScheduledTaskDisplayStatusSchema
+})
+
+export type ScheduledTaskDerived = z.infer<typeof ScheduledTaskDerivedSchema>
 
 export const SessionSchema = z.object({
     id: z.string(),

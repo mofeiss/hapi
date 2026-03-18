@@ -792,12 +792,12 @@ export async function startRunner(): Promise<void> {
       return await scheduler.listRuns({ machineId });
     };
 
-    const reportScheduledTaskOutcome = async (input: { runId: string; outcome: import('@hapi/protocol').ScheduledTaskRun['taskOutcome'] }) => {
+    const reportScheduledTaskOutcome = async (input: { runId: string; outcome: import('@hapi/protocol').ScheduledTaskRun['outcome'] }) => {
       return await scheduler.reportTaskOutcome(input as any);
     };
 
-    const cancelScheduledTask = async (taskId: string) => {
-      return await scheduler.cancelTask(taskId);
+    const archiveScheduledTask = async (taskId: string) => {
+      return await scheduler.archiveTask(taskId);
     };
 
     const deleteScheduledTask = async (taskId: string) => {
@@ -856,7 +856,7 @@ export async function startRunner(): Promise<void> {
       listScheduledTasks,
       listScheduledTaskRuns,
       reportScheduledTaskOutcome,
-      cancelScheduledTask,
+      archiveScheduledTask,
       deleteScheduledTask,
       requestShutdown: () => requestShutdown('hapi-cli'),
       onHappySessionWebhook

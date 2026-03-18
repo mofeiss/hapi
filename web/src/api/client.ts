@@ -428,8 +428,8 @@ export class ApiClient {
         return await this.request<ScheduledTasksResponse>('/api/scheduled-tasks')
     }
 
-    async cancelScheduledTask(taskId: string): Promise<void> {
-        await this.request('/api/scheduled-tasks/cancel', {
+    async archiveScheduledTask(taskId: string): Promise<void> {
+        await this.request('/api/scheduled-tasks/archive', {
             method: 'POST',
             body: JSON.stringify({ taskId })
         })

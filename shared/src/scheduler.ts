@@ -3,24 +3,26 @@ import { z } from 'zod'
 export const ScheduledAgentFlavorSchema = z.enum(['claude', 'codex'])
 export type ScheduledAgentFlavor = z.infer<typeof ScheduledAgentFlavorSchema>
 
-export const ScheduledTaskStatusSchema = z.enum([
-    'active',
+export const ScheduledTaskPhaseSchema = z.enum([
+    'enabled',
     'paused',
-    'completed',
-    'failed',
-    'canceled'
+    'archived'
 ])
-export type ScheduledTaskStatus = z.infer<typeof ScheduledTaskStatusSchema>
+export type ScheduledTaskPhase = z.infer<typeof ScheduledTaskPhaseSchema>
 
 export const ScheduledTaskRunStatusSchema = z.enum([
-    'queued',
-    'running',
     'succeeded',
-    'failed',
-    'missed',
-    'canceled'
+    'failed'
 ])
 export type ScheduledTaskRunStatus = z.infer<typeof ScheduledTaskRunStatusSchema>
+
+export const ScheduledTaskDisplayStatusSchema = z.enum([
+    'ready',
+    'completed',
+    'healthy',
+    'failed'
+])
+export type ScheduledTaskDisplayStatus = z.infer<typeof ScheduledTaskDisplayStatusSchema>
 
 export const ScheduledRunStrategySchema = z.enum(['new_session'])
 export type ScheduledRunStrategy = z.infer<typeof ScheduledRunStrategySchema>

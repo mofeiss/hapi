@@ -1,54 +1,45 @@
-import type { ScheduledTask } from './types'
+import type { ScheduledTask, ScheduledTaskDerived, ScheduledTaskRun } from './types'
 
-export type ScheduledTaskPauseValidationCode =
-    | 'once_already_consumed'
-    | 'once_expired'
-    | 'unknown'
-
-export function hasScheduledTaskExecuted(task: ScheduledTask): boolean {
-    return typeof task.lastRunAt === 'number' && Number.isFinite(task.lastRunAt)
+function getLatestScheduledTaskRun(task: ScheduledTask, runs: readonly ScheduledTaskRun[]): ScheduledTaskRun | undefined {
+    return runs
+        .filter((run) => run.taskId === task.id)
+        .sort((a, b) => {
+            const left = a.triggeredAt ?? a.scheduledFor ?? a.finishedAt ?? 0
+            const right = b.triggeredAt ?? b.scheduledFor ?? b.finishedAt ?? 0
+            return right - left
+        })[0]
 }
 
-export function isScheduledTaskOnceExpired(task: ScheduledTask, now = Date.now()): boolean {
-    if (task.scheduleType !== 'once') return false
-
-    const runAt = task.scheduleSpec.runAt
-    if (typeof runAt !== 'number' || !Number.isFinite(runAt)) {
-        return true
-    }
-
-    return runAt <= now
+export function isScheduledTaskConsumed(task: ScheduledTask, runs: readonly ScheduledTaskRun[]): boolean {
+    return task.scheduleType === 'once' && runs.some((run) => run.taskId === task.id)
 }
 
-export function getScheduledTaskPauseValidationCode(
-    task: ScheduledTask,
-    now = Date.now(),
-): ScheduledTaskPauseValidationCode | null {
-    if (task.scheduleType === 'cron') {
-        return null
+export function getScheduledTaskDisplayStatus(task: ScheduledTask, runs: readonly ScheduledTaskRun[]): ScheduledTaskDerived['displayStatus'] {
+    const latestRun = getLatestScheduledTaskRun(task, runs)
+    if (!latestRun) {
+        return 'ready'
     }
 
-    if (hasScheduledTaskExecuted(task)) {
-        return 'once_already_consumed'
+    if (task.scheduleType === 'once') {
+        return latestRun.status === 'succeeded' ? 'completed' : 'failed'
     }
 
-    const runAt = task.scheduleSpec.runAt
-    if (typeof runAt !== 'number' || !Number.isFinite(runAt)) {
-        return 'unknown'
-    }
-
-    if (runAt <= now) {
-        return 'once_expired'
-    }
-
-    return null
+    return latestRun.status === 'succeeded' ? 'healthy' : 'failed'
 }
 
-export function canScheduledTaskTogglePaused(task: ScheduledTask, now = Date.now()): boolean {
-    return getScheduledTaskPauseValidationCode(task, now) === null
-}
+export function deriveScheduledTask(task: ScheduledTask, runs: readonly ScheduledTaskRun[], nextRunAt?: number): ScheduledTaskDerived {
+    const taskRuns = runs.filter((run) => run.taskId === task.id)
+    const latestRun = getLatestScheduledTaskRun(task, taskRuns)
+    const lastRunAt = latestRun?.finishedAt ?? latestRun?.startedAt ?? latestRun?.triggeredAt
 
-export function isScheduledTaskPauseLocked(task: ScheduledTask, now = Date.now()): boolean {
-    return !canScheduledTaskTogglePaused(task, now)
+    return {
+        consumed: isScheduledTaskConsumed(task, taskRuns),
+        runCount: taskRuns.length,
+        lastRunAt,
+        nextRunAt,
+        latestRunId: latestRun?.id,
+        latestRunStatus: latestRun?.status,
+        latestRunOutcomeStatus: latestRun?.outcome?.status,
+        displayStatus: getScheduledTaskDisplayStatus(task, taskRuns)
+    }
 }
-

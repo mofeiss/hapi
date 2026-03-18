@@ -22,7 +22,7 @@ export function startRunnerControlServer({
   listScheduledTasks,
   listScheduledTaskRuns,
   reportScheduledTaskOutcome,
-  cancelScheduledTask,
+  archiveScheduledTask,
   deleteScheduledTask,
   requestShutdown,
   onHappySessionWebhook
@@ -34,8 +34,8 @@ export function startRunnerControlServer({
   updateScheduledTask: (input: UpdateScheduledTaskInput) => Promise<ScheduledTask | null>;
   listScheduledTasks: () => Promise<ScheduledTask[]>;
   listScheduledTaskRuns: () => Promise<ScheduledTaskRun[]>;
-  reportScheduledTaskOutcome: (input: { runId: string; outcome: ScheduledTaskRun['taskOutcome'] }) => Promise<ScheduledTaskRun | null>;
-  cancelScheduledTask: (taskId: string) => Promise<ScheduledTask | null>;
+  reportScheduledTaskOutcome: (input: { runId: string; outcome: ScheduledTaskRun['outcome'] }) => Promise<ScheduledTaskRun | null>;
+  archiveScheduledTask: (taskId: string) => Promise<ScheduledTask | null>;
   deleteScheduledTask: (taskId: string) => Promise<{ taskId: string; machineId: string; namespace: string } | null>;
   requestShutdown: () => void;
   onHappySessionWebhook: (sessionId: string, metadata: Metadata) => void;
@@ -209,7 +209,6 @@ export function startRunnerControlServer({
           runAt: z.number().optional(),
           cron: z.string().optional(),
           timezone: z.string().optional(),
-          paused: z.boolean().optional(),
           scheduledSessionPermission: z.enum(['aware', 'self_control', 'system_control']),
           allowOverlap: z.boolean().optional(),
           catchUpPolicy: z.enum(['once_within_window', 'skip']).optional(),
@@ -248,7 +247,7 @@ export function startRunnerControlServer({
           runAt: z.number().optional(),
           cron: z.string().optional(),
           timezone: z.string().optional(),
-          paused: z.boolean().optional(),
+          phase: z.enum(['enabled', 'paused', 'archived']).optional(),
           scheduledSessionPermission: z.enum(['aware', 'self_control', 'system_control']).optional(),
           allowOverlap: z.boolean().optional(),
           catchUpPolicy: z.enum(['once_within_window', 'skip']).optional(),
@@ -328,7 +327,7 @@ export function startRunnerControlServer({
       }
     });
 
-    typed.post('/scheduler/tasks/cancel', {
+    typed.post('/scheduler/tasks/archive', {
       schema: {
         body: z.object({ taskId: z.string() }),
         response: {
@@ -338,12 +337,12 @@ export function startRunnerControlServer({
       }
     }, async (request, reply) => {
       try {
-        const task = await cancelScheduledTask(request.body.taskId)
+        const task = await archiveScheduledTask(request.body.taskId)
         return { task }
       } catch (error) {
         reply.code(500)
         return {
-          error: error instanceof Error && error.message ? error.message : 'Failed to cancel scheduled task',
+          error: error instanceof Error && error.message ? error.message : 'Failed to archive scheduled task',
           code: typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
             ? (error as { code: string }).code
             : undefined

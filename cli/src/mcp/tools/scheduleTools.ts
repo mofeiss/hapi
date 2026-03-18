@@ -3,9 +3,11 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import type { ApiSessionClient } from '@/api/apiSession'
 import type { SessionTriggerMetadata } from '@/api/types'
+import type { ScheduledTaskRun } from '@hapi/protocol'
+import { deriveScheduledTask } from '@hapi/protocol'
 import { logger } from '@/ui/logger'
 import {
-    cancelRunnerScheduledTask,
+    archiveRunnerScheduledTask,
     createRunnerScheduledTask,
     deleteRunnerScheduledTask,
     listRunnerScheduledTaskRuns,
@@ -19,77 +21,28 @@ const scheduleTypeSchema = z.enum(['once', 'cron'])
 const scheduleModelSchema = z.enum(['opus', 'sonnet', 'gpt-5.4'])
 const scheduledSessionPermissionSchema = z.enum(['aware', 'self_control', 'system_control'])
 const scheduledTaskOutcomeStatusSchema = z.enum(['completed', 'partial', 'blocked', 'abandoned'])
+const scheduledTaskPhaseSchema = z.enum(['enabled', 'paused', 'archived'])
+const viewSchema = z.enum(['basic', 'full']).optional()
 
 type ScheduleToolAccess = 'none' | 'self_control' | 'system_control'
 
+type SchedulerToolResult<T> = {
+    ok: boolean
+    code: string
+    message: string
+    data?: T
+}
+
 function normalizeRunAt(value: number | string | undefined): number | undefined {
-    if (typeof value === 'number') {
-        return value
-    }
-    if (typeof value === 'string' && value.trim()) {
-        return Date.parse(value)
-    }
+    if (typeof value === 'number') return value
+    if (typeof value === 'string' && value.trim()) return Date.parse(value)
     return undefined
 }
 
-function validateAgentModel(agentFlavor: 'claude' | 'codex', model: string | undefined): string | null {
-    if (!model) {
-        return null
-    }
-
-    if (agentFlavor === 'claude' && model !== 'opus' && model !== 'sonnet') {
-        return 'Failed to create scheduled task: claude model must be opus or sonnet'
-    }
-
-    if (agentFlavor === 'codex' && model !== 'gpt-5.4') {
-        return 'Failed to create scheduled task: codex model must be gpt-5.4'
-    }
-
-    return null
-}
-
-function validateScheduleArgs(args: {
-    agentFlavor: 'claude' | 'codex'
-    model?: string
-    scheduleType: 'once' | 'cron'
-    runAt?: number
-    cron?: string
-}): string | null {
-    const modelError = validateAgentModel(args.agentFlavor, args.model)
-    if (modelError) {
-        return modelError
-    }
-
-    if (args.scheduleType === 'once') {
-        if (!Number.isFinite(args.runAt)) {
-            return 'Failed to create scheduled task: invalid runAt value'
-        }
-        if ((args.runAt as number) <= Date.now()) {
-            return 'Failed to create scheduled task: runAt must be in the future'
-        }
-        return null
-    }
-
-    if (!args.cron?.trim()) {
-        return 'Failed to create scheduled task: cron schedule requires a cron expression'
-    }
-
-    return null
-}
-
 function getScheduleToolAccess(trigger?: SessionTriggerMetadata): ScheduleToolAccess {
-    if (trigger?.type !== 'scheduled-task') {
-        return 'system_control'
-    }
-
-    if (trigger.scheduledSessionPermission === 'system_control') {
-        return 'system_control'
-    }
-
-    if (trigger.scheduledSessionPermission === 'self_control') {
-        return 'self_control'
-    }
-
+    if (trigger?.type !== 'scheduled-task') return 'system_control'
+    if (trigger.scheduledSessionPermission === 'system_control') return 'system_control'
+    if (trigger.scheduledSessionPermission === 'self_control') return 'self_control'
     return 'none'
 }
 
@@ -102,13 +55,35 @@ function getCurrentTrigger(client: ApiSessionClient): Extract<SessionTriggerMeta
     return isScheduledTrigger(trigger) ? trigger : null
 }
 
-function ensureSelfControlTarget(taskId: string, trigger: Extract<SessionTriggerMetadata, { type: 'scheduled-task' }> | null): string | null {
-    if (!trigger) {
-        return null
+function ensureSelfControlTarget(taskId: string, trigger: Extract<SessionTriggerMetadata, { type: 'scheduled-task' }> | null): SchedulerToolResult<never> | null {
+    if (!trigger || trigger.taskId === taskId) return null
+    return {
+        ok: false,
+        code: 'schedule.self_control_forbidden',
+        message: `self-control sessions may only manage their own task (${trigger.taskId})`
     }
-    return trigger.taskId === taskId
-        ? null
-        : `Failed to access scheduled task: self-control sessions may only manage their own task (${trigger.taskId})`
+}
+
+function validateAgentModel(agentFlavor: 'claude' | 'codex', model: string | undefined): SchedulerToolResult<never> | null {
+    if (!model) return null
+    if (agentFlavor === 'claude' && model !== 'opus' && model !== 'sonnet') {
+        return { ok: false, code: 'schedule.invalid_input', message: 'claude model must be opus or sonnet' }
+    }
+    if (agentFlavor === 'codex' && model !== 'gpt-5.4') {
+        return { ok: false, code: 'schedule.invalid_input', message: 'codex model must be gpt-5.4' }
+    }
+    return null
+}
+
+function toToolText<T>(result: SchedulerToolResult<T>): { content: Array<{ type: 'text'; text: string }>; isError: boolean } {
+    return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        isError: !result.ok
+    }
+}
+
+function getRunSortTime(run: ScheduledTaskRun): number {
+    return run.triggeredAt ?? run.scheduledFor ?? run.finishedAt ?? 0
 }
 
 export async function registerScheduleTools(mcp: McpServer, client: ApiSessionClient): Promise<string[]> {
@@ -116,44 +91,49 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
     const access = getScheduleToolAccess(trigger)
     const toolNames: string[] = []
 
-    const createScheduleSchema: z.ZodTypeAny = z.object({
-        title: z.string().min(1).describe('A short title describing the scheduled task'),
-        prompt: z.string().min(1).describe('The prompt to send when the schedule triggers'),
-        agentFlavor: scheduleAgentSchema.describe('Target agent type'),
-        model: scheduleModelSchema.optional().describe('Allowed values: claude => opus/sonnet, codex => gpt-5.4'),
+    async function getTaskSnapshot(taskId: string) {
+        const [tasks, runs] = await Promise.all([
+            listRunnerScheduledTasks(),
+            listRunnerScheduledTaskRuns()
+        ])
+        const task = tasks.find((entry) => entry.id === taskId)
+        const taskRuns = runs.filter((run) => run.taskId === taskId).sort((a, b) => getRunSortTime(b) - getRunSortTime(a))
+        return { task, taskRuns }
+    }
+
+    const createSchema = z.object({
+        title: z.string().min(1),
+        prompt: z.string().min(1),
+        agentFlavor: scheduleAgentSchema,
+        model: scheduleModelSchema.optional(),
         scheduleType: scheduleTypeSchema.optional(),
-        runAt: z.union([z.number(), z.string()]).optional().describe('For once tasks: epoch milliseconds or ISO datetime string'),
-        cron: z.string().optional().describe('For cron tasks: cron expression, e.g. */5 * * * *'),
-        targetDirectory: z.string().min(1).describe('Working directory for the spawned session'),
+        runAt: z.union([z.number(), z.string()]).optional(),
+        cron: z.string().optional(),
+        targetDirectory: z.string().min(1),
         timezone: z.string().optional(),
-        paused: z.boolean().optional(),
-        scheduledSessionPermission: scheduledSessionPermissionSchema.describe('Must be explicitly chosen by the user: aware, self_control, or system_control')
+        scheduledSessionPermission: scheduledSessionPermissionSchema.optional()
     })
 
-    const updateScheduleSchema: z.ZodTypeAny = z.object({
+    const editSchema = z.object({
         taskId: z.string().min(1),
         title: z.string().min(1).optional(),
         prompt: z.string().min(1).optional(),
         agentFlavor: scheduleAgentSchema.optional(),
-        model: z.string().optional().describe('Admin override: supports custom model id in updates'),
+        model: z.string().optional(),
         scheduleType: scheduleTypeSchema.optional(),
         runAt: z.union([z.number(), z.string()]).optional(),
         cron: z.string().optional(),
         targetDirectory: z.string().min(1).optional(),
         timezone: z.string().optional(),
-        paused: z.boolean().optional(),
         scheduledSessionPermission: scheduledSessionPermissionSchema.optional()
     })
 
-    const listScheduleSchema: z.ZodTypeAny = z.object({
-        includeRuns: z.boolean().optional()
-    })
-
-    const taskIdSchema: z.ZodTypeAny = z.object({
-        taskId: z.string().min(1)
-    })
-
-    const reportOutcomeSchema: z.ZodTypeAny = z.object({
+    const listSchema = z.object({ view: viewSchema })
+    const getSchema = z.object({ taskId: z.string().min(1), view: viewSchema })
+    const runListSchema = z.object({ taskId: z.string().min(1).optional(), view: viewSchema })
+    const runGetSchema = z.object({ runId: z.string().min(1), view: viewSchema })
+    const taskIdSchema = z.object({ taskId: z.string().min(1) })
+    const reportOutcomeSchema = z.object({
         status: scheduledTaskOutcomeStatusSchema,
         summary: z.string().min(1),
         needsUserIntervention: z.boolean().optional(),
@@ -161,50 +141,31 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
     })
 
     if (access === 'system_control') {
-        toolNames.push('schedule_create')
-        mcp.registerTool<any, any>('schedule_create', {
-            description: 'Create a scheduled task managed by the HAPI runner. You must only call this after the user explicitly chooses the scheduled session permission: aware, self_control, or system_control. Never pick a default yourself.',
+        toolNames.push('schedule_create', 'schedule_list', 'schedule_get', 'schedule_run_list', 'schedule_run_get', 'schedule_delete')
+
+        mcp.registerTool('schedule_create', {
+            description: 'Create a scheduled task managed by the HAPI runner.',
             title: 'Create Scheduled Task',
-            inputSchema: createScheduleSchema
-        }, async (args: {
-            title: string
-            prompt: string
-            agentFlavor: 'claude' | 'codex'
-            model?: 'opus' | 'sonnet' | 'gpt-5.4'
-            scheduleType?: 'once' | 'cron'
-            runAt?: number | string
-            cron?: string
-            targetDirectory: string
-            timezone?: string
-            paused?: boolean
-            scheduledSessionPermission: 'aware' | 'self_control' | 'system_control'
-        }) => {
+            inputSchema: createSchema
+        }, async (args) => {
             const scheduleType = args.scheduleType ?? 'once'
             const runAt = normalizeRunAt(args.runAt)
-            const validationError = validateScheduleArgs({
-                agentFlavor: args.agentFlavor,
-                model: args.model,
-                scheduleType,
-                runAt,
-                cron: args.cron
-            })
-            if (validationError) {
-                return {
-                    content: [{ type: 'text' as const, text: validationError }],
-                    isError: true
-                }
+            const modelValidation = validateAgentModel(args.agentFlavor, args.model)
+            if (modelValidation) return toToolText(modelValidation)
+
+            if (scheduleType === 'once' && !Number.isFinite(runAt)) {
+                return toToolText({ ok: false, code: 'schedule.invalid_input', message: 'invalid runAt value' })
+            }
+            if (scheduleType === 'cron' && !args.cron?.trim()) {
+                return toToolText({ ok: false, code: 'schedule.invalid_input', message: 'cron schedule requires a cron expression' })
+            }
+
+            const machineId = client.getMetadata()?.machineId
+            if (!machineId) {
+                return toToolText({ ok: false, code: 'schedule.internal_error', message: 'machineId is unavailable for the current session' })
             }
 
             try {
-                const metadata = client.getMetadata()
-                const machineId = metadata?.machineId
-                if (!machineId) {
-                    return {
-                        content: [{ type: 'text' as const, text: 'Failed to create scheduled task: machineId is unavailable for the current session' }],
-                        isError: true
-                    }
-                }
-
                 const task = await createRunnerScheduledTask({
                     machineId,
                     createdBySessionId: client.sessionId,
@@ -217,105 +178,214 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
                     cron: args.cron,
                     targetDirectory: args.targetDirectory,
                     timezone: args.timezone,
-                    paused: args.paused,
-                    scheduledSessionPermission: args.scheduledSessionPermission
+                    scheduledSessionPermission: args.scheduledSessionPermission ?? 'aware'
                 })
 
                 if (!task) {
-                    return {
-                        content: [{ type: 'text' as const, text: 'Failed to create scheduled task: runner returned no task' }],
-                        isError: true
-                    }
+                    return toToolText({ ok: false, code: 'schedule.internal_error', message: 'runner returned no task' })
                 }
 
-                return {
-                    content: [{
-                        type: 'text' as const,
-                        text: [
-                            'Scheduled task created successfully.',
-                            `taskId: ${task.id}`,
-                            `title: ${task.title}`,
-                            `createdAt: ${new Date(task.createdAt).toISOString()}`,
-                            `scheduleType: ${task.scheduleType}`,
-                            `scheduledSessionPermission: ${task.scheduledSessionPermission}`,
-                            `nextRunAt: ${task.nextRunAt ? new Date(task.nextRunAt).toISOString() : '-'}`,
-                            `cron: ${task.scheduleSpec.cron ?? '-'}`,
-                            `timezone: ${task.timezone}`,
-                            `agent: ${task.agentFlavor}`,
-                            `model: ${task.model ?? '-'}`,
-                            `directory: ${task.targetDirectory}`
-                        ].join('\n')
-                    }],
-                    isError: false
-                }
+                return toToolText({
+                    ok: true,
+                    code: 'ok',
+                    message: 'Scheduled task created successfully.',
+                    data: {
+                        taskId: task.id,
+                        title: task.title,
+                        scheduleType: task.scheduleType,
+                        phase: task.phase,
+                        scheduledSessionPermission: task.scheduledSessionPermission,
+                        runAt: task.runAt,
+                        cron: task.cron,
+                        timezone: task.timezone
+                    }
+                })
             } catch (error) {
                 logger.debug('[hapiMCP] schedule_create failed', error)
-                return {
-                    content: [{ type: 'text' as const, text: `Failed to create scheduled task: ${String(error)}` }],
-                    isError: true
+                return toToolText({ ok: false, code: 'schedule.internal_error', message: String(error) })
+            }
+        })
+
+        mcp.registerTool('schedule_list', {
+            description: 'List scheduled tasks managed by the local HAPI runner.',
+            title: 'List Scheduled Tasks',
+            inputSchema: listSchema
+        }, async () => {
+            try {
+                const tasks = await listRunnerScheduledTasks()
+                return toToolText({
+                    ok: true,
+                    code: 'ok',
+                    message: 'Scheduled tasks retrieved.',
+                    data: {
+                        tasks: tasks.map((task) => ({
+                            id: task.id,
+                            title: task.title,
+                            scheduleType: task.scheduleType,
+                            phase: task.phase
+                        }))
+                    }
+                })
+            } catch (error) {
+                logger.debug('[hapiMCP] schedule_list failed', error)
+                return toToolText({ ok: false, code: 'schedule.internal_error', message: String(error) })
+            }
+        })
+
+        mcp.registerTool('schedule_get', {
+            description: 'Get one scheduled task by id.',
+            title: 'Get Scheduled Task',
+            inputSchema: getSchema
+        }, async (args) => {
+            try {
+                const snapshot = await getTaskSnapshot(args.taskId)
+                if (!snapshot.task) {
+                    return toToolText({ ok: false, code: 'schedule.task_not_found', message: `Scheduled task not found: ${args.taskId}` })
                 }
+
+                const derived = deriveScheduledTask(snapshot.task, snapshot.taskRuns)
+                return toToolText({
+                    ok: true,
+                    code: 'ok',
+                    message: 'Scheduled task retrieved.',
+                    data: {
+                        taskId: snapshot.task.id,
+                        title: snapshot.task.title,
+                        prompt: snapshot.task.prompt,
+                        scheduleType: snapshot.task.scheduleType,
+                        phase: snapshot.task.phase,
+                        createdBySessionId: snapshot.task.createdBySessionId,
+                        scheduledSessionPermission: snapshot.task.scheduledSessionPermission,
+                        targetDirectory: snapshot.task.targetDirectory,
+                        agentFlavor: snapshot.task.agentFlavor,
+                        model: snapshot.task.model,
+                        timezone: snapshot.task.timezone,
+                        runAt: snapshot.task.runAt,
+                        cron: snapshot.task.cron,
+                        ...(args.view === 'full' ? derived : {})
+                    }
+                })
+            } catch (error) {
+                logger.debug('[hapiMCP] schedule_get failed', error)
+                return toToolText({ ok: false, code: 'schedule.internal_error', message: String(error) })
+            }
+        })
+
+        mcp.registerTool('schedule_run_list', {
+            description: 'List scheduled runs.',
+            title: 'List Scheduled Runs',
+            inputSchema: runListSchema
+        }, async (args) => {
+            try {
+                const [tasks, runs] = await Promise.all([listRunnerScheduledTasks(), listRunnerScheduledTaskRuns()])
+                if (args.taskId && !tasks.some((task) => task.id === args.taskId)) {
+                    return toToolText({ ok: false, code: 'schedule.task_not_found', message: `Scheduled task not found: ${args.taskId}` })
+                }
+
+                const filtered = runs
+                    .filter((run) => !args.taskId || run.taskId === args.taskId)
+                    .sort((a, b) => getRunSortTime(b) - getRunSortTime(a))
+
+                return toToolText({
+                    ok: true,
+                    code: 'ok',
+                    message: 'Scheduled runs retrieved.',
+                    data: {
+                        runs: filtered.map((run) => ({
+                            id: run.id,
+                            taskId: run.taskId,
+                            status: run.status,
+                            scheduledFor: run.scheduledFor,
+                            sessionId: run.sessionId,
+                            outcomeStatus: run.outcome?.status,
+                            ...(args.view === 'full' ? {
+                                triggeredAt: run.triggeredAt,
+                                startedAt: run.startedAt,
+                                finishedAt: run.finishedAt,
+                                resultSummary: run.resultSummary,
+                                errorMessage: run.errorMessage,
+                                outcome: run.outcome
+                            } : {})
+                        }))
+                    }
+                })
+            } catch (error) {
+                logger.debug('[hapiMCP] schedule_run_list failed', error)
+                return toToolText({ ok: false, code: 'schedule.internal_error', message: String(error) })
+            }
+        })
+
+        mcp.registerTool('schedule_run_get', {
+            description: 'Get one scheduled run by id.',
+            title: 'Get Scheduled Run',
+            inputSchema: runGetSchema
+        }, async (args) => {
+            try {
+                const runs = await listRunnerScheduledTaskRuns()
+                const run = runs.find((entry) => entry.id === args.runId)
+                if (!run) {
+                    return toToolText({ ok: false, code: 'schedule.run_not_found', message: `Scheduled run not found: ${args.runId}` })
+                }
+
+                return toToolText({
+                    ok: true,
+                    code: 'ok',
+                    message: 'Scheduled run retrieved.',
+                    data: {
+                        runId: run.id,
+                        taskId: run.taskId,
+                        status: run.status,
+                        scheduledFor: run.scheduledFor,
+                        triggeredAt: run.triggeredAt,
+                        startedAt: run.startedAt,
+                        finishedAt: run.finishedAt,
+                        sessionId: run.sessionId,
+                        resultSummary: run.resultSummary,
+                        errorMessage: run.errorMessage,
+                        ...(args.view === 'full' ? { outcome: run.outcome } : {})
+                    }
+                })
+            } catch (error) {
+                logger.debug('[hapiMCP] schedule_run_get failed', error)
+                return toToolText({ ok: false, code: 'schedule.internal_error', message: String(error) })
+            }
+        })
+
+        mcp.registerTool('schedule_delete', {
+            description: 'Delete a scheduled task by id.',
+            title: 'Delete Scheduled Task',
+            inputSchema: taskIdSchema
+        }, async (args) => {
+            try {
+                const deleted = await deleteRunnerScheduledTask(args.taskId)
+                if (!deleted) {
+                    return toToolText({ ok: false, code: 'schedule.task_not_found', message: `Scheduled task not found: ${args.taskId}` })
+                }
+                return toToolText({ ok: true, code: 'ok', message: 'Scheduled task deleted.', data: { taskId: deleted.taskId, deleted: true } })
+            } catch (error) {
+                logger.debug('[hapiMCP] schedule_delete failed', error)
+                return toToolText({ ok: false, code: 'schedule.internal_error', message: String(error) })
             }
         })
     }
 
     if (access === 'system_control' || access === 'self_control') {
-        toolNames.push('schedule_update')
-        mcp.registerTool<any, any>('schedule_update', {
-            description: access === 'self_control'
-                ? 'Update your own scheduled task only.'
-                : 'Update an existing scheduled task managed by the HAPI runner. Agent/model mismatch is rejected.',
-            title: 'Update Scheduled Task',
-            inputSchema: updateScheduleSchema
-        }, async (args: {
-            taskId: string
-            title?: string
-            prompt?: string
-            agentFlavor?: 'claude' | 'codex'
-            model?: string
-            scheduleType?: 'once' | 'cron'
-            runAt?: number | string
-            cron?: string
-            targetDirectory?: string
-            timezone?: string
-            paused?: boolean
-            scheduledSessionPermission?: 'aware' | 'self_control' | 'system_control'
-        }) => {
+        toolNames.push('schedule_edit', 'schedule_pause', 'schedule_resume', 'schedule_archive')
+
+        mcp.registerTool('schedule_edit', {
+            description: access === 'self_control' ? 'Edit your own scheduled task only.' : 'Edit an existing scheduled task.',
+            title: 'Edit Scheduled Task',
+            inputSchema: editSchema
+        }, async (args) => {
             const currentTrigger = getCurrentTrigger(client)
             if (access === 'self_control') {
                 const selfControlError = ensureSelfControlTarget(args.taskId, currentTrigger)
-                if (selfControlError) {
-                    return {
-                        content: [{ type: 'text' as const, text: selfControlError }],
-                        isError: true
-                    }
-                }
+                if (selfControlError) return toToolText(selfControlError)
             }
 
             const runAt = normalizeRunAt(args.runAt)
-
-            if (args.agentFlavor && args.model) {
-                const modelError = validateAgentModel(args.agentFlavor, args.model)
-                if (modelError) {
-                    return {
-                        content: [{ type: 'text' as const, text: modelError.replace('create', 'update') }],
-                        isError: true
-                    }
-                }
-            }
-
-            if (args.scheduleType === 'once' && args.runAt !== undefined && !Number.isFinite(runAt)) {
-                return {
-                    content: [{ type: 'text' as const, text: 'Failed to update scheduled task: invalid runAt value' }],
-                    isError: true
-                }
-            }
-
-            if (args.scheduleType === 'cron' && args.cron !== undefined && !args.cron.trim()) {
-                return {
-                    content: [{ type: 'text' as const, text: 'Failed to update scheduled task: cron schedule requires a cron expression' }],
-                    isError: true
-                }
-            }
+            const modelValidation = args.agentFlavor ? validateAgentModel(args.agentFlavor, args.model) : null
+            if (modelValidation) return toToolText(modelValidation)
 
             try {
                 const task = await updateRunnerScheduledTask({
@@ -329,229 +399,130 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
                     cron: args.cron,
                     targetDirectory: args.targetDirectory,
                     timezone: args.timezone,
-                    paused: args.paused,
                     scheduledSessionPermission: args.scheduledSessionPermission
                 })
 
                 if (!task) {
-                    return {
-                        content: [{ type: 'text' as const, text: `Scheduled task not found: ${args.taskId}` }],
-                        isError: true
-                    }
+                    return toToolText({ ok: false, code: 'schedule.task_not_found', message: `Scheduled task not found: ${args.taskId}` })
                 }
 
-                return {
-                    content: [{
-                        type: 'text' as const,
-                        text: [
-                            `Scheduled task updated: ${task.id}`,
-                            `createdAt: ${new Date(task.createdAt).toISOString()}`,
-                            `updatedAt: ${new Date(task.updatedAt).toISOString()}`,
-                            `scheduledSessionPermission: ${task.scheduledSessionPermission}`,
-                            `model: ${task.model ?? '-'}`,
-                            `paused: ${String(task.paused)}`
-                        ].join('\n')
-                    }],
-                    isError: false
-                }
+                return toToolText({
+                    ok: true,
+                    code: 'ok',
+                    message: 'Scheduled task updated.',
+                    data: {
+                        taskId: task.id,
+                        updatedAt: task.updatedAt,
+                        scheduleType: task.scheduleType,
+                        scheduledSessionPermission: task.scheduledSessionPermission,
+                        runAt: task.runAt,
+                        cron: task.cron,
+                        timezone: task.timezone
+                    }
+                })
             } catch (error) {
-                logger.debug('[hapiMCP] schedule_update failed', error)
-                return {
-                    content: [{ type: 'text' as const, text: `Failed to update scheduled task: ${String(error)}` }],
-                    isError: true
-                }
+                logger.debug('[hapiMCP] schedule_edit failed', error)
+                const message = error instanceof Error ? error.message : String(error)
+                const code = typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+                    ? (error as { code: string }).code
+                    : 'schedule.internal_error'
+                return toToolText({ ok: false, code, message })
             }
         })
 
-        for (const toolName of ['schedule_pause', 'schedule_resume', 'schedule_cancel'] as const) {
-            toolNames.push(toolName)
-        }
-
-        mcp.registerTool<any, any>('schedule_pause', {
-            description: access === 'self_control' ? 'Pause your own scheduled task' : 'Pause a scheduled task',
+        mcp.registerTool('schedule_pause', {
+            description: access === 'self_control' ? 'Pause your own scheduled task.' : 'Pause a scheduled task.',
             title: 'Pause Scheduled Task',
             inputSchema: taskIdSchema
-        }, async (args: { taskId: string }) => {
+        }, async (args) => {
             const currentTrigger = getCurrentTrigger(client)
             if (access === 'self_control') {
                 const selfControlError = ensureSelfControlTarget(args.taskId, currentTrigger)
-                if (selfControlError) {
-                    return {
-                        content: [{ type: 'text' as const, text: selfControlError }],
-                        isError: true
-                    }
-                }
+                if (selfControlError) return toToolText(selfControlError)
             }
 
             try {
-                const task = await updateRunnerScheduledTask({ taskId: args.taskId, paused: true })
+                const task = await updateRunnerScheduledTask({ taskId: args.taskId, phase: 'paused' })
                 if (!task) {
-                    return {
-                        content: [{ type: 'text' as const, text: `Scheduled task not found: ${args.taskId}` }],
-                        isError: true
-                    }
+                    return toToolText({ ok: false, code: 'schedule.task_not_found', message: `Scheduled task not found: ${args.taskId}` })
                 }
-                return {
-                    content: [{ type: 'text' as const, text: `Scheduled task paused: ${task.id}` }],
-                    isError: false
-                }
+                return toToolText({ ok: true, code: 'ok', message: 'Scheduled task paused.', data: { taskId: task.id, phase: task.phase, updatedAt: task.updatedAt } })
             } catch (error) {
                 logger.debug('[hapiMCP] schedule_pause failed', error)
-                return {
-                    content: [{ type: 'text' as const, text: `Failed to pause scheduled task: ${String(error)}` }],
-                    isError: true
-                }
+                const message = error instanceof Error ? error.message : String(error)
+                const code = typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+                    ? (error as { code: string }).code
+                    : 'schedule.internal_error'
+                return toToolText({ ok: false, code, message })
             }
         })
 
-        mcp.registerTool<any, any>('schedule_resume', {
-            description: access === 'self_control' ? 'Resume your own scheduled task' : 'Resume a scheduled task',
+        mcp.registerTool('schedule_resume', {
+            description: access === 'self_control' ? 'Resume your own scheduled task.' : 'Resume a scheduled task.',
             title: 'Resume Scheduled Task',
             inputSchema: taskIdSchema
-        }, async (args: { taskId: string }) => {
+        }, async (args) => {
             const currentTrigger = getCurrentTrigger(client)
             if (access === 'self_control') {
                 const selfControlError = ensureSelfControlTarget(args.taskId, currentTrigger)
-                if (selfControlError) {
-                    return {
-                        content: [{ type: 'text' as const, text: selfControlError }],
-                        isError: true
-                    }
-                }
+                if (selfControlError) return toToolText(selfControlError)
             }
 
             try {
-                const task = await updateRunnerScheduledTask({ taskId: args.taskId, paused: false })
+                const task = await updateRunnerScheduledTask({ taskId: args.taskId, phase: 'enabled' })
                 if (!task) {
-                    return {
-                        content: [{ type: 'text' as const, text: `Scheduled task not found: ${args.taskId}` }],
-                        isError: true
-                    }
+                    return toToolText({ ok: false, code: 'schedule.task_not_found', message: `Scheduled task not found: ${args.taskId}` })
                 }
-                return {
-                    content: [{ type: 'text' as const, text: `Scheduled task resumed: ${task.id}` }],
-                    isError: false
-                }
+                return toToolText({ ok: true, code: 'ok', message: 'Scheduled task resumed.', data: { taskId: task.id, phase: task.phase, updatedAt: task.updatedAt } })
             } catch (error) {
                 logger.debug('[hapiMCP] schedule_resume failed', error)
-                return {
-                    content: [{ type: 'text' as const, text: `Failed to resume scheduled task: ${String(error)}` }],
-                    isError: true
-                }
+                const message = error instanceof Error ? error.message : String(error)
+                const code = typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+                    ? (error as { code: string }).code
+                    : 'schedule.internal_error'
+                return toToolText({ ok: false, code, message })
             }
         })
 
-        mcp.registerTool<any, any>('schedule_cancel', {
-            description: access === 'self_control' ? 'Cancel your own scheduled task' : 'Cancel a scheduled task by id',
-            title: 'Cancel Scheduled Task',
+        mcp.registerTool('schedule_archive', {
+            description: access === 'self_control' ? 'Archive your own scheduled task.' : 'Archive a scheduled task.',
+            title: 'Archive Scheduled Task',
             inputSchema: taskIdSchema
-        }, async (args: { taskId: string }) => {
+        }, async (args) => {
             const currentTrigger = getCurrentTrigger(client)
             if (access === 'self_control') {
                 const selfControlError = ensureSelfControlTarget(args.taskId, currentTrigger)
-                if (selfControlError) {
-                    return {
-                        content: [{ type: 'text' as const, text: selfControlError }],
-                        isError: true
-                    }
-                }
+                if (selfControlError) return toToolText(selfControlError)
             }
 
             try {
-                const task = await cancelRunnerScheduledTask(args.taskId)
+                const task = await archiveRunnerScheduledTask(args.taskId)
                 if (!task) {
-                    return {
-                        content: [{ type: 'text' as const, text: `Scheduled task not found: ${args.taskId}` }],
-                        isError: true
-                    }
+                    return toToolText({ ok: false, code: 'schedule.task_not_found', message: `Scheduled task not found: ${args.taskId}` })
                 }
-                return {
-                    content: [{ type: 'text' as const, text: `Scheduled task canceled: ${task.id}` }],
-                    isError: false
-                }
+                return toToolText({ ok: true, code: 'ok', message: 'Scheduled task archived.', data: { taskId: task.id, phase: task.phase, updatedAt: task.updatedAt } })
             } catch (error) {
-                logger.debug('[hapiMCP] schedule_cancel failed', error)
-                return {
-                    content: [{ type: 'text' as const, text: `Failed to cancel scheduled task: ${String(error)}` }],
-                    isError: true
-                }
-            }
-        })
-    }
-
-    if (access === 'system_control') {
-        toolNames.push('schedule_list', 'schedule_delete')
-
-        mcp.registerTool<any, any>('schedule_list', {
-            description: 'List scheduled tasks managed by the local HAPI runner',
-            title: 'List Scheduled Tasks',
-            inputSchema: listScheduleSchema
-        }, async (args: { includeRuns?: boolean }) => {
-            try {
-                const tasks = await listRunnerScheduledTasks()
-                const runs = args.includeRuns ? await listRunnerScheduledTaskRuns() : []
-                return {
-                    content: [{
-                        type: 'text' as const,
-                        text: JSON.stringify({ tasks, runs }, null, 2)
-                    }],
-                    isError: false
-                }
-            } catch (error) {
-                logger.debug('[hapiMCP] schedule_list failed', error)
-                return {
-                    content: [{ type: 'text' as const, text: `Failed to list scheduled tasks: ${String(error)}` }],
-                    isError: true
-                }
-            }
-        })
-
-        mcp.registerTool<any, any>('schedule_delete', {
-            description: 'Delete a scheduled task by id',
-            title: 'Delete Scheduled Task',
-            inputSchema: taskIdSchema
-        }, async (args: { taskId: string }) => {
-            try {
-                const deleted = await deleteRunnerScheduledTask(args.taskId)
-                if (!deleted) {
-                    return {
-                        content: [{ type: 'text' as const, text: `Scheduled task not found: ${args.taskId}` }],
-                        isError: true
-                    }
-                }
-                return {
-                    content: [{ type: 'text' as const, text: `Scheduled task deleted: ${deleted.taskId}` }],
-                    isError: false
-                }
-            } catch (error) {
-                logger.debug('[hapiMCP] schedule_delete failed', error)
-                return {
-                    content: [{ type: 'text' as const, text: `Failed to delete scheduled task: ${String(error)}` }],
-                    isError: true
-                }
+                logger.debug('[hapiMCP] schedule_archive failed', error)
+                const message = error instanceof Error ? error.message : String(error)
+                const code = typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+                    ? (error as { code: string }).code
+                    : 'schedule.internal_error'
+                return toToolText({ ok: false, code, message })
             }
         })
     }
 
     if (isScheduledTrigger(trigger)) {
         toolNames.push('schedule_report_outcome')
-        mcp.registerTool<any, any>('schedule_report_outcome', {
-            description: 'Report the business outcome of the current scheduled run. This does not change scheduler permissions or task configuration.',
+        mcp.registerTool('schedule_report_outcome', {
+            description: 'Report the business outcome of the current scheduled run.',
             title: 'Report Scheduled Outcome',
             inputSchema: reportOutcomeSchema
-        }, async (args: {
-            status: 'completed' | 'partial' | 'blocked' | 'abandoned'
-            summary: string
-            needsUserIntervention?: boolean
-            permanentFailureLikely?: boolean
-        }) => {
+        }, async (args) => {
             try {
                 const currentTrigger = getCurrentTrigger(client)
                 if (!currentTrigger) {
-                    return {
-                        content: [{ type: 'text' as const, text: 'Failed to report scheduled task outcome: current session is not a scheduled task run' }],
-                        isError: true
-                    }
+                    return toToolText({ ok: false, code: 'schedule.outcome_report_forbidden', message: 'current session is not a scheduled task run' })
                 }
 
                 const run = await reportRunnerScheduledTaskOutcome({
@@ -566,31 +537,21 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
                 })
 
                 if (!run) {
-                    return {
-                        content: [{ type: 'text' as const, text: `Failed to report scheduled task outcome: run not found (${currentTrigger.runId})` }],
-                        isError: true
-                    }
+                    return toToolText({ ok: false, code: 'schedule.run_not_found', message: `run not found (${currentTrigger.runId})` })
                 }
 
-                return {
-                    content: [{
-                        type: 'text' as const,
-                        text: [
-                            `Scheduled run outcome reported: ${currentTrigger.runId}`,
-                            `status: ${args.status}`,
-                            `summary: ${args.summary}`,
-                            `needsUserIntervention: ${String(Boolean(args.needsUserIntervention))}`,
-                            `permanentFailureLikely: ${String(Boolean(args.permanentFailureLikely))}`
-                        ].join('\n')
-                    }],
-                    isError: false
-                }
+                return toToolText({
+                    ok: true,
+                    code: 'ok',
+                    message: 'Scheduled run outcome reported.',
+                    data: {
+                        runId: run.id,
+                        outcome: run.outcome
+                    }
+                })
             } catch (error) {
                 logger.debug('[hapiMCP] schedule_report_outcome failed', error)
-                return {
-                    content: [{ type: 'text' as const, text: `Failed to report scheduled task outcome: ${String(error)}` }],
-                    isError: true
-                }
+                return toToolText({ ok: false, code: 'schedule.internal_error', message: String(error) })
             }
         })
     }

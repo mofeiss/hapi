@@ -3,6 +3,7 @@ import type {
   ScheduledCatchUpPolicy,
   ScheduledSessionPermission,
   ScheduledTask,
+  ScheduledTaskPhase,
   ScheduledTaskOutcome,
   ScheduledTaskRun
 } from '@hapi/protocol'
@@ -20,7 +21,6 @@ export type CreateScheduledTaskInput = {
   runAt?: number
   cron?: string
   timezone?: string
-  paused?: boolean
   scheduledSessionPermission: ScheduledSessionPermission
   allowOverlap?: boolean
   catchUpPolicy?: ScheduledCatchUpPolicy
@@ -38,7 +38,7 @@ export type UpdateScheduledTaskInput = {
   runAt?: number
   cron?: string
   timezone?: string
-  paused?: boolean
+  phase?: ScheduledTaskPhase
   scheduledSessionPermission?: ScheduledSessionPermission
   allowOverlap?: boolean
   catchUpPolicy?: ScheduledCatchUpPolicy
@@ -47,7 +47,7 @@ export type UpdateScheduledTaskInput = {
 
 export type ListScheduledTasksFilters = {
   machineId?: string
-  status?: ScheduledTask['status']
+  phase?: ScheduledTaskPhase
 }
 
 export type ListScheduledTaskRunsFilters = {

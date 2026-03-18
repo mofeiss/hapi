@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
-import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol'
+import { deriveScheduledTask, isScheduledTaskConsumed } from '@hapi/protocol'
+import type { ScheduledTask, ScheduledTaskPhase, ScheduledTaskRun } from '@hapi/protocol'
 import { logger } from '@/ui/logger'
 import { RunnerSchedulerStore } from './store'
 import { isTaskDue, resolveNextRunAt } from './nextRun'
@@ -20,9 +21,10 @@ type SchedulerChangeEvent =
   | { type: 'run-updated'; run: ScheduledTaskRun; task: ScheduledTask }
 
 type SchedulerValidationCode =
-  | 'scheduled.once_expired'
-  | 'scheduled.cron_invalid'
-  | 'scheduled.invalid_state'
+  | 'schedule.invalid_input'
+  | 'schedule.invalid_transition'
+  | 'schedule.once_consumed'
+  | 'schedule.phase_archived'
 
 class SchedulerValidationError extends Error {
   code: SchedulerValidationCode
@@ -34,18 +36,6 @@ class SchedulerValidationError extends Error {
   }
 }
 
-function resolveScheduleSpec(input: {
-  scheduleType: ScheduledTask['scheduleType']
-  runAt?: number
-  cron?: string
-}): ScheduledTask['scheduleSpec'] {
-  if (input.scheduleType === 'cron') {
-    return { cron: input.cron?.trim() }
-  }
-
-  return { runAt: input.runAt }
-}
-
 function assertScheduleInput(input: {
   scheduleType: ScheduledTask['scheduleType']
   runAt?: number
@@ -53,65 +43,70 @@ function assertScheduleInput(input: {
 }): void {
   if (input.scheduleType === 'cron') {
     if (!input.cron?.trim()) {
-      throw new Error('cron schedule requires a cron expression')
+      throw new SchedulerValidationError('schedule.invalid_input', 'cron schedule requires a cron expression')
     }
     return
   }
 
   if (!Number.isFinite(input.runAt)) {
-    throw new Error('once schedule requires a valid runAt timestamp')
+    throw new SchedulerValidationError('schedule.invalid_input', 'once schedule requires a valid runAt timestamp')
   }
 }
 
-function assertTaskCanRun(input: {
+function buildTaskBase(input: {
+  existing?: ScheduledTask
+  now: number
+  machineId: string
+  namespace: string
+  createdBySessionId?: string
+  title: string
+  prompt: string
+  agentFlavor: ScheduledTask['agentFlavor']
+  targetDirectory: string
+  model?: string
   scheduleType: ScheduledTask['scheduleType']
   runAt?: number
   cron?: string
-  timezone?: string
-  now: number
-}): void {
-  if (input.scheduleType === 'once') {
-    if (!Number.isFinite(input.runAt)) {
-      throw new SchedulerValidationError('scheduled.invalid_state', 'once schedule requires a valid runAt timestamp')
-    }
-    if ((input.runAt as number) <= input.now) {
-      throw new SchedulerValidationError('scheduled.once_expired', 'once task run time has already passed and cannot be resumed')
-    }
-    return
+  timezone: string
+  scheduledSessionPermission: ScheduledTask['scheduledSessionPermission']
+  allowOverlap: boolean
+  catchUpPolicy: ScheduledTask['catchUpPolicy']
+  maxSkewMs: number
+  phase: ScheduledTaskPhase
+}): ScheduledTask {
+  return {
+    id: input.existing?.id ?? randomUUID(),
+    namespace: input.existing?.namespace ?? input.namespace,
+    machineId: input.existing?.machineId ?? input.machineId,
+    createdBySessionId: input.existing?.createdBySessionId ?? input.createdBySessionId,
+    title: input.title,
+    prompt: input.prompt,
+    agentFlavor: input.agentFlavor,
+    targetDirectory: input.targetDirectory,
+    permissionMode: input.agentFlavor === 'codex' ? 'yolo' : 'bypassPermissions',
+    basePermissionMode: input.agentFlavor === 'codex' ? 'yolo' : 'bypassPermissions',
+    model: input.model,
+    reasoningEffort: input.agentFlavor === 'codex' ? 'xhigh' : undefined,
+    runStrategy: 'new_session',
+    scheduleType: input.scheduleType,
+    runAt: input.scheduleType === 'once' ? input.runAt : undefined,
+    cron: input.scheduleType === 'cron' ? input.cron?.trim() : undefined,
+    timezone: input.timezone,
+    phase: input.phase,
+    scheduledSessionPermission: input.scheduledSessionPermission,
+    allowOverlap: input.allowOverlap,
+    catchUpPolicy: input.catchUpPolicy,
+    maxSkewMs: input.maxSkewMs,
+    createdAt: input.existing?.createdAt ?? input.now,
+    updatedAt: input.now
   }
+}
 
-  const expression = input.cron?.trim()
-  if (!expression) {
-    throw new SchedulerValidationError('scheduled.cron_invalid', 'cron schedule requires a cron expression')
-  }
-
-  try {
-    resolveNextRunAt({
-      id: 'validation',
-      namespace: 'default',
-      machineId: 'validation',
-      title: 'validation',
-      prompt: 'validation',
-      agentFlavor: 'claude',
-      targetDirectory: '.',
-      permissionMode: 'bypassPermissions',
-      basePermissionMode: 'bypassPermissions',
-      runStrategy: 'new_session',
-      scheduleType: 'cron',
-      scheduleSpec: { cron: expression },
-      timezone: input.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-      status: 'active',
-      paused: false,
-      scheduledSessionPermission: 'aware',
-      allowOverlap: false,
-      catchUpPolicy: 'once_within_window',
-      maxSkewMs: 10 * 60 * 1000,
-      createdAt: input.now,
-      updatedAt: input.now
-    }, input.now)
-  } catch {
-    throw new SchedulerValidationError('scheduled.cron_invalid', 'cron schedule is invalid and cannot be resumed')
-  }
+function canTransitionPhase(current: ScheduledTaskPhase, next: ScheduledTaskPhase): boolean {
+  if (current === next) return true
+  if (current === 'enabled' && (next === 'paused' || next === 'archived')) return true
+  if (current === 'paused' && (next === 'enabled' || next === 'archived')) return true
+  return false
 }
 
 export class RunnerSchedulerService {
@@ -143,7 +138,7 @@ export class RunnerSchedulerService {
     const tasks = await this.store.listTasks()
     return tasks.filter((task) => {
       if (filters?.machineId && task.machineId !== filters.machineId) return false
-      if (filters?.status && task.status !== filters.status) return false
+      if (filters?.phase && task.phase !== filters.phase) return false
       return true
     })
   }
@@ -162,38 +157,26 @@ export class RunnerSchedulerService {
     const scheduleType = input.scheduleType ?? 'once'
     assertScheduleInput({ scheduleType, runAt: input.runAt, cron: input.cron })
 
-    const draft: ScheduledTask = {
-      id: randomUUID(),
-      namespace: input.namespace ?? 'default',
+    const task = buildTaskBase({
+      now,
       machineId: input.machineId,
+      namespace: input.namespace ?? 'default',
       createdBySessionId: input.createdBySessionId,
       title: input.title,
       prompt: input.prompt,
       agentFlavor: input.agentFlavor ?? 'claude',
       targetDirectory: input.targetDirectory,
-      permissionMode: (input.agentFlavor ?? 'claude') === 'codex' ? 'yolo' : 'bypassPermissions',
-      basePermissionMode: (input.agentFlavor ?? 'claude') === 'codex' ? 'yolo' : 'bypassPermissions',
       model: input.model,
-      reasoningEffort: (input.agentFlavor ?? 'claude') === 'codex' ? 'xhigh' : undefined,
-      runStrategy: 'new_session',
       scheduleType,
-      scheduleSpec: resolveScheduleSpec({ scheduleType, runAt: input.runAt, cron: input.cron }),
+      runAt: input.runAt,
+      cron: input.cron,
       timezone: input.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-      nextRunAt: undefined,
-      status: 'active',
-      paused: input.paused ?? false,
       scheduledSessionPermission: input.scheduledSessionPermission,
       allowOverlap: input.allowOverlap ?? false,
       catchUpPolicy: input.catchUpPolicy ?? 'once_within_window',
       maxSkewMs: input.maxSkewMs ?? 10 * 60 * 1000,
-      createdAt: now,
-      updatedAt: now
-    }
-
-    const task: ScheduledTask = {
-      ...draft,
-      nextRunAt: resolveNextRunAt(draft, now)
-    }
+      phase: 'enabled'
+    })
 
     await this.store.update((state) => ({
       ...state,
@@ -212,53 +195,45 @@ export class RunnerSchedulerService {
       return null
     }
 
-    const now = Date.now()
-    const scheduleType = input.scheduleType ?? existing.scheduleType
-    const runAt = input.runAt ?? existing.scheduleSpec.runAt
-    const cron = input.cron ?? existing.scheduleSpec.cron
-    assertScheduleInput({ scheduleType, runAt, cron })
-
-    const nextPaused = input.paused ?? existing.paused
-    if (!nextPaused) {
-      assertTaskCanRun({
-        scheduleType,
-        runAt,
-        cron,
-        timezone: input.timezone ?? existing.timezone,
-        now
-      })
+    const taskRuns = currentState.runs.filter((run) => run.taskId === existing.id)
+    if (existing.phase === 'archived') {
+      throw new SchedulerValidationError('schedule.phase_archived', 'archived task cannot be edited')
+    }
+    if (isScheduledTaskConsumed(existing, taskRuns)) {
+      throw new SchedulerValidationError('schedule.once_consumed', 'once task has already been consumed')
     }
 
-    const updated: ScheduledTask = {
-      ...existing,
+    const now = Date.now()
+    const scheduleType = input.scheduleType ?? existing.scheduleType
+    const runAt = input.runAt ?? existing.runAt
+    const cron = input.cron ?? existing.cron
+    assertScheduleInput({ scheduleType, runAt, cron })
+
+    const nextPhase = input.phase ?? existing.phase
+    if (!canTransitionPhase(existing.phase, nextPhase)) {
+      throw new SchedulerValidationError('schedule.invalid_transition', `invalid phase transition: ${existing.phase} -> ${nextPhase}`)
+    }
+
+    const updated = buildTaskBase({
+      existing,
+      now,
+      machineId: existing.machineId,
+      namespace: existing.namespace,
       title: input.title ?? existing.title,
       prompt: input.prompt ?? existing.prompt,
       agentFlavor: input.agentFlavor ?? existing.agentFlavor,
       targetDirectory: input.targetDirectory ?? existing.targetDirectory,
-      permissionMode: (input.agentFlavor ?? existing.agentFlavor) === 'codex' ? 'yolo' : 'bypassPermissions',
-      basePermissionMode: (input.agentFlavor ?? existing.agentFlavor) === 'codex' ? 'yolo' : 'bypassPermissions',
       model: input.model ?? existing.model,
-      reasoningEffort: (input.agentFlavor ?? existing.agentFlavor) === 'codex' ? 'xhigh' : undefined,
       scheduleType,
-      scheduleSpec: resolveScheduleSpec({ scheduleType, runAt, cron }),
+      runAt,
+      cron,
       timezone: input.timezone ?? existing.timezone,
-      paused: nextPaused,
       scheduledSessionPermission: input.scheduledSessionPermission ?? existing.scheduledSessionPermission,
       allowOverlap: input.allowOverlap ?? existing.allowOverlap,
       catchUpPolicy: input.catchUpPolicy ?? existing.catchUpPolicy,
       maxSkewMs: input.maxSkewMs ?? existing.maxSkewMs,
-      updatedAt: now,
-      status: existing.status === 'canceled' ? 'active' : existing.status,
-      lastError: undefined
-    }
-
-    updated.nextRunAt = updated.paused ? undefined : resolveNextRunAt(updated, now)
-    if (updated.scheduleType === 'once' && updated.status === 'completed') {
-      updated.status = 'active'
-    }
-    if (updated.status === 'failed') {
-      updated.status = 'active'
-    }
+      phase: nextPhase
+    })
 
     await this.store.update((state) => ({
       ...state,
@@ -270,29 +245,34 @@ export class RunnerSchedulerService {
     return updated
   }
 
-  async cancelTask(taskId: string): Promise<ScheduledTask | null> {
-    let canceledTask: ScheduledTask | null = null
-    await this.store.update((state) => ({
-      ...state,
-      tasks: state.tasks.map((task) => {
-        if (task.id !== taskId) return task
-        canceledTask = {
-          ...task,
-          status: 'canceled',
-          paused: true,
-          nextRunAt: undefined,
-          updatedAt: Date.now()
-        }
-        return canceledTask
-      })
-    }))
+  async archiveTask(taskId: string): Promise<ScheduledTask | null> {
+    return await this.updateTask({ taskId, phase: 'archived' })
+  }
 
-    if (canceledTask) {
-      await this.emitChange({ type: 'task-updated', task: canceledTask })
+  async reportTaskOutcome(input: ReportScheduledTaskOutcomeInput): Promise<ScheduledTaskRun | null> {
+    const currentState = await this.store.read()
+    const existing = currentState.runs.find((run) => run.id === input.runId)
+    if (!existing) {
+      return null
     }
 
-    this.scheduleNextWakeup()
-    return canceledTask
+    const updatedRun: ScheduledTaskRun = {
+      ...existing,
+      outcome: input.outcome,
+      updatedAt: Math.max(existing.updatedAt ?? 0, input.outcome.reportedAt)
+    }
+
+    await this.store.update((state) => ({
+      ...state,
+      runs: state.runs.map((run) => run.id === input.runId ? updatedRun : run)
+    }))
+
+    const task = currentState.tasks.find((entry) => entry.id === existing.taskId)
+    if (task) {
+      await this.emitChange({ type: 'run-updated', run: updatedRun, task })
+    }
+
+    return updatedRun
   }
 
   async deleteTask(taskId: string): Promise<{ taskId: string; machineId: string; namespace: string } | null> {
@@ -320,44 +300,28 @@ export class RunnerSchedulerService {
     return deletedTask
   }
 
-  async reportTaskOutcome(input: ReportScheduledTaskOutcomeInput): Promise<ScheduledTaskRun | null> {
-    const currentState = await this.store.read()
-    const existing = currentState.runs.find((run) => run.id === input.runId)
-    if (!existing) {
-      return null
-    }
-
-    const updatedRun: ScheduledTaskRun = {
-      ...existing,
-      taskOutcome: input.outcome,
-      updatedAt: Math.max(existing.updatedAt, input.outcome.reportedAt)
-    }
-
-    await this.store.update((state) => ({
-      ...state,
-      runs: state.runs.map((run) => run.id === input.runId ? updatedRun : run)
-    }))
-
-    const task = currentState.tasks.find((entry) => entry.id === existing.taskId)
-    if (task) {
-      await this.emitChange({ type: 'run-updated', run: updatedRun, task })
-    }
-
-    return updatedRun
-  }
-
   async reconcileTasks(now: number = Date.now()): Promise<void> {
     const nextState = await this.store.update((state) => ({
       ...state,
-      tasks: state.tasks.map((task) => ({
-        ...task,
-        nextRunAt: task.paused ? undefined : resolveNextRunAt(task, now)
-      }))
+      tasks: state.tasks.map((task) => this.reconcileTask(task, state.runs, now))
     }))
 
     await Promise.all(nextState.tasks.map(async (task) => {
       await this.emitChange({ type: 'task-updated', task })
     }))
+  }
+
+  private reconcileTask(task: ScheduledTask, runs: readonly ScheduledTaskRun[], now: number): ScheduledTask {
+    const derived = deriveScheduledTask(task, runs, resolveNextRunAt(task, now))
+    if (task.scheduleType === 'once' && derived.consumed) {
+      return {
+        ...task,
+        phase: 'archived',
+        updatedAt: now
+      }
+    }
+
+    return task
   }
 
   private scheduleNextWakeup(): void {
@@ -372,8 +336,9 @@ export class RunnerSchedulerService {
 
     void this.store.listTasks().then((tasks) => {
       const nextTask = tasks
-        .filter((task) => task.status === 'active' && !task.paused && typeof task.nextRunAt === 'number')
-        .sort((a, b) => (a.nextRunAt ?? Number.MAX_SAFE_INTEGER) - (b.nextRunAt ?? Number.MAX_SAFE_INTEGER))[0]
+        .map((task) => ({ task, nextRunAt: resolveNextRunAt(task, Date.now()) }))
+        .filter((entry) => typeof entry.nextRunAt === 'number')
+        .sort((a, b) => (a.nextRunAt as number) - (b.nextRunAt as number))[0]
 
       if (!nextTask?.nextRunAt) {
         return
@@ -408,138 +373,70 @@ export class RunnerSchedulerService {
   }
 
   private async runTask(task: ScheduledTask, now: number): Promise<void> {
-    const scheduledFor = task.nextRunAt ?? task.scheduleSpec.runAt ?? now
-    const skew = now - scheduledFor
+    const scheduledFor = resolveNextRunAt(task, now) ?? task.runAt ?? now
+    let finalRun: ScheduledTaskRun
 
-    if (skew > task.maxSkewMs) {
-      const missedRun: ScheduledTaskRun = {
+    try {
+      const triggerResult = await this.triggerTask({
+        task,
+        run: {
+          id: randomUUID(),
+          taskId: task.id,
+          machineId: task.machineId,
+          scheduledFor,
+          triggeredAt: now,
+          startedAt: now,
+          status: 'succeeded'
+        }
+      })
+
+      const finishedAt = Date.now()
+      finalRun = {
         id: randomUUID(),
         taskId: task.id,
         machineId: task.machineId,
         scheduledFor,
         triggeredAt: now,
-        status: 'missed',
-        error: `Task missed execution window by ${skew}ms`,
-        createdAt: now,
-        updatedAt: now
-      }
-
-      const nextTaskState = this.buildNextTaskStateAfterRun({
-        task,
-        now,
-        status: 'failed',
-        lastError: missedRun.error
-      })
-
-      await this.store.update((state) => ({
-        ...state,
-        tasks: state.tasks.map((current) => current.id !== task.id ? current : nextTaskState),
-        runs: [...state.runs, missedRun]
-      }))
-
-      await this.emitChange({ type: 'task-updated', task: nextTaskState })
-      await this.emitChange({ type: 'run-updated', run: missedRun, task: nextTaskState })
-      return
-    }
-
-    const run: ScheduledTaskRun = {
-      id: randomUUID(),
-      taskId: task.id,
-      machineId: task.machineId,
-      scheduledFor,
-      triggeredAt: now,
-      startedAt: now,
-      status: 'running',
-      createdAt: now,
-      updatedAt: now
-    }
-
-    await this.store.update((state) => ({
-      ...state,
-      runs: [...state.runs, run]
-    }))
-    await this.emitChange({ type: 'run-updated', run, task })
-
-    try {
-      const result = await this.triggerTask({ task, run })
-      const finishedAt = Date.now()
-      const succeededRun: ScheduledTaskRun = {
-        ...run,
-        status: 'succeeded',
-        sessionId: result.sessionId,
-        resultSummary: result.resultSummary,
+        startedAt: now,
         finishedAt,
+        status: 'succeeded',
+        sessionId: triggerResult.sessionId,
+        resultSummary: triggerResult.resultSummary,
+        createdAt: now,
         updatedAt: finishedAt
       }
-      const nextTaskState = this.buildNextTaskStateAfterRun({
-        task,
-        now: finishedAt,
-        status: task.scheduleType === 'cron' ? 'active' : 'completed'
-      })
-
-      await this.store.update((state) => ({
-        ...state,
-        tasks: state.tasks.map((current) => current.id !== task.id ? current : nextTaskState),
-        runs: state.runs.map((current) => current.id !== run.id ? current : succeededRun)
-      }))
-
-      await this.emitChange({ type: 'task-updated', task: nextTaskState })
-      await this.emitChange({ type: 'run-updated', run: succeededRun, task: nextTaskState })
     } catch (error) {
       const finishedAt = Date.now()
       const message = error instanceof Error ? error.message : String(error)
       logger.debug('[scheduler] task trigger failed', { taskId: task.id, error: message })
-
-      const failedRun: ScheduledTaskRun = {
-        ...run,
-        status: 'failed',
-        error: message,
+      finalRun = {
+        id: randomUUID(),
+        taskId: task.id,
+        machineId: task.machineId,
+        scheduledFor,
+        triggeredAt: now,
+        startedAt: now,
         finishedAt,
+        status: 'failed',
+        errorMessage: message,
+        createdAt: now,
         updatedAt: finishedAt
       }
-      const nextTaskState = this.buildNextTaskStateAfterRun({
-        task,
-        now: finishedAt,
-        status: task.scheduleType === 'cron' ? 'active' : 'failed',
-        lastError: message
-      })
-
-      await this.store.update((state) => ({
-        ...state,
-        tasks: state.tasks.map((current) => current.id !== task.id ? current : nextTaskState),
-        runs: state.runs.map((current) => current.id !== run.id ? current : failedRun)
-      }))
-
-      await this.emitChange({ type: 'task-updated', task: nextTaskState })
-      await this.emitChange({ type: 'run-updated', run: failedRun, task: nextTaskState })
-    }
-  }
-
-  private buildNextTaskStateAfterRun(options: {
-    task: ScheduledTask
-    now: number
-    status: ScheduledTask['status']
-    lastError?: string
-  }): ScheduledTask {
-    const baseTask: ScheduledTask = {
-      ...options.task,
-      status: options.status,
-      lastRunAt: options.now,
-      updatedAt: options.now,
-      lastError: options.lastError
     }
 
-    if (options.task.scheduleType === 'cron' && options.status !== 'canceled') {
-      return {
-        ...baseTask,
-        nextRunAt: baseTask.paused ? undefined : resolveNextRunAt(baseTask, options.now)
-      }
-    }
+    const finishedAt = finalRun.finishedAt ?? now
+    const nextTaskState: ScheduledTask = task.scheduleType === 'once'
+      ? { ...task, phase: 'archived', updatedAt: finishedAt }
+      : { ...task, updatedAt: finishedAt }
 
-    return {
-      ...baseTask,
-      nextRunAt: undefined
-    }
+    await this.store.update((state) => ({
+      ...state,
+      tasks: state.tasks.map((current) => current.id !== task.id ? current : nextTaskState),
+      runs: [...state.runs, finalRun]
+    }))
+
+    await this.emitChange({ type: 'task-updated', task: nextTaskState })
+    await this.emitChange({ type: 'run-updated', run: finalRun, task: nextTaskState })
   }
 
   private async emitChange(event: SchedulerChangeEvent): Promise<void> {

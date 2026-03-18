@@ -1,13 +1,12 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { getScheduledTaskPauseValidationCode } from '@hapi/protocol'
 import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol'
 
 import type { WebAppEnv } from '../middleware/auth'
 import type { SyncEngine } from '../../sync/syncEngine'
 import { requireMachine, requireSyncEngine } from './guards'
 
-const cancelBodySchema = z.object({
+const archiveBodySchema = z.object({
     taskId: z.string().min(1)
 })
 
@@ -25,7 +24,7 @@ const updateBodySchema = z.object({
     runAt: z.number().optional(),
     cron: z.string().optional(),
     timezone: z.string().optional(),
-    paused: z.boolean().optional(),
+    phase: z.enum(['enabled', 'paused', 'archived']).optional(),
     allowOverlap: z.boolean().optional(),
     catchUpPolicy: z.enum(['once_within_window', 'skip']).optional(),
     maxSkewMs: z.number().int().nonnegative().optional()
@@ -130,20 +129,20 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
         })
     })
 
-    app.post('/scheduled-tasks/cancel', async (c) => {
+    app.post('/scheduled-tasks/archive', async (c) => {
         const engine = requireSyncEngine(c, getSyncEngine)
         if (engine instanceof Response) {
             return engine
         }
 
         const body = await c.req.json().catch(() => null)
-        const parsed = cancelBodySchema.safeParse(body)
+        const parsed = archiveBodySchema.safeParse(body)
         if (!parsed.success) {
             return c.json({ error: 'Invalid body' }, 400)
         }
 
         try {
-            const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/cancel', parsed.data)
+            const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/archive', parsed.data)
             return c.json(result)
         } catch (error) {
             const message = error instanceof Error && error.message ? error.message : 'Runner request failed'
@@ -169,40 +168,6 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
         }
 
         try {
-            if (typeof parsed.data.paused === 'boolean') {
-                const snapshot = await getScheduledTaskSnapshot(parsed.data.taskId)
-                if (!snapshot.task) {
-                    return c.json({ error: 'Scheduled task not found', code: 'scheduled.task_not_found' }, 404)
-                }
-
-                const pauseValidationCode = getScheduledTaskPauseValidationCode(snapshot.task)
-                if (pauseValidationCode !== null) {
-                    const attemptingStateChange = parsed.data.paused !== snapshot.task.paused
-                    if (attemptingStateChange) {
-                        if (pauseValidationCode === 'once_already_consumed') {
-                            return c.json({
-                                error: 'This one-time task has already run and can no longer be paused or resumed.',
-                                code: 'scheduled.once_already_consumed'
-                            }, 400)
-                        }
-
-                        if (pauseValidationCode === 'once_expired') {
-                            return c.json({
-                                error: snapshot.task.paused
-                                    ? 'This one-time task is already past its scheduled run time and cannot be resumed.'
-                                    : 'This one-time task is already past its scheduled run time and cannot be paused.',
-                                code: 'scheduled.once_expired'
-                            }, 400)
-                        }
-
-                        return c.json({
-                            error: 'This scheduled task cannot be updated in its current state.',
-                            code: 'scheduled.invalid_state'
-                        }, 400)
-                    }
-                }
-            }
-
             const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/update', parsed.data)
             return c.json(result)
         } catch (error) {

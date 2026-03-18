@@ -15,12 +15,9 @@ describe('buildScheduledPrompt', () => {
       targetDirectory: '/tmp',
       runStrategy: 'new_session',
       scheduleType: 'once',
-      scheduleSpec: {
-        runAt: Date.now() + 60_000
-      },
+      runAt: Date.now() + 60_000,
       timezone: 'Asia/Shanghai',
-      status: 'active',
-      paused: false,
+      phase: 'enabled',
       scheduledSessionPermission: 'aware',
       allowOverlap: false,
       catchUpPolicy: 'skip',

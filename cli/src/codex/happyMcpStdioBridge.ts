@@ -61,14 +61,13 @@ const allToolDefinitions = [
       cron: z.string().optional().describe('For cron tasks: cron expression, e.g. */5 * * * *'),
       targetDirectory: z.string().min(1).describe('Working directory for the spawned session'),
       timezone: z.string().optional(),
-      paused: z.boolean().optional(),
-      scheduledSessionPermission: scheduledSessionPermissionSchema.describe('Must be explicitly chosen by the user: aware, self_control, or system_control')
+      scheduledSessionPermission: scheduledSessionPermissionSchema.optional().describe('Defaults to aware unless higher permission is explicitly needed')
     })
   },
   {
-    name: 'schedule_update',
-    description: 'Update an existing scheduled task managed by the HAPI runner. Agent/model mismatch is rejected.',
-    title: 'Update Scheduled Task',
+    name: 'schedule_edit',
+    description: 'Edit an existing scheduled task managed by the HAPI runner.',
+    title: 'Edit Scheduled Task',
     inputSchema: z.object({
       taskId: z.string().min(1),
       title: z.string().min(1).optional(),
@@ -80,7 +79,6 @@ const allToolDefinitions = [
       cron: z.string().optional(),
       targetDirectory: z.string().min(1).optional(),
       timezone: z.string().optional(),
-      paused: z.boolean().optional(),
       scheduledSessionPermission: scheduledSessionPermissionSchema.optional()
     })
   },
@@ -97,16 +95,34 @@ const allToolDefinitions = [
     inputSchema: z.object({ taskId: z.string().min(1) })
   },
   {
+    name: 'schedule_get',
+    description: 'Get one scheduled task by id',
+    title: 'Get Scheduled Task',
+    inputSchema: z.object({ taskId: z.string().min(1), view: z.enum(['basic', 'full']).optional() })
+  },
+  {
     name: 'schedule_list',
     description: 'List scheduled tasks managed by the local HAPI runner',
     title: 'List Scheduled Tasks',
-    inputSchema: z.object({ includeRuns: z.boolean().optional() })
+    inputSchema: z.object({ view: z.enum(['basic', 'full']).optional() })
   },
   {
-    name: 'schedule_cancel',
-    description: 'Cancel a scheduled task by id',
-    title: 'Cancel Scheduled Task',
+    name: 'schedule_archive',
+    description: 'Archive a scheduled task by id',
+    title: 'Archive Scheduled Task',
     inputSchema: z.object({ taskId: z.string().min(1) })
+  },
+  {
+    name: 'schedule_run_list',
+    description: 'List scheduled runs',
+    title: 'List Scheduled Runs',
+    inputSchema: z.object({ taskId: z.string().min(1).optional(), view: z.enum(['basic', 'full']).optional() })
+  },
+  {
+    name: 'schedule_run_get',
+    description: 'Get one scheduled run by id',
+    title: 'Get Scheduled Run',
+    inputSchema: z.object({ runId: z.string().min(1), view: z.enum(['basic', 'full']).optional() })
   },
   {
     name: 'schedule_delete',

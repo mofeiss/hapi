@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { canScheduledTaskTogglePaused, getScheduledTaskPauseValidationCode } from '@hapi/protocol'
 
 import type { ApiClient } from '@/api/client'
 import type { Machine, ScheduledTask, ScheduledTaskRun } from '@/types/api'
@@ -13,6 +12,7 @@ import { ScheduledTaskActionMenu } from '@/components/ScheduledTaskActionMenu'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
 import { getScheduledRunStatusToneClassName } from '@/lib/scheduled-run-status'
+import { canScheduledTaskTogglePaused, getScheduledTaskPauseValidationCode } from '@/lib/scheduled-task-compat'
 import {
     openWorkspaceScheduledTask,
     selectWorkspaceScheduledRun,
@@ -88,9 +88,9 @@ function buildEditState(task: ScheduledTask): EditState {
         targetDirectory: task.targetDirectory,
         model: task.model ?? '',
         scheduleType: task.scheduleType,
-        runAt: formatDateTimeLocalInput(task.scheduleSpec.runAt ?? task.nextRunAt),
-        cron: task.scheduleSpec.cron ?? '',
-        paused: task.paused,
+        runAt: formatDateTimeLocalInput(task.scheduleSpec?.runAt ?? task.nextRunAt),
+        cron: task.scheduleSpec?.cron ?? '',
+        paused: Boolean(task.paused),
     }
 }
 
@@ -226,7 +226,7 @@ function ScheduledTaskListItem(props: {
             <ScheduledTaskActionMenu
                 isOpen={menuOpen}
                 onClose={() => setMenuOpen(false)}
-                paused={props.task.paused}
+                paused={Boolean(props.task.paused)}
                 canTogglePaused={canTogglePaused}
                 togglePausedTitle={togglePausedTitle}
                 canCancel={props.task.status === 'active' && !props.task.paused && !props.isPending}
@@ -246,7 +246,7 @@ export function ScheduledWorkspace(props: {
 }) {
     const { t } = useTranslation()
     const { tasks, runs, isLoading, error } = useScheduledTasks(props.api)
-    const { cancelScheduledTask, deleteScheduledTask, updateScheduledTask, isPending } = useScheduledTaskActions(props.api)
+    const { archiveScheduledTask, deleteScheduledTask, updateScheduledTask, isPending } = useScheduledTaskActions(props.api)
     const workspace = useWorkspaceState()
     const [search, setSearch] = useState('')
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -268,7 +268,7 @@ export function ScheduledWorkspace(props: {
                 task.targetDirectory,
                 task.agentFlavor,
                 task.model,
-                task.scheduleSpec.cron,
+            task.scheduleSpec?.cron,
                 task.machineId,
             ]
                 .filter(Boolean)
@@ -308,7 +308,7 @@ export function ScheduledWorkspace(props: {
             map.get(run.taskId)?.push(run)
         }
         for (const taskRuns of map.values()) {
-            taskRuns.sort((left, right) => right.triggeredAt - left.triggeredAt)
+            taskRuns.sort((left, right) => (right.triggeredAt ?? right.scheduledFor) - (left.triggeredAt ?? left.scheduledFor))
         }
         return map
     }, [runs])
@@ -359,7 +359,7 @@ export function ScheduledWorkspace(props: {
         const map = new Map<string, ScheduledTaskRun>()
         for (const run of runs) {
             const existing = map.get(run.taskId)
-            if (!existing || run.triggeredAt > existing.triggeredAt) {
+            if (!existing || (run.triggeredAt ?? run.scheduledFor) > (existing.triggeredAt ?? existing.scheduledFor)) {
                 map.set(run.taskId, run)
             }
         }
@@ -466,7 +466,7 @@ export function ScheduledWorkspace(props: {
                                                 openWorkspaceScheduledTask(task.id, latestRun?.id ?? null)
                                             }}
                                             onTogglePaused={() => void updateScheduledTask({ taskId: task.id, paused: !task.paused })}
-                                            onCancel={() => void cancelScheduledTask(task.id)}
+                                            onCancel={() => void archiveScheduledTask(task.id)}
                                             onDelete={() => setDeleteTaskId(task.id)}
                                         />
                                     )
@@ -503,7 +503,7 @@ export function ScheduledWorkspace(props: {
                                         <>
                                             <button type="button" disabled={isPending} onClick={() => setIsEditing(true)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Edit</button>
                                             <button type="button" disabled={isPending} onClick={() => void handleTogglePaused()} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{selectedTask.paused ? 'Resume' : 'Pause'}</button>
-                                            <button type="button" disabled={isPending || selectedTask.status !== 'active' || selectedTask.paused} onClick={() => void cancelScheduledTask(selectedTask.id)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Cancel</button>
+                                            <button type="button" disabled={isPending || selectedTask.phase === 'archived'} onClick={() => void archiveScheduledTask(selectedTask.id)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Archive</button>
                                             <button type="button" disabled={isPending} onClick={() => setDeleteTaskId(selectedTask.id)} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50">Delete</button>
                                         </>
                                     ) : (
@@ -567,7 +567,7 @@ export function ScheduledWorkspace(props: {
                                                 )}
                                             </>
                                         ) : (
-                                            <div><span className="text-[var(--app-hint)]">Expression:</span> <span> {selectedTask.scheduleSpec.cron ?? formatDateTime(selectedTask.scheduleSpec.runAt)}</span></div>
+                                            <div><span className="text-[var(--app-hint)]">Expression:</span> <span> {selectedTask.scheduleSpec?.cron ?? formatDateTime(selectedTask.scheduleSpec?.runAt)}</span></div>
                                         )}
                                     </div>
                                 </div>

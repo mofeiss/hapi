@@ -5,6 +5,7 @@ export type {
     AttachmentMetadata,
     DecryptedMessage,
     Metadata,
+    ScheduledTaskDerived,
     ScheduledTask,
     ScheduledTaskOutcome,
     ScheduledTaskRun,
@@ -32,10 +33,11 @@ export type {
 export type {
     ScheduledAgentFlavor,
     ScheduledCatchUpPolicy,
+    ScheduledTaskDisplayStatus,
+    ScheduledTaskPhase,
     ScheduledRunStrategy,
     ScheduledSessionPermission,
     ScheduledTaskOutcomeStatus,
     ScheduledTaskRunStatus,
-    ScheduledTaskStatus,
     ScheduledTaskType
 } from './scheduler'
