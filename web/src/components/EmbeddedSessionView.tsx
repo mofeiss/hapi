@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SessionChat } from "@/components/SessionChat";
 import { LoadingState } from "@/components/LoadingState";
 import { useAppContext } from "@/lib/app-context";
+import { useSSE } from "@/hooks/useSSE";
 import { useTranslation } from "@/lib/use-translation";
 import { useToast } from "@/lib/toast-context";
 import { useSession } from "@/hooks/queries/useSession";
@@ -119,7 +120,7 @@ export function EmbeddedSessionView({
   streamOnly?: boolean;
   initialScrollAnchor?: "top" | "bottom";
 }) {
-  const { api } = useAppContext();
+  const { api, token, baseUrl } = useAppContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -129,6 +130,14 @@ export function EmbeddedSessionView({
   const [modeSyncInFlight, setModeSyncInFlight] = useState(false);
   const [quickNewSessionPending, setQuickNewSessionPending] = useState(false);
   const modeSyncKeyRef = useRef<string | null>(null);
+
+  useSSE({
+    enabled: Boolean(api && token && sessionId),
+    token,
+    baseUrl,
+    subscription: { sessionId },
+    onEvent: () => {},
+  });
 
   useEffect(() => {
     if (!api || !session || !pendingSessionMode) {
