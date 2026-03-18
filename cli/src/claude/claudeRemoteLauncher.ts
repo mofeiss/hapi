@@ -35,6 +35,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
     private abortFuture: Future<void> | null = null;
     private permissionHandler: PermissionHandler | null = null;
     private handleSessionFound: ((sessionId: string) => void) | null = null;
+    private lastPartialMessageSentAtById: Map<string, number> = new Map();
 
     constructor(session: Session) {
         super(isDiagnosticLoggingEnabled() ? session.logPath : undefined);
@@ -113,6 +114,8 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
             cwd: session.path,
             version: process.env.npm_package_version
         }, permissionHandler.getResponses());
+        const streamAssistantMessagesToHub = !isDiagnosticLoggingEnabled();
+        const diagnosticPartialUpdateMinIntervalMs = 120;
         const partialAssistantStreams = new PartialAssistantStreamTracker({
             cwd: session.path,
             sessionId: () => session.sessionId || 'unknown',
@@ -149,14 +152,23 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
         let planModeToolCalls = new Set<string>();
         let ongoingToolCalls = new Map<string, { parentToolCallId: string | null }>();
 
-        function onMessage(message: SDKMessage) {
+        const onMessage = (message: SDKMessage) => {
             formatClaudeMessageForInk(message, messageBuffer);
             permissionHandler.onMessage(message);
 
             if (message.type === 'stream_event') {
                 const partial = partialAssistantStreams.consume(message as SDKStreamEventMessage);
                 if (partial) {
-                    enqueueClaudeMessage(partial.logMessage, { messageId: partial.messageId });
+                    if (streamAssistantMessagesToHub) {
+                        enqueueClaudeMessage(partial.logMessage, { messageId: partial.messageId });
+                    } else {
+                        const now = Date.now();
+                        const lastSentAt = this.lastPartialMessageSentAtById.get(partial.messageId) ?? 0;
+                        if (now - lastSentAt >= diagnosticPartialUpdateMinIntervalMs) {
+                            this.lastPartialMessageSentAtById.set(partial.messageId, now);
+                            enqueueClaudeMessage(partial.logMessage, { messageId: partial.messageId });
+                        }
+                    }
                 }
                 return;
             }
@@ -227,11 +239,14 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                 }
             }
 
-            const logMessage = sdkToLogConverter.convert(msg);
+                const logMessage = sdkToLogConverter.convert(msg);
             if (logMessage) {
                 const streamedMessageId = message.type === 'assistant'
                     ? partialAssistantStreams.claimMessageId(message as SDKAssistantMessage)
                     : undefined;
+                if (streamedMessageId) {
+                    this.lastPartialMessageSentAtById.delete(streamedMessageId);
+                }
 
                 if (logMessage.type === 'user' && logMessage.message?.content) {
                     const content = Array.isArray(logMessage.message.content)
@@ -330,6 +345,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                     permissionHandler.reset();
                     sdkToLogConverter.resetParentChain();
                     partialAssistantStreams.clear();
+                    this.lastPartialMessageSentAtById.clear();
                     logger.debug(`[remote]: New session detected (previous: ${previousSessionId}, current: ${session.sessionId})`);
                 } else {
                     messageBuffer.addMessage('Continuing Claude session...', 'status');
@@ -455,6 +471,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
                     }
                     ongoingToolCalls.clear();
                     partialAssistantStreams.clear();
+                    this.lastPartialMessageSentAtById.clear();
 
                     logger.debug('[remote]: flushing message queue');
                     await messageQueue.flush();

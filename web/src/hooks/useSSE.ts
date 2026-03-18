@@ -4,6 +4,96 @@ import { isObject } from '@hapi/protocol'
 import type { SyncEvent } from '@/types/api'
 import { queryKeys } from '@/lib/query-keys'
 import { clearMessageWindow, ingestIncomingMessages } from '@/lib/message-window-store'
+import type { Session, SessionResponse, SessionsResponse, SessionSummary } from '@/types/api'
+
+function mergeSessionData<T extends Session>(session: T, patch: unknown): T {
+    if (!isObject(patch)) {
+        return session
+    }
+
+    const next = { ...session } as T
+
+    if (typeof patch.active === 'boolean') {
+        next.active = patch.active
+    }
+    if (typeof patch.activeAt === 'number') {
+        next.activeAt = patch.activeAt
+    }
+    if (typeof patch.thinking === 'boolean') {
+        next.thinking = patch.thinking
+    }
+    if ('permissionMode' in patch) {
+        next.permissionMode = patch.permissionMode as T['permissionMode']
+    }
+    if ('basePermissionMode' in patch) {
+        next.basePermissionMode = patch.basePermissionMode as T['basePermissionMode']
+    }
+    if ('modelMode' in patch) {
+        next.modelMode = patch.modelMode as T['modelMode']
+    }
+
+    return next
+}
+
+function mergeSessionSummaryData(session: SessionSummary, patch: unknown): SessionSummary {
+    if (!isObject(patch)) {
+        return session
+    }
+
+    const next = { ...session }
+
+    if (typeof patch.active === 'boolean') {
+        next.active = patch.active
+    }
+    if (typeof patch.activeAt === 'number') {
+        next.activeAt = patch.activeAt
+    }
+    if (typeof patch.thinking === 'boolean') {
+        next.thinking = patch.thinking
+    }
+    if ('modelMode' in patch) {
+        next.modelMode = patch.modelMode as SessionSummary['modelMode']
+    }
+
+    return next
+}
+
+function patchSessionCaches(queryClient: ReturnType<typeof useQueryClient>, sessionId: string, patch: unknown): boolean {
+    let updated = false
+
+    queryClient.setQueryData<SessionResponse | undefined>(queryKeys.session(sessionId), (current) => {
+        if (!current?.session) {
+            return current
+        }
+        updated = true
+        return { session: mergeSessionData(current.session, patch) }
+    })
+
+    queryClient.setQueryData<SessionsResponse | undefined>(queryKeys.sessions, (current) => {
+        if (!current?.sessions) {
+            return current
+        }
+
+        let changed = false
+        const sessions = current.sessions.map((session) => {
+            if (session.id !== sessionId) {
+                return session
+            }
+
+            changed = true
+            return mergeSessionSummaryData(session, patch)
+        })
+
+        if (!changed) {
+            return current
+        }
+
+        updated = true
+        return { sessions }
+    })
+
+    return updated
+}
 
 type SSESubscription = {
     all?: boolean
@@ -132,14 +222,20 @@ export function useSSE(options: {
             }
 
             if (event.type === 'session-added' || event.type === 'session-updated' || event.type === 'session-removed') {
-                void queryClient.invalidateQueries({ queryKey: queryKeys.sessions })
                 if ('sessionId' in event) {
                     if (event.type === 'session-removed') {
+                        void queryClient.invalidateQueries({ queryKey: queryKeys.sessions })
                         void queryClient.removeQueries({ queryKey: queryKeys.session(event.sessionId) })
                         clearMessageWindow(event.sessionId)
                     } else {
-                        void queryClient.invalidateQueries({ queryKey: queryKeys.session(event.sessionId) })
+                        const patched = patchSessionCaches(queryClient, event.sessionId, event.data)
+                        if (!patched || event.type === 'session-added') {
+                            void queryClient.invalidateQueries({ queryKey: queryKeys.sessions })
+                            void queryClient.invalidateQueries({ queryKey: queryKeys.session(event.sessionId) })
+                        }
                     }
+                } else {
+                    void queryClient.invalidateQueries({ queryKey: queryKeys.sessions })
                 }
             }
 

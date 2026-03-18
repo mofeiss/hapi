@@ -48,6 +48,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
     private abortController: AbortController = new AbortController();
     private currentThreadId: string | null = null;
     private currentTurnId: string | null = null;
+    private lastPartialMessageSentAtById: Map<string, number> = new Map();
 
     constructor(session: CodexSession) {
         super(isDiagnosticLoggingEnabled() ? session.logPath : undefined);
@@ -85,6 +86,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
             this.reasoningProcessor?.abort();
             this.diffProcessor?.reset();
             this.partialAssistantStream?.clear();
+            this.lastPartialMessageSentAtById.clear();
             logger.debug('[Codex] Abort completed - session remains active');
         } catch (error) {
             logger.debug('[Codex] Error during abort:', error);
@@ -137,6 +139,8 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         const mcpClient = this.mcpClient;
         const appServerClient = this.appServerClient;
         const appServerEventConverter = useAppServer ? new AppServerEventConverter() : null;
+        const streamAssistantMessagesToHub = !isDiagnosticLoggingEnabled();
+        const diagnosticPartialUpdateMinIntervalMs = 120;
 
         const normalizeCommand = (value: unknown): string | undefined => {
             if (typeof value === 'string') {
@@ -526,6 +530,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 if (message) {
                     const partial = itemId ? partialAssistantStream.finish(itemId, message) : null;
                     if (partial) {
+                        this.lastPartialMessageSentAtById.delete(partial.messageId);
                         session.sendCodexMessage(partial.message, { messageId: partial.messageId });
                         return;
                     }
@@ -542,7 +547,19 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 const delta = asString(msg.delta);
                 if (itemId && delta) {
                     const partial = partialAssistantStream.consumeDelta(itemId, delta);
-                    if (partial) {
+                    if (!partial) {
+                        return;
+                    }
+
+                    if (streamAssistantMessagesToHub) {
+                        session.sendCodexMessage(partial.message, { messageId: partial.messageId });
+                        return;
+                    }
+
+                    const now = Date.now();
+                    const lastSentAt = this.lastPartialMessageSentAtById.get(partial.messageId) ?? 0;
+                    if (now - lastSentAt >= diagnosticPartialUpdateMinIntervalMs) {
+                        this.lastPartialMessageSentAtById.set(partial.messageId, now);
                         session.sendCodexMessage(partial.message, { messageId: partial.messageId });
                     }
                 }
