@@ -412,7 +412,7 @@ function ToolCardInner(props: ToolCardProps) {
                     </span>
                     {subtitle ? (
                         <span
-                            className="min-w-0 truncate font-mono text-xs leading-tight text-[var(--app-hint)] opacity-80"
+                            className="min-w-0 truncate font-mono text-xs leading-tight text-[var(--app-hint)] opacity-60"
                             title={subtitle}
                         >
                             {truncate(subtitle, 160)}

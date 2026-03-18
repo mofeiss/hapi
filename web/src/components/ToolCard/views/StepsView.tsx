@@ -657,7 +657,7 @@ function StepNode(props: {
                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">
                     <span className="text-sm text-[var(--app-hint)] opacity-90">{display.title}</span>
                     {display.subtitle ? (
-                        <span className="ml-2 font-mono text-xs text-[var(--app-hint)]">
+                        <span className="ml-2 font-mono text-xs text-[var(--app-hint)] opacity-60">
                             {display.subtitle}
                         </span>
                     ) : null}
