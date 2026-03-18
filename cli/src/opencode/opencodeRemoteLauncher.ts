@@ -11,6 +11,7 @@ import { createOpencodeBackend } from './utils/opencodeBackend';
 import { OpencodePermissionHandler } from './utils/permissionHandler';
 import { TITLE_INSTRUCTION } from './utils/systemPrompt';
 import { formatSessionFailureMessage } from '@/utils/sessionFailure';
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 
 class OpencodeRemoteLauncher extends RemoteLauncherBase {
     private readonly session: OpencodeSession;
@@ -22,7 +23,7 @@ class OpencodeRemoteLauncher extends RemoteLauncherBase {
     private instructionsSent = false;
 
     constructor(session: OpencodeSession) {
-        super(process.env.DEBUG ? session.logPath : undefined);
+        super(isDiagnosticLoggingEnabled() ? session.logPath : undefined);
         this.session = session;
     }
 

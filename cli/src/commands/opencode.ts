@@ -4,6 +4,7 @@ import { initializeToken } from '@/ui/tokenInit'
 import { maybeAutoStartServer } from '@/utils/autoStartServer'
 import type { CommandDefinition } from './types'
 import type { OpencodePermissionMode } from '@hapi/protocol/types'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 function isOpencodePermissionMode(value: string): value is OpencodePermissionMode {
     return value === 'default' || value === 'yolo'
@@ -63,7 +64,7 @@ export const opencodeCommand: CommandDefinition = {
             await runOpencode(options)
         } catch (error) {
             console.error(chalk.red('Error:'), error instanceof Error ? error.message : 'Unknown error')
-            if (process.env.DEBUG) {
+            if (isDiagnosticLoggingEnabled()) {
                 console.error(error)
             }
             process.exit(1)

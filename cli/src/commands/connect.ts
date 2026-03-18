@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import type { CommandDefinition } from './types'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 export async function handleConnectCommand(_args: string[]): Promise<void> {
     console.error(chalk.red('The `hapi connect` command is not available in direct-connect mode.'))
@@ -15,7 +16,7 @@ export const connectCommand: CommandDefinition = {
             await handleConnectCommand(commandArgs)
         } catch (error) {
             console.error(chalk.red('Error:'), error instanceof Error ? error.message : 'Unknown error')
-            if (process.env.DEBUG) {
+            if (isDiagnosticLoggingEnabled()) {
                 console.error(error)
             }
             process.exit(1)

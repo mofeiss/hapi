@@ -26,6 +26,7 @@ import {
     type RemoteLauncherDisplayContext,
     type RemoteLauncherExitReason
 } from '@/modules/common/remote/RemoteLauncherBase';
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 
 type HappyServer = Awaited<ReturnType<typeof buildHapiMcpBridge>>['server'];
 
@@ -49,7 +50,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
     private currentTurnId: string | null = null;
 
     constructor(session: CodexSession) {
-        super(process.env.DEBUG ? session.logPath : undefined);
+        super(isDiagnosticLoggingEnabled() ? session.logPath : undefined);
         this.session = session;
         this.useAppServer = shouldUseAppServer();
         this.mcpClient = this.useAppServer ? null : new CodexMcpClient();
@@ -197,7 +198,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         };
 
         const traceAppServerMessage = (stage: string, payload: unknown): void => {
-            if (!process.env.DEBUG) return;
+            if (!isDiagnosticLoggingEnabled()) return;
             logger.debug(`[TRACE CODEX APP-SERVER] ${stage}`, {
                 sessionId: session.client.sessionId,
                 codexSessionId: session.sessionId ?? null,
@@ -670,7 +671,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         });
 
         function logActiveHandles(tag: string) {
-            if (!process.env.DEBUG) return;
+            if (!isDiagnosticLoggingEnabled()) return;
             const anyProc: any = process as any;
             const handles = typeof anyProc._getActiveHandles === 'function' ? anyProc._getActiveHandles() : [];
             const requests = typeof anyProc._getActiveRequests === 'function' ? anyProc._getActiveRequests() : [];

@@ -20,6 +20,7 @@ import {
     type RemoteLauncherExitReason
 } from "@/modules/common/remote/RemoteLauncherBase";
 import { formatSessionFailureMessage } from "@/utils/sessionFailure";
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 
 interface PermissionsField {
     date: number;
@@ -36,7 +37,7 @@ class ClaudeRemoteLauncher extends RemoteLauncherBase {
     private handleSessionFound: ((sessionId: string) => void) | null = null;
 
     constructor(session: Session) {
-        super(process.env.DEBUG ? session.logPath : undefined);
+        super(isDiagnosticLoggingEnabled() ? session.logPath : undefined);
         this.session = session;
     }
 

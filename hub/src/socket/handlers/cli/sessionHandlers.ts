@@ -7,6 +7,7 @@ import type { SyncEvent } from '../../../sync/syncEngine'
 import { extractTodoWriteTodosFromMessageContent } from '../../../sync/todos'
 import type { CliSocketWithData } from '../../socketTypes'
 import type { AccessErrorReason, AccessResult } from './types'
+import { isDiagnosticLoggingEnabled } from '../../../config/diagnosticLogging'
 
 function summarizeForDebug(value: unknown, depth: number = 0): unknown {
     if (depth > 4) return '[MaxDepth]'
@@ -105,7 +106,7 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
             })()
             : raw
 
-        if (process.env.DEBUG) {
+        if (isDiagnosticLoggingEnabled()) {
             console.debug('[TRACE HUB SOCKET<-CLI] message.received', {
                 sessionId: sid,
                 localId: localId ?? null,
@@ -127,7 +128,7 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
             id: messageId
         })
 
-        if (process.env.DEBUG) {
+        if (isDiagnosticLoggingEnabled()) {
             console.debug('[TRACE HUB STORE] message.upserted', {
                 sessionId: sid,
                 storedMessageId: msg.id,
@@ -163,7 +164,7 @@ export function registerSessionHandlers(socket: CliSocketWithData, deps: Session
         }
         socket.to(`session:${sid}`).emit('update', update)
 
-        if (process.env.DEBUG) {
+        if (isDiagnosticLoggingEnabled()) {
             console.debug('[TRACE HUB SOCKET->WEB] update.emitted', {
                 sessionId: sid,
                 updateId: update.id,

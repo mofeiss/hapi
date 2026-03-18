@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { logger } from '@/ui/logger'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 /**
  * Find Claude executable path on Windows.
@@ -118,7 +119,7 @@ export function getDefaultClaudeCodePath(): string {
  * Log debug message
  */
 export function logDebug(message: string): void {
-    if (process.env.DEBUG) {
+    if (isDiagnosticLoggingEnabled()) {
         logger.debug(message)
         console.log(message)
     }

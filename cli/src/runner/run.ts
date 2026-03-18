@@ -921,7 +921,7 @@ export async function startRunner(): Promise<void> {
       }
       heartbeatRunning = true;
 
-      if (process.env.DEBUG) {
+      if (isDiagnosticLoggingEnabled()) {
         logger.debug(`[RUNNER RUN] Health check started at ${new Date().toLocaleString()}`);
       }
 
@@ -991,7 +991,7 @@ export async function startRunner(): Promise<void> {
           runnerLogPath: fileState.runnerLogPath
         };
         writeRunnerState(updatedState);
-        if (process.env.DEBUG) {
+        if (isDiagnosticLoggingEnabled()) {
           logger.debug(`[RUNNER RUN] Health check completed at ${updatedState.lastHeartbeat}`);
         }
       } catch (error) {

@@ -5,6 +5,7 @@ import { maybeAutoStartServer } from '@/utils/autoStartServer'
 import type { CommandDefinition } from './types'
 import type { CodexPermissionMode } from '@hapi/protocol/types'
 import type { ReasoningEffort } from '@/codex/appServerTypes'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 function isCodexPermissionMode(value: string): value is CodexPermissionMode {
     return value === 'default'
@@ -103,7 +104,7 @@ export const codexCommand: CommandDefinition = {
             await runCodex(options)
         } catch (error) {
             console.error(chalk.red('Error:'), error instanceof Error ? error.message : 'Unknown error')
-            if (process.env.DEBUG) {
+            if (isDiagnosticLoggingEnabled()) {
                 console.error(error)
             }
             process.exit(1)

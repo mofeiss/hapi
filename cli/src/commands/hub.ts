@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import type { CommandDefinition, CommandContext } from './types'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 function parseHubArgs(args: string[]): { host?: string; port?: string } {
     const result: { host?: string; port?: string } = {}
@@ -36,7 +37,7 @@ export const hubCommand: CommandDefinition = {
             await import('../../../hub/src/index')
         } catch (error) {
             console.error(chalk.red('Error:'), error instanceof Error ? error.message : 'Unknown error')
-            if (process.env.DEBUG) {
+            if (isDiagnosticLoggingEnabled()) {
                 console.error(error)
             }
             process.exit(1)

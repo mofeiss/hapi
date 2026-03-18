@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Box, Text, useStdout } from 'ink'
 import { MessageBuffer, type BufferedMessage } from './messageBuffer'
 import { useSwitchControls } from './useSwitchControls'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 interface RemoteModeDisplayProps {
     messageBuffer: MessageBuffer
@@ -129,7 +130,7 @@ export const RemoteModeDisplay: React.FC<RemoteModeDisplayProps> = ({ messageBuf
                             </Text>
                         </>
                     )}
-                    {process.env.DEBUG && logPath && (
+                    {isDiagnosticLoggingEnabled() && logPath && (
                         <Text color="gray" dimColor>
                             Debug logs: {logPath}
                         </Text>

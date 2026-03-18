@@ -1,4 +1,5 @@
 import { logger } from '@/ui/logger';
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 
 type ConvertedEvent = {
     type: string;
@@ -376,7 +377,7 @@ export class AppServerEventConverter {
         const paramsRecord = asRecord(params) ?? {};
         const wrappedMsg = asRecord(paramsRecord.msg);
 
-        if (process.env.DEBUG) {
+        if (isDiagnosticLoggingEnabled()) {
             logger.debug('[TRACE CODEX CONVERTER] incoming', {
                 method,
                 params: summarizeForDebug(params)
@@ -1007,7 +1008,7 @@ export class AppServerEventConverter {
         }
 
         logger.debug('[AppServerEventConverter] Unhandled notification', { method, params });
-        if (process.env.DEBUG) {
+        if (isDiagnosticLoggingEnabled()) {
             logger.debug('[TRACE CODEX CONVERTER] outgoing', {
                 method,
                 events: summarizeForDebug(events)

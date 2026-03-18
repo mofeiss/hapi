@@ -32,6 +32,7 @@ import { registerCommonHandlers } from '../modules/common/registerCommonHandlers
 import { cleanupUploadDir } from '../modules/common/handlers/uploads'
 import { TerminalManager } from '@/terminal/TerminalManager'
 import { applyVersionedAck } from './versionedUpdate'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 function summarizeForDebug(value: unknown, depth: number = 0): unknown {
     if (depth > 4) return '[MaxDepth]'
@@ -59,7 +60,7 @@ function summarizeForDebug(value: unknown, depth: number = 0): unknown {
 }
 
 function debugSocketMessage(stage: string, sessionId: string, body: unknown, options?: { messageId?: string }): void {
-    if (!process.env.DEBUG) return
+    if (!isDiagnosticLoggingEnabled()) return
     logger.debug(`[TRACE CLI->HUB] ${stage}`, {
         sessionId,
         messageId: options?.messageId ?? null,

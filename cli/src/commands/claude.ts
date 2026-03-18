@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { PROTOCOL_VERSION } from '@hapi/protocol'
 import type { StartOptions } from '@/claude/runClaude'
 import { configuration } from '@/configuration'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 import { isRunnerRunningCurrentlyInstalledHappyVersion } from '@/runner/controlClient'
 import { authAndSetupMachineIfNeeded } from '@/ui/auth'
 import { logger } from '@/ui/logger'
@@ -191,7 +192,7 @@ ${chalk.bold.cyan('Claude Code Options (from `claude --help`):')}
                 }
             }
 
-            if (process.env.DEBUG) {
+            if (isDiagnosticLoggingEnabled()) {
                 console.error(error)
             }
             process.exit(1)

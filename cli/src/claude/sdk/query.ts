@@ -404,7 +404,7 @@ export function query(config: {
     let stderrTail = ''
     child.stderr.on('data', (data) => {
         stderrTail = appendTail(stderrTail, data)
-        if (process.env.DEBUG) {
+        if (isDiagnosticLoggingEnabled()) {
             console.error('Claude Code stderr:', data.toString())
         }
     })

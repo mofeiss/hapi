@@ -11,6 +11,7 @@ import { createGeminiBackend } from './utils/geminiBackend';
 import { GeminiPermissionHandler } from './utils/permissionHandler';
 import { resolveGeminiRuntimeConfig } from './utils/config';
 import { formatSessionFailureMessage } from '@/utils/sessionFailure';
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 
 class GeminiRemoteLauncher extends RemoteLauncherBase {
     private readonly session: GeminiSession;
@@ -26,7 +27,7 @@ class GeminiRemoteLauncher extends RemoteLauncherBase {
     private mcpServers: McpServerStdio[] = [];
 
     constructor(session: GeminiSession, opts: { hookSettingsPath?: string }) {
-        super(process.env.DEBUG ? session.logPath : undefined);
+        super(isDiagnosticLoggingEnabled() ? session.logPath : undefined);
         this.session = session;
         this.hookSettingsPath = opts.hookSettingsPath;
     }

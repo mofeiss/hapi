@@ -4,6 +4,7 @@ import { initializeToken } from '@/ui/tokenInit'
 import { maybeAutoStartServer } from '@/utils/autoStartServer'
 import type { CommandDefinition } from './types'
 import type { GeminiPermissionMode } from '@hapi/protocol/types'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 function isGeminiPermissionMode(value: string): value is GeminiPermissionMode {
     return value === 'default'
@@ -66,7 +67,7 @@ export const geminiCommand: CommandDefinition = {
             await runGemini(options)
         } catch (error) {
             console.error(chalk.red('Error:'), error instanceof Error ? error.message : 'Unknown error')
-            if (process.env.DEBUG) {
+            if (isDiagnosticLoggingEnabled()) {
                 console.error(error)
             }
             process.exit(1)

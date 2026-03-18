@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Text, useStdout } from 'ink';
 import { MessageBuffer, type BufferedMessage } from './messageBuffer';
 import { useSwitchControls } from './useSwitchControls';
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 
 interface OpencodeDisplayProps {
     messageBuffer: MessageBuffer;
@@ -176,7 +177,7 @@ export const OpencodeDisplay: React.FC<OpencodeDisplayProps> = ({
                                 .join(' | ')}
                         </Text>
                     )}
-                    {process.env.DEBUG && logPath && (
+                    {isDiagnosticLoggingEnabled() && logPath && (
                         <Text color="gray" dimColor>
                             Debug logs: {logPath}
                         </Text>

@@ -28,8 +28,8 @@ export function getEnvironmentInfo(): Record<string, any> {
         HAPI_PROJECT_ROOT: process.env.HAPI_PROJECT_ROOT,
         CLI_API_TOKEN_SET: Boolean(process.env.CLI_API_TOKEN),
         DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING: process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING,
+        HAPI_DIAGNOSTIC_LOGGING: process.env.HAPI_DIAGNOSTIC_LOGGING,
         NODE_ENV: process.env.NODE_ENV,
-        DEBUG: process.env.DEBUG,
         PATH: process.env.PATH,
         workingDirectory: process.cwd(),
         processArgv: process.argv,
@@ -121,7 +121,7 @@ export async function runDoctorCommand(filter?: 'all' | 'runner'): Promise<void>
         console.log(`HAPI_API_URL: ${env.HAPI_API_URL ? chalk.green(env.HAPI_API_URL) : chalk.gray('not set')}`);
         console.log(`CLI_API_TOKEN: ${env.CLI_API_TOKEN_SET ? chalk.green('set') : chalk.gray('not set')}`);
         console.log(`DANGEROUSLY_LOG_TO_SERVER: ${env.DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING ? chalk.yellow('ENABLED') : chalk.gray('not set')}`);
-        console.log(`DEBUG: ${env.DEBUG ? chalk.green(env.DEBUG) : chalk.gray('not set')}`);
+        console.log(`HAPI_DIAGNOSTIC_LOGGING: ${env.HAPI_DIAGNOSTIC_LOGGING ? chalk.green(env.HAPI_DIAGNOSTIC_LOGGING) : chalk.gray('not set')}`);
         console.log(`NODE_ENV: ${env.NODE_ENV ? chalk.green(env.NODE_ENV) : chalk.gray('not set')}`);
 
         // Settings

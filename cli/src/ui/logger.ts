@@ -11,6 +11,7 @@ import { configuration } from '@/configuration'
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join, basename } from 'node:path'
 import { readRunnerState } from '@/persistence'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 function serializeLogValue(value: unknown, depth: number = 0, seen?: WeakSet<object>): unknown {
   if (depth > 6) {
@@ -129,7 +130,7 @@ class Logger {
     // Instead simply open the debug file in a new editor window.
     //
     // Also log to console in development mode
-    // if (process.env.DEBUG) {
+    // if (isDiagnosticLoggingEnabled()) {
     //   this.logToConsole('debug', '', message, ...args)
     // }
   }
@@ -140,7 +141,7 @@ class Logger {
     maxStringLength: number = 100,
     maxArrayLength: number = 10,
   ): void {
-    if (!process.env.DEBUG) {
+    if (!isDiagnosticLoggingEnabled()) {
       this.debug(`In production, skipping message inspection`)
     }
 
@@ -189,8 +190,8 @@ class Logger {
     // Always write to debug
     this.debug(message, ...args)
     
-    // Write to info if DEBUG mode is on
-    if (process.env.DEBUG) {
+    // Write to info if diagnostic logging is on
+    if (isDiagnosticLoggingEnabled()) {
       this.logToConsole('info', '[DEV]', message, ...args)
     }
   }
@@ -278,7 +279,7 @@ class Logger {
     try {
       appendFileSync(this.logFilePath, logLine)
     } catch (appendError) {
-      if (process.env.DEBUG) {
+      if (isDiagnosticLoggingEnabled()) {
         console.error('[DEV MODE ONLY THROWING] Failed to append to log file:', appendError)
         throw appendError
       }

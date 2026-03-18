@@ -1,6 +1,7 @@
 import type { SDKMessage, SDKAssistantMessage, SDKResultMessage, SDKSystemMessage, SDKUserMessage } from '@/claude/sdk'
 import type { MessageBuffer } from './ink/messageBuffer'
 import { logger } from './logger'
+import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
 
 export type OnAssistantResultInkCallback = (result: SDKResultMessage, messageBuffer: MessageBuffer) => void | Promise<void>
 
@@ -130,7 +131,7 @@ export function formatClaudeMessageForInk(
         }
 
         default: {
-            if (process.env.DEBUG) {
+            if (isDiagnosticLoggingEnabled()) {
                 messageBuffer.addMessage(`[Unknown message type: ${message.type}]`, 'status')
             }
         }

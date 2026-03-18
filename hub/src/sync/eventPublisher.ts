@@ -1,5 +1,6 @@
 import type { SyncEvent } from '@hapi/protocol/types'
 import type { SSEManager } from '../sse/sseManager'
+import { isDiagnosticLoggingEnabled } from '../config/diagnosticLogging'
 
 function summarizeForDebug(value: unknown, depth: number = 0): unknown {
     if (depth > 4) return '[MaxDepth]'
@@ -46,7 +47,7 @@ export class EventPublisher {
         const namespace = this.resolveNamespace(event)
         const enrichedEvent = namespace ? { ...event, namespace } : event
 
-        if (process.env.DEBUG) {
+        if (isDiagnosticLoggingEnabled()) {
             console.debug('[TRACE HUB PUBLISHER] event.emit', {
                 type: enrichedEvent.type,
                 namespace: namespace ?? null,
