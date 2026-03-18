@@ -4,7 +4,12 @@ const STORAGE_KEY = 'hapi:widescreen'
 const listeners = new Set<() => void>()
 
 function getSnapshot(): boolean {
-    return localStorage.getItem(STORAGE_KEY) === 'true'
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored === null) {
+        return true
+    }
+
+    return stored === 'true'
 }
 
 function subscribe(callback: () => void): () => void {
