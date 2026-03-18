@@ -189,7 +189,7 @@ describe('buildLoadedTranscriptCopyText', () => {
                 '<UserPrompt>\n创建一个一次性任务。\n</UserPrompt>',
                 [
                     '```Tool_Call',
-                    '✓ change_title | 创建一次性任务查询 Node 版本',
+                    '✓ mcp__hapi__change_title | 创建一次性任务查询 Node 版本',
                     '<Input>',
                     '{',
                     '  "title": "创建一次性任务查询 Node 版本"',

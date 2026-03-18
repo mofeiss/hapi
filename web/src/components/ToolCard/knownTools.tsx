@@ -25,17 +25,6 @@ export type ToolDisplayText = {
     subtitle: string | null
 }
 
-function getRawDisplayedToolName(toolName: string): string {
-    if (!toolName.startsWith('mcp__')) return toolName
-
-    const parts = toolName.split('__')
-    if (parts.length >= 3) {
-        return parts.slice(2).join('__')
-    }
-
-    return toolName
-}
-
 function countLines(text: string): number {
     return text.split('\n').length
 }
@@ -194,15 +183,14 @@ export function getToolDisplayText(
         }
     }
 
-    const rawToolName = getRawDisplayedToolName(toolName)
     const subtitle = presentation.subtitle ?? (
-        presentation.title !== rawToolName
+        presentation.title !== toolName
             ? presentation.title
             : null
     )
 
     return {
-        title: rawToolName,
+        title: toolName,
         subtitle
     }
 }

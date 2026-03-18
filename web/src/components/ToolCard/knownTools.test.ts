@@ -427,8 +427,31 @@ describe('getToolPresentation', () => {
             'mcp__codex__list_mcp_resources',
             presentation
         )).toEqual({
-            title: 'list_mcp_resources',
+            title: 'mcp__codex__list_mcp_resources',
             subtitle: 'searxng'
+        })
+    })
+
+    it('preserves full hapi MCP tool names in display text', () => {
+        const presentation = getToolPresentation({
+            toolName: 'mcp__hapi__change_title',
+            input: {
+                title: '测试标题'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'zh-CN'
+        })
+
+        expect(getToolDisplayText(
+            null,
+            'mcp__hapi__change_title',
+            presentation
+        )).toEqual({
+            title: 'mcp__hapi__change_title',
+            subtitle: '测试标题'
         })
     })
 })
