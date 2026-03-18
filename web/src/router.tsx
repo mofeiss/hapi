@@ -4,6 +4,7 @@ import { CronExpressionParser } from "cron-parser";
 import {
   canScheduledTaskTogglePaused,
   getScheduledTaskPauseValidationCode,
+  hasScheduledTaskExecuted,
   isScheduledTaskPauseLocked,
 } from "@hapi/protocol";
 import {
@@ -1335,6 +1336,19 @@ function buildScheduledRunsCopyText(
   return lines.join("\n")
 }
 
+function buildScheduledDetailCopyText(
+  overviewText: string,
+  runsText: string,
+): string {
+  return [
+    "<scheduled-task-detail>",
+    overviewText,
+    "",
+    runsText,
+    "</scheduled-task-detail>",
+  ].join("\n")
+}
+
 function getScheduledErrorMessage(
   error: unknown,
   t: (key: string, params?: Record<string, string | number>) => string,
@@ -1641,6 +1655,10 @@ function ScheduledTaskHeader(props: {
   const titleChanged = trimmedEditedTitle.length > 0 && trimmedEditedTitle !== props.task.title;
   const canTogglePaused = canScheduledTaskTogglePaused(props.task);
   const pauseLocked = !canTogglePaused;
+  const showConsumedOnceIcon =
+    pauseLocked &&
+    props.task.scheduleType === "once" &&
+    hasScheduledTaskExecuted(props.task);
   const pauseDisabledReason = props.task.paused
     ? getScheduledResumeValidationMessage(props.task, t)
     : getScheduledPauseValidationMessage(props.task, t);
@@ -1712,8 +1730,19 @@ function ScheduledTaskHeader(props: {
                 title={pauseButtonTitle}
                 aria-label={pauseButtonTitle}
               >
-                {pauseLocked ? (
-                  <StopIcon className="h-[17px] w-[17px]" />
+                {showConsumedOnceIcon ? (
+                  <svg
+                    className="h-[17px] w-[17px]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
                 ) : props.task.paused ? (
                   <PlayIcon className="h-[17px] w-[17px]" />
                 ) : (
@@ -2000,13 +2029,14 @@ function ScheduledTaskDetailPanel({
     [taskRuns, selectedRun, t],
   );
 
-  const handleCopyOverview = useCallback(() => {
-    void copy(overviewCopyText);
-  }, [copy, overviewCopyText]);
+  const detailCopyText = useMemo(
+    () => buildScheduledDetailCopyText(overviewCopyText, runsCopyText),
+    [overviewCopyText, runsCopyText],
+  );
 
-  const handleCopyRuns = useCallback(() => {
-    void copy(runsCopyText);
-  }, [copy, runsCopyText]);
+  const handleCopyDetails = useCallback(() => {
+    void copy(detailCopyText);
+  }, [copy, detailCopyText]);
 
   return (
     <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
@@ -2085,12 +2115,12 @@ function ScheduledTaskDetailPanel({
               {(detailMode === "overview" || detailMode === "runs") ? (
                 <button
                   type="button"
-                  onClick={detailMode === "overview" ? handleCopyOverview : handleCopyRuns}
+                  onClick={handleCopyDetails}
                   className="inline-flex min-w-0 shrink-0 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] px-2.5 py-1.5 text-xs font-medium text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
-                  title={copied ? t("composer.copied") : t("composer.copy")}
-                  aria-label={copied ? t("composer.copied") : t("composer.copy")}
+                  title={copied ? t("scheduled.detail.copied") : t("scheduled.detail.copy")}
+                  aria-label={copied ? t("scheduled.detail.copied") : t("scheduled.detail.copy")}
                 >
-                  {copied ? t("composer.copied") : t("composer.copy")}
+                  {copied ? t("scheduled.detail.copied") : t("scheduled.detail.copy")}
                 </button>
               ) : null}
             </div>

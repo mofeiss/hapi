@@ -127,6 +127,8 @@ export default {
   'scheduled.detail.mode.overview': '概览',
   'scheduled.detail.mode.runs': '执行',
   'scheduled.detail.mode.session': '会话',
+  'scheduled.detail.copy': '复制详情',
+  'scheduled.detail.copied': '已复制',
   'scheduled.detail.mode.overviewHint': '查看任务定义、调度控制和稳定的任务级信息。',
   'scheduled.detail.mode.runsHint': '查看执行历史、运行结果，以及这个任务是否真的完成了目标。',
   'scheduled.detail.mode.sessionHint': '查看当前选中 run 的实际 agent 会话，并可进入交互模式接管。',
