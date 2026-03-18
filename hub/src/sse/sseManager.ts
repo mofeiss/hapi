@@ -2,6 +2,7 @@ import type { SyncEvent } from '../sync/syncEngine'
 import type { VisibilityState } from '../visibility/visibilityTracker'
 import type { VisibilityTracker } from '../visibility/visibilityTracker'
 import { isDiagnosticLoggingEnabled } from '../config/diagnosticLogging'
+import { writeTraceDebugLog } from '../utils/traceDebugLog'
 
 function summarizeForDebug(value: unknown, depth: number = 0): unknown {
     if (depth > 4) return '[MaxDepth]'
@@ -137,7 +138,7 @@ export class SSEManager {
             }
 
             if (isDiagnosticLoggingEnabled()) {
-                console.debug('[TRACE HUB SSE] broadcast.deliver', {
+                writeTraceDebugLog('TRACE HUB SSE broadcast.deliver', {
                     connectionId: connection.id,
                     namespace: connection.namespace,
                     sessionId: connection.sessionId,
