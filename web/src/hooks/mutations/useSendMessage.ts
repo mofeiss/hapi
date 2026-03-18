@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
-import type { ApiClient } from '@/api/client'
+import { ApiError, type ApiClient } from '@/api/client'
 import type { AttachmentMetadata, DecryptedMessage, UserMessageMeta } from '@/types/api'
 import { makeClientSideId } from '@/lib/messages'
 import {
@@ -71,12 +71,30 @@ export function useSendMessage(
     const [isResolving, setIsResolving] = useState(false)
     const resolveGuardRef = useRef(false)
 
+    const sendMessageWithActivationRetry = async (input: SendMessageInput): Promise<void> => {
+        if (!api) {
+            throw new Error('API unavailable')
+        }
+
+        try {
+            await api.sendMessage(input.sessionId, input.text, input.localId, input.attachments, input.meta)
+        } catch (error) {
+            const shouldWaitForActive = error instanceof ApiError
+                && error.status === 409
+                && error.message.toLowerCase().includes('inactive')
+
+            if (!shouldWaitForActive) {
+                throw error
+            }
+
+            await api.waitForSessionActive(input.sessionId)
+            await api.sendMessage(input.sessionId, input.text, input.localId, input.attachments, input.meta)
+        }
+    }
+
     const mutation = useMutation({
         mutationFn: async (input: SendMessageInput) => {
-            if (!api) {
-                throw new Error('API unavailable')
-            }
-            await api.sendMessage(input.sessionId, input.text, input.localId, input.attachments, input.meta)
+            await sendMessageWithActivationRetry(input)
         },
         onMutate: async (input) => {
             const optimisticMessage: DecryptedMessage = {
@@ -150,14 +168,18 @@ export function useSendMessage(
                     setIsResolving(false)
                 }
             }
-            mutation.mutate({
-                sessionId: targetSessionId,
-                text,
-                localId,
-                createdAt,
-                attachments,
-                meta: sendOptions?.meta
-            })
+            try {
+                await mutation.mutateAsync({
+                    sessionId: targetSessionId,
+                    text,
+                    localId,
+                    createdAt,
+                    attachments,
+                    meta: sendOptions?.meta
+                })
+            } catch {
+                // mutation handlers already update optimistic state and haptics
+            }
         })()
     }
 
@@ -182,12 +204,14 @@ export function useSendMessage(
 
         updateMessageStatus(sessionId, localId, 'sending')
 
-        mutation.mutate({
+        void mutation.mutateAsync({
             sessionId,
             text: message.originalText,
             localId,
             createdAt: message.createdAt,
             meta: extractMessageMeta(message)
+        }).catch(() => {
+            // mutation handlers already update optimistic state and haptics
         })
     }
 

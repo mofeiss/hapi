@@ -250,6 +250,29 @@ export class ApiClient {
         return await this.request<SessionResponse>(`/api/sessions/${encodeURIComponent(sessionId)}`)
     }
 
+    async waitForSessionActive(
+        sessionId: string,
+        options?: {
+            timeoutMs?: number
+            intervalMs?: number
+        }
+    ): Promise<SessionResponse> {
+        const timeoutMs = options?.timeoutMs ?? 15_000
+        const intervalMs = options?.intervalMs ?? 250
+        const startedAt = Date.now()
+
+        while (Date.now() - startedAt < timeoutMs) {
+            const session = await this.getSession(sessionId)
+            const runtimeUnavailable = Boolean(session.session.agentState?.runtimeUnavailable)
+            if (session.session.active && !runtimeUnavailable) {
+                return session
+            }
+            await new Promise((resolve) => setTimeout(resolve, intervalMs))
+        }
+
+        throw new ApiError('Timed out waiting for session to become active', 409, 'session_not_active')
+    }
+
     async getMessages(sessionId: string, options: { beforeSeq?: number | null; limit?: number }): Promise<MessagesResponse> {
         const params = new URLSearchParams()
         if (options.beforeSeq !== undefined && options.beforeSeq !== null) {
