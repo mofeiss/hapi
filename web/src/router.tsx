@@ -1859,22 +1859,23 @@ function ScheduledTaskDetailPanel({
                     ),
                   },
                   {
-                    key: "schedule",
-                    label: t("scheduled.detail.schedule"),
-                    valueNode: (
-                      <div className="flex min-w-0 items-center justify-end gap-2 text-right text-sm leading-[19px] text-[var(--app-fg)]">
-                        <span className="shrink-0">
-                          {task.scheduleType === "cron"
-                            ? t("scheduled.list.kind.cron")
-                            : t("scheduled.list.kind.once")}
-                        </span>
-                        <span className="block min-w-0 truncate">
-                          {task.scheduleType === "cron"
-                            ? (task.scheduleSpec.cron ?? "-")
-                            : formatScheduledDateTime(task.scheduleSpec.runAt)}
-                        </span>
-                      </div>
-                    ),
+                    key: "schedule-type",
+                    label: t("scheduled.detail.scheduleType"),
+                    value:
+                      task.scheduleType === "cron"
+                        ? t("scheduled.list.kind.cron")
+                        : t("scheduled.list.kind.once"),
+                  },
+                  {
+                    key: "schedule-detail",
+                    label:
+                      task.scheduleType === "cron"
+                        ? t("scheduled.detail.cron")
+                        : t("scheduled.detail.runAt"),
+                    value:
+                      task.scheduleType === "cron"
+                        ? (task.scheduleSpec.cron ?? "-")
+                        : formatScheduledDateTime(task.scheduleSpec.runAt),
                   },
                   {
                     key: "created",
