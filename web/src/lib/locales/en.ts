@@ -154,6 +154,8 @@ export default {
   "scheduled.action.save": "Save",
   "scheduled.action.cancelEdit": "Cancel Edit",
   "scheduled.validation.onceExpired": "This one-time task is already past its scheduled run time and cannot be resumed.",
+  "scheduled.validation.onceExpiredPause": "This one-time task is already past its scheduled run time and cannot be paused.",
+  "scheduled.validation.onceAlreadyConsumed": "This one-time task has already run and can no longer be paused or resumed.",
   "scheduled.validation.cronInvalid": "This cron expression is invalid and cannot be resumed.",
   "scheduled.validation.unknown": "This scheduled task cannot be resumed in its current state.",
 

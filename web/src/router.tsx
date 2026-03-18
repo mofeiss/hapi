@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CronExpressionParser } from "cron-parser";
 import {
+  canScheduledTaskTogglePaused,
+  getScheduledTaskPauseValidationCode,
+  isScheduledTaskPauseLocked,
+} from "@hapi/protocol";
+import {
   Link,
   Navigate,
   Outlet,
@@ -50,6 +55,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useToast } from "@/lib/toast-context";
 import { useTranslation } from "@/lib/use-translation";
 import { useTheme } from "@/hooks/useTheme";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { ApiError } from "@/api/client";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import {
@@ -1175,14 +1181,18 @@ function getScheduledResumeValidationMessage(
     return null;
   }
 
+  const pauseValidationCode = getScheduledTaskPauseValidationCode(task);
+  if (pauseValidationCode === "once_already_consumed") {
+    return t("scheduled.validation.onceAlreadyConsumed");
+  }
+  if (pauseValidationCode === "once_expired") {
+    return t("scheduled.validation.onceExpired");
+  }
+  if (pauseValidationCode === "unknown") {
+    return t("scheduled.validation.unknown");
+  }
+
   if (task.scheduleType === "once") {
-    const runAt = task.scheduleSpec.runAt;
-    if (typeof runAt !== "number" || !Number.isFinite(runAt)) {
-      return t("scheduled.validation.unknown");
-    }
-    if (runAt <= Date.now()) {
-      return t("scheduled.validation.onceExpired");
-    }
     return null;
   }
 
@@ -1202,11 +1212,137 @@ function getScheduledResumeValidationMessage(
   }
 }
 
+function getScheduledPauseValidationMessage(
+  task: ScheduledTask,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string | null {
+  if (task.paused) {
+    return null;
+  }
+
+  const pauseValidationCode = getScheduledTaskPauseValidationCode(task);
+  if (pauseValidationCode === "once_already_consumed") {
+    return t("scheduled.validation.onceAlreadyConsumed");
+  }
+  if (pauseValidationCode === "once_expired") {
+    return t("scheduled.validation.onceExpiredPause");
+  }
+  if (pauseValidationCode === "unknown") {
+    return t("scheduled.validation.unknown");
+  }
+
+  return null;
+}
+
+function formatScheduledFieldForCopy(label: string, value: string | null | undefined): string {
+  return `${label}: ${value && value.trim().length > 0 ? value : "-"}`;
+}
+
+function buildScheduledOverviewCopyText(
+  task: ScheduledTask,
+  machineTitle: string,
+  createdAtLabel: string | null,
+  createdBySessionTitle: string | null,
+  createdBySessionFlavor: string | null,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  const lines = [
+    "<scheduled-task-overview>",
+    formatScheduledFieldForCopy(t("scheduled.detail.status"), getScheduledTaskStatusText(task, t)),
+    formatScheduledFieldForCopy(t("scheduled.detail.machine"), machineTitle),
+    formatScheduledFieldForCopy(`${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`, `${task.agentFlavor} / ${task.model ?? "-"}`),
+    formatScheduledFieldForCopy(t("scheduled.detail.prompt"), task.prompt),
+    formatScheduledFieldForCopy(t("scheduled.detail.directory"), task.targetDirectory),
+    formatScheduledFieldForCopy(t("scheduled.detail.permission"), getScheduledSessionPermissionLabel(task.scheduledSessionPermission, t)),
+    formatScheduledFieldForCopy(t("scheduled.detail.scheduleType"), task.scheduleType === "cron" ? t("scheduled.list.kind.cron") : t("scheduled.list.kind.once")),
+    formatScheduledFieldForCopy(task.scheduleType === "cron" ? t("scheduled.detail.cron") : t("scheduled.detail.runAt"), task.scheduleType === "cron" ? (task.scheduleSpec.cron ?? "-") : (formatScheduledDateTime(task.scheduleSpec.runAt) ?? "-")),
+    formatScheduledFieldForCopy(t("scheduled.detail.created"), createdAtLabel),
+    formatScheduledFieldForCopy(t("scheduled.detail.taskId"), task.id),
+    formatScheduledFieldForCopy(t("scheduled.detail.createdFromSession"), task.createdBySessionId ? (createdBySessionTitle ?? `SESSION ID ${task.createdBySessionId}`) : t("scheduled.detail.createdFromSessionMissing")),
+  ]
+
+  if (task.createdBySessionId) {
+    lines.push(formatScheduledFieldForCopy(`${t("scheduled.detail.createdFromSession")} ID`, task.createdBySessionId))
+  }
+
+  if (task.createdBySessionId && createdBySessionFlavor) {
+    lines.push(formatScheduledFieldForCopy(`${t("scheduled.detail.createdFromSession")} Flavor`, createdBySessionFlavor))
+  }
+
+  lines.push("</scheduled-task-overview>")
+
+  return lines.join("\n")
+}
+
+function buildScheduledRunsCopyText(
+  taskRuns: ScheduledTaskRun[],
+  selectedRun: ScheduledTaskRun | null,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  const total = taskRuns.length
+  const succeeded = taskRuns.filter((run) => run.status === "succeeded").length
+  const failed = taskRuns.filter((run) => run.status === "failed").length
+  const running = taskRuns.filter((run) => run.status === "running").length
+  const queued = taskRuns.filter((run) => run.status === "queued").length
+  const canceled = taskRuns.filter((run) => run.status === "canceled").length
+  const missed = taskRuns.filter((run) => run.status === "missed").length
+
+  const lines = [
+    "<scheduled-task-runs>",
+    "<runs-summary>",
+    formatScheduledFieldForCopy(t("scheduled.detail.runs"), `${total}`),
+    formatScheduledFieldForCopy(`${t("scheduled.runStatus.succeeded")}`, `${succeeded}`),
+    formatScheduledFieldForCopy(`${t("scheduled.runStatus.failed")}`, `${failed}`),
+    formatScheduledFieldForCopy(`${t("scheduled.runStatus.running")}`, `${running}`),
+    formatScheduledFieldForCopy(`${t("scheduled.runStatus.queued")}`, `${queued}`),
+    formatScheduledFieldForCopy(`${t("scheduled.runStatus.canceled")}`, `${canceled}`),
+    formatScheduledFieldForCopy(`${t("scheduled.runStatus.missed")}`, `${missed}`),
+    "</runs-summary>",
+  ]
+
+  if (!selectedRun) {
+    lines.push("</scheduled-task-runs>")
+    return lines.join("\n")
+  }
+
+  lines.push("")
+  lines.push("<selected-run>")
+  lines.push(formatScheduledFieldForCopy(t("scheduled.detail.selectedRun"), t(`scheduled.runStatus.${selectedRun.status}`)))
+  lines.push(formatScheduledFieldForCopy(t("scheduled.detail.triggered"), formatScheduledDateTime(selectedRun.triggeredAt) ?? "-"))
+  lines.push(formatScheduledFieldForCopy(t("scheduled.detail.runId"), selectedRun.id))
+  lines.push(formatScheduledFieldForCopy(t("scheduled.detail.finished"), formatScheduledDateTime(selectedRun.finishedAt) ?? "-"))
+  lines.push(formatScheduledFieldForCopy(t("scheduled.detail.session"), selectedRun.sessionId ?? "-"))
+
+  if (selectedRun.error) {
+    lines.push(formatScheduledFieldForCopy("Error", selectedRun.error))
+  }
+
+  if (selectedRun.resultSummary) {
+    lines.push(formatScheduledFieldForCopy("Result", getScheduledRunResultSummaryLabel(selectedRun.resultSummary, t)))
+  }
+
+  if (selectedRun.taskOutcome) {
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcomeStatus"), getScheduledTaskOutcomeStatusLabel(selectedRun.taskOutcome.status, t)))
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcome"), selectedRun.taskOutcome.summary))
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcomeReportedAt"), formatScheduledDateTime(selectedRun.taskOutcome.reportedAt) ?? "-"))
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.needsUserIntervention"), selectedRun.taskOutcome.needsUserIntervention ? t("common.yes") : t("common.no")))
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.permanentFailureLikely"), selectedRun.taskOutcome.permanentFailureLikely ? t("common.yes") : t("common.no")))
+  }
+
+  lines.push("</selected-run>")
+  lines.push("</scheduled-task-runs>")
+
+  return lines.join("\n")
+}
+
 function getScheduledErrorMessage(
   error: unknown,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
   if (error instanceof ApiError) {
+    if (error.code === "scheduled.once_already_consumed") {
+      return t("scheduled.validation.onceAlreadyConsumed");
+    }
     if (error.code === "scheduled.once_expired") {
       return t("scheduled.validation.onceExpired");
     }
@@ -1360,6 +1496,10 @@ function ScheduledTaskListRow(props: {
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
         paused={props.task.paused}
+        canTogglePaused={canScheduledTaskTogglePaused(props.task) && !props.isPending}
+        togglePausedTitle={props.task.paused
+          ? (getScheduledResumeValidationMessage(props.task, t) ?? t("scheduled.action.resume"))
+          : (getScheduledPauseValidationMessage(props.task, t) ?? t("scheduled.action.pause"))}
         canCancel={
           props.task.status === "active" && !props.task.paused && !props.isPending
         }
@@ -1377,6 +1517,8 @@ function ScheduledTaskStatusIcon(props: {
   latestRun: ScheduledTaskRun | undefined;
   className?: string;
 }) {
+  const pauseLocked = isScheduledTaskPauseLocked(props.task);
+
   if (props.latestRun?.status === "running") {
     return (
       <svg
@@ -1414,6 +1556,23 @@ function ScheduledTaskStatusIcon(props: {
   }
 
   if (props.latestRun?.status === "succeeded") {
+    return (
+      <svg
+        className={props.className}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    );
+  }
+
+  if (pauseLocked && props.task.scheduleType === "once") {
     return (
       <svg
         className={props.className}
@@ -1480,6 +1639,16 @@ function ScheduledTaskHeader(props: {
     "inline-flex h-[30px] items-center rounded-lg border border-[var(--app-border)] px-2.5 text-xs text-[var(--app-fg)] disabled:opacity-50";
   const trimmedEditedTitle = props.editState?.title.trim() ?? "";
   const titleChanged = trimmedEditedTitle.length > 0 && trimmedEditedTitle !== props.task.title;
+  const canTogglePaused = canScheduledTaskTogglePaused(props.task);
+  const pauseLocked = !canTogglePaused;
+  const pauseDisabledReason = props.task.paused
+    ? getScheduledResumeValidationMessage(props.task, t)
+    : getScheduledPauseValidationMessage(props.task, t);
+  const pauseButtonTitle = pauseLocked
+    ? (pauseDisabledReason ?? t("scheduled.validation.unknown"))
+    : props.task.paused
+      ? t("scheduled.action.resume")
+      : t("scheduled.action.pause");
 
   return (
     <div className="bg-[var(--app-bg)] pt-[env(safe-area-inset-top)]">
@@ -1535,23 +1704,17 @@ function ScheduledTaskHeader(props: {
               <div className="mx-0.5 h-4 w-px bg-[var(--app-divider)]" />
               <button
                 type="button"
-                disabled={props.isPending}
+                disabled={props.isPending || pauseLocked}
                 onClick={() => {
                   void props.onTogglePaused();
                 }}
                 className={headerIconButtonClassName}
-                title={
-                  props.task.paused
-                    ? t("scheduled.action.resume")
-                    : t("scheduled.action.pause")
-                }
-                aria-label={
-                  props.task.paused
-                    ? t("scheduled.action.resume")
-                    : t("scheduled.action.pause")
-                }
+                title={pauseButtonTitle}
+                aria-label={pauseButtonTitle}
               >
-                {props.task.paused ? (
+                {pauseLocked ? (
+                  <StopIcon className="h-[17px] w-[17px]" />
+                ) : props.task.paused ? (
                   <PlayIcon className="h-[17px] w-[17px]" />
                 ) : (
                   <PauseIcon className="h-[17px] w-[17px]" />
@@ -1696,6 +1859,7 @@ function ScheduledTaskDetailPanel({
   });
   const [runSummaryTipOpen, setRunSummaryTipOpen] = useState(false);
   const runSummaryTipRef = useRef<HTMLDivElement | null>(null);
+  const { copied, copy } = useCopyToClipboard();
   const configValueSlotClassName =
     "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
   const configReadOnlyValueClassName =
@@ -1819,6 +1983,31 @@ function ScheduledTaskDetailPanel({
     }
   }, [detailMode, onSelectRun]);
 
+  const overviewCopyText = useMemo(
+    () => buildScheduledOverviewCopyText(
+      task,
+      machineTitle,
+      createdAtLabel,
+      createdBySessionTitle,
+      createdBySessionFlavor,
+      t,
+    ),
+    [task, machineTitle, createdAtLabel, createdBySessionTitle, createdBySessionFlavor, t],
+  );
+
+  const runsCopyText = useMemo(
+    () => buildScheduledRunsCopyText(taskRuns, selectedRun, t),
+    [taskRuns, selectedRun, t],
+  );
+
+  const handleCopyOverview = useCallback(() => {
+    void copy(overviewCopyText);
+  }, [copy, overviewCopyText]);
+
+  const handleCopyRuns = useCallback(() => {
+    void copy(runsCopyText);
+  }, [copy, runsCopyText]);
+
   return (
     <div className="relative flex h-full min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-hidden bg-[var(--app-bg)]">
       <ScheduledTaskHeader
@@ -1892,6 +2081,18 @@ function ScheduledTaskDetailPanel({
                       ? t("scheduled.detail.mode.sessionDisabled")
                       : t("scheduled.detail.mode.sessionHint")}
               </div>
+
+              {(detailMode === "overview" || detailMode === "runs") ? (
+                <button
+                  type="button"
+                  onClick={detailMode === "overview" ? handleCopyOverview : handleCopyRuns}
+                  className="inline-flex min-w-0 shrink-0 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] px-2.5 py-1.5 text-xs font-medium text-[var(--app-hint)] hover:bg-[var(--app-subtle-bg)] hover:text-[var(--app-fg)]"
+                  title={copied ? t("composer.copied") : t("composer.copy")}
+                  aria-label={copied ? t("composer.copied") : t("composer.copy")}
+                >
+                  {copied ? t("composer.copied") : t("composer.copy")}
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -1986,6 +2187,11 @@ function ScheduledTaskDetailPanel({
                     key: "created",
                     label: t("scheduled.detail.created"),
                     value: createdAtLabel ?? "-",
+                  },
+                  {
+                    key: "task-id",
+                    label: t("scheduled.detail.taskId"),
+                    value: task.id,
                   },
                   {
                     key: "created-by-session",
@@ -2467,13 +2673,17 @@ function CollapsedScheduledItem(props: {
   onCancelTask: () => void;
   onDeleteTask: () => void;
 }) {
+  const { t } = useTranslation();
   const { haptic } = usePlatform();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 });
   const title = props.task.title.trim();
   const initial = getSessionInitial(title || "S");
+  const pauseLocked = isScheduledTaskPauseLocked(props.task);
   const toneClass = props.task.paused
     ? "bg-amber-500/15 text-amber-600"
+    : pauseLocked
+      ? "bg-slate-500/15 text-slate-500"
     : props.latestRun?.status === "running"
       ? "bg-sky-500/15 text-sky-600"
       : props.latestRun?.status === "failed"
@@ -2516,6 +2726,10 @@ function CollapsedScheduledItem(props: {
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
         paused={props.task.paused}
+        canTogglePaused={!pauseLocked && !props.isPending}
+        togglePausedTitle={props.task.paused
+          ? (getScheduledResumeValidationMessage(props.task, t) ?? t("scheduled.action.resume"))
+          : (getScheduledPauseValidationMessage(props.task, t) ?? t("scheduled.action.pause"))}
         canCancel={
           props.task.status === "active" && !props.task.paused && !props.isPending
         }
@@ -3288,10 +3502,14 @@ function SessionsPage() {
 
   const handleScheduledTogglePaused = useCallback(
     async (task: ScheduledTask) => {
-      const validationMessage = getScheduledResumeValidationMessage(task, t);
+      const validationMessage = task.paused
+        ? getScheduledResumeValidationMessage(task, t)
+        : getScheduledPauseValidationMessage(task, t);
       if (validationMessage) {
         addToast({
-          title: t("scheduled.action.resume"),
+          title: task.paused
+            ? t("scheduled.action.resume")
+            : t("scheduled.action.pause"),
           body: validationMessage,
           sessionId: "",
           url: "/scheduled",

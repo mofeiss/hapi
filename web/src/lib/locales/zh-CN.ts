@@ -153,6 +153,8 @@ export default {
   'scheduled.action.save': '保存',
   'scheduled.action.cancelEdit': '取消编辑',
   'scheduled.validation.onceExpired': '这个单次任务的执行时间已经过去，无法恢复。',
+  'scheduled.validation.onceExpiredPause': '这个单次任务的执行时间已经过去，无法暂停。',
+  'scheduled.validation.onceAlreadyConsumed': '这个单次任务已经执行过了，不能再暂停或恢复。',
   'scheduled.validation.cronInvalid': '这个 Cron 表达式无效，无法恢复。',
   'scheduled.validation.unknown': '这个定时任务当前状态下无法恢复。',
 

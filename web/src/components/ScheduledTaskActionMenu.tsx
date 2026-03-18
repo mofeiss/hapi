@@ -14,6 +14,8 @@ type ScheduledTaskActionMenuProps = {
     isOpen: boolean
     onClose: () => void
     paused: boolean
+    canTogglePaused: boolean
+    togglePausedTitle?: string
     canCancel: boolean
     onTogglePaused: () => void
     onCancel: () => void
@@ -109,6 +111,8 @@ export function ScheduledTaskActionMenu(props: ScheduledTaskActionMenuProps) {
         isOpen,
         onClose,
         paused,
+        canTogglePaused,
+        togglePausedTitle,
         canCancel,
         onTogglePaused,
         onCancel,
@@ -227,11 +231,15 @@ export function ScheduledTaskActionMenu(props: ScheduledTaskActionMenuProps) {
                 <button
                     type="button"
                     role="menuitem"
-                    className={`${baseItemClassName} hover:bg-[var(--app-subtle-bg)]`}
+                    className={`${baseItemClassName} ${canTogglePaused ? 'hover:bg-[var(--app-subtle-bg)]' : 'cursor-not-allowed opacity-50'}`}
                     onClick={() => {
+                        if (!canTogglePaused) return
                         onClose()
                         onTogglePaused()
                     }}
+                    disabled={!canTogglePaused}
+                    title={togglePausedTitle}
+                    aria-label={togglePausedTitle}
                 >
                     {paused ? (
                         <PlayIcon className="h-4 w-4 text-[var(--app-hint)]" />

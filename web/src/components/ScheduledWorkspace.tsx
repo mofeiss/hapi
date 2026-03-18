@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import { canScheduledTaskTogglePaused, getScheduledTaskPauseValidationCode } from '@hapi/protocol'
 
 import type { ApiClient } from '@/api/client'
 import type { Machine, ScheduledTask, ScheduledTaskRun } from '@/types/api'
@@ -51,6 +52,22 @@ function getScheduledRunResultSummaryLabel(resultSummary: string, t: ReturnType<
 
 function getScheduledTaskStatusText(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string {
     return task.paused ? t('scheduled.list.status.paused') : t('scheduled.list.status.running')
+}
+
+function getScheduledWorkspacePauseValidationMessage(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string | null {
+    if (task.paused) {
+        const pauseValidationCode = getScheduledTaskPauseValidationCode(task)
+        if (pauseValidationCode === 'once_already_consumed') return t('scheduled.validation.onceAlreadyConsumed')
+        if (pauseValidationCode === 'once_expired') return t('scheduled.validation.onceExpired')
+        if (pauseValidationCode === 'unknown') return t('scheduled.validation.unknown')
+        return null
+    }
+
+    const pauseValidationCode = getScheduledTaskPauseValidationCode(task)
+    if (pauseValidationCode === 'once_already_consumed') return t('scheduled.validation.onceAlreadyConsumed')
+    if (pauseValidationCode === 'once_expired') return t('scheduled.validation.onceExpiredPause')
+    if (pauseValidationCode === 'unknown') return t('scheduled.validation.unknown')
+    return null
 }
 
 type EditState = {
@@ -151,6 +168,9 @@ function ScheduledTaskListItem(props: {
     const { haptic } = usePlatform()
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 })
+    const canTogglePaused = canScheduledTaskTogglePaused(props.task) && !props.isPending
+    const togglePausedTitle = getScheduledWorkspacePauseValidationMessage(props.task, t)
+        ?? (props.task.paused ? t('scheduled.action.resume') : t('scheduled.action.pause'))
 
     const longPressHandlers = useLongPress({
         onLongPress: (point) => {
@@ -207,6 +227,8 @@ function ScheduledTaskListItem(props: {
                 isOpen={menuOpen}
                 onClose={() => setMenuOpen(false)}
                 paused={props.task.paused}
+                canTogglePaused={canTogglePaused}
+                togglePausedTitle={togglePausedTitle}
                 canCancel={props.task.status === 'active' && !props.task.paused && !props.isPending}
                 onTogglePaused={props.onTogglePaused}
                 onCancel={props.onCancel}

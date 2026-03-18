@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { getScheduledTaskPauseValidationCode } from '@hapi/protocol'
 import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol'
 
 import type { WebAppEnv } from '../middleware/auth'
@@ -168,6 +169,40 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
         }
 
         try {
+            if (typeof parsed.data.paused === 'boolean') {
+                const snapshot = await getScheduledTaskSnapshot(parsed.data.taskId)
+                if (!snapshot.task) {
+                    return c.json({ error: 'Scheduled task not found', code: 'scheduled.task_not_found' }, 404)
+                }
+
+                const pauseValidationCode = getScheduledTaskPauseValidationCode(snapshot.task)
+                if (pauseValidationCode !== null) {
+                    const attemptingStateChange = parsed.data.paused !== snapshot.task.paused
+                    if (attemptingStateChange) {
+                        if (pauseValidationCode === 'once_already_consumed') {
+                            return c.json({
+                                error: 'This one-time task has already run and can no longer be paused or resumed.',
+                                code: 'scheduled.once_already_consumed'
+                            }, 400)
+                        }
+
+                        if (pauseValidationCode === 'once_expired') {
+                            return c.json({
+                                error: snapshot.task.paused
+                                    ? 'This one-time task is already past its scheduled run time and cannot be resumed.'
+                                    : 'This one-time task is already past its scheduled run time and cannot be paused.',
+                                code: 'scheduled.once_expired'
+                            }, 400)
+                        }
+
+                        return c.json({
+                            error: 'This scheduled task cannot be updated in its current state.',
+                            code: 'scheduled.invalid_state'
+                        }, 400)
+                    }
+                }
+            }
+
             const result = await runnerPost<{ task: unknown | null }>('/scheduler/tasks/update', parsed.data)
             return c.json(result)
         } catch (error) {
