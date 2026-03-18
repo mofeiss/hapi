@@ -58,7 +58,7 @@ function getScheduledTaskStatusText(task: ScheduledTask, t: ReturnType<typeof us
 }
 
 function getScheduledWorkspacePauseValidationMessage(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string | null {
-    if (task.paused) {
+    if (task.phase === 'paused') {
         const pauseValidationCode = getScheduledTaskPauseValidationCode(task)
         if (pauseValidationCode === 'once_already_consumed') return t('scheduled.validation.onceAlreadyConsumed')
         if (pauseValidationCode === 'once_expired') return t('scheduled.validation.onceExpired')
@@ -91,9 +91,9 @@ function buildEditState(task: ScheduledTask): EditState {
         targetDirectory: task.targetDirectory,
         model: task.model ?? '',
         scheduleType: task.scheduleType,
-        runAt: formatDateTimeLocalInput(task.scheduleSpec?.runAt ?? task.nextRunAt),
-        cron: task.scheduleSpec?.cron ?? '',
-        paused: Boolean(task.paused),
+        runAt: formatDateTimeLocalInput(task.runAt ?? task.nextRunAt),
+        cron: task.cron ?? '',
+        paused: task.phase === 'paused',
     }
 }
 
@@ -165,7 +165,7 @@ function ScheduledTaskListItem(props: {
     onSelect: () => void
     onTogglePaused: () => void
     onArchive: () => void
-    onDelete: () => void
+        onDelete: () => void
 }) {
     const { t } = useTranslation()
     const { haptic } = usePlatform()
@@ -173,7 +173,7 @@ function ScheduledTaskListItem(props: {
     const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 })
     const canTogglePaused = canScheduledTaskTogglePaused(props.task) && !props.isPending
     const togglePausedTitle = getScheduledWorkspacePauseValidationMessage(props.task, t)
-        ?? (props.task.paused ? t('scheduled.action.resume') : t('scheduled.action.pause'))
+        ?? (props.task.phase === 'paused' ? t('scheduled.action.resume') : t('scheduled.action.pause'))
 
     const longPressHandlers = useLongPress({
         onLongPress: (point) => {
@@ -207,7 +207,7 @@ function ScheduledTaskListItem(props: {
                         <div className="truncate text-sm font-medium text-[var(--app-fg)]">{props.task.title}</div>
                         <div className="mt-1 truncate text-xs text-[var(--app-hint)]">{props.task.targetDirectory}</div>
                     </div>
-                    <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + (props.task.paused ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')}>
+                    <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + (props.task.phase === 'paused' ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600')}>
                         {getScheduledTaskStatusText(props.task, t)}
                     </span>
                 </div>
@@ -229,7 +229,7 @@ function ScheduledTaskListItem(props: {
             <ScheduledTaskActionMenu
                 isOpen={menuOpen}
                 onClose={() => setMenuOpen(false)}
-                paused={Boolean(props.task.paused)}
+                paused={props.task.phase === 'paused'}
                 canTogglePaused={canTogglePaused}
                 togglePausedTitle={togglePausedTitle}
                 canArchive={props.task.phase !== 'archived' && !props.isPending}
@@ -271,7 +271,7 @@ export function ScheduledWorkspace(props: {
                 task.targetDirectory,
                 task.agentFlavor,
                 task.model,
-            task.scheduleSpec?.cron,
+                task.cron,
                 task.machineId,
             ]
                 .filter(Boolean)
@@ -402,7 +402,7 @@ export function ScheduledWorkspace(props: {
         if (!selectedTask) {
             return
         }
-        await updateScheduledTask({ taskId: selectedTask.id, paused: !selectedTask.paused })
+        await updateScheduledTask({ taskId: selectedTask.id, phase: selectedTask.phase === 'paused' ? 'enabled' : 'paused' })
     }
 
     async function handleDeleteTask(): Promise<void> {
@@ -468,7 +468,7 @@ export function ScheduledWorkspace(props: {
                                                 setSelectedRunId(latestRun?.id ?? null)
                                                 openWorkspaceScheduledTask(task.id, latestRun?.id ?? null)
                                             }}
-                                            onTogglePaused={() => void updateScheduledTask({ taskId: task.id, paused: !task.paused })}
+                                            onTogglePaused={() => void updateScheduledTask({ taskId: task.id, phase: task.phase === 'paused' ? 'enabled' : 'paused' })}
                                             onArchive={() => void archiveScheduledTask(task.id)}
                                             onDelete={() => setDeleteTaskId(task.id)}
                                         />
@@ -505,7 +505,7 @@ export function ScheduledWorkspace(props: {
                                     {!isEditing ? (
                                         <>
                                             <button type="button" disabled={isPending} onClick={() => setIsEditing(true)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Edit</button>
-                                            <button type="button" disabled={isPending} onClick={() => void handleTogglePaused()} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{selectedTask.paused ? 'Resume' : 'Pause'}</button>
+                                            <button type="button" disabled={isPending} onClick={() => void handleTogglePaused()} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">{selectedTask.phase === 'paused' ? 'Resume' : 'Pause'}</button>
                                             <button type="button" disabled={isPending || selectedTask.phase === 'archived'} onClick={() => void archiveScheduledTask(selectedTask.id)} className="rounded-lg border border-[var(--app-border)] px-3 py-2 text-sm text-[var(--app-fg)] disabled:opacity-50">Archive</button>
                                             <button type="button" disabled={isPending} onClick={() => setDeleteTaskId(selectedTask.id)} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 disabled:opacity-50">Delete</button>
                                         </>
@@ -519,7 +519,7 @@ export function ScheduledWorkspace(props: {
                             </div>
 
                             <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-3">
-                                <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Status</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedTask.status}{selectedTask.paused ? ' / paused' : ''}</div></div>
+                                <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Status</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedTask.displayStatus} / {selectedTask.phase}</div></div>
                                 <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Schedule</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedTask.scheduleType}</div></div>
                                 <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Agent</div><div className="mt-1 text-sm text-[var(--app-fg)]">{selectedTask.agentFlavor}</div></div>
                                 <div className="rounded-2xl bg-[var(--app-secondary-bg)] px-3 py-3"><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">Created</div><div className="mt-1 text-sm text-[var(--app-fg)]">{formatDateTime(selectedTask.createdAt)}</div></div>
@@ -570,7 +570,7 @@ export function ScheduledWorkspace(props: {
                                                 )}
                                             </>
                                         ) : (
-                                            <div><span className="text-[var(--app-hint)]">Expression:</span> <span> {selectedTask.scheduleSpec?.cron ?? formatDateTime(selectedTask.scheduleSpec?.runAt)}</span></div>
+                                            <div><span className="text-[var(--app-hint)]">Expression:</span> <span> {selectedTask.cron ?? formatDateTime(selectedTask.runAt)}</span></div>
                                         )}
                                     </div>
                                 </div>
@@ -640,8 +640,8 @@ export function ScheduledWorkspace(props: {
                                                         <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t('scheduled.detail.runId')}</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.id}</div></div>
                                                         <div><div className="text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">{t('scheduled.detail.session')}</div><div className="mt-1 break-all text-sm text-[var(--app-fg)]">{selectedRun.sessionId ?? '-'}</div></div>
                                                     </div>
-                                                    {selectedRun.error ? (
-                                                        <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>{selectedRun.error}</div>
+                                                    {selectedRun.errorMessage ? (
+                                                        <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>{selectedRun.errorMessage}</div>
                                                     ) : null}
                                                     {selectedRun.resultSummary ? (
                                                         <div className={`px-4 py-3 text-sm ${getScheduledRunStatusToneClassName(selectedRun.status)}`}>{getScheduledRunResultSummaryLabel(selectedRun.resultSummary, t)}</div>

@@ -61,21 +61,9 @@ export function useScheduledTasks(api: ApiClient | null): {
                 lastRunAt: derived.lastRunAt,
                 displayStatus: derived.displayStatus,
                 latestRunStatus: derived.latestRunStatus,
-                paused: task.phase === 'paused',
-                status: task.phase === 'archived'
-                    ? (derived.latestRunStatus === 'failed' ? 'failed' : task.scheduleType === 'once' ? 'completed' : 'archived')
-                    : 'active',
-                scheduleSpec: {
-                    runAt: task.runAt,
-                    cron: task.cron,
-                },
             }
         }),
-        runs: (query.data?.runs ?? []).map((run) => ({
-            ...run,
-            taskOutcome: run.outcome,
-            error: run.errorMessage,
-        })),
+        runs: query.data?.runs ?? [],
         isLoading: query.isLoading,
         error: query.error instanceof Error ? query.error.message : query.error ? 'Failed to load scheduled tasks' : null,
         refetch: query.refetch,

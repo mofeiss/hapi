@@ -864,14 +864,14 @@ function getScheduledSessionPermissionLabel(
 }
 
 function getScheduledTaskOutcomeStatusLabel(
-  status: NonNullable<ScheduledTaskRun["taskOutcome"]>["status"],
+  status: NonNullable<ScheduledTaskRun["outcome"]>["status"],
   t: ReturnType<typeof useTranslation>["t"],
 ): string {
   return t(`scheduled.outcomeStatus.${status}`);
 }
 
 function getScheduledTaskOutcomeToneClassName(
-  status: NonNullable<ScheduledTaskRun["taskOutcome"]>["status"],
+  status: NonNullable<ScheduledTaskRun["outcome"]>["status"],
 ): string {
   if (status === "completed") {
     return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
@@ -1204,7 +1204,7 @@ function getScheduledResumeValidationMessage(
     return null;
   }
 
-  const expression = task.scheduleSpec?.cron?.trim();
+  const expression = task.cron?.trim();
   if (!expression) {
     return t("scheduled.validation.cronInvalid");
   }
@@ -1263,7 +1263,7 @@ function buildScheduledOverviewCopyText(
     formatScheduledFieldForCopy(t("scheduled.detail.directory"), task.targetDirectory),
     formatScheduledFieldForCopy(t("scheduled.detail.permission"), getScheduledSessionPermissionLabel(task.scheduledSessionPermission, t)),
     formatScheduledFieldForCopy(t("scheduled.detail.scheduleType"), task.scheduleType === "cron" ? t("scheduled.list.kind.cron") : t("scheduled.list.kind.once")),
-    formatScheduledFieldForCopy(task.scheduleType === "cron" ? t("scheduled.detail.cron") : t("scheduled.detail.runAt"), task.scheduleType === "cron" ? (task.scheduleSpec?.cron ?? "-") : (formatScheduledDateTime(task.scheduleSpec?.runAt) ?? "-")),
+    formatScheduledFieldForCopy(task.scheduleType === "cron" ? t("scheduled.detail.cron") : t("scheduled.detail.runAt"), task.scheduleType === "cron" ? (task.cron ?? "-") : (formatScheduledDateTime(task.runAt) ?? "-")),
     formatScheduledFieldForCopy(t("scheduled.detail.created"), createdAtLabel),
     formatScheduledFieldForCopy(t("scheduled.detail.taskId"), task.id),
     formatScheduledFieldForCopy(t("scheduled.detail.createdFromSession"), task.createdBySessionId ? (createdBySessionTitle ?? `SESSION ID ${task.createdBySessionId}`) : t("scheduled.detail.createdFromSessionMissing")),
@@ -1312,20 +1312,20 @@ function buildScheduledRunsCopyText(
   lines.push(formatScheduledFieldForCopy(t("scheduled.detail.finished"), formatScheduledDateTime(selectedRun.finishedAt) ?? "-"))
   lines.push(formatScheduledFieldForCopy(t("scheduled.detail.session"), selectedRun.sessionId ?? "-"))
 
-  if (selectedRun.error) {
-    lines.push(formatScheduledFieldForCopy("Error", selectedRun.error))
+  if (selectedRun.errorMessage) {
+    lines.push(formatScheduledFieldForCopy("Error", selectedRun.errorMessage))
   }
 
   if (selectedRun.resultSummary) {
     lines.push(formatScheduledFieldForCopy("Result", getScheduledRunResultSummaryLabel(selectedRun.resultSummary, t)))
   }
 
-  if (selectedRun.taskOutcome) {
-    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcomeStatus"), getScheduledTaskOutcomeStatusLabel(selectedRun.taskOutcome.status, t)))
-    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcome"), selectedRun.taskOutcome.summary))
-    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcomeReportedAt"), formatScheduledDateTime(selectedRun.taskOutcome.reportedAt) ?? "-"))
-    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.needsUserIntervention"), selectedRun.taskOutcome.needsUserIntervention ? t("common.yes") : t("common.no")))
-    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.permanentFailureLikely"), selectedRun.taskOutcome.permanentFailureLikely ? t("common.yes") : t("common.no")))
+  if (selectedRun.outcome) {
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcomeStatus"), getScheduledTaskOutcomeStatusLabel(selectedRun.outcome.status, t)))
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcome"), selectedRun.outcome.summary))
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.outcomeReportedAt"), formatScheduledDateTime(selectedRun.outcome.reportedAt) ?? "-"))
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.needsUserIntervention"), selectedRun.outcome.needsUserIntervention ? t("common.yes") : t("common.no")))
+    lines.push(formatScheduledFieldForCopy(t("scheduled.detail.permanentFailureLikely"), selectedRun.outcome.permanentFailureLikely ? t("common.yes") : t("common.no")))
   }
 
   lines.push("</selected-run>")
@@ -1505,7 +1505,7 @@ function ScheduledTaskListRow(props: {
       <ScheduledTaskActionMenu
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
-        paused={Boolean(props.task.paused)}
+        paused={props.task.phase === "paused"}
         canTogglePaused={canScheduledTaskTogglePaused(props.task) && !props.isPending}
         togglePausedTitle={props.task.phase === "paused"
           ? (getScheduledResumeValidationMessage(props.task, t) ?? t("scheduled.action.resume"))
@@ -2185,8 +2185,8 @@ function ScheduledTaskDetailPanel({
                         : t("scheduled.detail.runAt"),
                     value:
                       task.scheduleType === "cron"
-                        ? (task.scheduleSpec?.cron ?? "-")
-                        : formatScheduledDateTime(task.scheduleSpec?.runAt),
+                        ? (task.cron ?? "-")
+                        : formatScheduledDateTime(task.runAt),
                   },
                   {
                     key: "created",
@@ -2321,11 +2321,11 @@ function ScheduledTaskDetailPanel({
                         label: t("scheduled.detail.session"),
                         value: selectedRun.sessionId ?? "-",
                       },
-                      ...(selectedRun.error
+                      ...(selectedRun.errorMessage
                         ? [{
                             key: "run-error",
                             label: "Error",
-                            value: selectedRun.error,
+                            value: selectedRun.errorMessage,
                             toneClassName: getScheduledRunStatusToneClassName(selectedRun.status),
                           }]
                         : []),
@@ -2345,10 +2345,10 @@ function ScheduledTaskDetailPanel({
                       </div>
                     ))}
 
-                    {selectedRun.taskOutcome ? (
+                    {selectedRun.outcome ? (
                       <div className="space-y-0 pt-2">
                         {(() => {
-                          const taskOutcome = selectedRun.taskOutcome;
+                          const taskOutcome = selectedRun.outcome;
                           return (
                             <>
                         <div className="border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" />
@@ -2728,7 +2728,7 @@ function CollapsedScheduledItem(props: {
       <ScheduledTaskActionMenu
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
-        paused={Boolean(props.task.paused)}
+        paused={props.task.phase === "paused"}
         canTogglePaused={!pauseLocked && !props.isPending}
         togglePausedTitle={props.task.phase === "paused"
           ? (getScheduledResumeValidationMessage(props.task, t) ?? t("scheduled.action.resume"))
@@ -2855,7 +2855,7 @@ function SessionsPage() {
         task.targetDirectory,
         task.agentFlavor,
         task.model,
-        task.scheduleSpec?.cron,
+        task.cron,
         task.machineId,
       ]
         .filter(Boolean)

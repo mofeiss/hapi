@@ -114,19 +114,9 @@ export type ScheduledTask = ProtocolScheduledTask & {
     lastRunAt?: number
     displayStatus: ScheduledTaskDerived['displayStatus']
     latestRunStatus?: ScheduledTaskDerived['latestRunStatus']
-    // Web compat aliases while scheduler redesign is in progress.
-    paused?: boolean
-    status?: 'active' | 'archived' | 'failed' | 'completed'
-    scheduleSpec?: {
-        runAt?: number
-        cron?: string
-    }
 }
 
-export type ScheduledTaskRun = ProtocolScheduledTaskRun & {
-    taskOutcome?: ProtocolScheduledTaskRun['outcome']
-    error?: string
-}
+export type ScheduledTaskRun = ProtocolScheduledTaskRun
 
 export type ScheduledTaskView = ScheduledTask
 
