@@ -504,20 +504,28 @@ describe('getToolPresentation', () => {
         expect(presentation.subtitle).toBe('run_456')
     })
 
-    it('shows status for schedule report outcome subtitle', () => {
+    it('shows result message for schedule report outcome subtitle', () => {
         const presentation = getToolPresentation({
             toolName: 'mcp__hapi__schedule_report_outcome',
             input: {
-                status: 'success',
+                status: 'completed',
                 summary: 'done'
             },
-            result: null,
+            result: {
+                content: [
+                    {
+                        type: 'text',
+                        text: '{\n  "ok": false,\n  "code": "schedule.run_not_found",\n  "message": "run not found (13db9bd8-50f3-4f3b-aa6f-7235c9cac2f2)"\n}'
+                    }
+                ],
+                structuredContent: null
+            },
             childrenCount: 0,
             description: null,
             metadata: null,
             locale: 'en'
         })
 
-        expect(presentation.subtitle).toBe('success')
+        expect(presentation.subtitle).toBe('run not found (13db9bd8-50f3-4f3b-aa6f-7235c9cac2f2)')
     })
 })

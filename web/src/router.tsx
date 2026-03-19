@@ -1607,7 +1607,7 @@ function ScheduledTaskListRow(props: {
             <AgentFlavorStatusIcon
               flavor={props.task.agentFlavor}
               active
-              sizeClassName="h-3.5 w-3.5"
+              sizeClassName="h-[11px] w-[11px]"
             />
             <span>{props.typeText}</span>
           </span>

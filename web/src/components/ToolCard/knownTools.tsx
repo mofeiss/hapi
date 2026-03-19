@@ -246,9 +246,38 @@ function getScheduleDeleteSubtitle(input: unknown): string | null {
     return getInputStringAny(input, ['taskId']) ?? null
 }
 
-function getScheduleSubtitle(toolName: string, input: unknown): string | null {
+function getScheduleReportOutcomeResultMessage(result: unknown): string | null {
+    if (isObject(result) && typeof result.message === 'string' && result.message.length > 0) {
+        return result.message
+    }
+
+    if (!isObject(result) || !Array.isArray(result.content)) {
+        return null
+    }
+
+    for (const entry of result.content) {
+        if (!isObject(entry) || typeof entry.text !== 'string' || entry.text.length === 0) {
+            continue
+        }
+
+        try {
+            const parsed = JSON.parse(entry.text)
+            if (isObject(parsed) && typeof parsed.message === 'string' && parsed.message.length > 0) {
+                return parsed.message
+            }
+        } catch {
+            continue
+        }
+    }
+
+    return null
+}
+
+function getScheduleSubtitle(toolName: string, input: unknown, result?: unknown): string | null {
     if (toolName === 'mcp__hapi__schedule_report_outcome' || toolName === 'hapi__schedule_report_outcome') {
-        return getInputStringAny(input, ['status']) ?? null
+        return getScheduleReportOutcomeResultMessage(result)
+            ?? getInputStringAny(input, ['status'])
+            ?? null
     }
 
     const title = getInputStringAny(input, ['title'])
@@ -959,7 +988,7 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
                 case 'mcp__hapi__schedule_run_list':
                 case 'mcp__hapi__schedule_run_get':
                 case 'mcp__hapi__schedule_report_outcome':
-                    return getScheduleSubtitle(toolOpts.toolName, toolOpts.input)
+                    return getScheduleSubtitle(toolOpts.toolName, toolOpts.input, toolOpts.result)
                 default:
                     return getGenericSubtitleFromInput(toolOpts.input, toolOpts.metadata)
             }
