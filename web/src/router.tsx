@@ -1480,25 +1480,34 @@ function ScheduledTaskListRow(props: {
           }}
         >
           <span className="inline-flex shrink-0 items-center gap-1">
-            <ScheduledTaskIcon className="h-3.5 w-3.5" />
-            <span>{props.typeText}</span>
-          </span>
-          <span className="truncate">{props.scheduleValueText}</span>
-          <span className="inline-flex shrink-0 items-center text-[var(--app-hint)]">
             <AgentFlavorStatusIcon
               flavor={props.task.agentFlavor}
               active
               sizeClassName="h-3.5 w-3.5"
             />
-          </span>
-          <span className="shrink-0 text-[11px] text-[var(--app-hint)]">
-            {getScheduledSessionPermissionLabel(props.task.scheduledSessionPermission, t)}
+            <span>{props.typeText}</span>
           </span>
           <span className="inline-flex min-w-0 items-center gap-1 truncate">
-            <span className="shrink-0 text-[10px]" aria-hidden="true">
-              📂
-            </span>
-            <span className="truncate">{normalizeProjectPath(props.task.targetDirectory)}</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="shrink-0"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span className="truncate">{props.scheduleValueText}</span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--app-subtle-bg)] px-2 py-0.5 text-[11px] text-[var(--app-hint)]">
+            <span>{getScheduledSessionPermissionLabel(props.task.scheduledSessionPermission, t)}</span>
           </span>
         </div>
       </button>
