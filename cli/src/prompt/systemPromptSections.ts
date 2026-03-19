@@ -19,7 +19,23 @@ export function buildScheduleCreationSection(tools: PromptToolRefs): string {
     return trimIdent(`
         ## Scheduled Task Creation
 
+        All scheduled task times in HAPI use the fixed timezone Asia/Shanghai.
+
         When using HAPI scheduled task tools, ALWAYS distinguish task creation success from task execution status.
+
+        For one-time tasks, prefer relative delay fields (years/months/days/hours/minutes/seconds) whenever the user asks for a relative time such as "1 minute later", "2 hours later", or "3 days later".
+
+        For one-time tasks, use exactly one of these two approaches:
+        1. Absolute time via runAt.
+        2. Relative time via delay fields.
+
+        Never send both runAt and delay for the same one-time task.
+
+        Never invent an absolute timestamp for a relative-time request.
+
+        If the user gives a relative time, convert it to delay fields instead of guessing a concrete clock time.
+
+        If the user gives an absolute time, use runAt and keep it in Asia/Shanghai.
 
         If "${tools.scheduleCreate}" returns success, the task has already been created successfully. The creation result is expressed by the tool response itself. Focus on the returned delivery confirmation, such as taskId, scheduleType, phase, cron, runAt, timezone, and scheduledSessionPermission, and report that result to the user immediately.
 

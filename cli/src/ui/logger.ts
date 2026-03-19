@@ -12,6 +12,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join, basename } from 'node:path'
 import { readRunnerState } from '@/persistence'
 import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging'
+import { createHapiTimestampForFilename, createHapiTimestampForLogEntry, getHapiTimezone } from '@hapi/protocol/time'
 
 function serializeLogValue(value: unknown, depth: number = 0, seen?: WeakSet<object>): unknown {
   if (depth > 6) {
@@ -74,26 +75,11 @@ function serializeLogValue(value: unknown, depth: number = 0, seen?: WeakSet<obj
  * Consistent date/time formatting functions
  */
 function createTimestampForFilename(date: Date = new Date()): string {
-  return date.toLocaleString('sv-SE', { 
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    year: 'numeric',
-    month: '2-digit', 
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).replace(/[: ]/g, '-').replace(/,/g, '') + '-pid-' + process.pid
+  return createHapiTimestampForFilename(date) + '-pid-' + process.pid
 }
 
 function createTimestampForLogEntry(date: Date = new Date()): string {
-  return date.toLocaleTimeString('en-US', { 
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    fractionalSecondDigits: 3
-  })
+  return createHapiTimestampForLogEntry(date)
 }
 
 function getSessionLogPath(): string {
@@ -116,10 +102,13 @@ class Logger {
     }
   }
 
-  // Use local timezone for simplicity of locating the logs,
-  // in practice you will not need absolute timestamps
+  // Use one fixed timezone across HAPI logs to avoid mixing local and UTC views.
   localTimezoneTimestamp(): string {
     return createTimestampForLogEntry()
+  }
+
+  fixedTimezone(): string {
+    return getHapiTimezone()
   }
 
   debug(message: string, ...args: unknown[]): void {

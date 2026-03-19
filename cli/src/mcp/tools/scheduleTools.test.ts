@@ -1,22 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const {
-    createRunnerScheduledTask,
-    updateRunnerScheduledTask,
-    archiveRunnerScheduledTask,
-    deleteRunnerScheduledTask,
-    listRunnerScheduledTasks,
-    listRunnerScheduledTaskRuns,
-    reportRunnerScheduledTaskOutcome
-} = vi.hoisted(() => ({
-    createRunnerScheduledTask: vi.fn(),
-    updateRunnerScheduledTask: vi.fn(),
-    archiveRunnerScheduledTask: vi.fn(),
-    deleteRunnerScheduledTask: vi.fn(),
-    listRunnerScheduledTasks: vi.fn(),
-    listRunnerScheduledTaskRuns: vi.fn(),
-    reportRunnerScheduledTaskOutcome: vi.fn()
-}))
+const createRunnerScheduledTask = vi.fn()
+const updateRunnerScheduledTask = vi.fn()
+const archiveRunnerScheduledTask = vi.fn()
+const deleteRunnerScheduledTask = vi.fn()
+const listRunnerScheduledTasks = vi.fn()
+const listRunnerScheduledTaskRuns = vi.fn()
+const reportRunnerScheduledTaskOutcome = vi.fn()
 
 vi.mock('@/runner/controlClient', () => ({
     createRunnerScheduledTask,
@@ -156,6 +146,7 @@ describe('registerScheduleTools', () => {
             model: undefined,
             scheduleType: undefined,
             runAt: undefined,
+            delay: undefined,
             cron: '*/5 * * * *',
             targetDirectory: undefined,
             timezone: undefined,
@@ -205,5 +196,58 @@ describe('registerScheduleTools', () => {
             }
         })
         expect(typeof reportRunnerScheduledTaskOutcome.mock.calls[0][0].outcome.reportedAt).toBe('number')
+    })
+
+    it('passes delay for once schedule creation without requiring runAt', async () => {
+        const { server, tools } = createMcpServerMock()
+        createRunnerScheduledTask.mockResolvedValue({
+            id: 'task-1',
+            title: 'delay task',
+            scheduleType: 'once',
+            phase: 'enabled',
+            scheduledSessionPermission: 'aware',
+            timezone: 'Asia/Shanghai',
+            runAt: 1,
+            delay: { minutes: 1 }
+        })
+
+        await registerScheduleTools(server as any, createClient())
+
+        const result = await tools.get('schedule_create')!.handler({
+            title: 'delay task',
+            prompt: 'PONG',
+            agentFlavor: 'codex',
+            scheduleType: 'once',
+            delay: { minutes: 1 },
+            targetDirectory: '/tmp'
+        })
+
+        const parsed = parseToolResult(result)
+        expect(parsed.ok).toBe(true)
+        expect(createRunnerScheduledTask).toHaveBeenCalledWith(expect.objectContaining({
+            scheduleType: 'once',
+            runAt: undefined,
+            delay: { minutes: 1 }
+        }))
+    })
+
+    it('rejects once schedule when both runAt and delay are provided', async () => {
+        const { server, tools } = createMcpServerMock()
+        await registerScheduleTools(server as any, createClient())
+
+        const result = await tools.get('schedule_create')!.handler({
+            title: 'bad task',
+            prompt: 'PONG',
+            agentFlavor: 'codex',
+            scheduleType: 'once',
+            runAt: '2026-03-20T01:00:00+08:00',
+            delay: { minutes: 1 },
+            targetDirectory: '/tmp'
+        })
+
+        const parsed = parseToolResult(result)
+        expect(parsed.ok).toBe(false)
+        expect(parsed.code).toBe('schedule.invalid_input')
+        expect(createRunnerScheduledTask).not.toHaveBeenCalled()
     })
 })

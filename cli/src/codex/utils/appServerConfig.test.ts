@@ -44,6 +44,8 @@ describe('appServerConfig', () => {
         expect(String(params.baseInstructions)).toContain('## Scheduled Session Permissions');
         expect(String(params.baseInstructions)).toContain('functions.hapi__schedule_create');
         expect(String(params.baseInstructions)).toContain('functions.hapi__schedule_list');
+        expect(String(params.baseInstructions)).toContain('All scheduled task times in HAPI use the fixed timezone Asia/Shanghai.');
+        expect(String(params.baseInstructions)).toContain('Never invent an absolute timestamp for a relative-time request.');
         expect(String(params.baseInstructions)).toContain('MUST use "functions.hapi__schedule_report_outcome" to report the final business outcome of this run.');
         expect(String(params.baseInstructions)).toContain('The summary must describe the real business outcome, not merely list actions taken.');
         expect(String(params.baseInstructions)).toContain('Do not use this tool for partial progress updates.');

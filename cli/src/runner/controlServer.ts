@@ -13,6 +13,17 @@ import { SpawnSessionOptions, SpawnSessionResult } from '@/modules/common/rpcTyp
 import type { CreateScheduledTaskInput, UpdateScheduledTaskInput } from './scheduler/types';
 import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol';
 
+const delaySchema = z.object({
+  years: z.number().int().nonnegative().optional(),
+  months: z.number().int().nonnegative().optional(),
+  days: z.number().int().nonnegative().optional(),
+  hours: z.number().int().nonnegative().optional(),
+  minutes: z.number().int().nonnegative().optional(),
+  seconds: z.number().int().nonnegative().optional()
+}).refine((value) => Object.values(value).some((entry) => typeof entry === 'number' && entry > 0), {
+  message: 'at least one delay unit must be greater than zero'
+})
+
 export function startRunnerControlServer({
   getChildren,
   stopSession,
@@ -207,6 +218,7 @@ export function startRunnerControlServer({
           model: z.string().optional(),
           scheduleType: z.enum(['once', 'cron']).optional(),
           runAt: z.number().optional(),
+          delay: delaySchema.optional(),
           cron: z.string().optional(),
           timezone: z.string().optional(),
           scheduledSessionPermission: z.enum(['aware', 'self_control', 'system_control']),
@@ -245,6 +257,7 @@ export function startRunnerControlServer({
           model: z.string().optional(),
           scheduleType: z.enum(['once', 'cron']).optional(),
           runAt: z.number().optional(),
+          delay: delaySchema.optional(),
           cron: z.string().optional(),
           timezone: z.string().optional(),
           phase: z.enum(['enabled', 'paused', 'archived']).optional(),

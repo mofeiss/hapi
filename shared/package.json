@@ -10,6 +10,7 @@
         "./messages": "./src/messages.ts",
         "./modes": "./src/modes.ts",
         "./scheduler": "./src/scheduler.ts",
+        "./time": "./src/time.ts",
         "./schemas": "./src/schemas.ts",
         "./types": "./src/types.ts",
         "./voice": "./src/voice.ts"

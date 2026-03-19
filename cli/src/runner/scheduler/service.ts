@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
-import { deriveScheduledTask, isScheduledTaskConsumed } from '@hapi/protocol'
-import type { ScheduledTask, ScheduledTaskPhase, ScheduledTaskRun } from '@hapi/protocol'
+import { deriveScheduledTask, getHapiTimezone, isScheduledTaskConsumed, resolveDelayedRunAt } from '@hapi/protocol'
+import type { ScheduledDelay, ScheduledTask, ScheduledTaskPhase, ScheduledTaskRun } from '@hapi/protocol'
 import { logger } from '@/ui/logger'
 import { RunnerSchedulerStore } from './store'
 import { isTaskDue, resolveNextRunAt } from './nextRun'
@@ -39,18 +39,38 @@ class SchedulerValidationError extends Error {
 function assertScheduleInput(input: {
   scheduleType: ScheduledTask['scheduleType']
   runAt?: number
+  delay?: ScheduledDelay
   cron?: string
 }): void {
   if (input.scheduleType === 'cron') {
+    if (input.runAt !== undefined || input.delay !== undefined) {
+      throw new SchedulerValidationError('schedule.invalid_input', 'cron schedule cannot include runAt or delay')
+    }
     if (!input.cron?.trim()) {
       throw new SchedulerValidationError('schedule.invalid_input', 'cron schedule requires a cron expression')
     }
     return
   }
 
-  if (!Number.isFinite(input.runAt)) {
-    throw new SchedulerValidationError('schedule.invalid_input', 'once schedule requires a valid runAt timestamp')
+  if (input.runAt !== undefined && input.delay !== undefined) {
+    throw new SchedulerValidationError('schedule.invalid_input', 'once schedule requires exactly one of runAt or delay')
   }
+
+  if (!Number.isFinite(input.runAt)) {
+    if (!input.delay) {
+      throw new SchedulerValidationError('schedule.invalid_input', 'once schedule requires a valid runAt timestamp or delay')
+    }
+  }
+}
+
+function resolveOnceRunAt(now: number, input: { runAt?: number; delay?: ScheduledDelay }): number | undefined {
+  if (Number.isFinite(input.runAt)) {
+    return input.runAt
+  }
+  if (!input.delay) {
+    return undefined
+  }
+  return resolveDelayedRunAt(now, input.delay)
 }
 
 function buildTaskBase(input: {
@@ -66,6 +86,7 @@ function buildTaskBase(input: {
   model?: string
   scheduleType: ScheduledTask['scheduleType']
   runAt?: number
+  delay?: ScheduledDelay
   cron?: string
   timezone: string
   scheduledSessionPermission: ScheduledTask['scheduledSessionPermission']
@@ -90,6 +111,7 @@ function buildTaskBase(input: {
     runStrategy: 'new_session',
     scheduleType: input.scheduleType,
     runAt: input.scheduleType === 'once' ? input.runAt : undefined,
+    delay: input.scheduleType === 'once' ? input.delay : undefined,
     cron: input.scheduleType === 'cron' ? input.cron?.trim() : undefined,
     timezone: input.timezone,
     phase: input.phase,
@@ -155,7 +177,8 @@ export class RunnerSchedulerService {
   async createTask(input: CreateScheduledTaskInput): Promise<ScheduledTask> {
     const now = Date.now()
     const scheduleType = input.scheduleType ?? 'once'
-    assertScheduleInput({ scheduleType, runAt: input.runAt, cron: input.cron })
+    assertScheduleInput({ scheduleType, runAt: input.runAt, delay: input.delay, cron: input.cron })
+    const runAt = scheduleType === 'once' ? resolveOnceRunAt(now, { runAt: input.runAt, delay: input.delay }) : undefined
 
     const task = buildTaskBase({
       now,
@@ -168,9 +191,10 @@ export class RunnerSchedulerService {
       targetDirectory: input.targetDirectory,
       model: input.model,
       scheduleType,
-      runAt: input.runAt,
+      runAt,
+      delay: scheduleType === 'once' ? input.delay : undefined,
       cron: input.cron,
-      timezone: input.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timezone: input.timezone ?? getHapiTimezone(),
       scheduledSessionPermission: input.scheduledSessionPermission,
       allowOverlap: input.allowOverlap ?? false,
       catchUpPolicy: input.catchUpPolicy ?? 'once_within_window',
@@ -205,9 +229,11 @@ export class RunnerSchedulerService {
 
     const now = Date.now()
     const scheduleType = input.scheduleType ?? existing.scheduleType
-    const runAt = input.runAt ?? existing.runAt
+    const delay = input.delay ?? existing.delay
+    const rawRunAt = input.runAt ?? existing.runAt
+    const runAt = scheduleType === 'once' ? resolveOnceRunAt(now, { runAt: rawRunAt, delay }) : undefined
     const cron = input.cron ?? existing.cron
-    assertScheduleInput({ scheduleType, runAt, cron })
+    assertScheduleInput({ scheduleType, runAt: rawRunAt, delay, cron })
 
     const nextPhase = input.phase ?? existing.phase
     if (!canTransitionPhase(existing.phase, nextPhase)) {
@@ -226,8 +252,9 @@ export class RunnerSchedulerService {
       model: input.model ?? existing.model,
       scheduleType,
       runAt,
+      delay: scheduleType === 'once' ? delay : undefined,
       cron,
-      timezone: input.timezone ?? existing.timezone,
+      timezone: input.timezone ?? existing.timezone ?? getHapiTimezone(),
       scheduledSessionPermission: input.scheduledSessionPermission ?? existing.scheduledSessionPermission,
       allowOverlap: input.allowOverlap ?? existing.allowOverlap,
       catchUpPolicy: input.catchUpPolicy ?? existing.catchUpPolicy,

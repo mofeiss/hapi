@@ -37,6 +37,16 @@ const scheduleTypeSchema = z.enum(['once', 'cron']);
 const scheduleModelSchema = z.enum(['opus', 'sonnet', 'gpt-5.4']);
 const scheduledSessionPermissionSchema = z.enum(['aware', 'self_control', 'system_control']);
 const scheduledTaskOutcomeStatusSchema = z.enum(['completed', 'partial', 'blocked', 'abandoned']);
+const delaySchema = z.object({
+  years: z.number().int().nonnegative().optional(),
+  months: z.number().int().nonnegative().optional(),
+  days: z.number().int().nonnegative().optional(),
+  hours: z.number().int().nonnegative().optional(),
+  minutes: z.number().int().nonnegative().optional(),
+  seconds: z.number().int().nonnegative().optional()
+}).refine((value) => Object.values(value).some((entry) => typeof entry === 'number' && entry > 0), {
+  message: 'at least one delay unit must be greater than zero'
+});
 
 const allToolDefinitions = [
   {
@@ -57,10 +67,11 @@ const allToolDefinitions = [
       agentFlavor: scheduleAgentSchema.describe('Target agent type'),
       model: scheduleModelSchema.optional().describe('Allowed values: claude => opus/sonnet, codex => gpt-5.4'),
       scheduleType: scheduleTypeSchema.optional(),
-      runAt: z.union([z.number(), z.string()]).optional().describe('For once tasks: epoch milliseconds or ISO datetime string'),
+      runAt: z.union([z.number(), z.string()]).optional().describe('For once tasks: epoch milliseconds or ISO datetime string. Use either runAt or delay, not both.'),
+      delay: delaySchema.optional().describe('For once tasks: relative delay from now in years/months/days/hours/minutes/seconds. Use either delay or runAt.'),
       cron: z.string().optional().describe('For cron tasks: cron expression, e.g. */5 * * * *'),
       targetDirectory: z.string().min(1).describe('Working directory for the spawned session'),
-      timezone: z.string().optional(),
+      timezone: z.string().optional().describe('Defaults to Asia/Shanghai when omitted'),
       scheduledSessionPermission: scheduledSessionPermissionSchema.optional().describe('Defaults to aware unless higher permission is explicitly needed')
     })
   },
@@ -76,6 +87,7 @@ const allToolDefinitions = [
       model: z.string().optional().describe('Admin override: supports custom model id in updates'),
       scheduleType: scheduleTypeSchema.optional(),
       runAt: z.union([z.number(), z.string()]).optional(),
+      delay: delaySchema.optional(),
       cron: z.string().optional(),
       targetDirectory: z.string().min(1).optional(),
       timezone: z.string().optional(),

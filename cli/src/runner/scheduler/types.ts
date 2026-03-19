@@ -1,6 +1,7 @@
 import type {
   ScheduledAgentFlavor,
   ScheduledCatchUpPolicy,
+  ScheduledDelay,
   ScheduledSessionPermission,
   ScheduledTask,
   ScheduledTaskPhase,
@@ -19,6 +20,7 @@ export type CreateScheduledTaskInput = {
   model?: string
   scheduleType?: ScheduledTask['scheduleType']
   runAt?: number
+  delay?: ScheduledDelay
   cron?: string
   timezone?: string
   scheduledSessionPermission: ScheduledSessionPermission
@@ -36,6 +38,7 @@ export type UpdateScheduledTaskInput = {
   model?: string
   scheduleType?: ScheduledTask['scheduleType']
   runAt?: number
+  delay?: ScheduledDelay
   cron?: string
   timezone?: string
   phase?: ScheduledTaskPhase

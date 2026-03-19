@@ -11,6 +11,7 @@ import { EmbeddedSessionView } from '@/components/EmbeddedSessionView'
 import { ScheduledTaskActionMenu } from '@/components/ScheduledTaskActionMenu'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useTranslation } from '@/lib/use-translation'
+import { formatTimestamp } from '@/lib/dateTime'
 import { getScheduledRunStatusToneClassName } from '@/lib/scheduled-run-status'
 import { canScheduledTaskTogglePaused, getScheduledTaskPauseValidationCode } from '@/lib/scheduled-task-compat'
 import {
@@ -28,8 +29,7 @@ function getMachineTitle(machine: Machine | null | undefined): string {
 }
 
 function formatDateTime(value: number | undefined): string {
-    if (!value) return '-'
-    return new Date(value).toLocaleString()
+    return formatTimestamp(value) ?? '-'
 }
 
 function formatDateTimeLocalInput(value: number | undefined): string {

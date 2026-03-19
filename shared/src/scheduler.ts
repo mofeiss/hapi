@@ -1,5 +1,22 @@
 import { z } from 'zod'
 
+export const HAPI_TIMEZONE = 'Asia/Shanghai'
+
+export const ScheduledDelayUnitValueSchema = z.number().int().nonnegative()
+
+export const ScheduledDelaySchema = z.object({
+    years: ScheduledDelayUnitValueSchema.optional(),
+    months: ScheduledDelayUnitValueSchema.optional(),
+    days: ScheduledDelayUnitValueSchema.optional(),
+    hours: ScheduledDelayUnitValueSchema.optional(),
+    minutes: ScheduledDelayUnitValueSchema.optional(),
+    seconds: ScheduledDelayUnitValueSchema.optional()
+}).refine((value) => Object.values(value).some((entry) => typeof entry === 'number' && entry > 0), {
+    message: 'at least one delay unit must be greater than zero'
+})
+
+export type ScheduledDelay = z.infer<typeof ScheduledDelaySchema>
+
 export const ScheduledAgentFlavorSchema = z.enum(['claude', 'codex'])
 export type ScheduledAgentFlavor = z.infer<typeof ScheduledAgentFlavorSchema>
 

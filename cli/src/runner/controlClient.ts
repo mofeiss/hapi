@@ -7,6 +7,7 @@ import { logger } from '@/ui/logger';
 import { clearRunnerState, readRunnerState } from '@/persistence';
 import { Metadata } from '@/api/types';
 import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol';
+import type { ScheduledDelay } from '@hapi/protocol';
 import packageJson from '../../package.json';
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -120,6 +121,7 @@ export async function createRunnerScheduledTask(input: {
   model?: string;
   scheduleType?: 'once' | 'cron';
   runAt?: number;
+  delay?: ScheduledDelay;
   cron?: string;
   timezone?: string;
   scheduledSessionPermission: 'aware' | 'self_control' | 'system_control';
@@ -140,6 +142,7 @@ export async function updateRunnerScheduledTask(input: {
   model?: string;
   scheduleType?: 'once' | 'cron';
   runAt?: number;
+  delay?: ScheduledDelay;
   cron?: string;
   timezone?: string;
   phase?: 'enabled' | 'paused' | 'archived';

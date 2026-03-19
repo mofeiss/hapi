@@ -3,6 +3,7 @@ import { MODEL_MODES, PERMISSION_MODES } from './modes'
 import {
     ScheduledAgentFlavorSchema,
     ScheduledCatchUpPolicySchema,
+    ScheduledDelaySchema,
     ScheduledTaskDisplayStatusSchema,
     ScheduledTaskPhaseSchema,
     ScheduledRunStrategySchema,
@@ -184,6 +185,7 @@ export const ScheduledTaskSchema = z.object({
     runStrategy: ScheduledRunStrategySchema,
     scheduleType: ScheduledTaskTypeSchema,
     runAt: z.number().optional(),
+    delay: ScheduledDelaySchema.optional(),
     cron: z.string().optional(),
     timezone: z.string(),
     phase: ScheduledTaskPhaseSchema,

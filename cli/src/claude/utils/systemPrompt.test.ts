@@ -10,6 +10,8 @@ describe('claude system prompt', () => {
         expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__change_title')
         expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__schedule_create')
         expect(buildClaudeSystemPrompt()).toContain('mcp__hapi__schedule_list')
+        expect(buildClaudeSystemPrompt()).toContain('All scheduled task times in HAPI use the fixed timezone Asia/Shanghai.')
+        expect(buildClaudeSystemPrompt()).toContain('Never invent an absolute timestamp for a relative-time request.')
         expect(buildClaudeSystemPrompt()).toContain('If the user does not specify a permission level, default to aware.')
         expect(buildClaudeSystemPrompt()).toContain('Only use self_control or system_control when the user explicitly asks')
         expect(buildClaudeSystemPrompt()).toContain('task creation success from task execution status')

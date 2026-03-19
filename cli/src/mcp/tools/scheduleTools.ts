@@ -23,6 +23,16 @@ const scheduledSessionPermissionSchema = z.enum(['aware', 'self_control', 'syste
 const scheduledTaskOutcomeStatusSchema = z.enum(['completed', 'partial', 'blocked', 'abandoned'])
 const scheduledTaskPhaseSchema = z.enum(['enabled', 'paused', 'archived'])
 const viewSchema = z.enum(['basic', 'full']).optional()
+const delaySchema = z.object({
+    years: z.number().int().nonnegative().optional(),
+    months: z.number().int().nonnegative().optional(),
+    days: z.number().int().nonnegative().optional(),
+    hours: z.number().int().nonnegative().optional(),
+    minutes: z.number().int().nonnegative().optional(),
+    seconds: z.number().int().nonnegative().optional()
+}).refine((value) => Object.values(value).some((entry) => typeof entry === 'number' && entry > 0), {
+    message: 'at least one delay unit must be greater than zero'
+})
 
 type ScheduleToolAccess = 'none' | 'self_control' | 'system_control'
 
@@ -108,6 +118,7 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
         model: scheduleModelSchema.optional(),
         scheduleType: scheduleTypeSchema.optional(),
         runAt: z.union([z.number(), z.string()]).optional(),
+        delay: delaySchema.optional(),
         cron: z.string().optional(),
         targetDirectory: z.string().min(1),
         timezone: z.string().optional(),
@@ -122,6 +133,7 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
         model: z.string().optional(),
         scheduleType: scheduleTypeSchema.optional(),
         runAt: z.union([z.number(), z.string()]).optional(),
+        delay: delaySchema.optional(),
         cron: z.string().optional(),
         targetDirectory: z.string().min(1).optional(),
         timezone: z.string().optional(),
@@ -153,8 +165,14 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
             const modelValidation = validateAgentModel(args.agentFlavor, args.model)
             if (modelValidation) return toToolText(modelValidation)
 
-            if (scheduleType === 'once' && !Number.isFinite(runAt)) {
-                return toToolText({ ok: false, code: 'schedule.invalid_input', message: 'invalid runAt value' })
+            if (scheduleType === 'once' && Number.isFinite(runAt) && args.delay) {
+                return toToolText({ ok: false, code: 'schedule.invalid_input', message: 'once schedule requires exactly one of runAt or delay' })
+            }
+            if (scheduleType === 'once' && !Number.isFinite(runAt) && !args.delay) {
+                return toToolText({ ok: false, code: 'schedule.invalid_input', message: 'once schedule requires runAt or delay' })
+            }
+            if (scheduleType === 'cron' && (Number.isFinite(runAt) || args.delay)) {
+                return toToolText({ ok: false, code: 'schedule.invalid_input', message: 'cron schedule cannot include runAt or delay' })
             }
             if (scheduleType === 'cron' && !args.cron?.trim()) {
                 return toToolText({ ok: false, code: 'schedule.invalid_input', message: 'cron schedule requires a cron expression' })
@@ -175,6 +193,7 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
                     model: args.model,
                     scheduleType,
                     runAt,
+                    delay: args.delay,
                     cron: args.cron,
                     targetDirectory: args.targetDirectory,
                     timezone: args.timezone,
@@ -196,6 +215,7 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
                         phase: task.phase,
                         scheduledSessionPermission: task.scheduledSessionPermission,
                         runAt: task.runAt,
+                        delay: task.delay,
                         cron: task.cron,
                         timezone: task.timezone
                     }
@@ -261,6 +281,7 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
                         model: snapshot.task.model,
                         timezone: snapshot.task.timezone,
                         runAt: snapshot.task.runAt,
+                        delay: snapshot.task.delay,
                         cron: snapshot.task.cron,
                         ...(args.view === 'full' ? derived : {})
                     }
@@ -396,6 +417,7 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
                     model: args.model,
                     scheduleType: args.scheduleType,
                     runAt,
+                    delay: args.delay,
                     cron: args.cron,
                     targetDirectory: args.targetDirectory,
                     timezone: args.timezone,
@@ -416,6 +438,7 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
                         scheduleType: task.scheduleType,
                         scheduledSessionPermission: task.scheduledSessionPermission,
                         runAt: task.runAt,
+                        delay: task.delay,
                         cron: task.cron,
                         timezone: task.timezone
                     }

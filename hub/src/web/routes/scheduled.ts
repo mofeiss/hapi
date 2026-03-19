@@ -22,6 +22,16 @@ const updateBodySchema = z.object({
     reasoningEffort: z.union([z.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']), z.null()]).optional(),
     scheduleType: z.enum(['once', 'cron']).optional(),
     runAt: z.number().optional(),
+    delay: z.object({
+        years: z.number().int().nonnegative().optional(),
+        months: z.number().int().nonnegative().optional(),
+        days: z.number().int().nonnegative().optional(),
+        hours: z.number().int().nonnegative().optional(),
+        minutes: z.number().int().nonnegative().optional(),
+        seconds: z.number().int().nonnegative().optional()
+    }).refine((value) => Object.values(value).some((entry) => typeof entry === 'number' && entry > 0), {
+        message: 'at least one delay unit must be greater than zero'
+    }).optional(),
     cron: z.string().optional(),
     timezone: z.string().optional(),
     phase: z.enum(['enabled', 'paused', 'archived']).optional(),
