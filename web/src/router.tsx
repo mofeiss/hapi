@@ -1391,8 +1391,8 @@ function ScheduledTaskListRow(props: {
   rowBackgroundClass: string;
   rowStyle: React.CSSProperties;
   typeText: string;
+  scheduleValueText: string;
   statusText: string;
-  createdAtLabel: string | null;
   iconToneClass: string;
   isPending: boolean;
   onSelect: () => void;
@@ -1483,29 +1483,22 @@ function ScheduledTaskListRow(props: {
             <ScheduledTaskIcon className="h-3.5 w-3.5" />
             <span>{props.typeText}</span>
           </span>
-          <span className="truncate">{normalizeProjectPath(props.task.targetDirectory)}</span>
-          {props.createdAtLabel ? (
-            <span className="inline-flex shrink-0 items-center gap-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span>{props.createdAtLabel}</span>
+          <span className="truncate">{props.scheduleValueText}</span>
+          <span className="inline-flex shrink-0 items-center text-[var(--app-hint)]">
+            <AgentFlavorStatusIcon
+              flavor={props.task.agentFlavor}
+              active
+              sizeClassName="h-3.5 w-3.5"
+            />
+          </span>
+          <span className="shrink-0 text-[11px] text-[var(--app-hint)]">
+            {getScheduledSessionPermissionLabel(props.task.scheduledSessionPermission, t)}
+          </span>
+          <span className="inline-flex min-w-0 items-center gap-1 truncate">
+            <span className="shrink-0 text-[10px]" aria-hidden="true">
+              📂
             </span>
-          ) : null}
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--app-subtle-bg)] px-2 py-0.5 text-[11px] text-[var(--app-hint)]">
-            <span>{getScheduledSessionPermissionLabel(props.task.scheduledSessionPermission, t)}</span>
+            <span className="truncate">{normalizeProjectPath(props.task.targetDirectory)}</span>
           </span>
         </div>
       </button>
@@ -1880,7 +1873,7 @@ function ScheduledTaskDetailPanel({
     "block min-h-[19px] w-full overflow-hidden whitespace-nowrap text-right text-sm leading-[19px] text-[var(--app-fg)]";
   const sessionModeDisabled = !selectedRun?.sessionId;
   const createdAtLabel = useMemo(
-    () => formatTimestamp(task.createdAt),
+    () => formatScheduledDateTime(task.createdAt),
     [task.createdAt],
   );
   const scheduledTaskIconToneClassName = task.phase === "paused"
@@ -4752,12 +4745,16 @@ function SessionsPage() {
                                               task.scheduleType === "cron"
                                                 ? t("scheduled.list.kind.cron")
                                                 : t("scheduled.list.kind.once");
+                                            const scheduleValueText =
+                                              task.scheduleType === "cron"
+                                                ? (task.cron?.trim() || "-")
+                                                : formatScheduledDateTime(
+                                                    task.nextRunAt ?? task.runAt,
+                                                  );
                                             const statusText = getScheduledTaskDisplayStatusText(
                                               task,
                                               t,
                                             );
-                                            const createdAtLabel =
-                                              formatTimestamp(task.createdAt);
                                             const iconToneClass = task.phase === "paused"
                                               ? "text-amber-600"
                                               : latestRun?.status === "failed"
@@ -4775,8 +4772,8 @@ function SessionsPage() {
                                                 rowBackgroundClass={rowBackgroundClass}
                                                 rowStyle={rowStyle}
                                                 typeText={typeText}
+                                                scheduleValueText={scheduleValueText}
                                                 statusText={statusText}
-                                                createdAtLabel={createdAtLabel}
                                                 iconToneClass={iconToneClass}
                                                 isPending={scheduledPending}
                                                 onSelect={() => {

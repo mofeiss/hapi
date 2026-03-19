@@ -11,7 +11,6 @@ import { useTranslation } from "@/lib/use-translation";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import { useToast } from "@/lib/toast-context";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
-import { formatTimestamp } from "@/lib/dateTime";
 import { readStorageJson, writeStorageJson } from "@/lib/storage";
 
 export type SessionGroup = {
@@ -43,6 +42,11 @@ function formatRelativeTime(
   const days = Math.floor(hours / 24);
   if (days < 7) return t("session.time.daysAgo", { n: days });
   return new Date(ms).toLocaleDateString();
+}
+
+function formatSessionDateTime(value: number | undefined): string | null {
+  if (!value) return null;
+  return new Date(value).toLocaleString();
 }
 
 export function groupSessionsByHost(
@@ -287,7 +291,7 @@ function SessionItem(props: {
   });
 
   const sessionName = useSessionTitleOverride(s.id) ?? getSessionTitle(s);
-  const createdAtLabel = formatTimestamp(s.createdAt);
+  const createdAtLabel = formatSessionDateTime(s.createdAt);
   const showArchiving = isArchiving || forceArchiving;
   const showDeleting = isDeleting || forceDeleting;
   const rowBackgroundClass = batchMode
