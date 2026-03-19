@@ -1,10 +1,17 @@
-import { useState, useEffect, type FC, type PropsWithChildren, type TransitionEvent } from 'react'
+import { useState, useEffect, useMemo, useRef, type FC, type PropsWithChildren, type TransitionEvent } from 'react'
 import { TextMessagePartProvider, useMessage, type ReasoningGroupProps } from '@assistant-ui/react'
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown'
 import { DisclosureChevron, DisclosureRail, OUTER_DISCLOSURE_ITEM_CLASS } from '@/components/Disclosure'
 import { cn } from '@/lib/utils'
 import { defaultComponents, MARKDOWN_BLOCK_SPACING_CLASSNAME, MARKDOWN_PLUGINS } from '@/components/assistant-ui/markdown-text'
 import { getReasoningRenderText, summarizeReasoning } from '@/lib/reasoning'
+
+const REASONING_GROUP_ACTIVE_EVENT = 'hapi:reasoning-group-active'
+
+type ReasoningGroupActiveDetail = {
+    groupKey: string
+    messageId: string | null
+}
 
 type ReasoningMessagePart = {
     type: 'reasoning'
@@ -67,6 +74,7 @@ export const Reasoning: FC = () => {
 export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ children, startIndex, endIndex }) => {
     // Check if reasoning is still streaming
     const message = useMessage()
+    const messageId = typeof message.id === 'string' ? message.id : null
     const reasoningText = message.content
         .slice(startIndex, endIndex + 1)
         .filter((part): part is ReasoningMessagePart => part.type === 'reasoning' && typeof (part as ReasoningMessagePart).text === 'string')
@@ -74,21 +82,60 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
         .join('\n')
     const preview = summarizeReasoning(reasoningText)
     const renderText = getReasoningRenderText(reasoningText)
-    const isStreaming = message.status?.type === 'running'
+    const lastReasoningIndex = useMemo(() => {
+        for (let index = message.content.length - 1; index >= 0; index -= 1) {
+            if (message.content[index]?.type === 'reasoning') {
+                return index
+            }
+        }
+        return -1
+    }, [message.content])
+    const isActiveStreamingGroup = message.status?.type === 'running'
         && message.content.length > 0
         && message.content[message.content.length - 1]?.type === 'reasoning'
-    const [isOpen, setIsOpen] = useState(isStreaming)
-    const [showPreview, setShowPreview] = useState(!isStreaming)
+        && lastReasoningIndex >= startIndex
+        && lastReasoningIndex <= endIndex
+    const groupKey = `${messageId ?? 'unknown'}:${startIndex}:${endIndex}`
+    const autoOpenedRef = useRef(isActiveStreamingGroup)
+    const [isOpen, setIsOpen] = useState(isActiveStreamingGroup)
+    const [showPreview, setShowPreview] = useState(!isActiveStreamingGroup)
 
-    // Auto-expand while streaming
+    // Auto-expand only for the latest active reasoning group.
     useEffect(() => {
-        if (isStreaming) {
+        if (isActiveStreamingGroup) {
+            autoOpenedRef.current = true
             setShowPreview(false)
             setIsOpen(true)
+            window.dispatchEvent(new CustomEvent<ReasoningGroupActiveDetail>(REASONING_GROUP_ACTIVE_EVENT, {
+                detail: {
+                    groupKey,
+                    messageId
+                }
+            }))
         }
-    }, [isStreaming])
+    }, [groupKey, isActiveStreamingGroup, messageId])
+
+    // When a newer reasoning group becomes active in the same message, collapse the previous auto-opened one.
+    useEffect(() => {
+        const handleReasoningGroupActive = (event: Event) => {
+            const detail = (event as CustomEvent<ReasoningGroupActiveDetail>).detail
+            if (!detail) return
+            if (detail.groupKey === groupKey) return
+            if (detail.messageId !== messageId) return
+            if (!autoOpenedRef.current) return
+
+            autoOpenedRef.current = false
+            setIsOpen(false)
+        }
+
+        window.addEventListener(REASONING_GROUP_ACTIVE_EVENT, handleReasoningGroupActive)
+        return () => {
+            window.removeEventListener(REASONING_GROUP_ACTIVE_EVENT, handleReasoningGroupActive)
+        }
+    }, [groupKey, messageId])
 
     const toggleOpen = () => {
+        autoOpenedRef.current = false
         setShowPreview(false)
         setIsOpen((current) => !current)
     }
@@ -106,6 +153,7 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
             <button
                 type="button"
                 onClick={toggleOpen}
+                aria-expanded={isOpen}
                 className={cn(
                     'flex w-full min-w-0 items-center gap-1.5 text-left',
                     'transition-colors cursor-pointer select-none'
@@ -125,7 +173,7 @@ export const ReasoningGroup: FC<PropsWithChildren<ReasoningGroupProps>> = ({ chi
                         </span>
                     ) : null}
                 </span>
-                {isStreaming && (
+                {isActiveStreamingGroup && (
                     <span className="ml-1 flex items-center gap-1 text-[var(--app-hint)]">
                         <ShimmerDot />
                     </span>
