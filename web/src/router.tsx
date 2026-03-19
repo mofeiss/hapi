@@ -341,7 +341,7 @@ function PlayIcon(props: { className?: string }) {
   );
 }
 
-function StopIcon(props: { className?: string }) {
+function ArchiveIcon(props: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -355,9 +355,9 @@ function StopIcon(props: { className?: string }) {
       strokeLinejoin="round"
       className={props.className}
     >
-      <circle cx="12" cy="12" r="10" />
-      <path d="m15 9-6 6" />
-      <path d="m9 9 6 6" />
+      <rect width="20" height="5" x="2" y="3" rx="1" />
+      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+      <path d="M10 12h4" />
     </svg>
   );
 }
@@ -1536,6 +1536,11 @@ function ScheduledTaskListRow(props: {
   statusText: string;
   iconToneClass: string;
   isPending: boolean;
+  forceArchiving?: boolean;
+  forceDeleting?: boolean;
+  batchMode?: "archive" | "delete" | null;
+  batchSelected?: boolean;
+  onBatchToggleSelect?: () => void;
   onSelect: () => void;
   onTogglePaused: () => void;
   onArchiveTask: () => void;
@@ -1546,6 +1551,9 @@ function ScheduledTaskListRow(props: {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 });
   const displayStatusTip = getScheduledTaskDisplayStatusTip(props.task, t);
+  const showArchiving = props.forceArchiving === true;
+  const showDeleting = props.forceDeleting === true;
+  const archived = props.task.phase === "archived";
 
   const longPressHandlers = useLongPress({
     onLongPress: (point) => {
@@ -1566,7 +1574,9 @@ function ScheduledTaskListRow(props: {
     <>
       <button
         type="button"
-        {...longPressHandlers}
+        {...(props.batchMode
+          ? { onClick: props.onBatchToggleSelect }
+          : longPressHandlers)}
         className={
           "session-list-item flex w-full flex-col gap-0.5 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)] select-none " +
           props.rowBackgroundClass
@@ -1576,6 +1586,14 @@ function ScheduledTaskListRow(props: {
       >
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex min-w-0 items-center gap-1">
+            {props.batchMode ? (
+              <input
+                type="checkbox"
+                checked={props.batchSelected ?? false}
+                readOnly
+                className="h-4 w-4 shrink-0 rounded accent-[var(--app-link)] pointer-events-none"
+              />
+            ) : null}
             <span
               className={
                 "inline-flex h-4 w-4 shrink-0 items-center justify-center " +
@@ -1591,9 +1609,9 @@ function ScheduledTaskListRow(props: {
             </span>
             <div
               className={`truncate text-base leading-none ${
-                props.selected
-                  ? "font-semibold text-[var(--app-fg)]"
-                  : "font-medium text-[var(--app-fg)]"
+                archived
+                    ? "font-normal text-[var(--app-hint)]"
+                    : "font-medium text-[var(--app-fg)]"
               }`}
             >
               {props.task.title}
@@ -1601,9 +1619,20 @@ function ScheduledTaskListRow(props: {
           </div>
           <div className="flex shrink-0 items-center gap-1 text-sm">
             <ScheduledStatusTipTrigger tip={displayStatusTip} />
+            {showDeleting ? (
+              <span className="text-[var(--app-orange-base)]">
+                {t("session.item.deleting")}
+              </span>
+            ) : showArchiving ? (
+              <span className="text-[var(--app-orange-base)]">
+                {t("session.item.archiving")}
+              </span>
+            ) : null}
             <span
               className={
-                props.task.phase === "paused"
+                archived
+                  ? "text-[var(--app-hint)]"
+                  : props.task.phase === "paused"
                   ? "text-amber-600"
                   : props.task.displayStatus === "failed"
                     ? "text-red-600"
@@ -1891,7 +1920,7 @@ function ScheduledTaskHeader(props: {
                 title={t("scheduled.action.archive")}
                 aria-label={t("scheduled.action.archive")}
               >
-                <StopIcon className="h-4 w-4" />
+                <ArchiveIcon className="h-4 w-4" />
               </button>
               <button
                 type="button"
@@ -2780,7 +2809,6 @@ function CollapsedSessionItem({
       <SessionActionMenu
         isOpen={menuEnabled && menuOpen}
         onClose={() => setMenuOpen(false)}
-        sessionActive={session.active}
         onRename={() => setRenameOpen(true)}
         onArchive={() =>
           skipArchiveConfirm ? runArchive() : setArchiveOpen(true)
@@ -2934,6 +2962,13 @@ function SessionsPage() {
       return false;
     }
   });
+  const [filterScheduledActiveOnly, setFilterScheduledActiveOnly] = useState(() => {
+    try {
+      return localStorage.getItem("hapi:filter:scheduledActiveOnly") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [sessionSearch, setSessionSearch] = useState("");
   const [scheduledSearch, setScheduledSearch] = useState("");
   const [selectedScheduledTaskId, setSelectedScheduledTaskId] = useState<
@@ -2942,6 +2977,18 @@ function SessionsPage() {
   const [selectedScheduledRunId, setSelectedScheduledRunId] = useState<
     string | null
   >(null);
+  const [scheduledBatchMode, setScheduledBatchMode] = useState<"archive" | "delete" | null>(null);
+  const [scheduledBatchSelectedIds, setScheduledBatchSelectedIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [scheduledBatchArchivingIds, setScheduledBatchArchivingIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [scheduledBatchDeletingIds, setScheduledBatchDeletingIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [scheduledBatchConfirmOpen, setScheduledBatchConfirmOpen] = useState(false);
+  const [scheduledBatchPending, setScheduledBatchPending] = useState(false);
   const [scheduledInteractiveSessionId, setScheduledInteractiveSessionId] =
     useState<string | null>(null);
   const lastScheduledTaskIdRef = useRef<string | null>(null);
@@ -2980,6 +3027,18 @@ function SessionsPage() {
     });
   }, []);
 
+  const toggleFilterScheduledActive = useCallback(() => {
+    setFilterScheduledActiveOnly((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("hapi:filter:scheduledActiveOnly", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
   const normalizedSessionSearch = sessionSearch.trim().toLowerCase();
   const hasSessionSearch = sessionSearch.length > 0;
   const hasAnySessions = sessions.length > 0;
@@ -3010,10 +3069,13 @@ function SessionsPage() {
 
   const normalizedScheduledSearch = scheduledSearch.trim().toLowerCase();
   const filteredScheduledTasks = useMemo(() => {
-    if (!normalizedScheduledSearch) {
-      return scheduledTasks;
-    }
     return scheduledTasks.filter((task) => {
+      if (filterScheduledActiveOnly && task.phase === "archived") {
+        return false;
+      }
+      if (!normalizedScheduledSearch) {
+        return true;
+      }
       const haystack = [
         task.title,
         task.prompt,
@@ -3028,19 +3090,29 @@ function SessionsPage() {
         .toLowerCase();
       return haystack.includes(normalizedScheduledSearch);
     });
-  }, [normalizedScheduledSearch, scheduledTasks]);
+  }, [filterScheduledActiveOnly, normalizedScheduledSearch, scheduledTasks]);
+
+  const displayScheduledTasks = useMemo(() => {
+    if (!scheduledBatchMode) {
+      return filteredScheduledTasks;
+    }
+    if (scheduledBatchMode === "archive") {
+      return filteredScheduledTasks.filter((task) => task.phase !== "archived");
+    }
+    return filteredScheduledTasks;
+  }, [filteredScheduledTasks, scheduledBatchMode]);
 
   const scheduledGroups = useMemo(
-    () => groupTasksByMachine(filteredScheduledTasks, machines),
-    [filteredScheduledTasks, machines],
+    () => groupTasksByMachine(displayScheduledTasks, machines),
+    [displayScheduledTasks, machines],
   );
 
   const selectedScheduledTask = useMemo(
     () =>
-      filteredScheduledTasks.find(
+      displayScheduledTasks.find(
         (task) => task.id === selectedScheduledTaskId,
       ) ?? null,
-    [filteredScheduledTasks, selectedScheduledTaskId],
+    [displayScheduledTasks, selectedScheduledTaskId],
   );
   const selectedScheduledMachineTitle = useMemo(() => {
     if (!selectedScheduledTask) {
@@ -3355,6 +3427,22 @@ function SessionsPage() {
     setBatchConfirmOpen(false);
   }, []);
 
+  const handleEnterScheduledBatchMode = useCallback((mode: "archive" | "delete") => {
+    setScheduledBatchMode(mode);
+    setScheduledBatchSelectedIds(new Set());
+    setSettingsOpen(false);
+    setNewSessionOpen(false);
+    setNewTaskOpen(false);
+    selectWorkspaceOverlay("none");
+    setToolbarMenuOpen(false);
+  }, []);
+
+  const handleExitScheduledBatchMode = useCallback(() => {
+    setScheduledBatchMode(null);
+    setScheduledBatchSelectedIds(new Set());
+    setScheduledBatchConfirmOpen(false);
+  }, []);
+
   const handleBatchToggleSelect = useCallback((sessionId: string) => {
     setBatchSelectedIds((prev) => {
       const next = new Set(prev);
@@ -3367,11 +3455,23 @@ function SessionsPage() {
     });
   }, []);
 
+  const handleScheduledBatchToggleSelect = useCallback((taskId: string) => {
+    setScheduledBatchSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  }, []);
+
   const batchFilteredIds = useMemo(() => {
     if (!batchMode) return new Set<string>();
     return new Set(
       displaySessions
-        .filter((s) => (batchMode === "archive" ? s.active : !s.active))
+        .filter((s) => (batchMode === "archive" ? s.active : true))
         .map((s) => s.id),
     );
   }, [displaySessions, batchMode]);
@@ -3381,8 +3481,27 @@ function SessionsPage() {
     [displaySessions],
   );
   const visibleDeletableCount = useMemo(
-    () => displaySessions.filter((session) => !session.active).length,
+    () => displaySessions.length,
     [displaySessions],
+  );
+
+  const scheduledBatchFilteredIds = useMemo(() => {
+    if (!scheduledBatchMode) return new Set<string>();
+    return new Set(
+      displayScheduledTasks
+        .filter((task) => (scheduledBatchMode === "archive" ? task.phase !== "archived" : true))
+        .map((task) => task.id),
+    );
+  }, [displayScheduledTasks, scheduledBatchMode]);
+
+  const visibleScheduledArchivableCount = useMemo(
+    () => displayScheduledTasks.filter((task) => task.phase !== "archived").length,
+    [displayScheduledTasks],
+  );
+
+  const visibleScheduledDeletableCount = useMemo(
+    () => displayScheduledTasks.length,
+    [displayScheduledTasks],
   );
 
   useEffect(() => {
@@ -3449,6 +3568,71 @@ function SessionsPage() {
       return changed ? next : prev;
     });
   }, [batchFilteredIds, batchMode]);
+
+  useEffect(() => {
+    setScheduledBatchArchivingIds((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+      const archivableIds = new Set(
+        scheduledTasks
+          .filter((task) => task.phase !== "archived")
+          .map((task) => task.id),
+      );
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (archivableIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [scheduledTasks]);
+
+  useEffect(() => {
+    setScheduledBatchDeletingIds((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+      const existingIds = new Set(scheduledTasks.map((task) => task.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (existingIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [scheduledTasks]);
+
+  const handleScheduledBatchSelectAll = useCallback(() => {
+    setScheduledBatchSelectedIds(new Set(scheduledBatchFilteredIds));
+  }, [scheduledBatchFilteredIds]);
+
+  useEffect(() => {
+    if (!scheduledBatchMode) {
+      return;
+    }
+
+    setScheduledBatchSelectedIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (scheduledBatchFilteredIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [scheduledBatchFilteredIds, scheduledBatchMode]);
 
   // Session keep-alive state
   const [activeSessionId, setActiveSessionId] = useState<string | null>(
@@ -3830,6 +4014,88 @@ function SessionsPage() {
       setBatchConfirmOpen(true);
     }
   }, [batchMode, batchSelectedIds, executeBatchOperation]);
+
+  const executeScheduledBatchOperation = useCallback(() => {
+    if (!api || scheduledBatchSelectedIds.size === 0 || !scheduledBatchMode) return;
+    const mode = scheduledBatchMode;
+    const ids = [...scheduledBatchSelectedIds];
+
+    if (mode === "archive") {
+      setScheduledBatchArchivingIds((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) {
+          next.add(id);
+        }
+        return next;
+      });
+    }
+
+    if (mode === "delete") {
+      setScheduledBatchDeletingIds((prev) => {
+        const next = new Set(prev);
+        for (const id of ids) {
+          next.add(id);
+        }
+        return next;
+      });
+    }
+
+    handleExitScheduledBatchMode();
+
+    void (async () => {
+      for (const id of ids) {
+        try {
+          if (mode === "archive") {
+            await archiveScheduledTask(id);
+            setScheduledBatchArchivingIds((prev) => {
+              if (!prev.has(id)) {
+                return prev;
+              }
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          } else {
+            await deleteScheduledTask(id);
+            setScheduledBatchDeletingIds((prev) => {
+              if (!prev.has(id)) {
+                return prev;
+              }
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          }
+        } catch {
+          if (mode === "archive") {
+            setScheduledBatchArchivingIds((prev) => {
+              if (!prev.has(id)) {
+                return prev;
+              }
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          }
+          if (mode === "delete") {
+            setScheduledBatchDeletingIds((prev) => {
+              if (!prev.has(id)) {
+                return prev;
+              }
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          }
+        }
+      }
+    })();
+  }, [api, archiveScheduledTask, deleteScheduledTask, handleExitScheduledBatchMode, scheduledBatchMode, scheduledBatchSelectedIds]);
+
+  const handleScheduledBatchConfirmClick = useCallback(() => {
+    if (scheduledBatchSelectedIds.size === 0) return;
+    setScheduledBatchConfirmOpen(true);
+  }, [scheduledBatchSelectedIds]);
 
   const closeSettingsOverlay = useCallback(() => {
     const restoredOverlay = restoreOverlayAfterSettingsRef.current;
@@ -4567,7 +4833,7 @@ function SessionsPage() {
     transformOrigin: "top left",
   };
   const showSidebarSearchRow = !effectiveCollapsed && !mobileTabDetailVisible;
-  const showSidebarBatchActions = !effectiveCollapsed && isSessionsTab;
+  const showSidebarBatchActions = !effectiveCollapsed && (isSessionsTab || isScheduledTab);
   const mobileLeftPanelVisible = leftPanelVisible.includes("flex");
   const showPinnedSidebarLogo = !narrowViewport || mobileLeftPanelVisible;
   const mobileLogoBackMode =
@@ -4603,10 +4869,11 @@ function SessionsPage() {
         : "Collapse sidebar";
 
   useEffect(() => {
-    if (batchMode && !showSidebarBatchActions) {
+    if ((batchMode || scheduledBatchMode) && !showSidebarBatchActions) {
       handleExitBatchMode();
+      handleExitScheduledBatchMode();
     }
-  }, [batchMode, handleExitBatchMode, showSidebarBatchActions]);
+  }, [batchMode, handleExitBatchMode, handleExitScheduledBatchMode, scheduledBatchMode, showSidebarBatchActions]);
 
   return (
     <div className="relative flex h-full min-h-0" onWheel={handleRootWheel}>
@@ -5013,13 +5280,17 @@ function SessionsPage() {
                                             const selected =
                                               task.id ===
                                               selectedScheduledTaskId;
-                                            const rowBackgroundClass = selected
-                                              ? "bg-[var(--app-session-active-bg)]"
-                                              : scheduledZebraTaskIds.has(
-                                                    task.id,
-                                                  )
-                                                ? "bg-[var(--app-session-zebra-bg)]"
-                                                : "";
+                                            const rowBackgroundClass = scheduledBatchMode
+                                              ? scheduledBatchSelectedIds.has(task.id)
+                                                ? "bg-[var(--app-link)]/10"
+                                                : scheduledZebraTaskIds.has(task.id)
+                                                  ? "bg-[var(--app-session-zebra-bg)]"
+                                                  : ""
+                                              : selected
+                                                ? "bg-[var(--app-session-active-bg)]"
+                                                : scheduledZebraTaskIds.has(task.id)
+                                                  ? "bg-[var(--app-session-zebra-bg)]"
+                                                  : "";
                                             const rowStyle = selected
                                               ? {
                                                   WebkitTouchCallout:
@@ -5031,6 +5302,10 @@ function SessionsPage() {
                                                   WebkitTouchCallout:
                                                     "none" as const,
                                                 };
+                                            const archived = task.phase === "archived";
+                                            const effectiveRowStyle = scheduledBatchMode
+                                              ? { WebkitTouchCallout: "none" as const }
+                                              : rowStyle;
                                             const typeText =
                                               task.scheduleType === "cron"
                                                 ? t("scheduled.list.kind.cron")
@@ -5045,7 +5320,9 @@ function SessionsPage() {
                                               task,
                                               t,
                                             );
-                                            const iconToneClass = task.phase === "paused"
+                                            const iconToneClass = archived
+                                              ? "text-[var(--app-hint)]"
+                                              : task.phase === "paused"
                                               ? "text-amber-600"
                                               : latestRun?.status === "failed"
                                                   ? "text-red-600"
@@ -5060,12 +5337,17 @@ function SessionsPage() {
                                                 latestRun={latestRun}
                                                 selected={selected}
                                                 rowBackgroundClass={rowBackgroundClass}
-                                                rowStyle={rowStyle}
+                                                rowStyle={effectiveRowStyle}
                                                 typeText={typeText}
                                                 scheduleValueText={scheduleValueText}
                                                 statusText={statusText}
                                                 iconToneClass={iconToneClass}
                                                 isPending={scheduledPending}
+                                                forceArchiving={scheduledBatchArchivingIds.has(task.id)}
+                                                forceDeleting={scheduledBatchDeletingIds.has(task.id)}
+                                                batchMode={scheduledBatchMode}
+                                                batchSelected={scheduledBatchSelectedIds.has(task.id)}
+                                                onBatchToggleSelect={() => handleScheduledBatchToggleSelect(task.id)}
                                                 onSelect={() => {
                                                   setNewTaskOpen(false);
                                                   selectWorkspaceOverlay("none");
@@ -5213,7 +5495,115 @@ function SessionsPage() {
                         spellCheck={false}
                       />
                       <div className="flex shrink-0 items-center gap-0.5">
-                        {isScheduledTab ? null : batchMode &&
+                        {isScheduledTab ? scheduledBatchMode ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={
+                                scheduledBatchSelectedIds.size ===
+                                  scheduledBatchFilteredIds.size &&
+                                scheduledBatchFilteredIds.size > 0
+                                  ? () => setScheduledBatchSelectedIds(new Set())
+                                  : handleScheduledBatchSelectAll
+                              }
+                              disabled={
+                                scheduledBatchPending || scheduledBatchFilteredIds.size === 0
+                              }
+                              className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                              title={
+                                scheduledBatchSelectedIds.size ===
+                                  scheduledBatchFilteredIds.size &&
+                                scheduledBatchFilteredIds.size > 0
+                                  ? t("batch.deselectAll")
+                                  : t("batch.selectAll")
+                              }
+                            >
+                              {scheduledBatchSelectedIds.size ===
+                                scheduledBatchFilteredIds.size &&
+                              scheduledBatchFilteredIds.size > 0 ? (
+                                <BatchDeselectAllIcon className="h-[14px] w-[14px]" />
+                              ) : (
+                                <BatchSelectAllIcon className="h-[14px] w-[14px]" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleScheduledBatchConfirmClick}
+                              disabled={
+                                scheduledBatchSelectedIds.size === 0 || scheduledBatchPending
+                              }
+                              className={`p-0.5 rounded-full transition-colors ${scheduledBatchSelectedIds.size > 0 ? "text-emerald-600 hover:bg-emerald-500/10" : "text-[var(--app-hint)]"} disabled:cursor-not-allowed disabled:opacity-50`}
+                              title={t("batch.confirm.tooltip")}
+                            >
+                              <BatchCheckIcon className="h-[14px] w-[14px]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleExitScheduledBatchMode}
+                              disabled={scheduledBatchPending}
+                              className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                              title={t("batch.cancel.tooltip")}
+                            >
+                              <BatchXIcon className="h-[14px] w-[14px]" />
+                            </button>
+                          </>
+                        ) : showSidebarBatchActions ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleEnterScheduledBatchMode("archive")}
+                              disabled={visibleScheduledArchivableCount === 0}
+                              className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                              title={t("scheduled.batch.archive.tooltip")}
+                            >
+                              <BatchArchiveIcon className="h-[14px] w-[14px]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEnterScheduledBatchMode("delete")}
+                              disabled={visibleScheduledDeletableCount === 0}
+                              className="p-0.5 rounded-full text-[var(--app-hint)] transition-colors hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                              title={t("scheduled.batch.delete.tooltip")}
+                            >
+                              <BatchTrashIcon className="h-[14px] w-[14px]" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={toggleFilterScheduledActive}
+                              className={`p-0.5 rounded-full transition-colors ${filterScheduledActiveOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                              title={
+                                filterScheduledActiveOnly
+                                  ? t("filter.showAll")
+                                  : t("scheduled.filter.activeOnly")
+                              }
+                              aria-label={
+                                filterScheduledActiveOnly
+                                  ? t("filter.showAll")
+                                  : t("scheduled.filter.activeOnly")
+                              }
+                            >
+                              <OnlineFilterIcon className="h-[14px] w-[14px]" />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={toggleFilterScheduledActive}
+                            className={`p-0.5 rounded-full transition-colors ${filterScheduledActiveOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-secondary-bg)]"}`}
+                            title={
+                              filterScheduledActiveOnly
+                                ? t("filter.showAll")
+                                : t("scheduled.filter.activeOnly")
+                            }
+                            aria-label={
+                              filterScheduledActiveOnly
+                                ? t("filter.showAll")
+                                : t("scheduled.filter.activeOnly")
+                            }
+                          >
+                            <OnlineFilterIcon className="h-[14px] w-[14px]" />
+                          </button>
+                        ) : batchMode &&
                           showSidebarBatchActions ? (
                           <>
                             <button
@@ -5358,6 +5748,35 @@ function SessionsPage() {
         />
 
         <ConfirmDialog
+          isOpen={scheduledBatchConfirmOpen}
+          onClose={() => setScheduledBatchConfirmOpen(false)}
+          title={t(
+            scheduledBatchMode === "archive"
+              ? "scheduled.batch.archive.title"
+              : "scheduled.batch.delete.title",
+          )}
+          description={t(
+            scheduledBatchMode === "archive"
+              ? "scheduled.batch.archive.description"
+              : "scheduled.batch.delete.description",
+            { count: scheduledBatchSelectedIds.size },
+          )}
+          confirmLabel={t(
+            scheduledBatchMode === "archive"
+              ? "scheduled.action.archive"
+              : "scheduled.action.delete",
+          )}
+          confirmingLabel={t(
+            scheduledBatchMode === "archive"
+              ? "dialog.archive.confirming"
+              : "scheduled.deleteDialog.confirming",
+          )}
+          onConfirm={executeScheduledBatchOperation}
+          isPending={scheduledBatchPending}
+          destructive
+        />
+
+        <ConfirmDialog
           isOpen={scheduledDeleteTarget !== null}
           onClose={() => setScheduledDeleteTarget(null)}
           title={t("scheduled.deleteDialog.title")}
@@ -5443,21 +5862,69 @@ function SessionsPage() {
           </div>
           <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
 
-          {isSessionsTab ? (
+          {isSessionsTab || isScheduledTab ? (
             <>
               <div className="px-2 py-1.5 shrink-0 flex flex-col items-center gap-1">
-                <button
-                  type="button"
-                  onClick={toggleFilterOnline}
-                  className={`p-1.5 rounded-full ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
-                  title={
-                    filterOnlineOnly
-                      ? t("filter.showAll")
-                      : t("filter.onlineOnly")
-                  }
-                >
-                  <OnlineFilterIcon className="h-[14px] w-[14px]" />
-                </button>
+                {isScheduledTab && showSidebarBatchActions ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleEnterScheduledBatchMode("archive")}
+                      className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={visibleScheduledArchivableCount === 0}
+                      title={t("scheduled.batch.archive.tooltip")}
+                    >
+                      <BatchArchiveIcon className="h-[14px] w-[14px]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEnterScheduledBatchMode("delete")}
+                      className="p-1.5 rounded-full text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={visibleScheduledDeletableCount === 0}
+                      title={t("scheduled.batch.delete.tooltip")}
+                    >
+                      <BatchTrashIcon className="h-[14px] w-[14px]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={toggleFilterScheduledActive}
+                      className={`p-1.5 rounded-full ${filterScheduledActiveOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+                      title={
+                        filterScheduledActiveOnly
+                          ? t("filter.showAll")
+                          : t("scheduled.filter.activeOnly")
+                      }
+                    >
+                      <OnlineFilterIcon className="h-[14px] w-[14px]" />
+                    </button>
+                  </>
+                ) : isScheduledTab ? (
+                  <button
+                    type="button"
+                    onClick={toggleFilterScheduledActive}
+                    className={`p-1.5 rounded-full ${filterScheduledActiveOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+                    title={
+                      filterScheduledActiveOnly
+                        ? t("filter.showAll")
+                        : t("scheduled.filter.activeOnly")
+                    }
+                  >
+                    <OnlineFilterIcon className="h-[14px] w-[14px]" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={toggleFilterOnline}
+                    className={`p-1.5 rounded-full ${filterOnlineOnly ? "bg-emerald-500/15 text-emerald-500" : "text-[var(--app-hint)] hover:text-[var(--app-fg)] hover:bg-[var(--app-subtle-bg)]"}`}
+                    title={
+                      filterOnlineOnly
+                        ? t("filter.showAll")
+                        : t("filter.onlineOnly")
+                    }
+                  >
+                    <OnlineFilterIcon className="h-[14px] w-[14px]" />
+                  </button>
+                )}
               </div>
               <div className="mx-2 h-px bg-[var(--app-divider)] shrink-0" />
             </>

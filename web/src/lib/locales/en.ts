@@ -248,6 +248,15 @@ export default {
     'Are you sure you want to delete task "{name}"? This also deletes the task, all recorded runs, and any sessions linked to those runs. The original creator session is preserved. This action cannot be undone.',
   "scheduled.deleteDialog.confirm": "Delete",
   "scheduled.deleteDialog.confirming": "Deleting…",
+  "scheduled.filter.activeOnly": "Show active only",
+  "scheduled.batch.archive.tooltip": "Batch Archive Tasks",
+  "scheduled.batch.delete.tooltip": "Batch Delete Tasks",
+  "scheduled.batch.archive.title": "Batch Archive Tasks",
+  "scheduled.batch.archive.description":
+    "Archive {count} selected tasks? Archived tasks stay visible unless you filter to active only.",
+  "scheduled.batch.delete.title": "Batch Delete Tasks",
+  "scheduled.batch.delete.description":
+    "Delete {count} selected tasks? This action cannot be undone.",
   "dialog.error.default": "Operation failed. Please try again.",
   "dialog.dontAskAgain": "Don't ask again",
 
@@ -259,7 +268,7 @@ export default {
 
   // Filter
   "filter.onlineOnly": "Show online only",
-  "filter.showAll": "Show all sessions",
+  "filter.showAll": "Show all",
 
   // Batch operations
   "batch.archive.tooltip": "Batch Archive",

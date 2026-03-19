@@ -337,17 +337,12 @@ export function createSessionsRoutes(getSyncEngine: () => SyncEngine | null): Ho
             return sessionResult
         }
 
-        if (sessionResult.session.active) {
-            return c.json({ error: 'Cannot delete active session. Archive it first.' }, 409)
-        }
-
         try {
             await engine.deleteSession(sessionResult.sessionId)
             return c.json({ ok: true })
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to delete session'
-            // Map "active session" error to 409 conflict (race condition: session became active)
-            if (message.includes('active')) {
+            if (message.includes('concurrently') || message.includes('version')) {
                 return c.json({ error: message }, 409)
             }
             return c.json({ error: message }, 500)

@@ -241,6 +241,13 @@ export default {
   'scheduled.deleteDialog.description': '确定要删除任务 "{name}" 吗？这会一并删除该任务、所有执行记录，以及这些执行记录关联的会话；创建该任务的原始会话会被保留。此操作无法撤销。',
   'scheduled.deleteDialog.confirm': '删除',
   'scheduled.deleteDialog.confirming': '删除中…',
+  'scheduled.filter.activeOnly': '仅看活跃',
+  'scheduled.batch.archive.tooltip': '批量归档任务',
+  'scheduled.batch.delete.tooltip': '批量删除任务',
+  'scheduled.batch.archive.title': '批量归档任务',
+  'scheduled.batch.archive.description': '确定要归档选中的 {count} 个任务吗？归档任务仍会保留在列表中，除非切换为仅看活跃。',
+  'scheduled.batch.delete.title': '批量删除任务',
+  'scheduled.batch.delete.description': '确定要删除选中的 {count} 个任务吗？此操作无法撤销。',
   'dialog.error.default': '操作失败，请重试。',
   'dialog.dontAskAgain': '不再提示',
 
@@ -252,7 +259,7 @@ export default {
 
   // Filter
   'filter.onlineOnly': '仅显示在线',
-  'filter.showAll': '显示全部会话',
+  'filter.showAll': '显示全部',
 
   // Batch operations
   'batch.archive.tooltip': '批量归档',

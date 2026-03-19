@@ -277,10 +277,6 @@ export class SessionCache {
             throw new Error('Session not found')
         }
 
-        if (session.active) {
-            throw new Error('Cannot delete active session')
-        }
-
         const deleted = this.store.sessions.deleteSession(sessionId, session.namespace)
         if (!deleted) {
             throw new Error('Failed to delete session')

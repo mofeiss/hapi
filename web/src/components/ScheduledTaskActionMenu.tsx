@@ -55,7 +55,7 @@ function PlayIcon(props: { className?: string }) {
     )
 }
 
-function StopIcon(props: { className?: string }) {
+function ArchiveIcon(props: { className?: string }) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -69,9 +69,9 @@ function StopIcon(props: { className?: string }) {
             strokeLinejoin="round"
             className={props.className}
         >
-            <circle cx="12" cy="12" r="10" />
-            <path d="m15 9-6 6" />
-            <path d="m9 9 6 6" />
+            <rect width="20" height="5" x="2" y="3" rx="1" />
+            <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+            <path d="M10 12h4" />
         </svg>
     )
 }
@@ -259,7 +259,7 @@ export function ScheduledTaskActionMenu(props: ScheduledTaskActionMenuProps) {
                     }}
                     disabled={!canArchive}
                 >
-                    <StopIcon className="text-[var(--app-hint)]" />
+                    <ArchiveIcon className="text-[var(--app-hint)]" />
                     {t('scheduled.action.archive')}
                 </button>
                 <button

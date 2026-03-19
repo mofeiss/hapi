@@ -12,7 +12,6 @@ import { useTranslation } from '@/lib/use-translation'
 type SessionActionMenuProps = {
     isOpen: boolean
     onClose: () => void
-    sessionActive: boolean
     onRename: () => void
     onArchive: () => void
     onDelete: () => void
@@ -95,7 +94,6 @@ export function SessionActionMenu(props: SessionActionMenuProps) {
     const {
         isOpen,
         onClose,
-        sessionActive,
         onRename,
         onArchive,
         onDelete,
@@ -238,28 +236,24 @@ export function SessionActionMenu(props: SessionActionMenuProps) {
                     <EditIcon className="text-[var(--app-hint)]" />
                     {t('session.action.rename')}
                 </button>
-
-                {sessionActive ? (
-                    <button
-                        type="button"
-                        role="menuitem"
-                        className={`${baseItemClassName} text-red-500 hover:bg-red-500/10`}
-                        onClick={handleArchive}
-                    >
-                        <ArchiveIcon className="text-red-500" />
-                        {t('session.action.archive')}
-                    </button>
-                ) : (
-                    <button
-                        type="button"
-                        role="menuitem"
-                        className={`${baseItemClassName} text-red-500 hover:bg-red-500/10`}
-                        onClick={handleDelete}
-                    >
-                        <TrashIcon className="text-red-500" />
-                        {t('session.action.delete')}
-                    </button>
-                )}
+                <button
+                    type="button"
+                    role="menuitem"
+                    className={`${baseItemClassName} hover:bg-[var(--app-subtle-bg)]`}
+                    onClick={handleArchive}
+                >
+                    <ArchiveIcon className="text-[var(--app-hint)]" />
+                    {t('session.action.archive')}
+                </button>
+                <button
+                    type="button"
+                    role="menuitem"
+                    className={`${baseItemClassName} text-red-500 hover:bg-red-500/10`}
+                    onClick={handleDelete}
+                >
+                    <TrashIcon className="text-red-500" />
+                    {t('session.action.delete')}
+                </button>
             </div>
         </div>
     )

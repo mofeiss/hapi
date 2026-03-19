@@ -340,9 +340,7 @@ function SessionItem(props: {
             />
             <div
               className={`truncate text-base leading-none ${
-                selected
-                  ? "font-semibold text-[var(--app-fg)]"
-                  : !s.active
+                !s.active
                     ? "font-normal text-[var(--app-hint)]"
                     : "font-medium"
               }`}
@@ -446,7 +444,6 @@ function SessionItem(props: {
           <SessionActionMenu
             isOpen={menuOpen}
             onClose={() => setMenuOpen(false)}
-            sessionActive={s.active}
             onRename={() => setRenameOpen(true)}
             onArchive={() =>
               skipArchiveConfirm ? handleQuickArchive() : setArchiveOpen(true)
@@ -529,7 +526,7 @@ export function SessionList(props: {
   const filteredSessions = useMemo(() => {
     if (!batchMode) return props.sessions;
     if (batchMode === "archive") return props.sessions.filter((s) => s.active);
-    return props.sessions.filter((s) => !s.active);
+    return props.sessions;
   }, [props.sessions, batchMode]);
 
   const groups = useMemo(
