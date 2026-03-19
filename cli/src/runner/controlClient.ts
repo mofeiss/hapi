@@ -184,7 +184,7 @@ export async function archiveRunnerScheduledTask(taskId: string): Promise<Schedu
   return result.task ?? null;
 }
 
-export async function deleteRunnerScheduledTask(taskId: string): Promise<{ taskId: string; machineId: string; namespace: string } | null> {
+export async function deleteRunnerScheduledTask(taskId: string): Promise<{ taskId: string; machineId: string; namespace: string; deletedSessionIds: string[] } | null> {
   const result = await runnerPost('/scheduler/tasks/delete', { taskId });
   return result.deleted ?? null;
 }

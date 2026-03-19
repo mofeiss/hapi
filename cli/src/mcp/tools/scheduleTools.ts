@@ -373,7 +373,7 @@ export async function registerScheduleTools(mcp: McpServer, client: ApiSessionCl
         })
 
         mcp.registerTool('schedule_delete', {
-            description: 'Delete a scheduled task by id.',
+            description: 'Delete a scheduled task by id. This removes the task, all of its recorded runs, and any non-creator run sessions linked to those runs. The original creator session is preserved.',
             title: 'Delete Scheduled Task',
             inputSchema: taskIdSchema
         }, async (args) => {

@@ -244,7 +244,7 @@ export default {
   "dialog.delete.confirming": "Deleting…",
   "scheduled.deleteDialog.title": "Delete Task",
   "scheduled.deleteDialog.description":
-    'Are you sure you want to delete task "{name}"? This action cannot be undone.',
+    'Are you sure you want to delete task "{name}"? This also deletes the task, all recorded runs, and any sessions linked to those runs. The original creator session is preserved. This action cannot be undone.',
   "scheduled.deleteDialog.confirm": "Delete",
   "scheduled.deleteDialog.confirming": "Deleting…",
   "dialog.error.default": "Operation failed. Please try again.",

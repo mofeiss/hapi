@@ -77,23 +77,6 @@ function filterScheduledPayloadByMachine<T extends { machineId: string }>(items:
     return items.filter((item) => machineIds.has(item.machineId))
 }
 
-async function getScheduledTaskSnapshot(taskId: string): Promise<{
-    task: ScheduledTask | null
-    runs: ScheduledTaskRun[]
-}> {
-    const { tasks } = await runnerPost<{ tasks: ScheduledTask[] }>('/scheduler/tasks/list', {})
-    const task = tasks.find((entry) => entry.id === taskId) ?? null
-    if (!task) {
-        return { task: null, runs: [] }
-    }
-
-    const { runs } = await runnerPost<{ runs: ScheduledTaskRun[] }>('/scheduler/runs/list', {})
-    return {
-        task,
-        runs: runs.filter((run) => run.taskId === taskId)
-    }
-}
-
 export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): Hono<WebAppEnv> {
     const app = new Hono<WebAppEnv>()
 
@@ -204,11 +187,7 @@ export function createScheduledRoutes(getSyncEngine: () => SyncEngine | null): H
         }
 
         try {
-            const snapshot = await getScheduledTaskSnapshot(parsed.data.taskId)
             const result = await runnerPost<{ deleted: unknown | null }>('/scheduler/tasks/delete', parsed.data)
-            if (snapshot.task) {
-                await engine.deleteScheduledTaskSessions(snapshot.task, snapshot.runs)
-            }
             return c.json(result)
         } catch (error) {
             const message = error instanceof Error && error.message ? error.message : 'Runner request failed'

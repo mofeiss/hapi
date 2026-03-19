@@ -238,6 +238,14 @@ function getGenericSubtitleFromInput(input: unknown, metadata: SessionMetadataSu
     return null
 }
 
+function getScheduleCreateSubtitle(input: unknown): string | null {
+    return getInputStringAny(input, ['title']) ?? null
+}
+
+function getScheduleDeleteSubtitle(input: unknown): string | null {
+    return getInputStringAny(input, ['taskId']) ?? null
+}
+
 type ToolOpts = {
     toolName: string
     input: unknown
@@ -904,10 +912,23 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
     const coreRichTitle = isTodoToolName(toolOpts.toolName) ? null : getCoreToolRichTitle(toolOpts)
 
     if (toolOpts.toolName.startsWith('mcp__')) {
+        const specialSubtitle = (() => {
+            switch (toolOpts.toolName) {
+                case 'mcp__hapi__schedule_create':
+                case 'hapi__schedule_create':
+                    return getScheduleCreateSubtitle(toolOpts.input)
+                case 'mcp__hapi__schedule_delete':
+                case 'hapi__schedule_delete':
+                    return getScheduleDeleteSubtitle(toolOpts.input)
+                default:
+                    return getGenericSubtitleFromInput(toolOpts.input, toolOpts.metadata)
+            }
+        })()
+
         return {
             icon: <PuzzleIcon className={DEFAULT_ICON_CLASS} />,
             title: standardTitle ?? formatMCPTitle(toolOpts.toolName),
-            subtitle: getGenericSubtitleFromInput(toolOpts.input, toolOpts.metadata),
+            subtitle: specialSubtitle,
             minimal: true
         }
     }

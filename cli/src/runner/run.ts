@@ -801,7 +801,39 @@ export async function startRunner(): Promise<void> {
     };
 
     const deleteScheduledTask = async (taskId: string) => {
-      return await scheduler.deleteTask(taskId);
+      const tasks = await scheduler.listTasks({ machineId })
+      const task = tasks.find((entry) => entry.id === taskId)
+      if (!task) {
+        return null
+      }
+
+      const runs = (await scheduler.listRuns({ machineId })).filter((run) => run.taskId === taskId)
+      const deleted = await scheduler.deleteTask(taskId)
+      if (!deleted) {
+        return null
+      }
+
+      const preservedSessionId = task.createdBySessionId ?? null
+      const deletedSessionIds: string[] = []
+
+      for (const run of runs) {
+        const sessionId = run.sessionId
+        if (!sessionId || sessionId === preservedSessionId) {
+          continue
+        }
+
+        try {
+          await api.deleteSession(sessionId)
+          deletedSessionIds.push(sessionId)
+        } catch (error) {
+          logger.debug(`[RUNNER RUN] Failed to delete scheduled run session ${sessionId} while deleting task ${taskId}`, error)
+        }
+      }
+
+      return {
+        ...deleted,
+        deletedSessionIds
+      }
     };
 
     // Stop a session by sessionId or PID fallback

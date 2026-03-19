@@ -179,6 +179,19 @@ export class ApiClient {
         }
     }
 
+    async deleteSession(sessionId: string): Promise<void> {
+        await axios.delete(
+            `${configuration.apiUrl}/api/sessions/${encodeURIComponent(sessionId)}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${this.token}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 60_000
+            }
+        )
+    }
+
     sessionSyncClient(session: Session): ApiSessionClient {
         return new ApiSessionClient(this.token, session)
     }

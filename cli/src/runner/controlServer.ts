@@ -47,7 +47,7 @@ export function startRunnerControlServer({
   listScheduledTaskRuns: () => Promise<ScheduledTaskRun[]>;
   reportScheduledTaskOutcome: (input: { runId: string; outcome: ScheduledTaskRun['outcome'] }) => Promise<ScheduledTaskRun | null>;
   archiveScheduledTask: (taskId: string) => Promise<ScheduledTask | null>;
-  deleteScheduledTask: (taskId: string) => Promise<{ taskId: string; machineId: string; namespace: string } | null>;
+  deleteScheduledTask: (taskId: string) => Promise<{ taskId: string; machineId: string; namespace: string; deletedSessionIds: string[] } | null>;
   requestShutdown: () => void;
   onHappySessionWebhook: (sessionId: string, metadata: Metadata) => void;
 }): Promise<{ port: number; stop: () => Promise<void> }> {
@@ -367,7 +367,7 @@ export function startRunnerControlServer({
       schema: {
         body: z.object({ taskId: z.string() }),
         response: {
-          200: z.object({ deleted: z.object({ taskId: z.string(), machineId: z.string(), namespace: z.string() }).nullable() }),
+          200: z.object({ deleted: z.object({ taskId: z.string(), machineId: z.string(), namespace: z.string(), deletedSessionIds: z.array(z.string()) }).nullable() }),
           500: z.object({ error: z.string(), code: z.string().optional() })
         }
       }
