@@ -401,13 +401,14 @@ export class RunnerSchedulerService {
 
   private async runTask(task: ScheduledTask, now: number): Promise<void> {
     const scheduledFor = resolveNextRunAt(task, now) ?? task.runAt ?? now
+    const runId = randomUUID()
     let finalRun: ScheduledTaskRun
 
     try {
       const triggerResult = await this.triggerTask({
         task,
         run: {
-          id: randomUUID(),
+          id: runId,
           taskId: task.id,
           machineId: task.machineId,
           scheduledFor,
@@ -419,7 +420,7 @@ export class RunnerSchedulerService {
 
       const finishedAt = Date.now()
       finalRun = {
-        id: randomUUID(),
+        id: runId,
         taskId: task.id,
         machineId: task.machineId,
         scheduledFor,
@@ -437,7 +438,7 @@ export class RunnerSchedulerService {
       const message = error instanceof Error ? error.message : String(error)
       logger.debug('[scheduler] task trigger failed', { taskId: task.id, error: message })
       finalRun = {
-        id: randomUUID(),
+        id: runId,
         taskId: task.id,
         machineId: task.machineId,
         scheduledFor,
