@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CronExpressionParser } from "cron-parser";
 import {
@@ -2242,9 +2242,8 @@ function ScheduledTaskDetailPanel({
                     ),
                   },
                 ].map((item, index) => (
-                  <>
+                  <Fragment key={item.key}>
                     <div
-                      key={`config-definition-${item.key}`}
                       className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" : ""}`}
                     >
                       <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
@@ -2262,7 +2261,7 @@ function ScheduledTaskDetailPanel({
                         {task.prompt}
                       </div>
                     ) : null}
-                  </>
+                  </Fragment>
                 ))}
               </div>
             </div>
@@ -2434,9 +2433,8 @@ function ScheduledTaskDetailPanel({
                               : t("common.no"),
                           },
                         ].map((item) => (
-                          <>
+                          <Fragment key={item.key}>
                             <div
-                              key={item.key}
                               className="flex items-start justify-between gap-4 border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)] py-2 text-sm"
                             >
                               <div className="shrink-0 text-xs uppercase tracking-[0.12em] text-[var(--app-hint)]">
@@ -2454,7 +2452,7 @@ function ScheduledTaskDetailPanel({
                                 {taskOutcome.summary}
                               </div>
                             ) : null}
-                          </>
+                          </Fragment>
                         ))}
                             </>
                           );
@@ -3085,7 +3083,13 @@ function SessionsPage() {
       return;
     }
     if (!scheduledEditing) {
-      setScheduledEditState(buildScheduledTitleEditState(selectedScheduledTask));
+      setScheduledEditState((current) => {
+        const next = buildScheduledTitleEditState(selectedScheduledTask);
+        if (current?.title === next.title) {
+          return current;
+        }
+        return next;
+      });
     }
   }, [scheduledEditing, selectedScheduledTask]);
 

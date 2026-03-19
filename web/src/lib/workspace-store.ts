@@ -78,7 +78,20 @@ export function getWorkspaceState(): WorkspaceState {
 }
 
 export function setWorkspaceState(next: Partial<WorkspaceState>): void {
-    state = { ...state, ...next }
+    const nextState = { ...state, ...next }
+
+    if (
+        nextState.tab === state.tab
+        && nextState.overlay === state.overlay
+        && nextState.selectedSessionId === state.selectedSessionId
+        && nextState.sessionSubview === state.sessionSubview
+        && nextState.selectedScheduledTaskId === state.selectedScheduledTaskId
+        && nextState.selectedScheduledRunId === state.selectedScheduledRunId
+    ) {
+        return
+    }
+
+    state = nextState
     persistState(state)
     emit()
 }
