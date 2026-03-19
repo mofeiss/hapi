@@ -3834,10 +3834,23 @@ function SessionsPage() {
     [openNewTaskOverlay],
   );
 
+  const toggleCurrentNewOverlay = useCallback(() => {
+    if (workspace.tab === "scheduled") {
+      if (newTaskOpen) {
+        setNewTaskOpen(false);
+        selectWorkspaceOverlay("none");
+        return;
+      }
+
+      openNewTaskOverlay();
+      return;
+    }
+
+    toggleNewSessionOverlay();
+  }, [newTaskOpen, openNewTaskOverlay, toggleNewSessionOverlay, workspace.tab]);
+
   useEffect(() => {
     setSettingsOpen(workspace.overlay === "settings");
-    setNewSessionOpen(workspace.overlay === "newSession");
-    setNewTaskOpen(workspace.overlay === "newTask");
     if (workspace.overlay === "newTask") {
       setNewSessionEntryMode("task");
     } else if (workspace.overlay === "newSession") {
@@ -4361,7 +4374,7 @@ function SessionsPage() {
           ((isSessionsTab && activeSessionId !== null) ||
             (isScheduledTab && selectedScheduledTaskId !== null))) ||
         Boolean(swipeForwardSessionId)),
-    onOpenNewSession: toggleNewSessionOverlay,
+    onOpenNewSession: toggleCurrentNewOverlay,
     onToggleSettings: toggleSettingsOverlay,
     onToggleDesktopSidebar: toggleCollapsed,
     onToggleMobileSessionPane: toggleMobileSessionPane,
@@ -4896,6 +4909,8 @@ function SessionsPage() {
                                                 iconToneClass={iconToneClass}
                                                 isPending={scheduledPending}
                                                 onSelect={() => {
+                                                  setNewTaskOpen(false);
+                                                  selectWorkspaceOverlay("none");
                                                   setSelectedScheduledTaskId(
                                                     task.id,
                                                   );
@@ -5305,6 +5320,8 @@ function SessionsPage() {
                         latestRun={latestScheduledRunByTaskId.get(task.id)}
                         isPending={scheduledPending}
                         onSelect={(taskId, runId) => {
+                          setNewTaskOpen(false);
+                          selectWorkspaceOverlay("none");
                           setSelectedScheduledTaskId(taskId);
                           setSelectedScheduledRunId(runId ?? null);
                           openWorkspaceScheduledTask(taskId, runId ?? null);

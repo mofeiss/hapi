@@ -42,7 +42,7 @@ describe('useAppKeyboardShortcuts', () => {
         }
     })
 
-    it('opens the new session panel on Cmd/Ctrl+Alt+, when enabled', () => {
+    it('opens the current new panel on Cmd/Ctrl+Alt+, when enabled', () => {
         const onOpenNewSession = vi.fn()
         render(<Harness onOpenNewSession={onOpenNewSession} />)
 
@@ -60,7 +60,7 @@ describe('useAppKeyboardShortcuts', () => {
         expect(event.defaultPrevented).toBe(true)
     })
 
-    it('does not open the new session panel when the shortcut is disabled', () => {
+    it('does not open the current new panel when the shortcut is disabled', () => {
         shortcutSettingsMock.current = {
             toggleSettings: true,
             toggleSidebar: true,
