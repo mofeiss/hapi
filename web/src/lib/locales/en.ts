@@ -295,6 +295,10 @@ export default {
   "newSession.empty.title": "Start a new session",
   "newSession.empty.subtitle":
     "Pick a workspace and environment, then tell HAPI what you want to do.",
+  "newTask.title": "New Task",
+  "newTask.empty.title": "Start a new task",
+  "newTask.empty.subtitle":
+    "Pick a workspace and environment, then tell HAPI what you want to do.",
   "newSession.machine": "Machine",
   "newSession.directory": "Directory",
   "newSession.placeholder": "/path/to/project",

@@ -214,6 +214,7 @@ function DraftHeader(props: {
 export function NewSession(props: {
     api: ApiClient
     machines: Machine[]
+    entryMode?: 'session' | 'task'
     includeTopSafeArea?: boolean
     isLoading?: boolean
     loadError?: string | null
@@ -238,6 +239,10 @@ export function NewSession(props: {
     const preferredAgent = loadPreferredAgent()
     const preferredModel = normalizeClaudeModelValue(loadPreferredModel())
     const isFormDisabled = Boolean(isPending || props.isLoading)
+    const entryMode = props.entryMode ?? 'session'
+    const titleKey = entryMode === 'task' ? 'newTask.title' : 'newSession.title'
+    const emptyTitleKey = entryMode === 'task' ? 'newTask.empty.title' : 'newSession.empty.title'
+    const emptySubtitleKey = entryMode === 'task' ? 'newTask.empty.subtitle' : 'newSession.empty.subtitle'
 
     const [machineId, setMachineId] = useState<string | null>(null)
     const [directory, setDirectory] = useState(loadPreferredDirectory)
@@ -715,7 +720,7 @@ export function NewSession(props: {
     return (
         <div className="flex h-full min-h-0 flex-col bg-[var(--app-bg)]">
             <DraftHeader
-                title={t('newSession.title')}
+                title={t(titleKey)}
                 onBack={props.onCancel}
                 includeTopSafeArea={props.includeTopSafeArea}
             />
@@ -736,10 +741,10 @@ export function NewSession(props: {
                                         </div>
 
                                         <h1 className="mt-4 text-[26px] font-semibold tracking-[-0.02em] text-[var(--app-fg)] sm:text-[32px]">
-                                            {t('newSession.empty.title')}
+                                            {t(emptyTitleKey)}
                                         </h1>
                                         <p className="mt-1.5 w-full max-w-[460px] overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-6 text-[var(--app-hint)]">
-                                            {t('newSession.empty.subtitle')}
+                                            {t(emptySubtitleKey)}
                                         </p>
                                     </div>
 

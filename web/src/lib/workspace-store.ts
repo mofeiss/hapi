@@ -3,7 +3,7 @@ import { readStorageJson, writeStorageJson } from '@/lib/storage'
 
 export type WorkspaceTab = 'sessions' | 'scheduled'
 export type SessionSubview = 'chat' | 'files' | 'terminal'
-export type WorkspaceOverlay = 'none' | 'settings' | 'newSession'
+export type WorkspaceOverlay = 'none' | 'settings' | 'newSession' | 'newTask'
 
 export type WorkspaceState = {
     tab: WorkspaceTab
@@ -34,7 +34,7 @@ function isSessionSubview(value: unknown): value is SessionSubview {
 }
 
 function isWorkspaceOverlay(value: unknown): value is WorkspaceOverlay {
-    return value === 'none' || value === 'settings' || value === 'newSession'
+    return value === 'none' || value === 'settings' || value === 'newSession' || value === 'newTask'
 }
 
 function readPersistedState(): WorkspaceState {

@@ -2811,6 +2811,9 @@ function SessionsPage() {
     null,
   );
   const [newSessionInitialPrompt, setNewSessionInitialPrompt] = useState("");
+  const [newSessionEntryMode, setNewSessionEntryMode] = useState<
+    "session" | "task"
+  >(() => (workspace.overlay === "newTask" ? "task" : "session"));
   const [scheduledGroupCollapseOverrides, setScheduledGroupCollapseOverrides] =
     useState<Map<string, boolean>>(() => {
       const stored = readStorageJson<[string, boolean][]>(
@@ -3114,14 +3117,21 @@ function SessionsPage() {
   const [newSessionOpen, setNewSessionOpen] = useState(
     workspace.overlay === "newSession",
   );
-  const hasOverlay =
-    settingsOpen || (workspace.tab === "sessions" && newSessionOpen);
+  const [newTaskOpen, setNewTaskOpen] = useState(
+    workspace.overlay === "newTask",
+  );
   const [narrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== "undefined"
       ? window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX
       : false,
   );
-  const restoreNewSessionAfterSettingsRef = useRef(false);
+  const restoreOverlayAfterSettingsRef = useRef<"session" | "task" | null>(
+    workspace.overlay === "newTask"
+      ? "task"
+      : workspace.overlay === "newSession"
+        ? "session"
+        : null,
+  );
   const [swipeForwardSessionId, setSwipeForwardSessionId] = useState<
     string | null
   >(null);
@@ -3190,6 +3200,7 @@ function SessionsPage() {
     setBatchSelectedIds(new Set());
     setSettingsOpen(false);
     setNewSessionOpen(false);
+    setNewTaskOpen(false);
     selectWorkspaceOverlay("none");
     setToolbarMenuOpen(false);
   }, []);
@@ -3392,6 +3403,7 @@ function SessionsPage() {
       setMountedSessions([sessionId]);
       setSettingsOpen(false);
       setNewSessionOpen(false);
+      setNewTaskOpen(false);
     },
     [navigate],
   );
@@ -3658,12 +3670,20 @@ function SessionsPage() {
   }, [batchMode, batchSelectedIds, executeBatchOperation]);
 
   const closeSettingsOverlay = useCallback(() => {
-    const shouldRestoreNewSession = restoreNewSessionAfterSettingsRef.current;
-    restoreNewSessionAfterSettingsRef.current = false;
+    const restoredOverlay = restoreOverlayAfterSettingsRef.current;
+    restoreOverlayAfterSettingsRef.current = null;
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
-    setNewSessionOpen(shouldRestoreNewSession);
-    selectWorkspaceOverlay(shouldRestoreNewSession ? "newSession" : "none");
+    setNewSessionOpen(restoredOverlay === "session");
+    setNewTaskOpen(restoredOverlay === "task");
+    setNewSessionEntryMode(restoredOverlay === "task" ? "task" : "session");
+    selectWorkspaceOverlay(
+      restoredOverlay === "task"
+        ? "newTask"
+        : restoredOverlay === "session"
+          ? "newSession"
+          : "none",
+    );
   }, []);
 
   const toggleSettingsOverlay = useCallback(() => {
@@ -3672,25 +3692,36 @@ function SessionsPage() {
       return;
     }
 
-    restoreNewSessionAfterSettingsRef.current = newSessionOpen;
+    restoreOverlayAfterSettingsRef.current = newTaskOpen
+      ? "task"
+      : newSessionOpen
+        ? "session"
+        : null;
     setSettingsOpen(true);
     setNewSessionOpen(false);
+    setNewTaskOpen(false);
     selectWorkspaceOverlay("settings");
     setToolbarMenuOpen(false);
-  }, [closeSettingsOverlay, newSessionOpen, settingsOpen]);
+  }, [closeSettingsOverlay, newSessionOpen, newTaskOpen, settingsOpen]);
 
   const openSettingsOverlay = useCallback(() => {
-    restoreNewSessionAfterSettingsRef.current = newSessionOpen;
+    restoreOverlayAfterSettingsRef.current = newTaskOpen
+      ? "task"
+      : newSessionOpen
+        ? "session"
+        : null;
     setSettingsOpen(true);
     setNewSessionOpen(false);
+    setNewTaskOpen(false);
     selectWorkspaceOverlay("settings");
     setToolbarMenuOpen(false);
-  }, [newSessionOpen]);
+  }, [newSessionOpen, newTaskOpen]);
 
   const toggleNewSessionOverlay = useCallback(() => {
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
     setNewSessionMachineId(null);
+    setNewSessionEntryMode("session");
 
     if (!narrowViewport) {
       setNewSessionOpen((prev) => {
@@ -3718,6 +3749,7 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
     setNewSessionMachineId(null);
     setNewSessionInitialPrompt("");
+    setNewSessionEntryMode("session");
     selectWorkspaceTab("sessions");
     selectWorkspaceOverlay("newSession");
 
@@ -3738,6 +3770,7 @@ function SessionsPage() {
       setToolbarMenuOpen(false);
       setNewSessionMachineId(null);
       setNewSessionInitialPrompt(trimmedPrompt);
+      setNewSessionEntryMode("session");
       selectWorkspaceTab("sessions");
       selectWorkspaceOverlay("newSession");
 
@@ -3764,6 +3797,7 @@ function SessionsPage() {
       setSettingsOpen(false);
       setToolbarMenuOpen(false);
       setNewSessionMachineId(matchedMachine?.id ?? null);
+      setNewSessionEntryMode("session");
       selectWorkspaceTab("sessions");
       selectWorkspaceOverlay("newSession");
 
@@ -3779,9 +3813,36 @@ function SessionsPage() {
     [machines, narrowViewport, navigate],
   );
 
+  const openNewTaskOverlay = useCallback(
+    (machineId?: string | null, prompt?: string) => {
+      setSettingsOpen(false);
+      setToolbarMenuOpen(false);
+      setNewSessionMachineId(machineId ?? null);
+      setNewSessionInitialPrompt(prompt?.trim() ?? "");
+      setNewSessionEntryMode("task");
+      selectWorkspaceTab("scheduled");
+      selectWorkspaceOverlay("newTask");
+      setNewTaskOpen(true);
+    },
+    [],
+  );
+
+  const openNewTaskForMachine = useCallback(
+    (machineId: string) => {
+      openNewTaskOverlay(machineId);
+    },
+    [openNewTaskOverlay],
+  );
+
   useEffect(() => {
     setSettingsOpen(workspace.overlay === "settings");
     setNewSessionOpen(workspace.overlay === "newSession");
+    setNewTaskOpen(workspace.overlay === "newTask");
+    if (workspace.overlay === "newTask") {
+      setNewSessionEntryMode("task");
+    } else if (workspace.overlay === "newSession") {
+      setNewSessionEntryMode("session");
+    }
   }, [workspace.overlay]);
 
   useEffect(() => {
@@ -3802,7 +3863,10 @@ function SessionsPage() {
 
   const isScheduledTab = workspace.tab === "scheduled";
   const isSessionsTab = workspace.tab === "sessions";
-  const visibleNewSessionOverlay = isSessionsTab && newSessionOpen;
+  const visibleSessionOverlay = isSessionsTab && newSessionOpen;
+  const visibleTaskOverlay = isScheduledTab && newTaskOpen;
+  const visibleNewSessionOverlay = visibleSessionOverlay || visibleTaskOverlay;
+  const hasOverlay = settingsOpen || visibleNewSessionOverlay;
   const swipeNavEnabled = narrowViewport;
   const isSubRoute =
     activeSessionId !== null && workspace.sessionSubview !== "chat";
@@ -3901,7 +3965,7 @@ function SessionsPage() {
         if (!capability.canBack || !capability.backTarget) {
           return false;
         }
-        if (capability.backTarget === "session") {
+      if (capability.backTarget === "session") {
           if (!capability.activeSessionId) {
             return false;
           }
@@ -3909,10 +3973,14 @@ function SessionsPage() {
           clearWorkspaceSessionSelection();
           setActiveSessionId(null);
           navigate({ to: "/" });
-        } else if (capability.backTarget === "newSession") {
-          setNewSessionOpen(false);
-          selectWorkspaceOverlay("none");
+      } else if (capability.backTarget === "newSession") {
+        if (visibleTaskOverlay) {
+          setNewTaskOpen(false);
         } else {
+          setNewSessionOpen(false);
+        }
+        selectWorkspaceOverlay("none");
+      } else {
           setSelectedScheduledTaskId(null);
           setSelectedScheduledRunId(null);
           setScheduledEditing(false);
@@ -3927,7 +3995,7 @@ function SessionsPage() {
       openSession(capability.forwardSessionId, { preserveForward: true });
       return true;
     },
-    [navigate, openSession],
+    [navigate, openSession, visibleTaskOverlay],
   );
 
   const finalizeWheelGesture = useCallback(() => {
@@ -4186,7 +4254,11 @@ function SessionsPage() {
     }
 
     if (visibleNewSessionOverlay) {
-      setNewSessionOpen(false);
+      if (visibleTaskOverlay) {
+        setNewTaskOpen(false);
+      } else {
+        setNewSessionOpen(false);
+      }
       selectWorkspaceOverlay("none");
       return;
     }
@@ -4219,6 +4291,7 @@ function SessionsPage() {
     selectedScheduledTaskId,
     swipeForwardSessionId,
     visibleNewSessionOverlay,
+    visibleTaskOverlay,
   ]);
 
   const mobileNewSessionVisible = narrowViewport && visibleNewSessionOverlay;
@@ -4335,7 +4408,11 @@ function SessionsPage() {
   const handlePinnedLogoClick = mobileLogoBackMode
     ? visibleNewSessionOverlay
       ? () => {
-          setNewSessionOpen(false);
+          if (visibleTaskOverlay) {
+            setNewTaskOpen(false);
+          } else {
+            setNewSessionOpen(false);
+          }
           selectWorkspaceOverlay("none");
         }
       : isSessionsTab && activeSessionId !== null
@@ -4542,13 +4619,18 @@ function SessionsPage() {
                     <div className="flex h-full min-h-0 flex-col overflow-hidden">
                       <NewSessionPanel
                         onClose={() => {
-                          setNewSessionOpen(false);
+                          if (visibleTaskOverlay) {
+                            setNewTaskOpen(false);
+                          } else {
+                            setNewSessionOpen(false);
+                          }
                           setNewSessionInitialPrompt("");
                           selectWorkspaceOverlay("none");
                         }}
                         onOpenSettings={openSettingsOverlay}
                         initialMachineId={newSessionMachineId}
                         initialPrompt={newSessionInitialPrompt}
+                        entryMode={visibleTaskOverlay ? "task" : "session"}
                       />
                     </div>
                   ) : mobileSessionsDetailVisible && activeSessionId ? (
@@ -4625,7 +4707,8 @@ function SessionsPage() {
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    openNewSessionOverlayWithPrompt(
+                                    openNewTaskOverlay(
+                                      null,
                                       t("scheduled.list.examplePrompt"),
                                     )
                                   }
@@ -4636,7 +4719,8 @@ function SessionsPage() {
                               }
                               actionLabel={t("scheduled.list.tryIt")}
                               onAction={() =>
-                                openNewSessionOverlayWithPrompt(
+                                openNewTaskOverlay(
+                                  null,
                                   t("scheduled.list.examplePrompt"),
                                 )
                               }
@@ -4657,16 +4741,17 @@ function SessionsPage() {
                                           : ""
                                       }
                                     >
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          toggleScheduledGroup(
-                                            group.machineId,
-                                            isCollapsed,
-                                          )
-                                        }
-                                        className="sticky top-0 z-10 flex w-full items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 text-left"
-                                      >
+                                      <div className="sticky top-0 z-10 flex items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 relative">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            toggleScheduledGroup(
+                                              group.machineId,
+                                              isCollapsed,
+                                            )
+                                          }
+                                          className="flex min-w-0 flex-1 items-center gap-2 pr-9 text-left"
+                                        >
                                         <svg
                                           xmlns="http://www.w3.org/2000/svg"
                                           width="16"
@@ -4721,7 +4806,32 @@ function SessionsPage() {
                                             ({group.tasks.length})
                                           </span>
                                         </div>
-                                      </button>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => openNewTaskForMachine(group.machineId)}
+                                          className="session-list-new-button absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]"
+                                          title={t("newTask.title")}
+                                          aria-label={`${t("newTask.title")} ${group.title}`}
+                                        >
+                                          <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            className="h-5 w-5"
+                                          >
+                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                            <line x1="12" y1="7" x2="12" y2="13" />
+                                            <line x1="9" y1="10" x2="15" y2="10" />
+                                          </svg>
+                                        </button>
+                                      </div>
                                       {!isCollapsed ? (
                                         <div className="flex flex-col divide-y divide-[var(--app-divider)]">
                                           {group.tasks.map((task) => {
@@ -5255,13 +5365,18 @@ function SessionsPage() {
           <div className="flex-1 min-h-0">
             <NewSessionPanel
               onClose={() => {
-                setNewSessionOpen(false);
+                if (visibleTaskOverlay) {
+                  setNewTaskOpen(false);
+                } else {
+                  setNewSessionOpen(false);
+                }
                 setNewSessionInitialPrompt("");
                 selectWorkspaceOverlay("none");
               }}
               onOpenSettings={openSettingsOverlay}
               initialMachineId={newSessionMachineId}
               initialPrompt={newSessionInitialPrompt}
+              entryMode={visibleTaskOverlay ? "task" : "session"}
             />
           </div>
         ) : !narrowViewport && isScheduledTab ? (
@@ -5486,6 +5601,7 @@ function NewSessionPanel(props: {
   onOpenSettings?: () => void;
   initialMachineId?: string | null;
   initialPrompt?: string;
+  entryMode?: "session" | "task";
 }) {
   const { api } = useAppContext();
   const navigate = useNavigate();
@@ -5529,6 +5645,7 @@ function NewSessionPanel(props: {
     <NewSession
       api={api}
       machines={machines}
+      entryMode={props.entryMode}
       includeTopSafeArea={false}
       isLoading={machinesLoading}
       loadError={machinesError}
