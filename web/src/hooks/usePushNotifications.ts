@@ -1,11 +1,35 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ApiClient } from '@/api/client'
 
+function isEmbeddedBrowserWithoutReliablePush(): boolean {
+    if (typeof navigator === 'undefined') {
+        return false
+    }
+
+    const userAgent = navigator.userAgent || ''
+
+    // VS Code Simple Browser runs inside an embedded Chromium/Electron shell.
+    // It may expose Push APIs but still fail subscription with
+    // "Registration failed - push service not available" during local dev.
+    return /\b(vscode|electron)\b/i.test(userAgent)
+}
+
 function isPushSupported(): boolean {
     return typeof window !== 'undefined'
         && 'serviceWorker' in navigator
         && 'PushManager' in window
         && 'Notification' in window
+        && !isEmbeddedBrowserWithoutReliablePush()
+}
+
+function isBenignPushSubscriptionError(error: unknown): boolean {
+    if (!(error instanceof DOMException)) {
+        return false
+    }
+
+    const message = error.message.toLowerCase()
+    return error.name === 'AbortError'
+        && (message.includes('push service not available') || message.includes('push service error'))
 }
 
 function base64UrlToUint8Array(base64Url: string): Uint8Array {
@@ -99,7 +123,9 @@ export function usePushNotifications(api: ApiClient | null) {
             setIsSubscribed(true)
             return true
         } catch (error) {
-            console.error('[PushNotifications] Failed to subscribe:', error)
+            if (!isBenignPushSubscriptionError(error)) {
+                console.error('[PushNotifications] Failed to subscribe:', error)
+            }
             return false
         }
     }, [api])
