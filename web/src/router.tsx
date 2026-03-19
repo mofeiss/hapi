@@ -3717,51 +3717,43 @@ function SessionsPage() {
     setToolbarMenuOpen(false);
   }, [newSessionOpen, newTaskOpen]);
 
-  const toggleNewSessionOverlay = useCallback(() => {
+  const toggleSessionOverlay = useCallback((options?: {
+    machineId?: string | null;
+    prompt?: string;
+  }) => {
     setSettingsOpen(false);
     setToolbarMenuOpen(false);
-    setNewSessionMachineId(null);
+    setNewSessionMachineId(options?.machineId ?? null);
+    setNewSessionInitialPrompt(options?.prompt?.trim() ?? "");
     setNewSessionEntryMode("session");
 
-    if (!narrowViewport) {
-      setNewSessionOpen((prev) => {
-        const next = !prev;
-        if (next) {
-          selectWorkspaceTab("sessions");
-        }
-        selectWorkspaceOverlay(next ? "newSession" : "none");
-        return next;
-      });
-      setActiveSessionId(null);
-      navigate({ to: "/" });
+    if (workspace.tab === "sessions" && newSessionOpen) {
+      setNewSessionOpen(false);
+      setNewSessionInitialPrompt("");
+      selectWorkspaceOverlay("none");
       return;
     }
 
-    setNewSessionOpen((prev) => {
-      const next = !prev;
-      selectWorkspaceOverlay(next ? "newSession" : "none");
-      return next;
-    });
-  }, [narrowViewport, navigate]);
-
-  const openNewSessionOverlay = useCallback(() => {
-    setSettingsOpen(false);
-    setToolbarMenuOpen(false);
-    setNewSessionMachineId(null);
-    setNewSessionInitialPrompt("");
-    setNewSessionEntryMode("session");
-    selectWorkspaceTab("sessions");
-    selectWorkspaceOverlay("newSession");
-
     if (!narrowViewport) {
       setNewSessionOpen(true);
-      setActiveSessionId(null);
+      selectWorkspaceTab("sessions");
+      selectWorkspaceOverlay("newSession");
       navigate({ to: "/" });
       return;
     }
 
     setNewSessionOpen(true);
-  }, [narrowViewport, navigate]);
+    selectWorkspaceTab("sessions");
+    selectWorkspaceOverlay("newSession");
+  }, [narrowViewport, navigate, newSessionOpen, workspace.tab]);
+
+  const toggleNewSessionOverlay = useCallback(() => {
+    toggleSessionOverlay();
+  }, [toggleSessionOverlay]);
+
+  const openNewSessionOverlay = useCallback(() => {
+    toggleSessionOverlay();
+  }, [toggleSessionOverlay]);
 
   const openNewSessionOverlayWithPrompt = useCallback(
     (prompt: string) => {
@@ -3794,23 +3786,31 @@ function SessionsPage() {
         return machineHost === host;
       });
 
+      toggleSessionOverlay({ machineId: matchedMachine?.id ?? null });
+    },
+    [machines, toggleSessionOverlay],
+  );
+
+  const toggleTaskOverlay = useCallback(
+    (machineId?: string | null, prompt?: string) => {
       setSettingsOpen(false);
       setToolbarMenuOpen(false);
-      setNewSessionMachineId(matchedMachine?.id ?? null);
-      setNewSessionEntryMode("session");
-      selectWorkspaceTab("sessions");
-      selectWorkspaceOverlay("newSession");
 
-      if (!narrowViewport) {
-        setNewSessionOpen(true);
-        setActiveSessionId(null);
-        navigate({ to: "/" });
+      if (workspace.tab === "scheduled" && newTaskOpen) {
+        setNewTaskOpen(false);
+        setNewSessionInitialPrompt("");
+        selectWorkspaceOverlay("none");
         return;
       }
 
-      setNewSessionOpen(true);
+      setNewSessionMachineId(machineId ?? null);
+      setNewSessionInitialPrompt(prompt?.trim() ?? "");
+      setNewSessionEntryMode("task");
+      selectWorkspaceTab("scheduled");
+      selectWorkspaceOverlay("newTask");
+      setNewTaskOpen(true);
     },
-    [machines, narrowViewport, navigate],
+    [newTaskOpen, workspace.tab],
   );
 
   const openNewTaskOverlay = useCallback(
@@ -3829,25 +3829,19 @@ function SessionsPage() {
 
   const openNewTaskForMachine = useCallback(
     (machineId: string) => {
-      openNewTaskOverlay(machineId);
+      toggleTaskOverlay(machineId);
     },
-    [openNewTaskOverlay],
+    [toggleTaskOverlay],
   );
 
   const toggleCurrentNewOverlay = useCallback(() => {
     if (workspace.tab === "scheduled") {
-      if (newTaskOpen) {
-        setNewTaskOpen(false);
-        selectWorkspaceOverlay("none");
-        return;
-      }
-
-      openNewTaskOverlay();
+      toggleTaskOverlay();
       return;
     }
 
-    toggleNewSessionOverlay();
-  }, [newTaskOpen, openNewTaskOverlay, toggleNewSessionOverlay, workspace.tab]);
+    toggleSessionOverlay();
+  }, [toggleSessionOverlay, toggleTaskOverlay, workspace.tab]);
 
   useEffect(() => {
     setSettingsOpen(workspace.overlay === "settings");
@@ -4608,7 +4602,7 @@ function SessionsPage() {
                     isDark={isDark}
                     onToggleTheme={toggleTheme}
                     onOpenSettings={toggleSettingsOverlay}
-                    onOpenNewSession={toggleNewSessionOverlay}
+                    onOpenNewSession={toggleCurrentNewOverlay}
                     onQuickNewSession={handleQuickNewSession}
                     quickNewSessionDisabled={quickNewDisabled}
                     quickNewSessionTitle={quickNewTitle}
@@ -4661,7 +4655,7 @@ function SessionsPage() {
                         onOpenSettings={() => {
                           toggleSettingsOverlay();
                         }}
-                        onOpenNewSession={toggleNewSessionOverlay}
+                        onOpenNewSession={toggleCurrentNewOverlay}
                       />
                     </div>
                   ) : mobileScheduledDetailVisible && selectedScheduledTask ? (
@@ -4977,7 +4971,7 @@ function SessionsPage() {
                         selectedSessionId={activeSessionId}
                         onSelect={handleSelectSession}
                         onNewSession={() => {
-                          openNewSessionOverlay();
+                          toggleSessionOverlay();
                         }}
                         onRefresh={handleRefresh}
                         isLoading={isLoading}
@@ -5466,7 +5460,7 @@ function SessionsPage() {
                     onOpenSettings={() => {
                       toggleSettingsOverlay();
                     }}
-                    onOpenNewSession={toggleNewSessionOverlay}
+                    onOpenNewSession={toggleCurrentNewOverlay}
                     subscribeToSessionEvents={false}
                   />
                 )}
