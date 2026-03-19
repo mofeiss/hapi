@@ -12,7 +12,7 @@ import { ChevronDownIcon } from '@/components/icons'
 import { useTranslation } from '@/lib/use-translation'
 import { Button } from '@/components/ui/button'
 
-const MAX_COLLAPSED_PROMPT_LINES = 5
+const MAX_COLLAPSED_PROMPT_CHARS = 1000
 
 function formatTimeGap(ms: number): string | null {
     const normalizedMs = Math.max(0, ms)
@@ -111,10 +111,9 @@ export function HappyUserMessage() {
     const onRetry = canRetry ? () => ctx.onRetryMessage!(localId) : undefined
     const messageId = threadMessageId.startsWith('user:') ? threadMessageId.slice(5) : threadMessageId
     const effectiveText = ctx.editedMessageTextById?.[messageId] ?? text
-    const promptLines = effectiveText.split(/\r?\n/)
-    const shouldCollapsePrompt = promptLines.length > MAX_COLLAPSED_PROMPT_LINES
+    const shouldCollapsePrompt = effectiveText.length > MAX_COLLAPSED_PROMPT_CHARS
     const visibleText = shouldCollapsePrompt && !isPromptExpanded
-        ? promptLines.slice(0, MAX_COLLAPSED_PROMPT_LINES).join('\n')
+        ? effectiveText.slice(0, MAX_COLLAPSED_PROMPT_CHARS)
         : effectiveText
     const isEdited = Boolean(ctx.editedMessageTextById?.[messageId])
     const canEdit = !isCliOutput
