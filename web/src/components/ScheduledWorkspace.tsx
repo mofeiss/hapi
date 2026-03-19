@@ -54,6 +54,14 @@ function getScheduledTaskDisplayStatusText(task: ScheduledTask, t: ReturnType<ty
     return t(`scheduled.list.status.${task.displayStatus}`)
 }
 
+function getScheduledTaskDisplayStatusClassName(task: ScheduledTask): string {
+    if (task.displayStatus === 'failed') return 'bg-rose-500/10 text-rose-600'
+    if (task.displayStatus === 'completed') return 'bg-emerald-500/10 text-emerald-600'
+    if (task.displayStatus === 'healthy') return 'bg-emerald-500/10 text-emerald-600'
+    if (task.displayStatus === 'succeeded') return getScheduledRunStatusToneClassName('succeeded')
+    return 'bg-[var(--app-subtle-bg)] text-[var(--app-fg)]'
+}
+
 function getScheduledTaskPhaseText(task: ScheduledTask, t: ReturnType<typeof useTranslation>['t']): string {
     return t(`scheduled.list.phase.${task.phase}`)
 }
@@ -208,7 +216,7 @@ function ScheduledTaskListItem(props: {
                         <div className="truncate text-sm font-medium text-[var(--app-fg)]">{props.task.title}</div>
                         <div className="mt-1 truncate text-xs text-[var(--app-hint)]">{props.task.targetDirectory}</div>
                     </div>
-                    <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + (props.task.displayStatus === 'failed' ? 'bg-rose-500/10 text-rose-600' : props.task.displayStatus === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : props.task.displayStatus === 'healthy' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-[var(--app-subtle-bg)] text-[var(--app-fg)]')}>
+                    <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + getScheduledTaskDisplayStatusClassName(props.task)}>
                         {getScheduledTaskDisplayStatusText(props.task, t)}
                     </span>
                 </div>

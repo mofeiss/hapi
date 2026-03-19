@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { CronExpressionParser } from "cron-parser";
 import {
@@ -800,6 +801,13 @@ function getScheduledTaskStatusTag(task: ScheduledTask): {
     };
   }
 
+  if (task.displayStatus === "succeeded") {
+    return {
+      label: "scheduled.runStatus.succeeded",
+      className: getScheduledRunStatusToneClassName("succeeded"),
+    };
+  }
+
   if (task.displayStatus === "healthy") {
     return {
       label: "scheduled.list.status.healthy",
@@ -820,6 +828,29 @@ function getScheduledTaskDisplayStatusText(
   return t(getScheduledTaskStatusTag(task).label);
 }
 
+function getScheduledTaskDisplayStatusTip(
+  task: ScheduledTask,
+  t: ReturnType<typeof useTranslation>["t"],
+): string | null {
+  if (task.displayStatus === "succeeded") {
+    return t("scheduled.detail.displayStatusTip.succeeded");
+  }
+
+  return null;
+}
+
+function getScheduledRunStatusTip(
+  task: ScheduledTask,
+  run: ScheduledTaskRun,
+  t: ReturnType<typeof useTranslation>["t"],
+): string | null {
+  if (task.scheduleType === "once" && run.status === "succeeded" && !run.outcome) {
+    return t("scheduled.detail.runStatusTip.succeededPendingOutcome");
+  }
+
+  return null;
+}
+
 function getScheduledTaskPhaseText(
   task: ScheduledTask,
   t: ReturnType<typeof useTranslation>["t"],
@@ -831,9 +862,70 @@ function ScheduledTaskStatusTag(props: {
   task: ScheduledTask;
   labelOverride?: string;
   icon?: React.ReactNode;
+  tip?: string | null;
 }) {
   const { t } = useTranslation();
   const taskStatusTag = getScheduledTaskStatusTag(props.task);
+  const [tipOpen, setTipOpen] = useState(false);
+  const tipRef = useRef<HTMLSpanElement | null>(null);
+  const tipButtonRef = useRef<HTMLSpanElement | null>(null);
+  const [tipPosition, setTipPosition] = useState<{ top: number; left: number } | null>(null);
+
+  const updateTipPosition = useCallback(() => {
+    const button = tipButtonRef.current;
+    if (!button) {
+      return;
+    }
+
+    const rect = button.getBoundingClientRect();
+    const tooltipWidth = 256;
+    const viewportWidth = window.innerWidth;
+    const left = Math.min(
+      Math.max(12, rect.right - tooltipWidth),
+      Math.max(12, viewportWidth - tooltipWidth - 12),
+    );
+
+    setTipPosition({
+      top: rect.bottom + 8,
+      left,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!tipOpen) {
+      return;
+    }
+
+    updateTipPosition();
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!tipRef.current?.contains(event.target as Node)) {
+        setTipOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setTipOpen(false);
+      }
+    };
+
+    const handleViewportChange = () => {
+      updateTipPosition();
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [tipOpen, updateTipPosition]);
 
   return (
     <span
@@ -841,6 +933,45 @@ function ScheduledTaskStatusTag(props: {
     >
       {props.icon}
       <span>{props.labelOverride ?? t(taskStatusTag.label)}</span>
+      {props.tip ? (
+        <span ref={tipRef} className="relative inline-flex">
+          <span
+            ref={tipButtonRef}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setTipOpen((open) => !open);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") {
+                return;
+              }
+
+              event.preventDefault();
+              event.stopPropagation();
+              setTipOpen((open) => !open);
+            }}
+            className="inline-flex h-3 w-3 items-center justify-center rounded-full border border-current text-[7px] leading-none opacity-80"
+            role="button"
+            tabIndex={0}
+            aria-label={props.tip}
+            aria-expanded={tipOpen}
+          >
+            !
+          </span>
+          {tipOpen && tipPosition && typeof document !== "undefined"
+            ? createPortal(
+                <div
+                  className="fixed z-[120] w-64 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-left text-sm leading-6 text-[var(--app-fg)] whitespace-normal break-words shadow-[0_18px_48px_rgba(15,23,42,0.14)]"
+                  style={{ top: tipPosition.top, left: tipPosition.left }}
+                >
+                  {props.tip}
+                </div>,
+                document.body,
+              )
+            : null}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -1404,6 +1535,7 @@ function ScheduledTaskListRow(props: {
   const { haptic } = usePlatform();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuAnchorPoint, setMenuAnchorPoint] = useState({ x: 0, y: 0 });
+  const displayStatusTip = getScheduledTaskDisplayStatusTip(props.task, t);
 
   const longPressHandlers = useLongPress({
     onLongPress: (point) => {
@@ -1458,19 +1590,11 @@ function ScheduledTaskListRow(props: {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1 text-sm">
-            <span
-              className={
-                props.task.phase === "paused"
-                  ? "text-amber-600"
-                  : props.latestRun?.status === "failed"
-                    ? "text-red-600"
-                    : props.latestRun?.status === "succeeded"
-                        ? "text-emerald-600"
-                        : "text-[var(--app-hint)]"
-              }
-            >
-              {props.statusText}
-            </span>
+            <ScheduledTaskStatusTag
+              task={props.task}
+              labelOverride={props.statusText}
+              tip={displayStatusTip}
+            />
           </div>
         </div>
         <div
@@ -1875,6 +1999,7 @@ function ScheduledTaskDetailPanel({
   });
   const [runSummaryTipOpen, setRunSummaryTipOpen] = useState(false);
   const runSummaryTipRef = useRef<HTMLDivElement | null>(null);
+  const runStatusTip = selectedRun ? getScheduledRunStatusTip(task, selectedRun, t) : null;
   const { copied, copy } = useCopyToClipboard();
   const configValueSlotClassName =
     "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
@@ -2119,7 +2244,7 @@ function ScheduledTaskDetailPanel({
                   {
                     key: "display-status",
                     label: t("scheduled.detail.displayStatus"),
-                    valueNode: <ScheduledTaskStatusTag task={task} />,
+                    valueNode: <ScheduledTaskStatusTag task={task} tip={getScheduledTaskDisplayStatusTip(task, t)} />,
                   },
                   {
                     key: "task-phase",
@@ -2294,7 +2419,7 @@ function ScheduledTaskDetailPanel({
                         label: t("scheduled.detail.status"),
                         valueNode: (
                           <div className="flex items-center justify-end">
-                            {selectedRun.resultSummary ? (
+                            {selectedRun.resultSummary || runStatusTip ? (
                               <div ref={runSummaryTipRef} className="relative">
                                 <button
                                   type="button"
@@ -2310,7 +2435,7 @@ function ScheduledTaskDetailPanel({
                                 </button>
                                 {runSummaryTipOpen ? (
                                   <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-64 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-left text-sm leading-6 text-[var(--app-fg)] whitespace-normal break-words shadow-[0_18px_48px_rgba(15,23,42,0.14)]">
-                                    {getScheduledRunResultSummaryLabel(selectedRun.resultSummary, t)}
+                                    {runStatusTip ?? (selectedRun.resultSummary ? getScheduledRunResultSummaryLabel(selectedRun.resultSummary, t) : null)}
                                   </div>
                                 ) : null}
                               </div>

@@ -21,7 +21,11 @@ export function getScheduledTaskDisplayStatus(task: ScheduledTask, runs: readonl
     }
 
     if (task.scheduleType === 'once') {
-        return latestRun.status === 'succeeded' ? 'completed' : 'failed'
+        if (latestRun.status !== 'succeeded') {
+            return 'failed'
+        }
+
+        return latestRun.outcome ? 'completed' : 'succeeded'
     }
 
     return latestRun.status === 'succeeded' ? 'healthy' : 'failed'

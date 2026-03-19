@@ -35,6 +35,7 @@ export type ScheduledTaskRunStatus = z.infer<typeof ScheduledTaskRunStatusSchema
 
 export const ScheduledTaskDisplayStatusSchema = z.enum([
     'ready',
+    'succeeded',
     'completed',
     'healthy',
     'failed'
