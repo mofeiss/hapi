@@ -516,6 +516,12 @@ export default {
   "settings.shortcuts.openNewSession.title": "Open New Session",
   "settings.shortcuts.openNewSession.detail":
     "Open the new session panel on any platform.",
+  "settings.shortcuts.switchToSessions.title": "Switch to Sessions",
+  "settings.shortcuts.switchToSessions.detail":
+    "Jump to the Sessions workspace tab.",
+  "settings.shortcuts.switchToScheduled.title": "Switch to Scheduled",
+  "settings.shortcuts.switchToScheduled.detail":
+    "Jump to the Scheduled workspace tab.",
   "settings.voice.title": "Voice Assistant",
   "settings.voice.language": "Voice Language",
   "settings.voice.autoDetect": "Auto-detect",

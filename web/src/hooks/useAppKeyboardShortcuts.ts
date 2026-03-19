@@ -5,6 +5,8 @@ type UseAppKeyboardShortcutsOptions = {
     isMobileViewport: boolean
     canToggleMobileSessionPane: boolean
     onOpenNewSession: () => void
+    onSwitchToScheduled: () => void
+    onSwitchToSessions: () => void
     onToggleSettings: () => void
     onToggleDesktopSidebar: () => void
     onToggleMobileSessionPane: () => void
@@ -20,6 +22,8 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
         canToggleMobileSessionPane,
         isMobileViewport,
         onOpenNewSession,
+        onSwitchToScheduled,
+        onSwitchToSessions,
         onToggleDesktopSidebar,
         onToggleMobileSessionPane,
         onToggleSettings,
@@ -73,6 +77,30 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
             ) {
                 event.preventDefault()
                 onOpenNewSession()
+                return
+            }
+
+            if (
+                shortcutSettings.switchToSessions
+                && event.code === 'Digit1'
+                && !event.altKey
+                && !event.shiftKey
+                && !event.repeat
+            ) {
+                event.preventDefault()
+                onSwitchToSessions()
+                return
+            }
+
+            if (
+                shortcutSettings.switchToScheduled
+                && event.code === 'Digit2'
+                && !event.altKey
+                && !event.shiftKey
+                && !event.repeat
+            ) {
+                event.preventDefault()
+                onSwitchToScheduled()
             }
         }
 
@@ -82,6 +110,8 @@ export function useAppKeyboardShortcuts(options: UseAppKeyboardShortcutsOptions)
         canToggleMobileSessionPane,
         isMobileViewport,
         onOpenNewSession,
+        onSwitchToScheduled,
+        onSwitchToSessions,
         onToggleDesktopSidebar,
         onToggleMobileSessionPane,
         onToggleSettings,

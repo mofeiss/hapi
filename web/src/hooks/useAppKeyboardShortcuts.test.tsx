@@ -21,6 +21,8 @@ function Harness(props: { onOpenNewSession: () => void }) {
         isMobileViewport: false,
         canToggleMobileSessionPane: false,
         onOpenNewSession: props.onOpenNewSession,
+        onSwitchToScheduled: vi.fn(),
+        onSwitchToSessions: vi.fn(),
         onToggleSettings: vi.fn(),
         onToggleDesktopSidebar: vi.fn(),
         onToggleMobileSessionPane: vi.fn(),

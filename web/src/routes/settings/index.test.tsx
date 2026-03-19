@@ -18,6 +18,8 @@ vi.mock('@/hooks/useKeyboardShortcuts', () => ({
             toggleSettings: true,
             toggleSidebar: false,
             openNewSession: true,
+            switchToSessions: true,
+            switchToScheduled: true,
         },
         setShortcutEnabled: vi.fn(),
     }),
@@ -39,6 +41,18 @@ vi.mock('@/hooks/useKeyboardShortcuts', () => ({
             titleKey: 'settings.shortcuts.openNewSession.title',
             detailKey: 'settings.shortcuts.openNewSession.detail',
             combos: [['Cmd/Ctrl', 'Alt', 'N']],
+        },
+        {
+            id: 'switchToSessions',
+            titleKey: 'settings.shortcuts.switchToSessions.title',
+            detailKey: 'settings.shortcuts.switchToSessions.detail',
+            combos: [['Cmd/Ctrl', '1']],
+        },
+        {
+            id: 'switchToScheduled',
+            titleKey: 'settings.shortcuts.switchToScheduled.title',
+            detailKey: 'settings.shortcuts.switchToScheduled.detail',
+            combos: [['Cmd/Ctrl', '2']],
         },
     ],
 }))
@@ -117,6 +131,8 @@ describe('SettingsPage', () => {
         expect(screen.getAllByRole('switch', { name: 'Toggle Settings' }).at(-1)).toHaveAttribute('aria-checked', 'true')
         expect(screen.getAllByRole('switch', { name: 'Sidebar / Session List' }).at(-1)).toHaveAttribute('aria-checked', 'false')
         expect(screen.getAllByRole('switch', { name: 'Open New Session' }).at(-1)).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getAllByRole('switch', { name: 'Switch to Sessions' }).at(-1)).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getAllByRole('switch', { name: 'Switch to Scheduled' }).at(-1)).toHaveAttribute('aria-checked', 'true')
         expect(screen.getAllByText('Cmd/Ctrl').length).toBeGreaterThanOrEqual(1)
     })
 

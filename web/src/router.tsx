@@ -4375,6 +4375,8 @@ function SessionsPage() {
             (isScheduledTab && selectedScheduledTaskId !== null))) ||
         Boolean(swipeForwardSessionId)),
     onOpenNewSession: toggleCurrentNewOverlay,
+    onSwitchToScheduled: handleOpenScheduledTab,
+    onSwitchToSessions: () => selectWorkspaceTab("sessions"),
     onToggleSettings: toggleSettingsOverlay,
     onToggleDesktopSidebar: toggleCollapsed,
     onToggleMobileSessionPane: toggleMobileSessionPane,

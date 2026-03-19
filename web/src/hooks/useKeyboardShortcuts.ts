@@ -4,6 +4,8 @@ export type KeyboardShortcutId =
     | 'toggleSettings'
     | 'toggleSidebar'
     | 'openNewSession'
+    | 'switchToSessions'
+    | 'switchToScheduled'
 
 export type KeyboardShortcutSettings = Record<KeyboardShortcutId, boolean>
 
@@ -21,6 +23,8 @@ export const defaultKeyboardShortcutSettings: KeyboardShortcutSettings = {
     toggleSettings: true,
     toggleSidebar: true,
     openNewSession: true,
+    switchToSessions: true,
+    switchToScheduled: true,
 }
 
 let cachedStoredValue: string | null | undefined
@@ -44,6 +48,18 @@ export const keyboardShortcutDefinitions: ReadonlyArray<KeyboardShortcutDefiniti
         titleKey: 'settings.shortcuts.openNewSession.title',
         detailKey: 'settings.shortcuts.openNewSession.detail',
         combos: [['Cmd/Ctrl', 'Alt', ',']],
+    },
+    {
+        id: 'switchToSessions',
+        titleKey: 'settings.shortcuts.switchToSessions.title',
+        detailKey: 'settings.shortcuts.switchToSessions.detail',
+        combos: [['Cmd/Ctrl', '1']],
+    },
+    {
+        id: 'switchToScheduled',
+        titleKey: 'settings.shortcuts.switchToScheduled.title',
+        detailKey: 'settings.shortcuts.switchToScheduled.detail',
+        combos: [['Cmd/Ctrl', '2']],
     },
 ]
 
@@ -74,6 +90,14 @@ function normalizeShortcutSettings(raw: unknown): KeyboardShortcutSettings {
             typeof data.openNewSession === 'boolean'
                 ? data.openNewSession
                 : defaultKeyboardShortcutSettings.openNewSession,
+        switchToSessions:
+            typeof data.switchToSessions === 'boolean'
+                ? data.switchToSessions
+                : defaultKeyboardShortcutSettings.switchToSessions,
+        switchToScheduled:
+            typeof data.switchToScheduled === 'boolean'
+                ? data.switchToScheduled
+                : defaultKeyboardShortcutSettings.switchToScheduled,
     }
 }
 
