@@ -137,7 +137,7 @@ export default {
   "scheduled.detail.mode.overview": "Overview",
   "scheduled.detail.mode.runs": "Runs",
   "scheduled.detail.mode.session": "Session",
-  "scheduled.detail.copy": "Copy details",
+  "scheduled.detail.copy": "Copy Details",
   "scheduled.detail.copied": "Copied",
   "scheduled.detail.mode.overviewHint": "Task definition, scheduler controls, and stable task-level facts.",
   "scheduled.detail.mode.runsHint": "Execution history, run outcome, and whether this task is actually succeeding.",

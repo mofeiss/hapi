@@ -866,6 +866,24 @@ function ScheduledTaskStatusTag(props: {
 }) {
   const { t } = useTranslation();
   const taskStatusTag = getScheduledTaskStatusTag(props.task);
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${taskStatusTag.className}`}
+    >
+      {props.icon}
+      <span>{props.labelOverride ?? t(taskStatusTag.label)}</span>
+      <ScheduledStatusTipTrigger tip={props.tip} />
+    </span>
+  );
+}
+
+function ScheduledStatusTipTrigger(props: {
+  tip?: string | null;
+}) {
+  if (!props.tip) {
+    return null;
+  }
+
   const [tipOpen, setTipOpen] = useState(false);
   const tipRef = useRef<HTMLSpanElement | null>(null);
   const tipButtonRef = useRef<HTMLSpanElement | null>(null);
@@ -928,50 +946,42 @@ function ScheduledTaskStatusTag(props: {
   }, [tipOpen, updateTipPosition]);
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${taskStatusTag.className}`}
-    >
-      {props.icon}
-      <span>{props.labelOverride ?? t(taskStatusTag.label)}</span>
-      {props.tip ? (
-        <span ref={tipRef} className="relative inline-flex">
-          <span
-            ref={tipButtonRef}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setTipOpen((open) => !open);
-            }}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter" && event.key !== " ") {
-                return;
-              }
+    <span ref={tipRef} className="relative inline-flex">
+      <span
+        ref={tipButtonRef}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setTipOpen((open) => !open);
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") {
+            return;
+          }
 
-              event.preventDefault();
-              event.stopPropagation();
-              setTipOpen((open) => !open);
-            }}
-            className="inline-flex h-3 w-3 items-center justify-center rounded-full border border-current text-[7px] leading-none opacity-80"
-            role="button"
-            tabIndex={0}
-            aria-label={props.tip}
-            aria-expanded={tipOpen}
-          >
-            !
-          </span>
-          {tipOpen && tipPosition && typeof document !== "undefined"
-            ? createPortal(
-                <div
-                  className="fixed z-[120] w-64 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-left text-sm leading-6 text-[var(--app-fg)] whitespace-normal break-words shadow-[0_18px_48px_rgba(15,23,42,0.14)]"
-                  style={{ top: tipPosition.top, left: tipPosition.left }}
-                >
-                  {props.tip}
-                </div>,
-                document.body,
-              )
-            : null}
-        </span>
-      ) : null}
+          event.preventDefault();
+          event.stopPropagation();
+          setTipOpen((open) => !open);
+        }}
+        className="inline-flex h-3 w-3 items-center justify-center rounded-full border border-[var(--app-hint)] text-[7px] leading-none text-[var(--app-hint)] opacity-80"
+        role="button"
+        tabIndex={0}
+        aria-label={props.tip}
+        aria-expanded={tipOpen}
+      >
+        !
+      </span>
+      {tipOpen && tipPosition && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed z-[120] w-64 rounded-2xl border border-[var(--app-border)] bg-[var(--app-bg)] p-3 text-left text-sm leading-6 text-[var(--app-fg)] whitespace-normal break-words shadow-[0_18px_48px_rgba(15,23,42,0.14)]"
+              style={{ top: tipPosition.top, left: tipPosition.left }}
+            >
+              {props.tip}
+            </div>,
+            document.body,
+          )
+        : null}
     </span>
   );
 }
@@ -1590,11 +1600,20 @@ function ScheduledTaskListRow(props: {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1 text-sm">
-            <ScheduledTaskStatusTag
-              task={props.task}
-              labelOverride={props.statusText}
-              tip={displayStatusTip}
-            />
+            <ScheduledStatusTipTrigger tip={displayStatusTip} />
+            <span
+              className={
+                props.task.phase === "paused"
+                  ? "text-amber-600"
+                  : props.task.displayStatus === "failed"
+                    ? "text-red-600"
+                    : props.task.displayStatus === "completed" || props.task.displayStatus === "healthy" || props.task.displayStatus === "succeeded"
+                      ? "text-emerald-600"
+                      : "text-[var(--app-hint)]"
+              }
+            >
+              {props.statusText}
+            </span>
           </div>
         </div>
         <div
