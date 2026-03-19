@@ -126,6 +126,7 @@ type HeaderActionGroupProps = {
     onToggleTheme?: () => void
     onOpenSettings?: () => void
     onOpenNewSession?: () => void
+    newSessionLabel?: string
     onQuickNewSession?: () => void
     quickNewSessionPending?: boolean
     quickNewSessionDisabled?: boolean
@@ -150,6 +151,7 @@ type HeaderActionGroupProps = {
 
 export function HeaderActionGroup(props: HeaderActionGroupProps) {
     const { t } = useTranslation()
+    const newSessionLabel = props.newSessionLabel ?? t('sessions.new')
     const newSessionButtonClassName = props.compactIcons
         ? 'session-list-new-button flex h-8 w-8 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] text-[var(--app-fg)] hover:bg-[var(--app-bg)]'
         : 'session-list-new-button flex h-[30px] w-[30px] items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-secondary-bg)] text-[var(--app-fg)] transition-colors hover:bg-[var(--app-bg)]'
@@ -164,8 +166,8 @@ export function HeaderActionGroup(props: HeaderActionGroupProps) {
                     type="button"
                     onClick={props.onOpenNewSession}
                     className={newSessionButtonClassName}
-                    title={t('sessions.new')}
-                    aria-label={t('sessions.new')}
+                    title={newSessionLabel}
+                    aria-label={newSessionLabel}
                 >
                     <NewChatIcon />
                 </button>

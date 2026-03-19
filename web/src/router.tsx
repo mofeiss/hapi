@@ -5276,7 +5276,8 @@ function SessionsPage() {
             </ToggleGroup>
             <HeaderActionGroup
               api={api}
-              onOpenNewSession={toggleNewSessionOverlay}
+              onOpenNewSession={toggleCurrentNewOverlay}
+              newSessionLabel={isScheduledTab ? t("newTask.title") : t("sessions.new")}
               className="flex flex-col items-center gap-1"
               compactIcons
               hideQuickNewButton
