@@ -454,4 +454,70 @@ describe('getToolPresentation', () => {
             subtitle: '测试标题'
         })
     })
+
+    it('shows schedule title in subtitle when provided', () => {
+        const presentation = getToolPresentation({
+            toolName: 'mcp__hapi__schedule_edit',
+            input: {
+                taskId: 'task_123',
+                title: 'Daily sync'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'en'
+        })
+
+        expect(presentation.subtitle).toBe('Daily sync')
+    })
+
+    it('falls back to task id for schedule task tools without title', () => {
+        const presentation = getToolPresentation({
+            toolName: 'mcp__hapi__schedule_pause',
+            input: {
+                taskId: 'task_123'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'en'
+        })
+
+        expect(presentation.subtitle).toBe('task_123')
+    })
+
+    it('falls back to run id for schedule run tools without title', () => {
+        const presentation = getToolPresentation({
+            toolName: 'mcp__hapi__schedule_run_get',
+            input: {
+                runId: 'run_456'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'en'
+        })
+
+        expect(presentation.subtitle).toBe('run_456')
+    })
+
+    it('shows status for schedule report outcome subtitle', () => {
+        const presentation = getToolPresentation({
+            toolName: 'mcp__hapi__schedule_report_outcome',
+            input: {
+                status: 'success',
+                summary: 'done'
+            },
+            result: null,
+            childrenCount: 0,
+            description: null,
+            metadata: null,
+            locale: 'en'
+        })
+
+        expect(presentation.subtitle).toBe('success')
+    })
 })

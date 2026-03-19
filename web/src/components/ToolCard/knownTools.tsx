@@ -246,6 +246,41 @@ function getScheduleDeleteSubtitle(input: unknown): string | null {
     return getInputStringAny(input, ['taskId']) ?? null
 }
 
+function getScheduleSubtitle(toolName: string, input: unknown): string | null {
+    if (toolName === 'mcp__hapi__schedule_report_outcome' || toolName === 'hapi__schedule_report_outcome') {
+        return getInputStringAny(input, ['status']) ?? null
+    }
+
+    const title = getInputStringAny(input, ['title'])
+    if (title) return truncate(title, 140)
+
+    switch (toolName) {
+        case 'mcp__hapi__schedule_get':
+        case 'hapi__schedule_get':
+        case 'mcp__hapi__schedule_edit':
+        case 'hapi__schedule_edit':
+        case 'mcp__hapi__schedule_pause':
+        case 'hapi__schedule_pause':
+        case 'mcp__hapi__schedule_resume':
+        case 'hapi__schedule_resume':
+        case 'mcp__hapi__schedule_archive':
+        case 'hapi__schedule_archive':
+        case 'mcp__hapi__schedule_delete':
+        case 'hapi__schedule_delete':
+        case 'mcp__hapi__schedule_run_list':
+        case 'hapi__schedule_run_list':
+            return getInputStringAny(input, ['taskId', 'id']) ?? null
+        case 'mcp__hapi__schedule_run_get':
+        case 'hapi__schedule_run_get':
+            return getInputStringAny(input, ['runId', 'id']) ?? null
+        case 'mcp__hapi__schedule_create':
+        case 'hapi__schedule_create':
+            return null
+        default:
+            return getGenericSubtitleFromInput(input, null)
+    }
+}
+
 type ToolOpts = {
     toolName: string
     input: unknown
@@ -915,11 +950,16 @@ export function getToolPresentation(opts: Omit<ToolOpts, 'locale'> & { locale?: 
         const specialSubtitle = (() => {
             switch (toolOpts.toolName) {
                 case 'mcp__hapi__schedule_create':
-                case 'hapi__schedule_create':
-                    return getScheduleCreateSubtitle(toolOpts.input)
+                case 'mcp__hapi__schedule_get':
+                case 'mcp__hapi__schedule_edit':
+                case 'mcp__hapi__schedule_pause':
+                case 'mcp__hapi__schedule_resume':
+                case 'mcp__hapi__schedule_archive':
                 case 'mcp__hapi__schedule_delete':
-                case 'hapi__schedule_delete':
-                    return getScheduleDeleteSubtitle(toolOpts.input)
+                case 'mcp__hapi__schedule_run_list':
+                case 'mcp__hapi__schedule_run_get':
+                case 'mcp__hapi__schedule_report_outcome':
+                    return getScheduleSubtitle(toolOpts.toolName, toolOpts.input)
                 default:
                     return getGenericSubtitleFromInput(toolOpts.input, toolOpts.metadata)
             }
