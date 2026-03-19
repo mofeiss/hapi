@@ -112,6 +112,7 @@ import {
   selectWorkspaceTab,
   useWorkspaceState,
 } from "@/lib/workspace-store";
+import { setRealtimeOwnerState } from "@/lib/realtime-owner-store";
 
 function BackIcon(props: { className?: string }) {
   return (
@@ -404,7 +405,6 @@ function SidebarExpandIcon(props: { className?: string }) {
   );
 }
 
-const MAX_CACHED_SESSIONS = 3;
 const SWIPE_NARROW_BREAKPOINT_PX = 1024;
 const SWIPE_WHEEL_TRIGGER_PX = 140;
 const SWIPE_WHEEL_CANCEL_PX = 24;
@@ -3358,15 +3358,10 @@ function SessionsPage() {
       if (selectedSessionId) {
         openWorkspaceSession(selectedSessionId, workspace.sessionSubview);
         setActiveSessionId(selectedSessionId);
-        setMountedSessions((prev) => {
-          const filtered = prev.filter((id) => id !== selectedSessionId);
-          const next = [...filtered, selectedSessionId];
-          return next.length > MAX_CACHED_SESSIONS
-            ? next.slice(-MAX_CACHED_SESSIONS)
-            : next;
-        });
+        setMountedSessions([selectedSessionId]);
       } else {
         setActiveSessionId(null);
+        setMountedSessions([]);
       }
     }
   }, [selectedSessionId, workspace.sessionSubview]);
@@ -3388,13 +3383,7 @@ function SessionsPage() {
       }
       openWorkspaceSession(sessionId, "chat");
       setActiveSessionId(sessionId);
-      setMountedSessions((prev) => {
-        const filtered = prev.filter((id) => id !== sessionId);
-        const next = [...filtered, sessionId];
-        return next.length > MAX_CACHED_SESSIONS
-          ? next.slice(-MAX_CACHED_SESSIONS)
-          : next;
-      });
+      setMountedSessions([sessionId]);
       setSettingsOpen(false);
       setNewSessionOpen(false);
     },
@@ -4238,6 +4227,50 @@ function SessionsPage() {
     mobileNewSessionVisible ||
     mobileSessionsDetailVisible ||
     mobileScheduledDetailVisible;
+  const scheduledRunSessionInteractive =
+    selectedScheduledRun?.sessionId === scheduledInteractiveSessionId;
+
+  useEffect(() => {
+    if (workspace.tab === "sessions" && activeSessionId) {
+      setRealtimeOwnerState({
+        focusKind: "session-detail",
+        sessionId: activeSessionId,
+      });
+      return;
+    }
+
+    if (
+      workspace.tab === "scheduled"
+      && selectedScheduledTaskId
+      && selectedScheduledRun?.sessionId
+      && scheduledRunSessionInteractive
+    ) {
+      setRealtimeOwnerState({
+        focusKind: "scheduled-session-detail",
+        sessionId: selectedScheduledRun.sessionId,
+      });
+      return;
+    }
+
+    if (workspace.tab === "scheduled" && selectedScheduledTaskId) {
+      setRealtimeOwnerState({
+        focusKind: "scheduled-detail",
+        sessionId: null,
+      });
+      return;
+    }
+
+    setRealtimeOwnerState({
+      focusKind: "none",
+      sessionId: null,
+    });
+  }, [
+    activeSessionId,
+    scheduledRunSessionInteractive,
+    selectedScheduledRun?.sessionId,
+    selectedScheduledTaskId,
+    workspace.tab,
+  ]);
 
   useAppKeyboardShortcuts({
     isMobileViewport: narrowViewport,
@@ -5208,7 +5241,7 @@ function SessionsPage() {
       <div
         className={`${((isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay) || mobileTabDetailVisible ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}` : ""}`}
       >
-        {showDesktopNewSessionPane ? (
+        {!narrowViewport && showDesktopNewSessionPane ? (
           <div className="flex-1 min-h-0">
             <NewSessionPanel
               onClose={() => {
@@ -5221,7 +5254,7 @@ function SessionsPage() {
               initialPrompt={newSessionInitialPrompt}
             />
           </div>
-        ) : isScheduledTab && !narrowViewport ? (
+        ) : !narrowViewport && isScheduledTab ? (
           <div className="hidden min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden lg:flex">
             {!selectedScheduledTask ? (
               <EmptyListState
@@ -5264,7 +5297,7 @@ function SessionsPage() {
             )}
 
           </div>
-        ) : (
+        ) : !narrowViewport ? (
           <>
             <div className="flex-1 min-h-0">
               <Outlet />
@@ -5295,7 +5328,7 @@ function SessionsPage() {
               </div>
             ))}
           </>
-        )}
+        ) : null}
         <div
           className={`absolute inset-0 z-50 bg-[var(--app-bg)] transition-opacity duration-200 ${settingsOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >

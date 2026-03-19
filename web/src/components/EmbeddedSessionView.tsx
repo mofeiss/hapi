@@ -4,7 +4,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SessionChat } from "@/components/SessionChat";
 import { LoadingState } from "@/components/LoadingState";
 import { useAppContext } from "@/lib/app-context";
-import { useSSE } from "@/hooks/useSSE";
 import { useTranslation } from "@/lib/use-translation";
 import { useToast } from "@/lib/toast-context";
 import { useSession } from "@/hooks/queries/useSession";
@@ -27,6 +26,7 @@ import {
   clearPendingSessionMode,
   usePendingSessionMode,
 } from "@/lib/pending-session-mode-store";
+import { useRealtimeOwnerState } from "@/lib/realtime-owner-store";
 import { resolveDraftAttachmentMetadata } from "@/lib/draftAttachments";
 import type {
   AttachmentMetadata,
@@ -128,18 +128,38 @@ export function EmbeddedSessionView({
   const queryClient = useQueryClient();
   const { addToast } = useToast();
   const { session, refetch: refetchSession } = useSession(api, sessionId);
+  const realtimeOwner = useRealtimeOwnerState();
   const pendingSessionMode = usePendingSessionMode(sessionId);
   const [modeSyncInFlight, setModeSyncInFlight] = useState(false);
   const [quickNewSessionPending, setQuickNewSessionPending] = useState(false);
   const modeSyncKeyRef = useRef<string | null>(null);
+  const hasHydratedFocusedDataRef = useRef(false);
 
-  useSSE({
-    enabled: Boolean(api && token && sessionId && subscribeToSessionEvents),
-    token,
-    baseUrl,
-    subscription: { sessionId },
-    onEvent: () => {},
-  });
+  const isRealtimeFocus = subscribeToSessionEvents
+    && realtimeOwner.sessionId === sessionId
+    && (realtimeOwner.focusKind === "session-detail"
+      || realtimeOwner.focusKind === "scheduled-session-detail");
+
+  useEffect(() => {
+    if (!api || !sessionId) {
+      return;
+    }
+
+    if (!isRealtimeFocus) {
+      hasHydratedFocusedDataRef.current = false;
+      return;
+    }
+
+    if (hasHydratedFocusedDataRef.current) {
+      return;
+    }
+
+    hasHydratedFocusedDataRef.current = true;
+    void Promise.allSettled([
+      refetchSession(),
+      fetchLatestMessages(api, sessionId),
+    ]);
+  }, [api, isRealtimeFocus, refetchSession, sessionId]);
 
   useEffect(() => {
     if (!api || !session || !pendingSessionMode) {

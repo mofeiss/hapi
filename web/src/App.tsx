@@ -14,7 +14,7 @@ import { useViewportHeight } from '@/hooks/useViewportHeight'
 import { queryKeys } from '@/lib/query-keys'
 import { AppContextProvider } from '@/lib/app-context'
 import { fetchLatestMessages } from '@/lib/message-window-store'
-import { useWorkspaceState } from '@/lib/workspace-store'
+import { useRealtimeOwnerState } from '@/lib/realtime-owner-store'
 import { useAppGoBack } from '@/hooks/useAppGoBack'
 import { useTranslation } from '@/lib/use-translation'
 import { VoiceProvider } from '@/lib/voice-context'
@@ -108,7 +108,7 @@ function AppInner() {
     const { token, api, isLoading: isAuthLoading, error: authError, needsBinding, bind } = useAuth(authSource, baseUrl)
     const goBack = useAppGoBack()
     const pathname = useLocation({ select: (location) => location.pathname })
-    const workspace = useWorkspaceState()
+    const realtimeOwner = useRealtimeOwnerState()
     const router = useRouter()
     const { addToast } = useToast()
 
@@ -140,7 +140,7 @@ function AppInner() {
         }
     }, [goBack, pathname])
     const queryClient = useQueryClient()
-    const selectedSessionId = workspace.tab === 'sessions' ? workspace.selectedSessionId : null
+    const focusedSessionId = realtimeOwner.sessionId
     const { isSyncing, startSync, endSync } = useSyncingState()
     const [sseDisconnected, setSseDisconnected] = useState(false)
     const syncTokenRef = useRef(0)
@@ -222,12 +222,12 @@ function AppInner() {
         }
         const invalidations = [
             queryClient.invalidateQueries({ queryKey: queryKeys.sessions }),
-            ...(selectedSessionId ? [
-                queryClient.invalidateQueries({ queryKey: queryKeys.session(selectedSessionId) })
+            ...(focusedSessionId ? [
+                queryClient.invalidateQueries({ queryKey: queryKeys.session(focusedSessionId) })
             ] : [])
         ]
-        const refreshMessages = (selectedSessionId && api)
-            ? fetchLatestMessages(api, selectedSessionId)
+        const refreshMessages = (focusedSessionId && api)
+            ? fetchLatestMessages(api, focusedSessionId)
             : Promise.resolve()
         Promise.all([...invalidations, refreshMessages])
             .catch((error) => {
@@ -239,7 +239,7 @@ function AppInner() {
                     endSync()
                 }
             })
-    }, [api, queryClient, selectedSessionId, startSync, endSync])
+    }, [api, focusedSessionId, queryClient, startSync, endSync])
 
     const handleSseDisconnect = useCallback(() => {
         // Only show reconnecting banner if we've already connected once
@@ -269,11 +269,11 @@ function AppInner() {
     }, [addToast])
 
     const eventSubscription = useMemo(() => {
-        if (selectedSessionId) {
-            return { all: true, sessionId: selectedSessionId }
+        if (focusedSessionId) {
+            return { all: true, sessionId: focusedSessionId }
         }
         return { all: true }
-    }, [selectedSessionId])
+    }, [focusedSessionId])
 
     const { subscriptionId } = useSSE({
         enabled: Boolean(api && token),
