@@ -3319,6 +3319,21 @@ function SessionsPage() {
   activeSessionRef.current = activeSessionId;
 
   useEffect(() => {
+    const sessionIds = new Set(sessions.map((session) => session.id));
+
+    if (selectedSessionId && !sessionIds.has(selectedSessionId)) {
+      clearWorkspaceSessionSelection();
+    }
+
+    if (activeSessionRef.current && !sessionIds.has(activeSessionRef.current)) {
+      setActiveSessionId(null);
+      setMountedSessions((prev) =>
+        prev.filter((sessionId) => sessionIds.has(sessionId)),
+      );
+    }
+  }, [selectedSessionId, sessions]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const update = () => {
       setNarrowViewport(window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX);
@@ -3430,12 +3445,15 @@ function SessionsPage() {
     (deletedId: string) => {
       setMountedSessions((prev) => prev.filter((id) => id !== deletedId));
       setSwipeForwardSessionId((prev) => (prev === deletedId ? null : prev));
+      if (workspace.selectedSessionId === deletedId) {
+        clearWorkspaceSessionSelection();
+      }
       if (activeSessionRef.current === deletedId) {
         setActiveSessionId(null);
         navigate({ to: "/" });
       }
     },
-    [navigate],
+    [navigate, workspace.selectedSessionId],
   );
 
   const handleQuickNewSession = useCallback(async () => {
