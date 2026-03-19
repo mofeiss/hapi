@@ -113,6 +113,22 @@ type MachineTaskGroup = {
     latestAt: number
 }
 
+const SCHEDULED_TASK_PHASE_SORT_ORDER: Record<ScheduledTask['phase'], number> = {
+    enabled: 0,
+    paused: 1,
+    archived: 2,
+}
+
+function compareScheduledTasks(left: ScheduledTask, right: ScheduledTask): number {
+    const phaseDiff = SCHEDULED_TASK_PHASE_SORT_ORDER[left.phase] - SCHEDULED_TASK_PHASE_SORT_ORDER[right.phase]
+
+    if (phaseDiff !== 0) {
+        return phaseDiff
+    }
+
+    return right.createdAt - left.createdAt
+}
+
 function groupTasksByMachine(tasks: ScheduledTask[], machines: Machine[]): MachineTaskGroup[] {
     const machineMap = new Map(machines.map((machine) => [machine.id, machine]))
     const groups = new Map<string, ScheduledTask[]>()
@@ -126,11 +142,7 @@ function groupTasksByMachine(tasks: ScheduledTask[], machines: Machine[]): Machi
 
     return Array.from(groups.entries())
         .map(([machineId, machineTasks]) => {
-            const sortedTasks = [...machineTasks].sort((left, right) => {
-                const leftTime = left.nextRunAt ?? left.lastRunAt ?? left.createdAt
-                const rightTime = right.nextRunAt ?? right.lastRunAt ?? right.createdAt
-                return rightTime - leftTime
-            })
+            const sortedTasks = [...machineTasks].sort(compareScheduledTasks)
             const latestAt = sortedTasks.reduce((max, task) => Math.max(max, task.nextRunAt ?? task.lastRunAt ?? task.createdAt), 0)
             return {
                 machineId,
