@@ -711,6 +711,69 @@ function formatScheduledDateTime(value: number | undefined): string {
   return new Date(value).toLocaleString();
 }
 
+function formatScheduledCountdownText(
+  targetTime: number,
+  now: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  const diff = Math.max(0, targetTime - now);
+  const totalSeconds = Math.ceil(diff / 1_000);
+  const totalDays = Math.floor(totalSeconds / 86_400);
+
+  if (diff < 1_000) {
+    return t("scheduled.time.startingSoon");
+  }
+
+  if (totalDays >= 1) {
+    return t("scheduled.time.inDaysOnly", { days: totalDays });
+  }
+
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+  return t("scheduled.time.hms", {
+    hours: String(hours).padStart(2, "0"),
+    minutes: String(minutes).padStart(2, "0"),
+    seconds: String(seconds).padStart(2, "0"),
+  });
+}
+
+function getScheduledNextTimeSummary(
+  task: ScheduledTask,
+  now: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (typeof task.nextRunAt === "number") {
+    return `${formatScheduledDateTime(task.nextRunAt)} · ${formatScheduledCountdownText(task.nextRunAt, now, t)}`;
+  }
+
+  if (task.phase === "paused") {
+    return t("scheduled.detail.nextRunTipPaused");
+  }
+
+  if (task.scheduleType === "once") {
+    return t("scheduled.detail.nextRunTipOnceFinished");
+  }
+
+  return t("scheduled.detail.nextRunTipUnavailable");
+}
+
+function getScheduledListStatusText(
+  task: ScheduledTask,
+  now: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (task.phase === "paused") {
+    return t("scheduled.list.status.paused");
+  }
+
+  if ((task.displayStatus === "ready" || task.displayStatus === "healthy") && typeof task.nextRunAt === "number") {
+    return formatScheduledCountdownText(task.nextRunAt, now, t);
+  }
+
+  return getScheduledTaskDisplayStatusText(task, t);
+}
+
 function buildScheduledTitleEditState(task: ScheduledTask): ScheduledTitleEditState {
   return {
     title: task.title,
@@ -1412,6 +1475,7 @@ function buildScheduledOverviewCopyText(
   task: ScheduledTask,
   machineTitle: string,
   createdAtLabel: string | null,
+  nextTimeLabel: string,
   createdBySessionTitle: string | null,
   createdBySessionFlavor: string | null,
   t: (key: string, params?: Record<string, string | number>) => string,
@@ -1419,6 +1483,7 @@ function buildScheduledOverviewCopyText(
   const lines = [
     "<scheduled-task-overview>",
     formatScheduledFieldForCopy(t("scheduled.detail.displayStatus"), getScheduledTaskDisplayStatusText(task, t)),
+    formatScheduledFieldForCopy(t("scheduled.detail.nextTime"), nextTimeLabel),
     formatScheduledFieldForCopy(t("scheduled.detail.taskPhase"), getScheduledTaskPhaseText(task, t)),
     formatScheduledFieldForCopy(t("scheduled.detail.machine"), machineTitle),
     formatScheduledFieldForCopy(`${t("scheduled.detail.agent")} / ${t("scheduled.detail.model")}`, `${task.agentFlavor} / ${task.model ?? "-"}`),
@@ -2047,6 +2112,7 @@ function ScheduledTaskDetailPanel({
   onOpenCreatedBySession: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
+  const [scheduledNow, setScheduledNow] = useState(() => Date.now());
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [outcomeExpanded, setOutcomeExpanded] = useState(false);
   const [detailMode, setDetailMode] = useState<ScheduledDetailMode>(() => {
@@ -2067,10 +2133,16 @@ function ScheduledTaskDetailPanel({
     "min-w-0 flex-[0_1_62%] text-right text-sm leading-[19px] text-[var(--app-fg)]";
   const configReadOnlyValueClassName =
     "block min-h-[19px] w-full overflow-hidden whitespace-nowrap text-right text-sm leading-[19px] text-[var(--app-fg)]";
+  const overviewSectionDividerClassName =
+    "border-[var(--app-border)]";
   const sessionModeDisabled = !selectedRun?.sessionId;
   const createdAtLabel = useMemo(
     () => formatScheduledDateTime(task.createdAt),
     [task.createdAt],
+  );
+  const nextTimeLabel = useMemo(
+    () => getScheduledNextTimeSummary(task, scheduledNow, t),
+    [scheduledNow, t, task],
   );
   const scheduledTaskIconToneClassName = task.phase === "paused"
     ? "text-amber-600"
@@ -2079,6 +2151,16 @@ function ScheduledTaskDetailPanel({
         : latestRun?.status === "succeeded"
           ? "text-emerald-600"
           : "text-[var(--app-hint)]";
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setScheduledNow(Date.now());
+    }, 1_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (detailMode !== "session") {
@@ -2189,11 +2271,12 @@ function ScheduledTaskDetailPanel({
       task,
       machineTitle,
       createdAtLabel,
+      nextTimeLabel,
       createdBySessionTitle,
       createdBySessionFlavor,
       t,
     ),
-    [task, machineTitle, createdAtLabel, createdBySessionTitle, createdBySessionFlavor, t],
+    [task, machineTitle, createdAtLabel, nextTimeLabel, createdBySessionTitle, createdBySessionFlavor, t],
   );
 
   const runsCopyText = useMemo(
@@ -2307,6 +2390,11 @@ function ScheduledTaskDetailPanel({
                     key: "display-status",
                     label: t("scheduled.detail.displayStatus"),
                     valueNode: <ScheduledTaskStatusTag task={task} tip={getScheduledTaskDisplayStatusTip(task, t)} />,
+                  },
+                  {
+                    key: "next-time",
+                    label: t("scheduled.detail.nextTime"),
+                    value: nextTimeLabel,
                   },
                   {
                     key: "task-phase",
@@ -2432,6 +2520,9 @@ function ScheduledTaskDetailPanel({
                   },
                 ].map((item, index) => (
                   <Fragment key={item.key}>
+                    {item.key === "machine" ? (
+                      <div className={`border-t border-dashed ${overviewSectionDividerClassName}`} />
+                    ) : null}
                     <div
                       className={`flex items-start justify-between gap-4 py-2 text-sm ${index > 0 ? "border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" : ""}`}
                     >
@@ -2557,7 +2648,7 @@ function ScheduledTaskDetailPanel({
                           const taskOutcome = selectedRun.outcome;
                           return (
                             <>
-                        <div className="border-t border-dashed border-[color:color-mix(in_srgb,var(--app-divider)_55%,transparent)]" />
+                        <div className={`border-t border-dashed ${overviewSectionDividerClassName}`} />
                         {[
                           {
                             key: "outcome-status",
@@ -3082,6 +3173,7 @@ function SessionsPage() {
   }, [refetch]);
 
   const normalizedScheduledSearch = scheduledSearch.trim().toLowerCase();
+  const [scheduledNow, setScheduledNow] = useState(() => Date.now());
   const filteredScheduledTasks = useMemo(() => {
     return scheduledTasks.filter((task) => {
       if (filterScheduledActiveOnly && task.phase === "archived") {
@@ -3105,6 +3197,16 @@ function SessionsPage() {
       return haystack.includes(normalizedScheduledSearch);
     });
   }, [filterScheduledActiveOnly, normalizedScheduledSearch, scheduledTasks]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setScheduledNow(Date.now());
+    }, 1_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const displayScheduledTasks = useMemo(() => {
     if (!scheduledBatchMode) {
@@ -5330,8 +5432,9 @@ function SessionsPage() {
                                                 : formatScheduledDateTime(
                                                     task.nextRunAt ?? task.runAt,
                                                   );
-                                            const statusText = getScheduledTaskDisplayStatusText(
+                                            const statusText = getScheduledListStatusText(
                                               task,
+                                              scheduledNow,
                                               t,
                                             );
                                             const iconToneClass = archived
