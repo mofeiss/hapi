@@ -1710,7 +1710,9 @@ function ScheduledTaskListRow(props: {
             <span
               className={
                 archived
-                  ? "text-[var(--app-hint)]"
+                  ? props.task.displayStatus === "completed" || props.task.displayStatus === "succeeded"
+                    ? "text-emerald-600"
+                    : "text-[var(--app-hint)]"
                   : props.task.phase === "paused"
                   ? "text-amber-600"
                   : props.task.displayStatus === "failed"
