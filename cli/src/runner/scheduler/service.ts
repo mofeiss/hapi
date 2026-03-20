@@ -4,7 +4,7 @@ import { deriveScheduledTask, getHapiTimezone, isScheduledTaskConsumed, resolveD
 import type { ScheduledDelay, ScheduledTask, ScheduledTaskPhase, ScheduledTaskRun } from '@hapi/protocol'
 import { logger } from '@/ui/logger'
 import { RunnerSchedulerStore } from './store'
-import { isTaskDue, resolveNextRunAt } from './nextRun'
+import { isTaskDue, resolveDueRunAt, resolveNextRunAt } from './nextRun'
 import type {
   CreateScheduledTaskInput,
   ListScheduledTaskRunsFilters,
@@ -400,7 +400,7 @@ export class RunnerSchedulerService {
   }
 
   private async runTask(task: ScheduledTask, now: number): Promise<void> {
-    const scheduledFor = resolveNextRunAt(task, now) ?? task.runAt ?? now
+    const scheduledFor = resolveDueRunAt(task, now) ?? task.runAt ?? now
     const runId = randomUUID()
     let finalRun: ScheduledTaskRun
 

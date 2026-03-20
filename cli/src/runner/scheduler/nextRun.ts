@@ -30,11 +30,59 @@ export function resolveNextRunAt(task: ScheduledTask, now: number): number | und
   }
 }
 
+export function resolveDueRunAt(task: ScheduledTask, now: number): number | undefined {
+  if (task.phase !== 'enabled') {
+    return undefined
+  }
+
+  if (task.scheduleType === 'once') {
+    return typeof task.runAt === 'number' && task.runAt <= now ? task.runAt : undefined
+  }
+
+  const expression = task.cron?.trim()
+  if (!expression) {
+    return undefined
+  }
+
+  try {
+    const nextRunAt = CronExpressionParser.parse(expression, {
+      currentDate: now,
+      tz: task.timezone
+    }).next().getTime()
+
+    const scheduledFor = nextRunAt <= now
+      ? nextRunAt
+      : CronExpressionParser.parse(expression, {
+          currentDate: now,
+          tz: task.timezone
+        }).prev().getTime()
+
+    if (!Number.isFinite(scheduledFor) || scheduledFor > now) {
+      return undefined
+    }
+
+    if (scheduledFor <= task.updatedAt) {
+      return undefined
+    }
+
+    if (task.catchUpPolicy === 'skip' && scheduledFor < now) {
+      return undefined
+    }
+
+    if (now - scheduledFor > task.maxSkewMs) {
+      return undefined
+    }
+
+    return scheduledFor
+  } catch {
+    return undefined
+  }
+}
+
 export function isTaskDue(task: ScheduledTask, now: number): boolean {
   if (task.phase !== 'enabled') {
     return false
   }
 
-  const nextRunAt = resolveNextRunAt(task, now)
-  return typeof nextRunAt === 'number' && nextRunAt <= now
+  return typeof resolveDueRunAt(task, now) === 'number'
 }

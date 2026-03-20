@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { ScheduledTask, ScheduledTaskRun } from '@hapi/protocol'
 
 import { RunnerSchedulerService } from './service'
+import { isTaskDue, resolveDueRunAt } from './nextRun'
 
 class InMemorySchedulerStore {
     state: { tasks: ScheduledTask[]; runs: ScheduledTaskRun[] } = {
@@ -83,5 +84,57 @@ describe('RunnerSchedulerService', () => {
 
         expect(updatedRun?.id).toBe(seenRunIds[0])
         expect(updatedRun?.outcome?.summary).toBe('PONG')
+    })
+
+    it('treats a cron task as due immediately after the scheduled boundary and records the missed boundary time', async () => {
+        const scheduledBoundary = Date.parse('2026-03-20T00:50:00.000Z')
+        const now = Date.parse('2026-03-20T00:50:01.000Z')
+        const store = new InMemorySchedulerStore()
+
+        const scheduler = new RunnerSchedulerService(
+            store as any,
+            async () => ({
+                sessionId: 'session-cron-1',
+                resultSummary: 'Scheduled prompt delivered'
+            })
+        )
+
+        const task: ScheduledTask = {
+            id: 'task-cron-1',
+            machineId: 'machine-1',
+            namespace: 'default',
+            createdBySessionId: 'session-origin-1',
+            title: 'Ping every 5 minutes',
+            prompt: 'PONG',
+            agentFlavor: 'codex',
+            permissionMode: 'yolo',
+            basePermissionMode: 'yolo',
+            model: 'gpt-5.4',
+            reasoningEffort: 'xhigh',
+            targetDirectory: '/tmp',
+            runStrategy: 'new_session',
+            scheduleType: 'cron',
+            cron: '*/5 * * * *',
+            timezone: 'Asia/Shanghai',
+            phase: 'enabled',
+            scheduledSessionPermission: 'aware',
+            allowOverlap: false,
+            catchUpPolicy: 'once_within_window',
+            maxSkewMs: 10 * 60 * 1000,
+            createdAt: Date.parse('2026-03-20T00:39:11.000Z'),
+            updatedAt: Date.parse('2026-03-20T00:39:11.000Z')
+        }
+
+        store.state.tasks = [task]
+
+        expect(resolveDueRunAt(task, now)).toBe(scheduledBoundary)
+        expect(isTaskDue(task, now)).toBe(true)
+
+        await scheduler.processDueTasks(now)
+
+        const runs = await scheduler.listRuns({ taskId: task.id, machineId: 'machine-1' })
+        expect(runs).toHaveLength(1)
+        expect(runs[0]?.scheduledFor).toBe(scheduledBoundary)
+        expect(runs[0]?.triggeredAt).toBe(now)
     })
 })
