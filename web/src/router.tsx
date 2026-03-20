@@ -1580,17 +1580,20 @@ function getScheduledErrorMessage(
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
   if (error instanceof ApiError) {
-    if (error.code === "scheduled.once_already_consumed") {
+    if (error.code === "schedule.once_consumed" || error.code === "scheduled.once_already_consumed") {
       return t("scheduled.validation.onceAlreadyConsumed");
     }
     if (error.code === "scheduled.once_expired") {
       return t("scheduled.validation.onceExpired");
     }
+    if (error.code === "schedule.phase_archived") {
+      return t("scheduled.validation.unknown");
+    }
+    if (error.code === "schedule.invalid_transition" || error.code === "scheduled.invalid_state") {
+      return t("scheduled.validation.unknown");
+    }
     if (error.code === "scheduled.cron_invalid") {
       return t("scheduled.validation.cronInvalid");
-    }
-    if (error.code === "scheduled.invalid_state") {
-      return t("scheduled.validation.unknown");
     }
     if (error.message) {
       return error.message;
