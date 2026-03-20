@@ -2984,13 +2984,13 @@ function CollapsedScheduledItem(props: {
   const pauseLocked = isScheduledTaskPauseLocked(props.task);
   const toneClass = props.task.phase === "paused"
     ? "bg-amber-500/15 text-amber-600"
-    : pauseLocked
-      ? "bg-slate-500/15 text-slate-500"
     : props.latestRun?.status === "failed"
         ? "bg-red-500/15 text-red-600"
         : props.latestRun?.status === "succeeded"
           ? "bg-emerald-500/15 text-emerald-600"
-          : "bg-[var(--app-subtle-bg)] text-[var(--app-hint)]";
+          : pauseLocked
+            ? "bg-slate-500/15 text-slate-500"
+            : "bg-[var(--app-subtle-bg)] text-[var(--app-hint)]";
 
   const longPressHandlers = useLongPress({
     onLongPress: (point) => {
