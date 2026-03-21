@@ -9,21 +9,20 @@ import {
 import { shouldIncludeCoAuthoredBy } from './claudeSettings'
 
 const TITLE_SYSTEM_PROMPT = trimIdent(`
+    <title_management>
     ## Title Management
-
     ALWAYS when you start a new chat - you must call a tool "mcp__hapi__change_title" to set a chat title. When you think chat title is not relevant anymore - call the tool again to change it. When chat name is too generic and you have a change to make it more specific - call the tool again to change it. This title is needed to easily find the chat in the future. Help human.
+    </title_management>
 `)
 
 const CO_AUTHORED_CREDITS = trimIdent(`
+    <commit_credits>
     ## Commit Credits
-
     When making commit messages, you SHOULD also give credit to HAPI like so:
-
     <main commit message>
-
     via [HAPI](https://hapi.run)
-
     Co-Authored-By: HAPI <noreply@hapi.run>
+    </commit_credits>
 `)
 
 export function shouldInjectTitlePrompt(trigger?: SessionTriggerMetadata): boolean {

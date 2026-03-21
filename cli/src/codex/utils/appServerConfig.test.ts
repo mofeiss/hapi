@@ -14,7 +14,8 @@ describe('appServerConfig', () => {
 
         expect(params.sandbox).toBe('danger-full-access');
         expect(params.approvalPolicy).toBe('never');
-        expect(params.baseInstructions).toBe(codexSystemPrompt);
+        expect(params.baseInstructions).toBeUndefined();
+        expect(params.developerInstructions).toBe(codexSystemPrompt);
         expect(params.config).toEqual({
             'mcp_servers.hapi': {
                 command: 'node',
@@ -23,7 +24,7 @@ describe('appServerConfig', () => {
         });
     });
 
-    it('omits base instructions for scheduled-triggered sessions', () => {
+    it('uses developer instructions for scheduled-triggered sessions', () => {
         const params = buildThreadStartParams({
             mode: { permissionMode: 'default' },
             mcpServers,
@@ -37,27 +38,39 @@ describe('appServerConfig', () => {
             }
         });
 
-        expect(params.baseInstructions).toBeDefined();
-        expect(String(params.baseInstructions)).not.toContain('functions.hapi__change_title');
-        expect(String(params.baseInstructions)).toContain('## Scheduled Session Environment');
-        expect(String(params.baseInstructions)).toContain('## Scheduled Run Outcome Reporting');
-        expect(String(params.baseInstructions)).toContain('## Scheduled Session Permissions');
-        expect(String(params.baseInstructions)).toContain('functions.hapi__schedule_create');
-        expect(String(params.baseInstructions)).toContain('functions.hapi__schedule_list');
-        expect(String(params.baseInstructions)).toContain('All scheduled task times in HAPI use the fixed timezone Asia/Shanghai.');
-        expect(String(params.baseInstructions)).toContain('Never invent an absolute timestamp for a relative-time request.');
-        expect(String(params.baseInstructions)).toContain('MUST use "functions.hapi__schedule_report_outcome" to report the final business outcome of this run.');
-        expect(String(params.baseInstructions)).toContain('The summary must describe the real business outcome, not merely list actions taken.');
-        expect(String(params.baseInstructions)).toContain('Do not use this tool for partial progress updates.');
-        expect(String(params.baseInstructions)).toContain('Use these meanings:');
-        expect(String(params.baseInstructions)).toContain('If you are unsure between partial and blocked, prefer blocked');
-        expect(String(params.baseInstructions)).toContain('Even without scheduler control permissions, you still MUST report the final run outcome through the scheduled outcome reporting tool.');
+        expect(params.baseInstructions).toBeUndefined();
+        expect(params.developerInstructions).toBeDefined();
+        expect(String(params.developerInstructions)).not.toContain('functions.hapi__change_title');
+        expect(String(params.developerInstructions)).toContain('## Scheduled Session Environment');
+        expect(String(params.developerInstructions)).toContain('## Scheduled Run Outcome Reporting');
+        expect(String(params.developerInstructions)).toContain('## Scheduled Session Permissions');
+        expect(String(params.developerInstructions)).toContain('functions.hapi__schedule_create');
+        expect(String(params.developerInstructions)).toContain('functions.hapi__schedule_list');
+        expect(String(params.developerInstructions)).toContain('All scheduled task times in HAPI use the fixed timezone Asia/Shanghai.');
+        expect(String(params.developerInstructions)).toContain('Never invent an absolute timestamp for a relative-time request.');
+        expect(String(params.developerInstructions)).toContain('MUST use "functions.hapi__schedule_report_outcome" to report the final business outcome of this run.');
+        expect(String(params.developerInstructions)).toContain('The summary must describe the real business outcome, not merely list actions taken.');
+        expect(String(params.developerInstructions)).toContain('Do not use this tool for partial progress updates.');
+        expect(String(params.developerInstructions)).toContain('Use these meanings:');
+        expect(String(params.developerInstructions)).toContain('If you are unsure between partial and blocked, prefer blocked');
+        expect(String(params.developerInstructions)).toContain('Even without scheduler control permissions, you still MUST report the final run outcome through the scheduled outcome reporting tool.');
         expect(params.config).toEqual({
             'mcp_servers.hapi': {
                 command: 'node',
                 args: ['mcp']
             }
         });
+    });
+
+    it('appends explicit developer instructions after HAPI developer instructions', () => {
+        const params = buildThreadStartParams({
+            mode: { permissionMode: 'default' },
+            mcpServers,
+            developerInstructions: 'Custom remote hint'
+        });
+
+        expect(params.baseInstructions).toBeUndefined();
+        expect(params.developerInstructions).toBe(`${codexSystemPrompt}\n\nCustom remote hint`);
     });
 
     it('ignores CLI overrides when permission mode is not default', () => {

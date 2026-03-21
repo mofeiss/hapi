@@ -90,13 +90,16 @@ export function buildThreadStartParams(args: {
     const resolvedSandbox = cliOverrides?.sandbox ?? sandbox;
 
     const config = buildMcpServerConfig(args.mcpServers);
-    const baseInstructions = args.baseInstructions ?? buildCodexSystemPrompt(args.trigger);
+    const hapiDeveloperInstructions = buildCodexSystemPrompt(args.trigger);
+    const developerInstructions = args.developerInstructions && hapiDeveloperInstructions
+        ? `${hapiDeveloperInstructions}\n\n${args.developerInstructions}`
+        : (args.developerInstructions ?? hapiDeveloperInstructions);
 
     const params: ThreadStartParams = {
         approvalPolicy: resolvedApprovalPolicy,
         sandbox: resolvedSandbox,
-        ...(baseInstructions ? { baseInstructions } : {}),
-        ...(args.developerInstructions ? { developerInstructions: args.developerInstructions } : {}),
+        ...(args.baseInstructions ? { baseInstructions: args.baseInstructions } : {}),
+        ...(developerInstructions ? { developerInstructions } : {}),
         ...(Object.keys(config).length > 0 ? { config } : {})
     };
 

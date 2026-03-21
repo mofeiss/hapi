@@ -1,6 +1,14 @@
 import { trimIdent } from '@/utils/trimIdent'
 import type { SessionTriggerMetadata } from '@/api/types'
 
+function wrapPromptSection(tag: string, body: string): string {
+    return trimIdent(`
+        <${tag}>
+        ${body}
+        </${tag}>
+    `)
+}
+
 export type PromptToolRefs = {
     scheduleCreate: string
     scheduleList: string
@@ -16,7 +24,7 @@ export type PromptToolRefs = {
 }
 
 export function buildScheduleCreationSection(tools: PromptToolRefs): string {
-    return trimIdent(`
+    return wrapPromptSection('scheduled_task_creation', trimIdent(`
         ## Scheduled Task Creation
 
         All scheduled task times in HAPI use the fixed timezone Asia/Shanghai.
@@ -51,7 +59,7 @@ export function buildScheduleCreationSection(tools: PromptToolRefs): string {
         If the user does not specify a permission level, default to aware.
 
         Only use self_control or system_control when the user explicitly asks for those stronger scheduler-control capabilities.
-    `)
+    `))
 }
 
 export function buildScheduledSessionEnvironmentSection(trigger: Extract<SessionTriggerMetadata, { type: 'scheduled-task' }>): string {
@@ -60,7 +68,7 @@ export function buildScheduledSessionEnvironmentSection(trigger: Extract<Session
         ? `This is execution #${trigger.iteration}.`
         : 'The exact execution count is unavailable.'
 
-    return trimIdent(`
+    return wrapPromptSection('scheduled_session_environment', trimIdent(`
         ## Scheduled Session Environment
 
         You are running inside a HAPI scheduled session.
@@ -79,11 +87,11 @@ export function buildScheduledSessionEnvironmentSection(trigger: Extract<Session
         For one-time tasks, "consumed" is derived from whether at least one run record exists. Do not look for an old task status field such as pending, active, or completed.
 
         If the task is blocked, missing required information, or continuing would only repeat useless attempts, stop making unproductive attempts and clearly state that user intervention is required.
-    `)
+    `))
 }
 
 export function buildScheduledOutcomeReportingSection(tools: PromptToolRefs): string {
-    return trimIdent(`
+    return wrapPromptSection('scheduled_run_outcome_reporting', trimIdent(`
         ## Scheduled Run Outcome Reporting
 
         Because this is a scheduled session, you MUST use "${tools.scheduleReportOutcome}" to report the final business outcome of this run.
@@ -118,7 +126,7 @@ export function buildScheduledOutcomeReportingSection(tools: PromptToolRefs): st
         - If you conclude the run should stop rather than continue making low-value or predictably futile attempts, use abandoned.
 
         If you are unsure between partial and blocked, prefer blocked when there is a clear external or prerequisite constraint preventing completion. Otherwise prefer partial.
-    `)
+    `))
 }
 
 export function buildScheduledPermissionControlSection(
@@ -126,7 +134,7 @@ export function buildScheduledPermissionControlSection(
     tools: PromptToolRefs
 ): string {
     if (trigger.scheduledSessionPermission === 'aware') {
-        return trimIdent(`
+        return wrapPromptSection('scheduled_session_permissions', trimIdent(`
             ## Scheduled Session Permissions
 
             Your permission level is aware.
@@ -134,11 +142,11 @@ export function buildScheduledPermissionControlSection(
             You know that the scheduler exists, and you know that you are running as a scheduled task, but you do not have permission to control the scheduler or scheduled tasks through scheduler management tools.
 
             Even without scheduler control permissions, you still MUST report the final run outcome through the scheduled outcome reporting tool.
-        `)
+        `))
     }
 
     if (trigger.scheduledSessionPermission === 'self_control') {
-        return trimIdent(`
+        return wrapPromptSection('scheduled_session_permissions', trimIdent(`
             ## Scheduled Session Permissions
 
             Your permission level is self_control.
@@ -150,10 +158,10 @@ export function buildScheduledPermissionControlSection(
             Use scheduler tools when needed to adapt your own future executions, for example pausing your own task, resuming it later, archiving it, or updating its prompt/schedule if that is necessary to keep the unattended workflow healthy.
 
             You must not attempt to manage other scheduled tasks.
-        `)
+        `))
     }
 
-    return trimIdent(`
+    return wrapPromptSection('scheduled_session_permissions', trimIdent(`
         ## Scheduled Session Permissions
 
         Your permission level is system_control.
@@ -163,5 +171,5 @@ export function buildScheduledPermissionControlSection(
         You may control your own task (${trigger.taskId}) and the wider scheduler system when it is necessary to fulfill the unattended workflow safely.
 
         If you determine that this looping workflow will keep failing in the future without human intervention, you should use the available scheduler controls to prevent repeated pointless failures.
-    `)
+    `))
 }
