@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import { readStorageJson, writeStorageJson } from '@/lib/storage'
 
-export type WorkspaceTab = 'sessions' | 'scheduled'
+export type WorkspaceTab = 'desk' | 'sessions' | 'scheduled'
+export type DeskView = 'overview' | 'accounts'
 export type SessionSubview = 'chat' | 'files' | 'terminal'
 export type WorkspaceOverlay = 'none' | 'settings' | 'newSession' | 'newTask'
 
@@ -15,7 +16,7 @@ export type WorkspaceState = {
 }
 
 const DEFAULT_STATE: WorkspaceState = {
-    tab: 'sessions',
+    tab: 'desk',
     overlay: 'none',
     selectedSessionId: null,
     sessionSubview: 'chat',
@@ -26,7 +27,7 @@ const DEFAULT_STATE: WorkspaceState = {
 const STORAGE_KEY = 'hapi:workspace-state'
 
 function isWorkspaceTab(value: unknown): value is WorkspaceTab {
-    return value === 'sessions' || value === 'scheduled'
+    return value === 'desk' || value === 'sessions' || value === 'scheduled'
 }
 
 function isSessionSubview(value: unknown): value is SessionSubview {

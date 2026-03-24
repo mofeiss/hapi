@@ -53,6 +53,7 @@ export default {
   "sessions.emptyTitle": "No sessions yet",
   "sessions.empty": "Start a session to keep your recent work, terminal, and files together here.",
   menu: "Menu",
+  "desk.tab": "Desk",
 
   // Scheduled
   "scheduled.tab": "Scheduler",

@@ -18,6 +18,16 @@ import { SessionChat } from "@/components/SessionChat";
 import { EmbeddedSessionView } from "@/components/EmbeddedSessionView";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 import { HeaderActionGroup } from "@/components/HeaderActionGroup";
+import {
+  DeskCompactRail,
+  DeskSidebar,
+  DeskWorkspace,
+  DEFAULT_DESK_ITEM_ID,
+  getDeskDefaultItemId,
+  getDeskItems,
+  getDeskItemsForView,
+  getDeskSelectedItem,
+} from "@/components/DeskWorkspace";
 import { ClockIcon } from "@/components/icons";
 import { ChevronDownIcon } from "@/components/icons";
 import {
@@ -112,6 +122,7 @@ import {
   selectWorkspaceScheduledRun,
   selectWorkspaceTab,
   useWorkspaceState,
+  type DeskView,
 } from "@/lib/workspace-store";
 import { setRealtimeOwnerState } from "@/lib/realtime-owner-store";
 
@@ -3047,7 +3058,7 @@ function SessionsPage() {
   const { api } = useAppContext();
   const navigate = useNavigate();
   const workspace = useWorkspaceState();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { addToast } = useToast();
   const { isDark, toggleTheme } = useTheme();
   const { sessions, isLoading, error, refetch } = useSessions(api);
@@ -3105,6 +3116,14 @@ function SessionsPage() {
   const [scheduledDeleteTarget, setScheduledDeleteTarget] = useState<
     ScheduledTask | null
   >(null);
+  const [deskView, setDeskView] = useState<DeskView>(() => {
+    const stored = readStorageItem("session", "hapi:desk:view");
+    return stored === "accounts" ? "accounts" : "overview";
+  });
+  const [selectedDeskItemId, setSelectedDeskItemId] = useState<string | null>(() => {
+    return readStorageItem("session", "hapi:desk:selected-item") ?? DEFAULT_DESK_ITEM_ID;
+  });
+  const [deskMobileDetailOpen, setDeskMobileDetailOpen] = useState(false);
   const [scheduledEditing, setScheduledEditing] = useState(false);
   const [scheduledEditState, setScheduledEditState] =
     useState<ScheduledTitleEditState | null>(null);
@@ -3222,6 +3241,21 @@ function SessionsPage() {
     }
     return filteredScheduledTasks;
   }, [filteredScheduledTasks, scheduledBatchMode]);
+
+  const deskItems = useMemo(
+    () => getDeskItems(locale, displaySessions, displayScheduledTasks, scheduledRuns),
+    [displayScheduledTasks, displaySessions, locale, scheduledRuns],
+  );
+
+  const deskViewItems = useMemo(
+    () => getDeskItemsForView(deskItems, deskView),
+    [deskItems, deskView],
+  );
+
+  const selectedDeskItem = useMemo(
+    () => getDeskSelectedItem(deskItems, deskView, selectedDeskItemId),
+    [deskItems, deskView, selectedDeskItemId],
+  );
 
   const scheduledGroups = useMemo(
     () => groupTasksByMachine(displayScheduledTasks, machines),
@@ -3435,6 +3469,43 @@ function SessionsPage() {
     }
   }, [scheduledEditing, selectedScheduledTask]);
 
+  useEffect(() => {
+    writeStorageItem("session", "hapi:desk:view", deskView);
+  }, [deskView]);
+
+  useEffect(() => {
+    if (selectedDeskItemId) {
+      writeStorageItem("session", "hapi:desk:selected-item", selectedDeskItemId);
+    }
+  }, [selectedDeskItemId]);
+
+  useEffect(() => {
+    const defaultItemId = getDeskDefaultItemId(deskItems, deskView);
+    if (!defaultItemId) {
+      if (selectedDeskItemId !== null) {
+        setSelectedDeskItemId(null);
+      }
+      if (deskMobileDetailOpen) {
+        setDeskMobileDetailOpen(false);
+      }
+      return;
+    }
+
+    const selectionStillVisible = deskViewItems.some(
+      (item) => item.id === selectedDeskItemId,
+    );
+
+    if (!selectionStillVisible) {
+      setSelectedDeskItemId(defaultItemId);
+    }
+  }, [deskItems, deskMobileDetailOpen, deskView, deskViewItems, selectedDeskItemId]);
+
+  useEffect(() => {
+    if (workspace.tab !== "desk" && deskMobileDetailOpen) {
+      setDeskMobileDetailOpen(false);
+    }
+  }, [deskMobileDetailOpen, workspace.tab]);
+
   const selectedSessionId = workspace.selectedSessionId;
 
   // Panel resize state (persisted to localStorage)
@@ -3462,6 +3533,12 @@ function SessionsPage() {
       ? window.innerWidth < SWIPE_NARROW_BREAKPOINT_PX
       : false,
   );
+  useEffect(() => {
+    if (!narrowViewport && deskMobileDetailOpen) {
+      setDeskMobileDetailOpen(false);
+    }
+  }, [deskMobileDetailOpen, narrowViewport]);
+
   const restoreOverlayAfterSettingsRef = useRef<"session" | "task" | null>(
     workspace.overlay === "newTask"
       ? "task"
@@ -3506,7 +3583,7 @@ function SessionsPage() {
     canBack: boolean;
     canForward: boolean;
     activeSessionId: string | null;
-    backTarget: "session" | "scheduled" | "newSession" | null;
+    backTarget: "session" | "desk" | "scheduled" | "newSession" | null;
     forwardSessionId: string | null;
   }>({
     canBack: false,
@@ -4417,6 +4494,7 @@ function SessionsPage() {
       );
   }, [openSettingsOverlay]);
 
+  const isDeskTab = workspace.tab === "desk";
   const isScheduledTab = workspace.tab === "scheduled";
   const isSessionsTab = workspace.tab === "sessions";
   const visibleSessionOverlay = isSessionsTab && newSessionOpen;
@@ -4438,11 +4516,17 @@ function SessionsPage() {
     isScheduledTab &&
     selectedScheduledTaskId !== null &&
     !hasOverlay;
+  const canSwipeBackFromDeskDetail =
+    swipeNavEnabled &&
+    isDeskTab &&
+    deskMobileDetailOpen &&
+    !hasOverlay;
   const canSwipeBackFromNewSession =
     swipeNavEnabled && visibleNewSessionOverlay;
 
   const canSwipeBackToList =
     canSwipeBackFromSessionDetail ||
+    canSwipeBackFromDeskDetail ||
     canSwipeBackFromScheduledDetail ||
     canSwipeBackFromNewSession;
   const canSwipeForwardToSession =
@@ -4457,6 +4541,8 @@ function SessionsPage() {
     activeSessionId,
     backTarget: canSwipeBackFromSessionDetail
       ? "session"
+      : canSwipeBackFromDeskDetail
+        ? "desk"
       : canSwipeBackFromScheduledDetail
         ? "scheduled"
         : canSwipeBackFromNewSession
@@ -4521,7 +4607,7 @@ function SessionsPage() {
         if (!capability.canBack || !capability.backTarget) {
           return false;
         }
-      if (capability.backTarget === "session") {
+        if (capability.backTarget === "session") {
           if (!capability.activeSessionId) {
             return false;
           }
@@ -4529,14 +4615,16 @@ function SessionsPage() {
           clearWorkspaceSessionSelection();
           setActiveSessionId(null);
           navigate({ to: "/" });
-      } else if (capability.backTarget === "newSession") {
-        if (visibleTaskOverlay) {
-          setNewTaskOpen(false);
+        } else if (capability.backTarget === "desk") {
+          setDeskMobileDetailOpen(false);
+        } else if (capability.backTarget === "newSession") {
+          if (visibleTaskOverlay) {
+            setNewTaskOpen(false);
+          } else {
+            setNewSessionOpen(false);
+          }
+          selectWorkspaceOverlay("none");
         } else {
-          setNewSessionOpen(false);
-        }
-        selectWorkspaceOverlay("none");
-      } else {
           setSelectedScheduledTaskId(null);
           setSelectedScheduledRunId(null);
           setScheduledEditing(false);
@@ -4795,6 +4883,32 @@ function SessionsPage() {
     selectWorkspaceTab("scheduled");
   }, []);
 
+  const handleOpenDeskTab = useCallback(() => {
+    selectWorkspaceTab("desk");
+    setDeskMobileDetailOpen(false);
+  }, []);
+
+  const handleDeskSelectItem = useCallback(
+    (itemId: string) => {
+      setSelectedDeskItemId(itemId);
+      if (narrowViewport) {
+        setDeskMobileDetailOpen(true);
+      }
+    },
+    [narrowViewport],
+  );
+
+  const handleDeskSelectView = useCallback(
+    (view: DeskView) => {
+      setDeskView(view);
+      setSelectedDeskItemId(getDeskDefaultItemId(deskItems, view));
+      if (narrowViewport) {
+        setDeskMobileDetailOpen(false);
+      }
+    },
+    [deskItems, narrowViewport],
+  );
+
   const handleScheduledDetailBack = useCallback(() => {
     setScheduledInteractiveSessionId(null);
     setSelectedScheduledTaskId(null);
@@ -4832,11 +4946,18 @@ function SessionsPage() {
       return;
     }
 
+    if (isDeskTab && deskMobileDetailOpen) {
+      setDeskMobileDetailOpen(false);
+      return;
+    }
+
     if (swipeForwardSessionId) {
       openSession(swipeForwardSessionId, { preserveForward: true });
     }
   }, [
+    deskMobileDetailOpen,
     handleScheduledDetailBack,
+    isDeskTab,
     isSubRoute,
     isScheduledTab,
     isSessionsTab,
@@ -4858,9 +4979,15 @@ function SessionsPage() {
     isScheduledTab &&
     Boolean(selectedScheduledTaskId) &&
     !hasOverlay;
+  const mobileDeskDetailVisible =
+    narrowViewport &&
+    isDeskTab &&
+    deskMobileDetailOpen &&
+    !hasOverlay;
   const mobileTabDetailVisible =
     mobileNewSessionVisible ||
     mobileSessionsDetailVisible ||
+    mobileDeskDetailVisible ||
     mobileScheduledDetailVisible;
   const scheduledRunSessionInteractive =
     selectedScheduledRun?.sessionId === scheduledInteractiveSessionId;
@@ -4915,6 +5042,7 @@ function SessionsPage() {
       (visibleNewSessionOverlay ||
         (!isSubRoute &&
           ((isSessionsTab && activeSessionId !== null) ||
+            (isDeskTab && deskMobileDetailOpen) ||
             (isScheduledTab && selectedScheduledTaskId !== null))) ||
         Boolean(swipeForwardSessionId)),
     onOpenNewSession: toggleCurrentNewOverlay,
@@ -4927,6 +5055,7 @@ function SessionsPage() {
 
   const effectiveCollapsed = collapsed;
   const scheduledIndexVisible = !selectedScheduledTaskId;
+  const deskIndexVisible = !deskMobileDetailOpen;
   const leftPanelVisible = narrowViewport
     ? settingsOpen
       ? "hidden"
@@ -4935,13 +5064,17 @@ function SessionsPage() {
       ? isSessionsIndex && !hasOverlay
         ? "flex lg:hidden"
         : "hidden"
-      : isScheduledTab
-        ? scheduledIndexVisible && !hasOverlay
-          ? "flex"
-          : "hidden lg:flex"
-        : isSessionsIndex && !hasOverlay
-          ? "flex"
-          : "hidden lg:flex";
+      : isDeskTab
+        ? hasOverlay
+          ? "hidden lg:flex"
+          : "flex"
+        : isScheduledTab
+          ? scheduledIndexVisible && !hasOverlay
+            ? "flex"
+            : "hidden lg:flex"
+          : isSessionsIndex && !hasOverlay
+            ? "flex"
+            : "hidden lg:flex";
   const showDesktopNewSessionPane =
     !narrowViewport &&
     (visibleNewSessionOverlay ||
@@ -4953,7 +5086,7 @@ function SessionsPage() {
     transform: `scale(${leftPanelContentScale})`,
     transformOrigin: "top left",
   };
-  const showSidebarSearchRow = !effectiveCollapsed && !mobileTabDetailVisible;
+  const showSidebarSearchRow = !effectiveCollapsed && !mobileTabDetailVisible && !isDeskTab;
   const showSidebarBatchActions = !effectiveCollapsed && (isSessionsTab || isScheduledTab);
   const mobileLeftPanelVisible = leftPanelVisible.includes("flex");
   const showPinnedSidebarLogo = !narrowViewport || mobileLeftPanelVisible;
@@ -4962,6 +5095,7 @@ function SessionsPage() {
     !settingsOpen &&
     (visibleNewSessionOverlay ||
       (isSessionsTab && activeSessionId !== null) ||
+      (isDeskTab && deskMobileDetailOpen) ||
       (isScheduledTab && Boolean(selectedScheduledTaskId)));
   const handlePinnedLogoClick = mobileLogoBackMode
     ? visibleNewSessionOverlay
@@ -4973,6 +5107,10 @@ function SessionsPage() {
           }
           selectWorkspaceOverlay("none");
         }
+      : isDeskTab && deskMobileDetailOpen
+        ? () => {
+            setDeskMobileDetailOpen(false);
+          }
       : isSessionsTab && activeSessionId !== null
         ? handleSessionBack
         : isScheduledTab && selectedScheduledTaskId
@@ -5031,6 +5169,50 @@ function SessionsPage() {
 
                 <div className="min-w-0 flex-1 overflow-visible pt-1">
                   <div className="-ml-[5px] flex min-w-0 items-start gap-[7px] overflow-visible pl-[2px]">
+                    <button
+                      type="button"
+                      onClick={handleOpenDeskTab}
+                      className={`group relative inline-flex shrink-0 -translate-x-[2px] items-center rounded-t-[12px] border border-b-0 px-3 text-base font-semibold ${isDeskTab ? "liquid-line liquid-line-tab z-20 h-[35px] bg-[var(--app-bg)] text-[var(--app-fg)] border-[var(--app-border)]" : "z-30 h-[35px] border-transparent bg-transparent text-[var(--app-hint)] hover:text-[var(--app-fg)]"}`}
+                      aria-pressed={isDeskTab}
+                    >
+                      {isDeskTab ? null : (
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-[-1px] -right-[4px] top-[-0.5px] bottom-[5.5px] rounded-[8px] bg-transparent transition-colors group-hover:bg-[var(--app-subtle-solid-bg)]"
+                        />
+                      )}
+                      <span className="relative z-[1] inline-flex -translate-y-[2px] items-center gap-1.5">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                        >
+                          <path d="M3 12h7" />
+                          <path d="M3 18h13" />
+                          <path d="M3 6h18" />
+                        </svg>
+                        <span>{t("desk.tab")}</span>
+                      </span>
+                      {isDeskTab ? (
+                        <>
+                          <span aria-hidden="true" className="absolute -bottom-px left-0 right-0 h-[3px] bg-[var(--app-bg)]" />
+                          <span aria-hidden="true" className="absolute -bottom-px -left-[7px] h-[3px] w-[9px] bg-[var(--app-bg)]" />
+                          <span aria-hidden="true" className="absolute -bottom-px -right-[7px] h-[3px] w-[9px] bg-[var(--app-bg)]" />
+                          <span aria-hidden="true" className="absolute bottom-0 left-[-1px] h-[10px] w-[10px] bg-[var(--app-bg)]" />
+                          <span aria-hidden="true" className="absolute bottom-0 right-[-1px] h-[10px] w-[10px] bg-[var(--app-bg)]" />
+                          <span aria-hidden="true" className="absolute bottom-px -left-[9px] h-[8px] w-[10px] rotate-90 rounded-tr-[8px] border-r border-t border-[var(--app-border)] bg-[var(--app-bg)]" />
+                          <span aria-hidden="true" className="absolute bottom-px -right-[9px] h-[8px] w-[10px] -rotate-90 rounded-tl-[8px] border-l border-t border-[var(--app-border)] bg-[var(--app-bg)]" />
+                        </>
+                      ) : null}
+                    </button>
                     <button
                       type="button"
                       onClick={() => selectWorkspaceTab("sessions")}
@@ -5207,6 +5389,34 @@ function SessionsPage() {
                         }}
                         onOpenNewSession={toggleCurrentNewOverlay}
                       />
+                    </div>
+                  ) : isDeskTab ? (
+                    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                      {deskMobileDetailOpen ? (
+                        <DeskWorkspace
+                          item={selectedDeskItem}
+                          view={deskView}
+                          onSelectView={handleDeskSelectView}
+                          onOpenSession={(sessionId) => {
+                            selectWorkspaceTab("sessions");
+                            openWorkspaceSession(sessionId, "chat");
+                          }}
+                          onOpenTask={(taskId, runId) => {
+                            selectWorkspaceTab("scheduled");
+                            setSelectedScheduledTaskId(taskId);
+                            setSelectedScheduledRunId(runId ?? null);
+                            openWorkspaceScheduledTask(taskId, runId ?? null);
+                          }}
+                        />
+                      ) : (
+                        <DeskSidebar
+                          items={deskViewItems}
+                          selectedItemId={selectedDeskItem?.id ?? selectedDeskItemId}
+                          view={deskView}
+                          onSelectItem={handleDeskSelectItem}
+                          onSelectView={handleDeskSelectView}
+                        />
+                      )}
                     </div>
                   ) : mobileScheduledDetailVisible && selectedScheduledTask ? (
                     <ScheduledTaskDetailPanel
@@ -5938,11 +6148,37 @@ function SessionsPage() {
                   handleOpenScheduledTab();
                   return;
                 }
-                selectWorkspaceTab("sessions");
+                if (value === "sessions") {
+                  selectWorkspaceTab("sessions");
+                  return;
+                }
+                handleOpenDeskTab();
               }}
               aria-label="Collapsed sidebar tab switcher"
               className="flex-col rounded-2xl p-1"
             >
+              <ToggleGroupItem
+                value="desk"
+                className="h-7 w-7 rounded-xl px-0"
+              >
+                <span className="sr-only">{t("desk.tab")}</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 12h7" />
+                  <path d="M3 18h13" />
+                  <path d="M3 6h18" />
+                </svg>
+              </ToggleGroupItem>
               <ToggleGroupItem
                 value="sessions"
                 className="h-7 w-7 rounded-xl px-0"
@@ -6054,7 +6290,16 @@ function SessionsPage() {
 
           {/* Middle: scrollable session groups */}
           <div className="flex-1 min-h-0 overflow-y-auto py-1 desktop-scrollbar-left">
-            {isScheduledTab
+            {isDeskTab
+              ? (
+                <DeskCompactRail
+                  items={deskViewItems}
+                  selectedItemId={selectedDeskItem?.id ?? selectedDeskItemId}
+                  view={deskView}
+                  onSelectItem={handleDeskSelectItem}
+                  onSelectView={handleDeskSelectView}
+                />
+              ) : isScheduledTab
               ? scheduledGroups.map((group, gi) => (
                   <div key={group.machineId}>
                     {gi > 0 && (
@@ -6124,7 +6369,7 @@ function SessionsPage() {
 
       {/* Right panel */}
       <div
-        className={`${((isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay) || mobileTabDetailVisible ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}` : ""}`}
+        className={`${((isDeskTab ? deskIndexVisible : isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay) || mobileTabDetailVisible ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}` : ""}`}
       >
         {!narrowViewport && showDesktopNewSessionPane ? (
           <div className="flex-1 min-h-0">
@@ -6142,6 +6387,25 @@ function SessionsPage() {
               initialMachineId={newSessionMachineId}
               initialPrompt={newSessionInitialPrompt}
               entryMode={visibleTaskOverlay ? "task" : "session"}
+            />
+          </div>
+        ) : !narrowViewport && isDeskTab ? (
+          <div className="hidden min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden lg:flex">
+            <DeskWorkspace
+              item={selectedDeskItem}
+              view={deskView}
+              showViewToggle
+              onSelectView={handleDeskSelectView}
+              onOpenSession={(sessionId) => {
+                selectWorkspaceTab("sessions");
+                openWorkspaceSession(sessionId, "chat");
+              }}
+              onOpenTask={(taskId, runId) => {
+                selectWorkspaceTab("scheduled");
+                setSelectedScheduledTaskId(taskId);
+                setSelectedScheduledRunId(runId ?? null);
+                openWorkspaceScheduledTask(taskId, runId ?? null);
+              }}
             />
           </div>
         ) : !narrowViewport && isScheduledTab ? (

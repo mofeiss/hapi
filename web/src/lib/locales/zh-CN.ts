@@ -52,6 +52,7 @@ export default {
   'sessions.emptyTitle': '还没有会话',
   'sessions.empty': '从这里开始一个新会话，后续的对话、终端和文件都会汇集在这里。',
   'menu': '菜单',
+  'desk.tab': '工作台',
 
   // Scheduled
   'scheduled.tab': '计划任务',

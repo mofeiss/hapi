@@ -250,16 +250,18 @@
 形态：
 
 - 左侧退化成窄 strip
-- 主画布面积变大
+- 右侧仍是主详情画布
 
 `Desk` 在这里应该更像：
 
-- 可浏览的首页主面板
-- 更适合放总览卡片和分区摘要
+- 保留 item 切换能力的 compact rail
+- 让用户在不展开侧边栏的情况下仍能切换待处理项与账户项
 
 推荐行为：
 
-- 默认优先显示 overview，而不是直接钉死某条 item
+- 左侧 strip 不能空白
+- strip 内必须保留 item 入口，而不只是顶层 tab
+- 右侧继续承接当前 item detail
 
 ### Mobile / Narrow
 
@@ -276,8 +278,9 @@
 
 推荐行为：
 
-- 首屏先看 feed
-- 点开后进入详情页
+- 首屏先看 `Action Queue` / item list
+- 点击 item 后进入详情页
+- 左上返回按钮与手势返回都回到 item list
 - 详情页再跳 `Sessions` 或 `Scheduled`
 
 ## MVP Direction
@@ -369,6 +372,25 @@
 - `Desk` 应拆成 `Overview` 与 `Accounts` 两个一级视角。
 - `Overview` 看事情。
 - `Accounts` 看资产。
+
+### 2026-03-24 / Desk Shell Integration Iteration
+
+事实：
+
+- `Desk` 已真正接入现有 workspace shell，不再只是独立 demo。
+- 移动端确认采用 `item list -> detail -> back` 的 drill-down。
+- PC 折叠侧边栏确认采用 compact rail，保留 item 切换入口。
+- `Overview` 与 `Accounts` 都统一为左侧 item list、右侧 detail。
+
+判断：
+
+- 这一轮用户对直观效果满意，方向被确认。
+- 当前仍然全部采用 mock 数据，尚未进入真实交易域接线。
+
+未改变：
+
+- `Desk` 仍是和 `Sessions` / `Scheduled` 并列的一等 workspace tab。
+- 真实交易所、账户同步、下单执行仍不是这一阶段目标。
 
 ### 2026-03-24 / Current User State
 
