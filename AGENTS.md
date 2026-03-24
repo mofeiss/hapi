@@ -62,6 +62,17 @@ Bun workspaces; `shared` consumed by cli, hub, web.
 - 新增组件或新增界面文案时，必须同时适配中文和英文语义；特定术语、产品名、协议名、库名、代码标识等保持英文，不要强行翻译
 - 提交说明必须遵循当前仓库最近历史风格；默认使用 Conventional Commit 风格的 `type(scope): summary`，如 `fix(web): ...`、`feat(cli): ...`；不要写随意的自然语言标题，不要把同一件事拆成多条噪音式小提交
 
+## Trader Workspace History
+
+Use this section when the task is part of trader product exploration, especially on branch `product/trader-workspace`.
+
+- authoritative living doc: `docs/trader-workspace-history.md`
+- treat that file as both direction doc and historical evolution log; append, do not rewrite away prior stage context
+- when current round intentionally skips deep product discussion for pacing, user state, or fast MVP delivery, record that honestly in the history doc instead of polishing it away
+- when work changes product shape, IA, workspace roles, account/dashboard model, or MVP scope, update the history doc in the same change set
+- when user issues `cp` / `commit+push` for trader product exploration work, update `docs/trader-workspace-history.md` before commit; this is part of done-ness
+- if a round is implementation-only, still add a short entry stating what shipped and what design assumptions remained unchanged
+
 ## Web storage policy
 
 - Web persisted state must be classified before implementation: `sessionStorage` for per-tab workspace context, `localStorage` for cross-tab user preferences/config/history, or no persistence.

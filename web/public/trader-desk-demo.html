@@ -1,0 +1,1433 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <title>HAPI Trader Demo</title>
+        <style>
+            :root {
+                --app-orange-base: #f59e0b;
+                --bg: #0a0d11;
+                --bg-elevated: rgba(19, 24, 31, 0.9);
+                --bg-panel: rgba(15, 20, 27, 0.88);
+                --bg-soft: rgba(255, 255, 255, 0.04);
+                --bg-strong: rgba(255, 255, 255, 0.07);
+                --line: rgba(255, 255, 255, 0.09);
+                --line-soft: rgba(255, 255, 255, 0.05);
+                --text: #f3eee4;
+                --muted: #9aa3ae;
+                --muted-strong: #c9d0d7;
+                --good: #5dd6a2;
+                --bad: #ff7b7b;
+                --warn: #f5c15d;
+                --blue: #70b7ff;
+                --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+                --radius-xl: 28px;
+                --radius-lg: 20px;
+                --radius-md: 14px;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            html,
+            body {
+                margin: 0;
+                min-height: 100%;
+                background:
+                    radial-gradient(circle at top left, rgba(245, 158, 11, 0.18), transparent 28%),
+                    radial-gradient(circle at top right, rgba(93, 214, 162, 0.12), transparent 24%),
+                    linear-gradient(180deg, #10141b 0%, #080b0f 100%);
+                color: var(--text);
+                font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", sans-serif;
+            }
+
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                opacity: 0.16;
+                background-image:
+                    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.15) 0.8px, transparent 1px);
+                background-size: 26px 26px, 26px 26px, 16px 16px;
+                mix-blend-mode: soft-light;
+            }
+
+            .shell {
+                position: relative;
+                display: grid;
+                grid-template-columns: 320px minmax(0, 1fr) 420px;
+                min-height: 100vh;
+                gap: 18px;
+                padding: 18px;
+            }
+
+            .panel {
+                position: relative;
+                overflow: hidden;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, rgba(16, 21, 28, 0.96), rgba(11, 15, 21, 0.94));
+                box-shadow: var(--shadow);
+                backdrop-filter: blur(18px);
+            }
+
+            .left-panel,
+            .right-panel {
+                border-radius: var(--radius-xl);
+            }
+
+            .center-panel {
+                border-radius: 34px;
+                padding: 22px;
+            }
+
+            .left-panel,
+            .right-panel {
+                padding: 20px;
+            }
+
+            .left-panel::after,
+            .center-panel::after,
+            .right-panel::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                border-radius: inherit;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            }
+
+            .brand {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                margin-bottom: 18px;
+            }
+
+            .brand-mark {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .eyebrow {
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                font-size: 11px;
+                color: rgba(245, 158, 11, 0.92);
+            }
+
+            .brand h1,
+            .detail-header h2,
+            .center-title {
+                margin: 0;
+                font-family: "Iowan Old Style", "Baskerville", serif;
+                font-weight: 600;
+                letter-spacing: -0.02em;
+            }
+
+            .brand h1 {
+                font-size: 32px;
+            }
+
+            .status-pill,
+            .small-pill,
+            .action-tag,
+            .timeline-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                border-radius: 999px;
+                padding: 8px 12px;
+                font-size: 12px;
+                border: 1px solid var(--line);
+                background: rgba(255, 255, 255, 0.04);
+                color: var(--muted-strong);
+            }
+
+            .status-dot,
+            .tiny-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 999px;
+                background: currentColor;
+                box-shadow: 0 0 14px currentColor;
+            }
+
+            .status-pill.good {
+                color: var(--good);
+            }
+
+            .section {
+                margin-top: 18px;
+            }
+
+            .section-title {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 12px;
+                color: var(--muted);
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.14em;
+            }
+
+            .nav-list {
+                display: grid;
+                gap: 10px;
+            }
+
+            .nav-card {
+                display: grid;
+                gap: 6px;
+                width: 100%;
+                border-radius: 18px;
+                border: 1px solid transparent;
+                padding: 14px 14px 13px;
+                background: var(--bg-soft);
+                color: inherit;
+                text-align: left;
+                cursor: pointer;
+                transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+            }
+
+            .nav-card:hover,
+            .nav-card.active {
+                transform: translateY(-1px);
+                border-color: rgba(245, 158, 11, 0.42);
+                background: linear-gradient(180deg, rgba(245, 158, 11, 0.12), rgba(255, 255, 255, 0.05));
+            }
+
+            .nav-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                font-size: 14px;
+                color: var(--text);
+            }
+
+            .nav-meta {
+                display: flex;
+                gap: 10px;
+                color: var(--muted);
+                font-size: 12px;
+            }
+
+            .nav-main {
+                font-weight: 600;
+            }
+
+            .nav-sub {
+                color: var(--muted);
+                font-size: 12px;
+                line-height: 1.45;
+            }
+
+            .left-footer {
+                margin-top: 18px;
+                padding: 14px;
+                border-radius: 18px;
+                background: linear-gradient(135deg, rgba(112, 183, 255, 0.08), rgba(245, 158, 11, 0.1));
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+
+            .left-footer strong {
+                display: block;
+                margin-bottom: 6px;
+                font-size: 14px;
+            }
+
+            .left-footer p {
+                margin: 0;
+                color: var(--muted-strong);
+                font-size: 13px;
+                line-height: 1.55;
+            }
+
+            .center-header {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 18px;
+                padding-bottom: 18px;
+                border-bottom: 1px solid var(--line-soft);
+            }
+
+            .center-header .title-block {
+                display: grid;
+                gap: 8px;
+            }
+
+            .center-title {
+                font-size: 42px;
+                line-height: 0.95;
+            }
+
+            .subtitle {
+                max-width: 760px;
+                color: var(--muted-strong);
+                font-size: 14px;
+                line-height: 1.6;
+            }
+
+            .toolbar {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+
+            .button,
+            .ghost-button,
+            .approve-button,
+            .reject-button {
+                appearance: none;
+                border: 0;
+                border-radius: 999px;
+                font: inherit;
+                cursor: pointer;
+                transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+            }
+
+            .button:hover,
+            .ghost-button:hover,
+            .approve-button:hover,
+            .reject-button:hover {
+                transform: translateY(-1px);
+            }
+
+            .button {
+                padding: 12px 18px;
+                background: linear-gradient(135deg, #f8b235, var(--app-orange-base));
+                color: #241507;
+                font-weight: 700;
+            }
+
+            .ghost-button {
+                padding: 12px 16px;
+                background: rgba(255, 255, 255, 0.05);
+                color: var(--text);
+                border: 1px solid var(--line);
+            }
+
+            .tab-row {
+                display: flex;
+                gap: 10px;
+                margin-top: 18px;
+                margin-bottom: 18px;
+            }
+
+            .tab-button {
+                padding: 10px 14px;
+                border-radius: 999px;
+                border: 1px solid transparent;
+                background: rgba(255, 255, 255, 0.04);
+                color: var(--muted-strong);
+                cursor: pointer;
+                font: inherit;
+                transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+            }
+
+            .tab-button.active {
+                background: rgba(245, 158, 11, 0.14);
+                color: #fff4d7;
+                border-color: rgba(245, 158, 11, 0.38);
+            }
+
+            .tab-button:hover {
+                transform: translateY(-1px);
+            }
+
+            .tab-panel {
+                display: none;
+                gap: 18px;
+            }
+
+            .tab-panel.active {
+                display: grid;
+            }
+
+            .metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 14px;
+            }
+
+            .metric-card,
+            .surface-card,
+            .action-card,
+            .detail-card,
+            .journal-card,
+            .timeline-card {
+                border-radius: var(--radius-lg);
+                border: 1px solid var(--line);
+                background: var(--bg-panel);
+            }
+
+            .metric-card {
+                padding: 16px;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .metric-card::before {
+                content: "";
+                position: absolute;
+                inset: auto -30% -55% 30%;
+                height: 120px;
+                background: radial-gradient(circle, rgba(245, 158, 11, 0.14), transparent 65%);
+                pointer-events: none;
+            }
+
+            .metric-label {
+                color: var(--muted);
+                font-size: 11px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+            }
+
+            .metric-value {
+                margin-top: 14px;
+                font-size: 30px;
+                font-weight: 700;
+                letter-spacing: -0.03em;
+            }
+
+            .metric-foot {
+                margin-top: 10px;
+                font-size: 12px;
+                color: var(--muted-strong);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .metric-foot.good {
+                color: var(--good);
+            }
+
+            .desk-grid {
+                display: grid;
+                grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+                gap: 18px;
+            }
+
+            .surface-card {
+                padding: 18px;
+            }
+
+            .surface-title {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 16px;
+                margin-bottom: 16px;
+            }
+
+            .surface-title h3,
+            .detail-card h3,
+            .journal-card h3 {
+                margin: 0;
+                font-size: 18px;
+                font-weight: 650;
+            }
+
+            .surface-title span {
+                color: var(--muted);
+                font-size: 12px;
+            }
+
+            .position-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .position-table th,
+            .position-table td {
+                padding: 11px 0;
+                border-bottom: 1px solid var(--line-soft);
+                font-size: 13px;
+                text-align: left;
+            }
+
+            .position-table th {
+                color: var(--muted);
+                font-size: 11px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+
+            .symbol-cell {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .symbol-cell strong {
+                font-size: 14px;
+            }
+
+            .symbol-cell span {
+                color: var(--muted);
+                font-size: 12px;
+            }
+
+            .good {
+                color: var(--good);
+            }
+
+            .bad {
+                color: var(--bad);
+            }
+
+            .warn {
+                color: var(--warn);
+            }
+
+            .actions-stack {
+                display: grid;
+                gap: 12px;
+            }
+
+            .action-card {
+                width: 100%;
+                text-align: left;
+                padding: 16px;
+                cursor: pointer;
+                transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+            }
+
+            .action-card:hover,
+            .action-card.active {
+                transform: translateY(-1px);
+                border-color: rgba(245, 158, 11, 0.38);
+                background: linear-gradient(180deg, rgba(245, 158, 11, 0.08), rgba(255, 255, 255, 0.03));
+            }
+
+            .action-head {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 16px;
+                margin-bottom: 10px;
+            }
+
+            .action-title {
+                display: grid;
+                gap: 6px;
+            }
+
+            .action-title strong {
+                font-size: 15px;
+            }
+
+            .action-title span {
+                color: var(--muted);
+                font-size: 12px;
+            }
+
+            .action-grid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 10px;
+                margin-top: 12px;
+            }
+
+            .mini-stat {
+                padding: 10px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.04);
+            }
+
+            .mini-stat label {
+                display: block;
+                margin-bottom: 6px;
+                color: var(--muted);
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+            }
+
+            .mini-stat strong {
+                font-size: 13px;
+            }
+
+            .market-strip {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 12px;
+                margin-top: 18px;
+            }
+
+            .strip-card {
+                padding: 14px;
+                border-radius: 18px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+            }
+
+            .strip-card svg {
+                width: 100%;
+                height: 42px;
+                margin-top: 10px;
+                display: block;
+            }
+
+            .strip-title {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                font-size: 13px;
+            }
+
+            .detail-header {
+                display: grid;
+                gap: 10px;
+                margin-bottom: 18px;
+            }
+
+            .detail-header h2 {
+                font-size: 34px;
+                line-height: 1;
+            }
+
+            .detail-summary {
+                color: var(--muted-strong);
+                line-height: 1.65;
+                font-size: 14px;
+            }
+
+            .detail-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 6px;
+            }
+
+            .approve-button,
+            .reject-button {
+                padding: 12px 18px;
+                font-weight: 700;
+            }
+
+            .approve-button {
+                background: linear-gradient(135deg, #f7c866, var(--app-orange-base));
+                color: #2b1b07;
+            }
+
+            .reject-button {
+                background: rgba(255, 255, 255, 0.06);
+                color: var(--text);
+                border: 1px solid var(--line);
+            }
+
+            .detail-grid {
+                display: grid;
+                gap: 12px;
+            }
+
+            .detail-card {
+                padding: 16px;
+            }
+
+            .detail-card h3 {
+                margin-bottom: 10px;
+            }
+
+            .detail-card p,
+            .detail-card li {
+                color: var(--muted-strong);
+                font-size: 13px;
+                line-height: 1.65;
+            }
+
+            .detail-card ul {
+                margin: 0;
+                padding-left: 18px;
+            }
+
+            .detail-table {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .detail-row {
+                padding: 10px 12px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.035);
+            }
+
+            .detail-row label {
+                display: block;
+                margin-bottom: 6px;
+                color: var(--muted);
+                font-size: 11px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+
+            .detail-row strong {
+                font-size: 13px;
+            }
+
+            .log-stream {
+                max-height: 240px;
+                overflow: auto;
+                padding-right: 4px;
+            }
+
+            .log-line {
+                display: grid;
+                grid-template-columns: 62px 1fr;
+                gap: 12px;
+                padding: 10px 0;
+                border-bottom: 1px solid var(--line-soft);
+                font-size: 12px;
+            }
+
+            .log-line time {
+                color: var(--muted);
+                font-variant-numeric: tabular-nums;
+            }
+
+            .actions-layout,
+            .journal-layout {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 360px;
+                gap: 18px;
+            }
+
+            .timeline-stack,
+            .journal-stack {
+                display: grid;
+                gap: 12px;
+            }
+
+            .timeline-card,
+            .journal-card {
+                padding: 16px;
+            }
+
+            .timeline-head {
+                display: flex;
+                justify-content: space-between;
+                gap: 14px;
+                margin-bottom: 10px;
+            }
+
+            .timeline-title {
+                display: grid;
+                gap: 6px;
+            }
+
+            .timeline-title strong {
+                font-size: 15px;
+            }
+
+            .timeline-title span,
+            .journal-card p,
+            .journal-meta {
+                color: var(--muted-strong);
+                font-size: 13px;
+                line-height: 1.6;
+            }
+
+            .timeline-meta,
+            .journal-meta {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 10px;
+            }
+
+            .journal-list {
+                display: grid;
+                gap: 10px;
+            }
+
+            .journal-entry {
+                padding: 12px 14px;
+                border-radius: 16px;
+                background: rgba(255, 255, 255, 0.035);
+                border: 1px solid var(--line-soft);
+            }
+
+            .footer-note {
+                margin-top: 16px;
+                padding: 14px;
+                border-radius: 18px;
+                background: linear-gradient(135deg, rgba(93, 214, 162, 0.08), rgba(112, 183, 255, 0.08));
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                color: var(--muted-strong);
+                font-size: 13px;
+                line-height: 1.6;
+            }
+
+            @media (max-width: 1380px) {
+                .shell {
+                    grid-template-columns: 280px minmax(0, 1fr) 360px;
+                }
+
+                .metrics-grid,
+                .market-strip {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .action-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            @media (max-width: 1120px) {
+                .shell {
+                    grid-template-columns: 1fr;
+                }
+
+                .left-panel,
+                .right-panel,
+                .center-panel {
+                    min-width: 0;
+                }
+
+                .desk-grid,
+                .actions-layout,
+                .journal-layout {
+                    grid-template-columns: 1fr;
+                }
+
+                .right-panel {
+                    order: 2;
+                }
+            }
+
+            @media (max-width: 760px) {
+                .shell {
+                    padding: 12px;
+                    gap: 12px;
+                }
+
+                .left-panel,
+                .right-panel,
+                .center-panel {
+                    border-radius: 22px;
+                    padding: 16px;
+                }
+
+                .center-header {
+                    flex-direction: column;
+                }
+
+                .toolbar {
+                    width: 100%;
+                    justify-content: flex-start;
+                }
+
+                .center-title {
+                    font-size: 34px;
+                }
+
+                .metrics-grid,
+                .market-strip,
+                .detail-table {
+                    grid-template-columns: 1fr;
+                }
+
+                .tab-row {
+                    overflow-x: auto;
+                    padding-bottom: 4px;
+                }
+
+                .action-head,
+                .timeline-head {
+                    flex-direction: column;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="shell">
+            <aside class="panel left-panel">
+                <div class="brand">
+                    <div class="brand-mark">
+                        <span class="eyebrow">Hapi Trader / Demo</span>
+                        <h1>交易指挥台</h1>
+                    </div>
+                    <span class="status-pill good"><span class="status-dot"></span>Binance 已连接</span>
+                </div>
+
+                <section class="section">
+                    <div class="section-title">
+                        <span>观察列表</span>
+                        <span>3 组</span>
+                    </div>
+                    <div class="nav-list">
+                        <button class="nav-card">
+                            <div class="nav-head">
+                                <span class="nav-main">Majors 主流资产</span>
+                                <span class="small-pill"><span class="tiny-dot good"></span>稳定</span>
+                            </div>
+                            <div class="nav-meta">
+                                <span>BTC / ETH / SOL</span>
+                                <span>8 个信号</span>
+                            </div>
+                            <div class="nav-sub">用于盘前扫描与趋势确认，优先生成低频高把握度动作。</div>
+                        </button>
+                        <button class="nav-card">
+                            <div class="nav-head">
+                                <span class="nav-main">Meme Radar</span>
+                                <span class="small-pill warn"><span class="tiny-dot warn"></span>波动高</span>
+                            </div>
+                            <div class="nav-meta">
+                                <span>PEPE / WIF / BONK</span>
+                                <span>3 个告警</span>
+                            </div>
+                            <div class="nav-sub">只做事件驱动和短时机会，不允许自动执行真实下单。</div>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <div class="section-title">
+                        <span>策略</span>
+                        <span>4 个激活</span>
+                    </div>
+                    <div class="nav-list">
+                        <button class="nav-card active">
+                            <div class="nav-head">
+                                <span class="nav-main">BTC 趋势策略</span>
+                                <span class="small-pill"><span class="tiny-dot good"></span>运行中</span>
+                            </div>
+                            <div class="nav-meta">
+                                <span>09:40 运行</span>
+                                <span>今日 +2.8R</span>
+                            </div>
+                            <div class="nav-sub">关注 4H 趋势恢复与 30m 回踩确认，适合大仓位低频动作。</div>
+                        </button>
+                        <button class="nav-card">
+                            <div class="nav-head">
+                                <span class="nav-main">ETH 摆动策略</span>
+                                <span class="small-pill"><span class="tiny-dot"></span>待观察</span>
+                            </div>
+                            <div class="nav-meta">
+                                <span>10:00 下次检查</span>
+                                <span>1 个待调整</span>
+                            </div>
+                            <div class="nav-sub">偏中性，等待日内区间突破后给出仓位调整建议。</div>
+                        </button>
+                        <button class="nav-card">
+                            <div class="nav-head">
+                                <span class="nav-main">Alt Rotation</span>
+                                <span class="small-pill warn"><span class="tiny-dot warn"></span>限制中</span>
+                            </div>
+                            <div class="nav-meta">
+                                <span>风险已占用 62%</span>
+                                <span>需人工批准</span>
+                            </div>
+                            <div class="nav-sub">自动扫描热点板块，但超过组合阈值后必须进入审批流。</div>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <div class="section-title">
+                        <span>待处理</span>
+                        <span>3 条</span>
+                    </div>
+                    <div class="nav-list">
+                        <button class="nav-card">
+                            <div class="nav-head">
+                                <span class="nav-main">BTC 开多建议</span>
+                                <span class="small-pill warn"><span class="tiny-dot warn"></span>待审批</span>
+                            </div>
+                            <div class="nav-meta">
+                                <span>来源 BTC 趋势</span>
+                                <span>风险 +1.8%</span>
+                            </div>
+                            <div class="nav-sub">满足趋势恢复条件，但会提升组合净多头敞口，需要你点头。</div>
+                        </button>
+                    </div>
+                </section>
+
+                <div class="left-footer">
+                    <strong>今天的系统气质</strong>
+                    <p>不是“随便给你一个买卖建议”，而是把研究、审批、执行、风控和复盘放在一个桌面里持续运转。</p>
+                </div>
+            </aside>
+
+            <main class="panel center-panel">
+                <div class="center-header">
+                    <div class="title-block">
+                        <span class="eyebrow">今日总览 / Tue 09:42 CST</span>
+                        <h2 class="center-title">桌面不是聊天框，<br />而是一套交易值班系统。</h2>
+                        <div class="subtitle">用户平时主要停留在这里：看组合状态、看系统刚刚跑完哪些策略、处理待审批动作、快速判断 AI 的建议是否应该放行。只有在需要深度介入时，才会打开具体会话进入接管模式。</div>
+                    </div>
+                    <div class="toolbar">
+                        <button class="ghost-button">打开接管会话</button>
+                        <button class="ghost-button">暂停所有自动执行</button>
+                        <button class="button">新建策略</button>
+                    </div>
+                </div>
+
+                <div class="tab-row" role="tablist" aria-label="页面主视图">
+                    <button class="tab-button active" data-tab="desk" role="tab" aria-selected="true">交易台</button>
+                    <button class="tab-button" data-tab="actions" role="tab" aria-selected="false">动作中心</button>
+                    <button class="tab-button" data-tab="journal" role="tab" aria-selected="false">交易日志</button>
+                </div>
+
+                <section class="tab-panel active" id="tab-desk">
+                    <div class="metrics-grid">
+                        <article class="metric-card">
+                            <div class="metric-label">总权益</div>
+                            <div class="metric-value">¥ 1,284,300</div>
+                            <div class="metric-foot good">今日 +¥43,820 · 胜率 62%</div>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-label">风险占用</div>
+                            <div class="metric-value">38%</div>
+                            <div class="metric-foot">单笔上限 2.0% · 组合上限 12%</div>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-label">净方向</div>
+                            <div class="metric-value">偏多</div>
+                            <div class="metric-foot">BTC + ETH 共占净风险 71%</div>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-label">注意事项</div>
+                            <div class="metric-value">3 条</div>
+                            <div class="metric-foot warn">2 条待审批 · 1 条止损调整</div>
+                        </article>
+                    </div>
+
+                    <div class="desk-grid">
+                        <article class="surface-card">
+                            <div class="surface-title">
+                                <h3>当前持仓</h3>
+                                <span>系统希望用户先看这里，再决定是否放行新动作</span>
+                            </div>
+                            <table class="position-table">
+                                <thead>
+                                    <tr>
+                                        <th>标的</th>
+                                        <th>方向</th>
+                                        <th>仓位</th>
+                                        <th>未实现盈亏</th>
+                                        <th>风险</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="symbol-cell">
+                                                <strong>BTCUSDT</strong>
+                                                <span>来源 BTC 趋势策略</span>
+                                            </div>
+                                        </td>
+                                        <td class="good">Long</td>
+                                        <td>$182,400</td>
+                                        <td class="good">+3.42%</td>
+                                        <td class="warn">1.4%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="symbol-cell">
+                                                <strong>ETHUSDT</strong>
+                                                <span>来源 ETH 摆动策略</span>
+                                            </div>
+                                        </td>
+                                        <td class="good">Long</td>
+                                        <td>$96,800</td>
+                                        <td class="good">+1.08%</td>
+                                        <td>0.9%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="symbol-cell">
+                                                <strong>WIFUSDT</strong>
+                                                <span>来源 Alt Rotation</span>
+                                            </div>
+                                        </td>
+                                        <td class="bad">Trim</td>
+                                        <td>$18,400</td>
+                                        <td class="bad">-2.31%</td>
+                                        <td class="warn">0.6%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="market-strip">
+                                <div class="strip-card">
+                                    <div class="strip-title"><strong>BTC 脉冲</strong><span class="good">趋势恢复</span></div>
+                                    <svg viewBox="0 0 120 42" aria-hidden="true">
+                                        <polyline points="0,30 12,29 24,26 36,18 48,20 60,17 72,13 84,14 96,11 108,8 120,4" fill="none" stroke="#5dd6a2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="strip-card">
+                                    <div class="strip-title"><strong>ETH 结构</strong><span>区间上缘</span></div>
+                                    <svg viewBox="0 0 120 42" aria-hidden="true">
+                                        <polyline points="0,25 12,24 24,23 36,20 48,21 60,20 72,19 84,19 96,17 108,16 120,14" fill="none" stroke="#70b7ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="strip-card">
+                                    <div class="strip-title"><strong>资金费率</strong><span class="warn">略高</span></div>
+                                    <svg viewBox="0 0 120 42" aria-hidden="true">
+                                        <polyline points="0,34 12,31 24,28 36,27 48,21 60,18 72,16 84,14 96,10 108,8 120,7" fill="none" stroke="#f5c15d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="strip-card">
+                                    <div class="strip-title"><strong>热点板块</strong><span>AI / Sol</span></div>
+                                    <svg viewBox="0 0 120 42" aria-hidden="true">
+                                        <polyline points="0,32 12,29 24,24 36,28 48,23 60,22 72,16 84,18 96,12 108,9 120,10" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="surface-card">
+                            <div class="surface-title">
+                                <h3>待审批动作</h3>
+                                <span>这里是产品最关键的工作区</span>
+                            </div>
+                            <div class="actions-stack" id="action-list">
+                                <button class="action-card active" data-action="btc-long">
+                                    <div class="action-head">
+                                        <div class="action-title">
+                                            <strong>开启 BTC 趋势多单</strong>
+                                            <span>来源 BTC 趋势策略 · 置信度高</span>
+                                        </div>
+                                        <span class="action-tag warn">待审批</span>
+                                    </div>
+                                    <div class="nav-sub">建议在 84,210 附近分两笔入场，止损 83,180，目标 86,700。若批准，组合净多头将上升到 44%。</div>
+                                    <div class="action-grid">
+                                        <div class="mini-stat"><label>风险增量</label><strong>+1.8%</strong></div>
+                                        <div class="mini-stat"><label>计划仓位</label><strong>$48,000</strong></div>
+                                        <div class="mini-stat"><label>预期 R</label><strong>2.4R</strong></div>
+                                    </div>
+                                </button>
+
+                                <button class="action-card" data-action="eth-stop">
+                                    <div class="action-head">
+                                        <div class="action-title">
+                                            <strong>上调 ETH 止损到保本</strong>
+                                            <span>来源 ETH 摆动策略 · 保护利润</span>
+                                        </div>
+                                        <span class="action-tag">低风险</span>
+                                    </div>
+                                    <div class="nav-sub">ETH 已跑出第一段盈利，系统建议把止损抬到保本上方，继续观察是否突破区间顶部。</div>
+                                    <div class="action-grid">
+                                        <div class="mini-stat"><label>风险变化</label><strong>-0.6%</strong></div>
+                                        <div class="mini-stat"><label>新止损</label><strong>4,182</strong></div>
+                                        <div class="mini-stat"><label>状态</label><strong>可自动执行</strong></div>
+                                    </div>
+                                </button>
+
+                                <button class="action-card" data-action="wif-trim">
+                                    <div class="action-head">
+                                        <div class="action-title">
+                                            <strong>减仓 WIF 短线仓位</strong>
+                                            <span>来源 Alt Rotation · 波动恶化</span>
+                                        </div>
+                                        <span class="action-tag bad">需注意</span>
+                                    </div>
+                                    <div class="nav-sub">板块热度回落且成交转弱，系统建议先减掉 40% 仓位，释放风险预算给主流资产策略。</div>
+                                    <div class="action-grid">
+                                        <div class="mini-stat"><label>释放风险</label><strong>-0.4%</strong></div>
+                                        <div class="mini-stat"><label>减仓比例</label><strong>40%</strong></div>
+                                        <div class="mini-stat"><label>理由</label><strong>流动性转弱</strong></div>
+                                    </div>
+                                </button>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="tab-panel" id="tab-actions">
+                    <div class="actions-layout">
+                        <div class="timeline-stack">
+                            <article class="timeline-card">
+                                <div class="timeline-head">
+                                    <div class="timeline-title">
+                                        <strong>动作工单流</strong>
+                                        <span>这里不是通知，而是每一笔建议从“生成”到“执行”的生命周期。</span>
+                                    </div>
+                                    <span class="timeline-tag">今日 11 条</span>
+                                </div>
+                                <div class="journal-list">
+                                    <div class="journal-entry">
+                                        <strong>09:40 · BTC 开多建议生成</strong>
+                                        <div class="journal-meta"><span>策略：BTC 趋势</span><span>状态：等待批准</span><span>风险：+1.8%</span></div>
+                                    </div>
+                                    <div class="journal-entry">
+                                        <strong>09:18 · ETH 止损上调已自动执行</strong>
+                                        <div class="journal-meta"><span>策略：ETH 摆动</span><span>状态：执行成功</span><span>影响：锁定盈利</span></div>
+                                    </div>
+                                    <div class="journal-entry">
+                                        <strong>08:55 · PEPE 事件单被拒绝</strong>
+                                        <div class="journal-meta"><span>策略：Meme Radar</span><span>状态：人工拒绝</span><span>原因：不符合当日风险偏好</span></div>
+                                    </div>
+                                </div>
+                            </article>
+
+                            <article class="timeline-card">
+                                <div class="timeline-head">
+                                    <div class="timeline-title">
+                                        <strong>审批策略示意</strong>
+                                        <span>让用户一眼看懂系统何时自动执行、何时必须点头。</span>
+                                    </div>
+                                </div>
+                                <div class="detail-table">
+                                    <div class="detail-row"><label>自动执行条件</label><strong>风险变化 &lt; 0.8% 且无新增敞口</strong></div>
+                                    <div class="detail-row"><label>必须审批</label><strong>新增仓位 / 提高净方向 / 放宽止损</strong></div>
+                                    <div class="detail-row"><label>强制阻止</label><strong>超总风险预算 / 黑名单标的 / 冷静期命中</strong></div>
+                                    <div class="detail-row"><label>接管入口</label><strong>打开具体会话，进入人工操作模式</strong></div>
+                                </div>
+                            </article>
+                        </div>
+
+                        <aside class="journal-card">
+                            <h3>一个动作卡的理想外观</h3>
+                            <p>用户在这个视图里关注的不是“AI 说了什么”，而是“这件事现在处于哪个状态、还差哪一步、谁做了最后决定”。</p>
+                            <div class="footer-note">如果你后续决定做手机版，手机端最重要的 tab 就应该是这个页面的压缩版：一张卡、一段理由、三个按钮。</div>
+                        </aside>
+                    </div>
+                </section>
+
+                <section class="tab-panel" id="tab-journal">
+                    <div class="journal-layout">
+                        <div class="journal-stack">
+                            <article class="journal-card">
+                                <div class="surface-title">
+                                    <h3>今日日志摘要</h3>
+                                    <span>把 run、交易和复盘放在一起，而不是散落在消息里</span>
+                                </div>
+                                <div class="journal-list">
+                                    <div class="journal-entry">
+                                        <strong>07:30 晨报已生成</strong>
+                                        <p>系统总结：BTC 仍为主多头方向，ETH 等待区间突破，Meme 板块只允许观察不允许自动执行。</p>
+                                    </div>
+                                    <div class="journal-entry">
+                                        <strong>09:00 风险巡检通过</strong>
+                                        <p>总风险占用 38%，未超过日内阈值；相关性偏高，建议新增仓位优先在 BTC 而不是 Alt。</p>
+                                    </div>
+                                    <div class="journal-entry">
+                                        <strong>09:40 策略运行产出 1 条高优先级动作</strong>
+                                        <p>BTC 趋势策略识别到回踩确认，触发一条待审批多头建议，当前等待用户决定。</p>
+                                    </div>
+                                </div>
+                            </article>
+
+                            <article class="journal-card">
+                                <div class="surface-title">
+                                    <h3>交易复盘流</h3>
+                                    <span>这会让产品逐渐从“执行器”变成“你的交易同事”</span>
+                                </div>
+                                <div class="journal-list">
+                                    <div class="journal-entry">
+                                        <strong>成功样本：BTC 8:15 回踩单</strong>
+                                        <p>入场理由和退出纪律都符合策略，系统标记为“可重复模板”。</p>
+                                    </div>
+                                    <div class="journal-entry">
+                                        <strong>失败样本：上周 SOL 追高单</strong>
+                                        <p>虽然趋势判断没错，但进场过晚、风险收益比不够，系统建议后续直接拒绝类似 setup。</p>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+
+                        <aside class="journal-card">
+                            <h3>你要的不是聊天记录</h3>
+                            <p>真正有价值的是这套结构化沉淀：<br />策略做了什么、系统为什么建议、用户最后怎么决策、结果如何、下一次应该怎么修正。</p>
+                            <div class="footer-note">所以这个产品最后看起来更像“交易运营面板”，而不是“把 Claude/Codex 套一个币圈主题皮肤”。</div>
+                        </aside>
+                    </div>
+                </section>
+            </main>
+
+            <aside class="panel right-panel">
+                <div class="detail-header">
+                    <span class="eyebrow">审批详情 / 当前选中动作</span>
+                    <h2 id="detail-title">开启 BTC 趋势多单</h2>
+                    <div class="detail-summary" id="detail-summary">AI 不是在替用户“偷偷交易”，而是在把一笔拟执行动作包装成一张可阅读、可审批、可接管的工单。用户在这里需要快速理解为什么要做、做了会怎样、风险是否合理。</div>
+                    <div class="detail-actions">
+                        <button class="reject-button">拒绝</button>
+                        <button class="ghost-button">改参数</button>
+                        <button class="approve-button">批准并执行</button>
+                    </div>
+                </div>
+
+                <div class="detail-grid">
+                    <article class="detail-card">
+                        <h3>Why now</h3>
+                        <p id="detail-why">BTC 4H 趋势恢复后首次回踩前高，30 分钟级别出现承接，资金费率尚未过热。系统判断这是一笔“值得放到审批流里”的高质量跟随单，而不是需要自动跳过的噪声信号。</p>
+                    </article>
+
+                    <article class="detail-card">
+                        <h3>Trade Plan</h3>
+                        <div class="detail-table" id="detail-plan">
+                            <div class="detail-row"><label>标的</label><strong>BTCUSDT</strong></div>
+                            <div class="detail-row"><label>方向</label><strong>Long</strong></div>
+                            <div class="detail-row"><label>入场区间</label><strong>84,160 - 84,260</strong></div>
+                            <div class="detail-row"><label>止损</label><strong>83,180</strong></div>
+                            <div class="detail-row"><label>目标</label><strong>86,700</strong></div>
+                            <div class="detail-row"><label>计划仓位</label><strong>$48,000</strong></div>
+                        </div>
+                    </article>
+
+                    <article class="detail-card">
+                        <h3>Risk Check</h3>
+                        <ul id="detail-risk">
+                            <li>单笔最大风险控制在 1.8%，未超过策略阈值 2.0%。</li>
+                            <li>批准后组合总风险将升至 44%，仍低于总预算 50%。</li>
+                            <li>与现有 ETH 多头方向一致，相关性上升，需要用户主动确认。</li>
+                        </ul>
+                    </article>
+
+                    <article class="detail-card">
+                        <h3>Agent Notes</h3>
+                        <div class="log-stream" id="detail-log">
+                            <div class="log-line"><time>09:39</time><div>扫描 BTC 4H / 30m 结构，确认趋势恢复未失效。</div></div>
+                            <div class="log-line"><time>09:40</time><div>对照当前持仓与相关性上限，判断不能自动执行，需要进入审批流。</div></div>
+                            <div class="log-line"><time>09:40</time><div>生成 Trade Intent，并给出入场、止损、目标与预期 R。</div></div>
+                        </div>
+                    </article>
+                </div>
+            </aside>
+        </div>
+
+        <script>
+            const tabButtons = Array.from(document.querySelectorAll('[data-tab]'));
+            const panels = {
+                desk: document.getElementById('tab-desk'),
+                actions: document.getElementById('tab-actions'),
+                journal: document.getElementById('tab-journal')
+            };
+
+            for (const button of tabButtons) {
+                button.addEventListener('click', () => {
+                    const target = button.dataset.tab;
+                    for (const other of tabButtons) {
+                        const active = other === button;
+                        other.classList.toggle('active', active);
+                        other.setAttribute('aria-selected', active ? 'true' : 'false');
+                    }
+                    for (const [key, panel] of Object.entries(panels)) {
+                        panel.classList.toggle('active', key === target);
+                    }
+                });
+            }
+
+            const actionData = {
+                'btc-long': {
+                    title: '开启 BTC 趋势多单',
+                    summary: '当前系统判断这是一笔高质量但不应自动执行的趋势跟随单，因为它会提高组合净多头敞口，所以产品需要把它包装成一张可审批工单交给用户。',
+                    why: 'BTC 4H 趋势恢复后首次回踩前高，30 分钟级别出现承接，资金费率尚未过热。系统判断这是一个“值得推进到审批流”的 setup，而不是仅记录在日志里的观察项。',
+                    plan: [
+                        ['标的', 'BTCUSDT'],
+                        ['方向', 'Long'],
+                        ['入场区间', '84,160 - 84,260'],
+                        ['止损', '83,180'],
+                        ['目标', '86,700'],
+                        ['计划仓位', '$48,000']
+                    ],
+                    risk: [
+                        '单笔最大风险控制在 1.8%，未超过策略阈值 2.0%。',
+                        '批准后组合总风险将升至 44%，仍低于总预算 50%。',
+                        '与现有 ETH 多头方向一致，相关性上升，需要用户主动确认。'
+                    ],
+                    logs: [
+                        ['09:39', '扫描 BTC 4H / 30m 结构，确认趋势恢复未失效。'],
+                        ['09:40', '对照当前持仓与相关性上限，判断不能自动执行，需要进入审批流。'],
+                        ['09:40', '生成 Trade Intent，并给出入场、止损、目标与预期 R。']
+                    ]
+                },
+                'eth-stop': {
+                    title: '上调 ETH 止损到保本',
+                    summary: '这类动作更像“系统替你做仓位维护”。它通常风险更低，未来可以默认自动执行，但在 demo 里依然展示成可见工单，让用户直观看到产品怎么保护仓位。',
+                    why: 'ETH 已达到第一目标区，浮盈建立后最重要的是保护仓位质量而不是继续放大回撤空间。系统因此建议止损上移到保本上方。',
+                    plan: [
+                        ['标的', 'ETHUSDT'],
+                        ['动作', '调整止损'],
+                        ['当前止损', '4,060'],
+                        ['新止损', '4,182'],
+                        ['影响仓位', '$96,800'],
+                        ['执行方式', '可自动执行']
+                    ],
+                    risk: [
+                        '风险占用下降 0.6%，属于保护利润动作。',
+                        '不会增加净方向敞口。',
+                        '即使后续失败，也不会扩大系统当前风险。'
+                    ],
+                    logs: [
+                        ['09:15', 'ETH 接近区间上沿，系统开始评估是否抬高止损。'],
+                        ['09:17', '确认第一目标位完成，决定以保本上移替代立即减仓。'],
+                        ['09:18', '动作进入自动执行候选队列。']
+                    ]
+                },
+                'wif-trim': {
+                    title: '减仓 WIF 短线仓位',
+                    summary: '这张卡体现的是“AI 不只会发起新交易，也会建议撤退”。它让用户直观看到系统不是单纯鼓励交易，而是在替组合释放风险预算。',
+                    why: 'Meme 板块成交量回落且局部趋势转弱，继续持有会挤占主流资产策略的风险预算。系统建议先减仓而不是等止损被动触发。',
+                    plan: [
+                        ['标的', 'WIFUSDT'],
+                        ['动作', '减仓 40%'],
+                        ['当前仓位', '$18,400'],
+                        ['释放风险', '-0.4%'],
+                        ['目标', '回收资金到稳定币'],
+                        ['备注', '不再允许本时段重新追入']
+                    ],
+                    risk: [
+                        '会降低组合对高波动板块的暴露。',
+                        '释放出的风险预算可重新分配给 BTC / ETH 主策略。',
+                        '若后续继续转弱，可追加一张完全平仓动作卡。'
+                    ],
+                    logs: [
+                        ['09:08', '检测到板块热度和成交量同步回落。'],
+                        ['09:09', '检查持仓后判断应优先减仓而非继续等待反抽。'],
+                        ['09:10', '产出减仓工单，并标记为“需注意”。']
+                    ]
+                }
+            };
+
+            const actionButtons = Array.from(document.querySelectorAll('.action-card'));
+            const detailTitle = document.getElementById('detail-title');
+            const detailSummary = document.getElementById('detail-summary');
+            const detailWhy = document.getElementById('detail-why');
+            const detailPlan = document.getElementById('detail-plan');
+            const detailRisk = document.getElementById('detail-risk');
+            const detailLog = document.getElementById('detail-log');
+
+            function renderAction(actionKey) {
+                const data = actionData[actionKey];
+                if (!data) return;
+
+                detailTitle.textContent = data.title;
+                detailSummary.textContent = data.summary;
+                detailWhy.textContent = data.why;
+
+                detailPlan.innerHTML = data.plan.map(([label, value]) => (
+                    '<div class="detail-row"><label>' + label + '</label><strong>' + value + '</strong></div>'
+                )).join('');
+
+                detailRisk.innerHTML = data.risk.map((item) => '<li>' + item + '</li>').join('');
+                detailLog.innerHTML = data.logs.map(([time, text]) => (
+                    '<div class="log-line"><time>' + time + '</time><div>' + text + '</div></div>'
+                )).join('');
+
+                for (const button of actionButtons) {
+                    button.classList.toggle('active', button.dataset.action === actionKey);
+                }
+            }
+
+            for (const button of actionButtons) {
+                button.addEventListener('click', () => renderAction(button.dataset.action));
+            }
+        </script>
+    </body>
+</html>
