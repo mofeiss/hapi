@@ -98,15 +98,19 @@ describe('buildCodexStartConfig', () => {
             mcpServers
         });
 
-        expect(String(config.config?.developer_instructions)).toContain('## Title Management');
-        expect(String(config.config?.developer_instructions)).toContain('## Scheduled Task Creation');
-        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_create');
-        expect(String(config.config?.developer_instructions)).toContain('functions.hapi__schedule_list');
-        expect(String(config.config?.developer_instructions)).toContain('All scheduled task times in HAPI use the fixed timezone Asia/Shanghai.');
-        expect(String(config.config?.developer_instructions)).toContain('Never invent an absolute timestamp for a relative-time request.');
-        expect(String(config.config?.developer_instructions)).toContain('If the user does not specify a permission level, default to aware.');
-        expect(String(config.config?.developer_instructions)).toContain('Only use self_control or system_control when the user explicitly asks');
-        expect(String(config.config?.developer_instructions)).toContain('task creation success from task execution status');
+        const instructions = String(config.config?.developer_instructions)
+
+        expect(instructions).toContain('<title_management>');
+        expect(instructions).toContain('functions.hapi__change_title');
+        expect(instructions).toContain('<scheduled_task_creation>');
+        expect(instructions).toContain('## Scheduled Task Creation');
+        expect(instructions).toContain('functions.hapi__schedule_create');
+        expect(instructions).toContain('functions.hapi__schedule_list');
+        expect(instructions).toContain('All scheduled task times in HAPI use the fixed timezone Asia/Shanghai.');
+        expect(instructions).toContain('Never invent an absolute timestamp for a relative-time request.');
+        expect(instructions).toContain('If the user does not specify a permission level, default to aware.');
+        expect(instructions).toContain('Only use self_control or system_control when the user explicitly asks');
+        expect(instructions).toContain('task creation success from task execution status');
     });
 
     it('injects self-control scheduler guidance for self_control scheduled sessions', () => {

@@ -1,22 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const createRunnerScheduledTask = vi.fn()
-const updateRunnerScheduledTask = vi.fn()
-const archiveRunnerScheduledTask = vi.fn()
-const deleteRunnerScheduledTask = vi.fn()
-const listRunnerScheduledTasks = vi.fn()
-const listRunnerScheduledTaskRuns = vi.fn()
-const reportRunnerScheduledTaskOutcome = vi.fn()
-
-vi.mock('@/runner/controlClient', () => ({
-    createRunnerScheduledTask,
-    updateRunnerScheduledTask,
-    archiveRunnerScheduledTask,
-    deleteRunnerScheduledTask,
-    listRunnerScheduledTasks,
-    listRunnerScheduledTaskRuns,
-    reportRunnerScheduledTaskOutcome
+const controlClientMocks = vi.hoisted(() => ({
+    createRunnerScheduledTask: vi.fn(),
+    updateRunnerScheduledTask: vi.fn(),
+    archiveRunnerScheduledTask: vi.fn(),
+    deleteRunnerScheduledTask: vi.fn(),
+    listRunnerScheduledTasks: vi.fn(),
+    listRunnerScheduledTaskRuns: vi.fn(),
+    reportRunnerScheduledTaskOutcome: vi.fn()
 }))
+
+vi.mock('@/runner/controlClient', () => controlClientMocks)
 
 import { registerScheduleTools } from './scheduleTools'
 
@@ -112,12 +106,12 @@ describe('registerScheduleTools', () => {
         const parsed = parseToolResult(updateResult)
         expect(parsed.ok).toBe(false)
         expect(parsed.code).toBe('schedule.self_control_forbidden')
-        expect(updateRunnerScheduledTask).not.toHaveBeenCalled()
+        expect(controlClientMocks.updateRunnerScheduledTask).not.toHaveBeenCalled()
     })
 
     it('allows self_control sessions to edit their own task', async () => {
         const { server, tools } = createMcpServerMock()
-        updateRunnerScheduledTask.mockResolvedValue({
+        controlClientMocks.updateRunnerScheduledTask.mockResolvedValue({
             id: 'task-1',
             updatedAt: 2,
             scheduleType: 'cron',
@@ -138,7 +132,7 @@ describe('registerScheduleTools', () => {
         const updateResult = await tools.get('schedule_edit')!.handler({ taskId: 'task-1', cron: '*/5 * * * *' })
         const parsed = parseToolResult(updateResult)
         expect(parsed.ok).toBe(true)
-        expect(updateRunnerScheduledTask).toHaveBeenCalledWith({
+        expect(controlClientMocks.updateRunnerScheduledTask).toHaveBeenCalledWith({
             taskId: 'task-1',
             title: undefined,
             prompt: undefined,
@@ -156,7 +150,7 @@ describe('registerScheduleTools', () => {
 
     it('reports outcome for any scheduled session using the current run id', async () => {
         const { server, tools } = createMcpServerMock()
-        reportRunnerScheduledTaskOutcome.mockResolvedValue({
+        controlClientMocks.reportRunnerScheduledTaskOutcome.mockResolvedValue({
             id: 'run-1',
             outcome: {
                 status: 'blocked',
@@ -185,8 +179,8 @@ describe('registerScheduleTools', () => {
 
         const parsed = parseToolResult(result)
         expect(parsed.ok).toBe(true)
-        expect(reportRunnerScheduledTaskOutcome).toHaveBeenCalledTimes(1)
-        expect(reportRunnerScheduledTaskOutcome.mock.calls[0][0]).toMatchObject({
+        expect(controlClientMocks.reportRunnerScheduledTaskOutcome).toHaveBeenCalledTimes(1)
+        expect(controlClientMocks.reportRunnerScheduledTaskOutcome.mock.calls[0][0]).toMatchObject({
             runId: 'run-1',
             outcome: {
                 status: 'blocked',
@@ -195,12 +189,12 @@ describe('registerScheduleTools', () => {
                 permanentFailureLikely: false
             }
         })
-        expect(typeof reportRunnerScheduledTaskOutcome.mock.calls[0][0].outcome.reportedAt).toBe('number')
+        expect(typeof controlClientMocks.reportRunnerScheduledTaskOutcome.mock.calls[0][0].outcome.reportedAt).toBe('number')
     })
 
     it('passes delay for once schedule creation without requiring runAt', async () => {
         const { server, tools } = createMcpServerMock()
-        createRunnerScheduledTask.mockResolvedValue({
+        controlClientMocks.createRunnerScheduledTask.mockResolvedValue({
             id: 'task-1',
             title: 'delay task',
             scheduleType: 'once',
@@ -224,7 +218,7 @@ describe('registerScheduleTools', () => {
 
         const parsed = parseToolResult(result)
         expect(parsed.ok).toBe(true)
-        expect(createRunnerScheduledTask).toHaveBeenCalledWith(expect.objectContaining({
+        expect(controlClientMocks.createRunnerScheduledTask).toHaveBeenCalledWith(expect.objectContaining({
             scheduleType: 'once',
             runAt: undefined,
             delay: { minutes: 1 }
@@ -248,6 +242,6 @@ describe('registerScheduleTools', () => {
         const parsed = parseToolResult(result)
         expect(parsed.ok).toBe(false)
         expect(parsed.code).toBe('schedule.invalid_input')
-        expect(createRunnerScheduledTask).not.toHaveBeenCalled()
+        expect(controlClientMocks.createRunnerScheduledTask).not.toHaveBeenCalled()
     })
 })

@@ -15,7 +15,6 @@ describe('claudeModels', () => {
     it('returns new-session options with a single custom entry', () => {
         const options = getClaudeNewSessionModelOptions()
         expect(options.map((entry) => entry.value)).toEqual([
-            'auto',
             'opus',
             'sonnet',
             CLAUDE_CUSTOM_MODEL_OPTION_VALUE

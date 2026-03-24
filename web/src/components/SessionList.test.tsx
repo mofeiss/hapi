@@ -65,7 +65,7 @@ vi.mock('@/components/AgentFlavorStatusIcon', () => ({
 }))
 
 describe('SessionList', () => {
-    it('uses scalable text classes for session and group titles', () => {
+    it('renders current session and group title styles without legacy fixed-size classes', () => {
         const sessions: SessionSummary[] = [
             {
                 id: 'session-1',
@@ -97,11 +97,11 @@ describe('SessionList', () => {
             />
         )
 
-        expect(screen.getByText('Alpha session')).toHaveClass('text-sm')
+        expect(screen.getByText('Alpha session')).toHaveClass('text-base')
         expect(screen.getByText('Alpha session').className).not.toContain('text-[14px]')
-        expect(screen.getByText('MacBook-Pro')).toHaveClass('text-sm')
+        expect(screen.getByText('MacBook-Pro')).toHaveClass('text-base')
         expect(screen.getByText('MacBook-Pro').className).not.toContain('text-[14px]')
-        expect(screen.getByText('2026-05-30 21:29:32')).toBeInTheDocument()
+        expect(screen.getByText('2026/5/30 21:29:32')).toBeInTheDocument()
         expect(screen.queryByText('codex')).not.toBeInTheDocument()
         expect(screen.getByText('project/hapi')).toBeInTheDocument()
     })

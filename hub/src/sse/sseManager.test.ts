@@ -1,9 +1,18 @@
-import { describe, expect, it } from 'bun:test'
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+
+mock.module('../config/diagnosticLogging', () => ({
+    isDiagnosticLoggingEnabled: () => false
+}))
+
 import { SSEManager } from './sseManager'
 import type { SyncEvent } from '../sync/syncEngine'
 import { VisibilityTracker } from '../visibility/visibilityTracker'
 
 describe('SSEManager namespace filtering', () => {
+    beforeEach(() => {
+        mock.restore()
+    })
+
     it('routes events to matching namespace', () => {
         const manager = new SSEManager(0, new VisibilityTracker())
         const receivedAlpha: SyncEvent[] = []

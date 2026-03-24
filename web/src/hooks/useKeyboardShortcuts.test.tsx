@@ -32,6 +32,8 @@ describe('useKeyboardShortcutSettings', () => {
                 toggleSettings: false,
                 toggleSidebar: true,
                 openNewSession: true,
+                switchToSessions: true,
+                switchToScheduled: true,
             })
         )
     })

@@ -20,7 +20,7 @@ export const MODEL_OPTIONS: Record<Exclude<AgentType, 'codex'>, ModelOption[]> =
     ]
 }
 
-export const LEGACY_GEMINI_MODEL_OPTIONS: ModelOption[] = [
+export const DEPRECATED_GEMINI_MODEL_OPTIONS: ModelOption[] = [
     { value: 'auto', label: 'Auto' },
     { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' },
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },

@@ -35,7 +35,7 @@ import { makeClientSideId } from '@/lib/messages'
 import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/use-translation'
 import { useAgentModels } from '@/hooks/queries/useAgentModels'
-import { buildCodexModelOptions, getHighestCodexReasoningEffort, LEGACY_GEMINI_MODEL_OPTIONS, MODEL_OPTIONS, type CodexModelOption } from '@/components/NewSession/types'
+import { buildCodexModelOptions, DEPRECATED_GEMINI_MODEL_OPTIONS, getHighestCodexReasoningEffort, MODEL_OPTIONS, type CodexModelOption } from '@/components/NewSession/types'
 import { loadPreferredModel, savePreferredModel } from '@/components/NewSession/preferences'
 import {
     buildClaudeComposerModelOptions,
@@ -342,7 +342,7 @@ export function SessionChat(props: {
             return
         }
 
-        const geminiModelValues = new Set(LEGACY_GEMINI_MODEL_OPTIONS.map((entry) => entry.value))
+        const geminiModelValues = new Set(DEPRECATED_GEMINI_MODEL_OPTIONS.map((entry) => entry.value))
         const sessionModel = props.session.metadata?.model?.trim()
         const preferredModel = (
             (composerGeminiModel && geminiModelValues.has(composerGeminiModel) ? composerGeminiModel : null)
@@ -362,7 +362,7 @@ export function SessionChat(props: {
     ])
 
     const handleGeminiModelChange = useCallback((model: string) => {
-        if (!LEGACY_GEMINI_MODEL_OPTIONS.some((option) => option.value === model)) {
+        if (!DEPRECATED_GEMINI_MODEL_OPTIONS.some((option) => option.value === model)) {
             return
         }
 
@@ -1111,7 +1111,7 @@ export function SessionChat(props: {
                                     claudeModelOptions={claudeComposerModelOptions}
                                     onClaudeModelChange={handleClaudeModelChange}
                                     geminiModel={composerGeminiModel}
-                                    geminiModelOptions={isGeminiSession ? LEGACY_GEMINI_MODEL_OPTIONS : []}
+                                    geminiModelOptions={isGeminiSession ? DEPRECATED_GEMINI_MODEL_OPTIONS : []}
                                     onGeminiModelChange={isGeminiSession ? handleGeminiModelChange : undefined}
                                     codexModel={composerCodexModel}
                                     codexModelOptions={codexComposerModelOptions}
