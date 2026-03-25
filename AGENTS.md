@@ -65,6 +65,16 @@ Use this section when the task is part of trader product exploration, especially
 - when user issues `cp` / `commit+push` for trader product exploration work, update `docs/trader-workspace-history.md` before commit; this is part of done-ness
 - if a round is implementation-only, still add a short entry stating what shipped and what design assumptions remained unchanged
 
+Minimum resident context:
+- `trader-workspace-history` on this branch normally refers to `docs/trader-workspace-history.md`
+- `main` remains generic HAPI infra; trader product exploration lives on `product/trader-workspace`
+- current workspace model is `Desk`, `Sessions`, `Scheduled`
+- `Desk` is currently split into `Overview` and `Accounts`
+- current phase assumption is mock-first, fast MVP, honest history logging
+
+Recall rule:
+- if the user asks about `trader-workspace-history`, trader workspace direction, `Desk` / `Overview` / `Accounts`, current product shape, or branch design rationale, read `docs/trader-workspace-history.md` before answering
+
 ## Scope map
 
 - `cli/AGENTS.md`: CLI commands, runner, local debug constraints, npm package publishing notes
@@ -81,6 +91,7 @@ Current project skills:
 - `hapi-local-debug-playbook` for isolated local hub/CLI debug flow
 - `hapi-incident-forensics` for evidence-first session failure investigation
 - `hapi-npm-publish` for npm pack / publish workflow of `@ofeiss/hapi`
+- `trader-workspace-history` for trader branch product direction and history recall
 
 ## Common commands
 
