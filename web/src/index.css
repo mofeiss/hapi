@@ -386,8 +386,8 @@ html[data-theme="dark"] .agent-icon-dark-invert {
   animation: bounce-in 0.3s ease-out;
 }
 
-/* Widescreen mode - remove content max-width constraint */
-.widescreen-mode .max-w-content {
+/* Workspace detail content uses full-width layout by default. */
+.workspace-content-fullwidth .max-w-content {
   max-width: 100%;
 }
 

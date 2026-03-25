@@ -142,7 +142,6 @@ export function SessionChat(props: {
     headerTitleOverride?: string | null
     headerTitleClassName?: string
     headerHideQuickNewButton?: boolean
-    headerHideWidescreenButton?: boolean
     headerHideSubtitleRow?: boolean
     streamOnly?: boolean
     initialScrollAnchor?: 'top' | 'bottom'
@@ -993,7 +992,6 @@ export function SessionChat(props: {
                         onQuickNewSession={props.onQuickNewSession}
                         quickNewSessionPending={props.quickNewSessionPending}
                         hideQuickNewButton={props.headerHideQuickNewButton}
-                        hideWidescreenButton={props.headerHideWidescreenButton}
                         hideSubtitleRow={props.headerHideSubtitleRow}
                         api={props.api}
                         onSessionDeleted={props.onSessionDeleted ?? props.onBack}

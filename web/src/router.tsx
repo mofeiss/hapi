@@ -43,7 +43,6 @@ import { RenameSessionDialog } from "@/components/RenameSessionDialog";
 import { useAppContext } from "@/lib/app-context";
 import { useAppGoBack } from "@/hooks/useAppGoBack";
 import { isTelegramApp } from "@/hooks/useTelegram";
-import { useWidescreen } from "@/hooks/useWidescreen";
 import { useLongPress } from "@/hooks/useLongPress";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useAppKeyboardShortcuts } from "@/hooks/useAppKeyboardShortcuts";
@@ -2776,7 +2775,6 @@ function ScheduledTaskDetailPanel({
                       headerTitleOverride={`SESSION ID ${selectedRun.sessionId}`}
                       headerTitleClassName="text-xs font-medium text-[var(--app-hint)]"
                       headerHideQuickNewButton
-                      headerHideWidescreenButton
                       headerHideSubtitleRow
                       streamOnly={!scheduledSessionInteractive}
                       initialScrollAnchor="top"
@@ -3518,7 +3516,6 @@ function SessionsPage() {
     return readStorageItem("session", "hapi:panel:collapsed") === "true";
   });
 
-  const { widescreen } = useWidescreen();
   const [settingsOpen, setSettingsOpen] = useState(
     workspace.overlay === "settings",
   );
@@ -5349,7 +5346,7 @@ function SessionsPage() {
           </div>
 
           <div
-            className={`mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col px-3 pb-3 lg:max-w-content ${widescreen ? "widescreen-mode" : ""}`}
+            className="workspace-content-fullwidth mx-auto flex min-h-0 w-full max-w-full flex-1 flex-col px-3 pb-3 lg:max-w-content"
           >
             <div className="flex min-h-0 flex-1 flex-col pt-0">
               <div className="relative -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[var(--app-border)] bg-[var(--app-bg)] shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
@@ -6369,7 +6366,7 @@ function SessionsPage() {
 
       {/* Right panel */}
       <div
-        className={`${((isDeskTab ? deskIndexVisible : isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay) || mobileTabDetailVisible ? "hidden lg:flex" : "flex"} relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${widescreen ? `widescreen-mode ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}` : ""}`}
+        className={`${((isDeskTab ? deskIndexVisible : isSessionsTab ? isSessionsIndex : scheduledIndexVisible) && !hasOverlay) || mobileTabDetailVisible ? "hidden lg:flex" : "flex"} workspace-content-fullwidth relative min-w-0 flex-1 flex-col bg-[var(--app-bg)] ${!effectiveCollapsed ? "lg:pr-[7px]" : ""}`}
       >
         {!narrowViewport && showDesktopNewSessionPane ? (
           <div className="flex-1 min-h-0">

@@ -249,6 +249,12 @@
 - 这轮属于实现与协作基础设施整理，不改变 trader workspace 的产品骨架判断。
 - `Desk` / `Sessions` / `Scheduled` 的顶层结构、`Desk > Overview` / `Accounts` 的拆分、以及 mock-first 的阶段假设保持不变。
 
+## 2026-03-25 Web Layout Simplification
+
+- 已移除 web 里的 widescreen 切换能力，不再提供窄版 / 宽版两种模式。
+- 当前 web 统一默认使用满宽工作区布局。
+- 这轮属于界面模式收敛，不改变 trader workspace 的产品信息架构与角色划分。
+
 - 默认自动选中最高优先级事项
 - `Overview` 与 `Accounts` 都服从主从布局
 
