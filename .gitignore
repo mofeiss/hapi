@@ -34,8 +34,9 @@ coverage/
 **/*.swo
 
 # Claude local settings
+.claude/*
+!.claude/skills
 .claude/settings.local.json
-.claude
 localdocs/
 execplan/
 

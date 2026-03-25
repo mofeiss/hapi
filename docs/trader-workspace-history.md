@@ -2,7 +2,7 @@
 
 状态：当前产品方向底稿 + 历史演进记录
 分支：`product/trader-workspace`
-最后更新：2026-03-24
+最后更新：2026-03-25
 
 ## Purpose
 
@@ -241,6 +241,13 @@
 - 右侧当前选中项详情
 
 推荐行为：
+
+## 2026-03-25 Implementation Note
+
+- 已把仓库级大块 `AGENTS.md` 拆成根级最小常驻规则 + `cli` / `hub` / `web` / `shared` / `docs` 目录级规则。
+- 已把低频长流程下沉到项目级 skills，并补上各层 `CLAUDE.md` 兼容入口。
+- 这轮属于实现与协作基础设施整理，不改变 trader workspace 的产品骨架判断。
+- `Desk` / `Sessions` / `Scheduled` 的顶层结构、`Desk > Overview` / `Accounts` 的拆分、以及 mock-first 的阶段假设保持不变。
 
 - 默认自动选中最高优先级事项
 - `Overview` 与 `Accounts` 都服从主从布局
