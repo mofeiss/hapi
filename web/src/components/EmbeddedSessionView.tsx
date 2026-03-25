@@ -99,7 +99,6 @@ export function EmbeddedSessionView({
   headerTitleOverride,
   headerTitleClassName,
   headerHideQuickNewButton = false,
-  headerHideWidescreenButton = false,
   headerHideSubtitleRow = false,
   subscribeToSessionEvents = true,
   streamOnly = false,
@@ -116,7 +115,6 @@ export function EmbeddedSessionView({
   headerTitleOverride?: string | null;
   headerTitleClassName?: string;
   headerHideQuickNewButton?: boolean;
-  headerHideWidescreenButton?: boolean;
   headerHideSubtitleRow?: boolean;
   subscribeToSessionEvents?: boolean;
   streamOnly?: boolean;
@@ -528,7 +526,6 @@ export function EmbeddedSessionView({
       headerTitleOverride={headerTitleOverride}
       headerTitleClassName={headerTitleClassName}
       headerHideQuickNewButton={headerHideQuickNewButton}
-      headerHideWidescreenButton={headerHideWidescreenButton}
       headerHideSubtitleRow={headerHideSubtitleRow}
       streamOnly={streamOnly}
       messages={messages}

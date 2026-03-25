@@ -28,7 +28,6 @@ import type { AttachmentMetadata, Machine, PermissionMode, Session, UserMessageM
 import { FloatingOverlay } from '@/components/ChatInput/FloatingOverlay'
 import { Autocomplete } from '@/components/ChatInput/Autocomplete'
 import { isTelegramApp } from '@/hooks/useTelegram'
-import { useWidescreen } from '@/hooks/useWidescreen'
 import type { AgentType, SessionType } from './types'
 import { buildCodexModelOptions, getHighestCodexReasoningEffort } from './types'
 import {
@@ -189,7 +188,6 @@ function DraftHeader(props: {
     onBack: () => void
     includeTopSafeArea?: boolean
 }) {
-    const { widescreen, toggleWidescreen } = useWidescreen()
     const includeTopSafeArea = props.includeTopSafeArea ?? true
 
     return (
@@ -199,8 +197,6 @@ function DraftHeader(props: {
                     {props.title}
                 </div>
                 <HeaderActionGroup
-                    onToggleWidescreen={toggleWidescreen}
-                    widescreen={widescreen}
                     hideNewSessionButton
                     hideThemeControls
                     hideSettingsButton

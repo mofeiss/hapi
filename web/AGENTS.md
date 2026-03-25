@@ -37,7 +37,7 @@ Web is the React PWA / Mini App remote workspace for sessions, scheduled tasks, 
 - Before changing layout, read `src/router.tsx` first.
 - Before adding header controls, inspect `HeaderActionGroup` and `PageHeaderUtilityControls`.
 - Keep parity across chat/files/terminal session subviews.
-- Desktop sidebar width is per-tab state; widescreen is cross-tab preference.
+- Desktop sidebar width is per-tab state.
 
 ## Scheduled-session scroll rule
 

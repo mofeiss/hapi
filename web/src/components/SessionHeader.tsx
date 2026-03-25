@@ -3,7 +3,6 @@ import type { Session } from "@/types/api";
 import type { ApiClient } from "@/api/client";
 import { isTelegramApp } from "@/hooks/useTelegram";
 import { HeaderActionGroup } from "@/components/HeaderActionGroup";
-import { useWidescreen } from "@/hooks/useWidescreen";
 import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import { normalizeProjectPath } from "@/utils/path";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
@@ -31,12 +30,10 @@ export function SessionHeader(props: {
   onQuickNewSession?: () => void;
   quickNewSessionPending?: boolean;
   hideQuickNewButton?: boolean;
-  hideWidescreenButton?: boolean;
   hideSubtitleRow?: boolean;
   api: ApiClient | null;
   onSessionDeleted?: () => void;
 }) {
-  const { widescreen, toggleWidescreen } = useWidescreen();
   const { session } = props;
   const includeTopSafeArea = props.includeTopSafeArea ?? true;
   const titleFromStore = useSessionTitleOverride(session.id);
@@ -81,9 +78,6 @@ export function SessionHeader(props: {
             terminalOpen={props.terminalOpen}
             onToggleFiles={props.onToggleFiles}
             filesOpen={props.filesOpen}
-            onToggleWidescreen={props.hideWidescreenButton ? undefined : toggleWidescreen}
-            widescreen={props.hideWidescreenButton ? undefined : widescreen}
-            widescreenClassName={`flex h-[30px] w-[30px] items-center justify-center rounded-full transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${widescreen ? "text-[var(--app-link)]" : "text-[var(--app-hint)]"}`}
             className="flex items-center gap-0.5"
           />
         </div>

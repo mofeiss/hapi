@@ -42,39 +42,6 @@ function FilesIcon(props: { className?: string }) {
     )
 }
 
-function WidescreenIcon(props: { className?: string; active?: boolean }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={props.className}
-        >
-            {props.active ? (
-                <>
-                    <polyline points="4 14 10 14 10 20" />
-                    <polyline points="20 10 14 10 14 4" />
-                    <line x1="14" y1="10" x2="21" y2="3" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                </>
-            ) : (
-                <>
-                    <polyline points="15 3 21 3 21 9" />
-                    <polyline points="9 21 3 21 3 15" />
-                    <line x1="21" y1="3" x2="14" y2="10" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                </>
-            )}
-        </svg>
-    )
-}
-
 function NewChatIcon(props: { className?: string }) {
     return (
         <svg
@@ -135,9 +102,6 @@ type HeaderActionGroupProps = {
     terminalOpen?: boolean
     onToggleFiles?: () => void
     filesOpen?: boolean
-    onToggleWidescreen?: () => void
-    widescreen?: boolean
-    widescreenClassName?: string
     className?: string
     compactIcons?: boolean
     hideNewSessionButton?: boolean
@@ -190,7 +154,7 @@ export function HeaderActionGroup(props: HeaderActionGroupProps) {
                 </button>
             ) : null}
 
-            {(!props.hideNewSessionButton && props.onOpenNewSession || !props.hideQuickNewButton && props.onQuickNewSession) && ((!props.hideThemeControls && props.onToggleTheme) || (!props.hideSettingsButton && props.onOpenSettings) || props.onToggleTerminal || props.onToggleFiles || props.onToggleWidescreen) ? (
+            {(!props.hideNewSessionButton && props.onOpenNewSession || !props.hideQuickNewButton && props.onQuickNewSession) && ((!props.hideThemeControls && props.onToggleTheme) || (!props.hideSettingsButton && props.onOpenSettings) || props.onToggleTerminal || props.onToggleFiles) ? (
                 <div className="mx-0.5 h-4 w-px bg-[var(--app-divider)]" />
             ) : null}
 
@@ -236,18 +200,6 @@ export function HeaderActionGroup(props: HeaderActionGroupProps) {
                     aria-label={t('session.title')}
                 >
                     <FilesIcon />
-                </button>
-            ) : null}
-
-            {props.onToggleWidescreen ? (
-                <button
-                    type="button"
-                    onClick={props.onToggleWidescreen}
-                    className={props.widescreenClassName ?? `flex h-[30px] w-[30px] items-center justify-center rounded-full hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)] ${props.widescreen ? 'text-[var(--app-link)]' : 'text-[var(--app-hint)]'}`}
-                    title={props.widescreen ? 'Exit widescreen' : 'Widescreen'}
-                    aria-label={props.widescreen ? 'Exit widescreen' : 'Widescreen'}
-                >
-                    <WidescreenIcon active={props.widescreen} />
                 </button>
             ) : null}
         </div>
