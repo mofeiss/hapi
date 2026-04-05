@@ -101,7 +101,7 @@ describe('SessionList', () => {
         expect(screen.getByText('Alpha session').className).not.toContain('text-[14px]')
         expect(screen.getByText('MacBook-Pro')).toHaveClass('text-base')
         expect(screen.getByText('MacBook-Pro').className).not.toContain('text-[14px]')
-        expect(screen.getByText('2026/5/30 21:29:32')).toBeInTheDocument()
+        expect(screen.getByText(new Date('2026-05-30T21:29:32').toLocaleString())).toBeInTheDocument()
         expect(screen.queryByText('codex')).not.toBeInTheDocument()
         expect(screen.getByText('project/hapi')).toBeInTheDocument()
     })
