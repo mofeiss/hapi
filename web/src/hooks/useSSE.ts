@@ -6,56 +6,124 @@ import { queryKeys } from '@/lib/query-keys'
 import { clearMessageWindow, ingestIncomingMessages } from '@/lib/message-window-store'
 import type { Session, SessionResponse, SessionsResponse, SessionSummary } from '@/types/api'
 
-function mergeSessionData<T extends Session>(session: T, patch: unknown): T {
+function hasOwn(record: Record<string, unknown>, key: string): boolean {
+    return Object.prototype.hasOwnProperty.call(record, key)
+}
+
+export function mergeSessionData<T extends Session>(session: T, patch: unknown): { session: T; changed: boolean } {
     if (!isObject(patch)) {
-        return session
+        return { session, changed: false }
     }
 
     const next = { ...session } as T
+    let changed = false
 
-    if (typeof patch.active === 'boolean') {
+    if (typeof patch.active === 'boolean' && patch.active !== session.active) {
         next.active = patch.active
+        changed = true
     }
-    if (typeof patch.activeAt === 'number') {
+    if (typeof patch.activeAt === 'number' && patch.activeAt !== session.activeAt) {
         next.activeAt = patch.activeAt
+        changed = true
     }
-    if (typeof patch.thinking === 'boolean') {
+    if (typeof patch.thinking === 'boolean' && patch.thinking !== session.thinking) {
         next.thinking = patch.thinking
+        changed = true
     }
-    if ('permissionMode' in patch) {
+    if (typeof patch.updatedAt === 'number' && patch.updatedAt !== session.updatedAt) {
+        next.updatedAt = patch.updatedAt
+        changed = true
+    }
+    if (typeof patch.seq === 'number' && patch.seq !== session.seq) {
+        next.seq = patch.seq
+        changed = true
+    }
+    if (hasOwn(patch, 'metadata') && patch.metadata !== session.metadata) {
+        next.metadata = patch.metadata as T['metadata']
+        changed = true
+    }
+    if (typeof patch.metadataVersion === 'number' && patch.metadataVersion !== session.metadataVersion) {
+        next.metadataVersion = patch.metadataVersion
+        changed = true
+    }
+    if (hasOwn(patch, 'agentState') && patch.agentState !== session.agentState) {
+        next.agentState = patch.agentState as T['agentState']
+        changed = true
+    }
+    if (typeof patch.agentStateVersion === 'number' && patch.agentStateVersion !== session.agentStateVersion) {
+        next.agentStateVersion = patch.agentStateVersion
+        changed = true
+    }
+    if (hasOwn(patch, 'todos') && patch.todos !== session.todos) {
+        next.todos = patch.todos as T['todos']
+        changed = true
+    }
+    if (hasOwn(patch, 'permissionMode') && patch.permissionMode !== session.permissionMode) {
         next.permissionMode = patch.permissionMode as T['permissionMode']
+        changed = true
     }
-    if ('basePermissionMode' in patch) {
+    if (hasOwn(patch, 'basePermissionMode') && patch.basePermissionMode !== session.basePermissionMode) {
         next.basePermissionMode = patch.basePermissionMode as T['basePermissionMode']
+        changed = true
     }
-    if ('modelMode' in patch) {
+    if (hasOwn(patch, 'modelMode') && patch.modelMode !== session.modelMode) {
         next.modelMode = patch.modelMode as T['modelMode']
+        changed = true
     }
 
-    return next
+    return changed ? { session: next, changed } : { session, changed }
 }
 
-function mergeSessionSummaryData(session: SessionSummary, patch: unknown): SessionSummary {
+export function mergeSessionSummaryData(session: SessionSummary, patch: unknown): { session: SessionSummary; changed: boolean } {
     if (!isObject(patch)) {
-        return session
+        return { session, changed: false }
     }
 
     const next = { ...session }
+    let changed = false
 
-    if (typeof patch.active === 'boolean') {
+    if (typeof patch.active === 'boolean' && patch.active !== session.active) {
         next.active = patch.active
+        changed = true
     }
-    if (typeof patch.activeAt === 'number') {
+    if (typeof patch.activeAt === 'number' && patch.activeAt !== session.activeAt) {
         next.activeAt = patch.activeAt
+        changed = true
     }
-    if (typeof patch.thinking === 'boolean') {
+    if (typeof patch.thinking === 'boolean' && patch.thinking !== session.thinking) {
         next.thinking = patch.thinking
+        changed = true
     }
-    if ('modelMode' in patch) {
+    if (typeof patch.updatedAt === 'number' && patch.updatedAt !== session.updatedAt) {
+        next.updatedAt = patch.updatedAt
+        changed = true
+    }
+    if (hasOwn(patch, 'metadata') && patch.metadata !== session.metadata) {
+        next.metadata = patch.metadata as SessionSummary['metadata']
+        changed = true
+    }
+    if (hasOwn(patch, 'todoProgress') && patch.todoProgress !== session.todoProgress) {
+        next.todoProgress = patch.todoProgress as SessionSummary['todoProgress']
+        changed = true
+    }
+    if (typeof patch.pendingRequestsCount === 'number' && patch.pendingRequestsCount !== session.pendingRequestsCount) {
+        next.pendingRequestsCount = patch.pendingRequestsCount
+        changed = true
+    } else if (hasOwn(patch, 'agentState')) {
+        const pendingRequestsCount = isObject(patch.agentState) && isObject(patch.agentState.requests)
+            ? Object.keys(patch.agentState.requests).length
+            : 0
+        if (pendingRequestsCount !== session.pendingRequestsCount) {
+            next.pendingRequestsCount = pendingRequestsCount
+            changed = true
+        }
+    }
+    if (hasOwn(patch, 'modelMode') && patch.modelMode !== session.modelMode) {
         next.modelMode = patch.modelMode as SessionSummary['modelMode']
+        changed = true
     }
 
-    return next
+    return changed ? { session: next, changed } : { session, changed }
 }
 
 function patchSessionCaches(queryClient: ReturnType<typeof useQueryClient>, sessionId: string, patch: unknown): boolean {
@@ -65,8 +133,14 @@ function patchSessionCaches(queryClient: ReturnType<typeof useQueryClient>, sess
         if (!current?.session) {
             return current
         }
+
+        const merged = mergeSessionData(current.session, patch)
+        if (!merged.changed) {
+            return current
+        }
+
         updated = true
-        return { session: mergeSessionData(current.session, patch) }
+        return { session: merged.session }
     })
 
     queryClient.setQueryData<SessionsResponse | undefined>(queryKeys.sessions, (current) => {
@@ -80,8 +154,13 @@ function patchSessionCaches(queryClient: ReturnType<typeof useQueryClient>, sess
                 return session
             }
 
+            const merged = mergeSessionSummaryData(session, patch)
+            if (!merged.changed) {
+                return session
+            }
+
             changed = true
-            return mergeSessionSummaryData(session, patch)
+            return merged.session
         })
 
         if (!changed) {

@@ -258,6 +258,13 @@
 - 默认自动选中最高优先级事项
 - `Overview` 与 `Accounts` 都服从主从布局
 
+## 2026-04-06 Permission Request Realtime Fix
+
+- 已修复 Codex 权限请求到达后，Session 视图未及时进入可审批状态、必须手动刷新后才出现审批 UI 的问题。
+- 本轮实现补齐了 web 端对 `session-updated` 的实时缓存合并，正确响应 `agentState` 与 `pendingRequestsCount`，并在请求清空时同步把待审批计数归零。
+- 同时修复了点击 `permission required / Waiting for approval…` 提示时的重复导航路径，避免在已打开目标 Session 时再次触发页面异常刷新。
+- 这轮属于现有 workspace 审批流修复，不改变 trader workspace 的 IA、角色边界或 mock-first 阶段假设。
+
 ### Desktop Collapsed
 
 形态：
