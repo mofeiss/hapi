@@ -12,7 +12,7 @@
     },
     "cli": {
       "name": "@ofeiss/hapi",
-      "version": "0.15.24",
+      "version": "0.15.25",
       "bin": {
         "hapi": "bin/hapi.cjs",
       },
@@ -44,11 +44,11 @@
         "vitest": "^4.0.16",
       },
       "optionalDependencies": {
-        "@ofeiss/hapi-darwin-arm64": "0.15.24",
-        "@ofeiss/hapi-darwin-x64": "0.15.24",
-        "@ofeiss/hapi-linux-arm64": "0.15.24",
-        "@ofeiss/hapi-linux-x64": "0.15.24",
-        "@ofeiss/hapi-win32-x64": "0.15.24",
+        "@ofeiss/hapi-darwin-arm64": "0.15.25",
+        "@ofeiss/hapi-darwin-x64": "0.15.25",
+        "@ofeiss/hapi-linux-arm64": "0.15.25",
+        "@ofeiss/hapi-linux-x64": "0.15.25",
+        "@ofeiss/hapi-win32-x64": "0.15.25",
       },
     },
     "docs": {
@@ -626,11 +626,11 @@
 
     "@ofeiss/hapi": ["@ofeiss/hapi@workspace:cli"],
 
-    "@ofeiss/hapi-darwin-arm64": ["@ofeiss/hapi-darwin-arm64@0.15.24", "", { "os": "darwin", "cpu": "arm64", "bin": { "hapi": "bin/hapi" } }, "sha512-tAo0h9n5ZmwAshFn/0oFrUDa/yAwc6c1JAQuRu9eeM06ANGmi5Vo9ebQ9xdqXpBKt7hgRZvLAPM4dUTHlhxwZA=="],
+    "@ofeiss/hapi-darwin-arm64": ["@ofeiss/hapi-darwin-arm64@0.15.25", "", { "os": "darwin", "cpu": "arm64", "bin": { "hapi": "bin/hapi" } }, "sha512-tAo0h9n5ZmwAshFn/0oFrUDa/yAwc6c1JAQuRu9eeM06ANGmi5Vo9ebQ9xdqXpBKt7hgRZvLAPM4dUTHlhxwZA=="],
 
-    "@ofeiss/hapi-linux-x64": ["@ofeiss/hapi-linux-x64@0.15.24", "", { "os": "linux", "cpu": "x64", "bin": { "hapi": "bin/hapi" } }, "sha512-Zd7VjtG7PB1okJxeAVihARnWIRlTwrvwtUijA9qvphywXB7thiHt6ruOjGIcb0bHdzzOa4d/gRroPd+AIZmq5Q=="],
+    "@ofeiss/hapi-linux-x64": ["@ofeiss/hapi-linux-x64@0.15.25", "", { "os": "linux", "cpu": "x64", "bin": { "hapi": "bin/hapi" } }, "sha512-Zd7VjtG7PB1okJxeAVihARnWIRlTwrvwtUijA9qvphywXB7thiHt6ruOjGIcb0bHdzzOa4d/gRroPd+AIZmq5Q=="],
 
-    "@ofeiss/hapi-win32-x64": ["@ofeiss/hapi-win32-x64@0.15.24", "", { "os": "win32", "cpu": "x64", "bin": { "hapi": "bin/hapi.exe" } }, "sha512-kAuR1yukBwXU2KDqcoUa24bOvdEP6jc/ISIqL7Ylg7EuShD7hQZ67+vgfcPQ9NUMcXJPY4qK3vAxCW7GRCBepQ=="],
+    "@ofeiss/hapi-win32-x64": ["@ofeiss/hapi-win32-x64@0.15.25", "", { "os": "win32", "cpu": "x64", "bin": { "hapi": "bin/hapi.exe" } }, "sha512-kAuR1yukBwXU2KDqcoUa24bOvdEP6jc/ISIqL7Ylg7EuShD7hQZ67+vgfcPQ9NUMcXJPY4qK3vAxCW7GRCBepQ=="],
 
     "@pinojs/redact": ["@pinojs/redact@0.4.0", "", {}, "sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg=="],
 
