@@ -67,8 +67,14 @@ export class CodexAppServerClient {
     private readonly requestHandlers = new Map<string, RequestHandler>();
     private notificationHandler: ((method: string, params: unknown) => void) | null = null;
     private protocolError: Error | null = null;
+    private readonly cwd: string | undefined;
 
     static readonly DEFAULT_TIMEOUT_MS = 14 * 24 * 60 * 60 * 1000;
+
+    constructor(options?: { cwd?: string }) {
+        const cwd = options?.cwd;
+        this.cwd = typeof cwd === 'string' && cwd.trim().length > 0 ? cwd : undefined;
+    }
 
     async connect(): Promise<void> {
         if (this.connected) {
@@ -76,6 +82,7 @@ export class CodexAppServerClient {
         }
 
         this.process = spawn('codex', ['app-server'], {
+            ...(this.cwd ? { cwd: this.cwd } : {}),
             env: Object.keys(process.env).reduce((acc, key) => {
                 const value = process.env[key];
                 if (typeof value === 'string') acc[key] = value;

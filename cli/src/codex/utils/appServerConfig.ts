@@ -61,6 +61,15 @@ function resolveSandboxPolicyOverride(value: CodexCliOverrides['sandbox'] | unde
     }
 }
 
+function resolveWorkingDirectory(value: string | undefined): string | undefined {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function buildMcpServerConfig(mcpServers: McpServersConfig): Record<string, unknown> {
     const config: Record<string, unknown> = {};
 
@@ -81,6 +90,7 @@ export function buildThreadStartParams(args: {
     baseInstructions?: string;
     developerInstructions?: string;
     trigger?: SessionTriggerMetadata;
+    cwd?: string;
 }): ThreadStartParams {
     const approvalPolicy = resolveApprovalPolicy(args.mode);
     const sandbox = resolveSandbox(args.mode);
@@ -94,10 +104,12 @@ export function buildThreadStartParams(args: {
     const developerInstructions = args.developerInstructions && hapiDeveloperInstructions
         ? `${hapiDeveloperInstructions}\n\n${args.developerInstructions}`
         : (args.developerInstructions ?? hapiDeveloperInstructions);
+    const cwd = resolveWorkingDirectory(args.cwd);
 
     const params: ThreadStartParams = {
         approvalPolicy: resolvedApprovalPolicy,
         sandbox: resolvedSandbox,
+        ...(cwd ? { cwd } : {}),
         ...(args.baseInstructions ? { baseInstructions: args.baseInstructions } : {}),
         ...(developerInstructions ? { developerInstructions } : {}),
         ...(Object.keys(config).length > 0 ? { config } : {})
@@ -121,10 +133,13 @@ export function buildTurnStartParams(args: {
         model?: string;
         effort?: ReasoningEffort;
     };
+    cwd?: string;
 }): TurnStartParams {
+    const cwd = resolveWorkingDirectory(args.cwd);
     const params: TurnStartParams = {
         threadId: args.threadId,
-        input: [{ type: 'text', text: args.message }]
+        input: [{ type: 'text', text: args.message }],
+        ...(cwd ? { cwd } : {})
     };
 
     const allowCliOverrides = args.mode?.permissionMode === 'default';

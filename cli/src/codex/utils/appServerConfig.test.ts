@@ -9,11 +9,13 @@ describe('appServerConfig', () => {
         const params = buildThreadStartParams({
             mode: { permissionMode: 'default' },
             mcpServers,
-            cliOverrides: { sandbox: 'danger-full-access', approvalPolicy: 'never' }
+            cliOverrides: { sandbox: 'danger-full-access', approvalPolicy: 'never' },
+            cwd: '/Users/ofeiss/project/dogclaw'
         });
 
         expect(params.sandbox).toBe('danger-full-access');
         expect(params.approvalPolicy).toBe('never');
+        expect(params.cwd).toBe('/Users/ofeiss/project/dogclaw');
         expect(params.baseInstructions).toBeUndefined();
         expect(params.developerInstructions).toBe(codexSystemPrompt);
         expect(params.config).toEqual({
@@ -88,11 +90,13 @@ describe('appServerConfig', () => {
         const params = buildTurnStartParams({
             threadId: 'thread-1',
             message: 'hello',
-            mode: { permissionMode: 'read-only', model: 'o3', effort: 'high' }
+            mode: { permissionMode: 'read-only', model: 'o3', effort: 'high' },
+            cwd: '/Users/ofeiss/project/dogclaw'
         });
 
         expect(params.threadId).toBe('thread-1');
         expect(params.input).toEqual([{ type: 'text', text: 'hello' }]);
+        expect(params.cwd).toBe('/Users/ofeiss/project/dogclaw');
         expect(params.approvalPolicy).toBe('never');
         expect(params.sandboxPolicy).toEqual({ type: 'readOnly' });
         expect(params.model).toBe('o3');

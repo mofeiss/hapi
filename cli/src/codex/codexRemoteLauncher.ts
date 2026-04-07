@@ -55,7 +55,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         this.session = session;
         this.useAppServer = shouldUseAppServer();
         this.mcpClient = this.useAppServer ? null : new CodexMcpClient();
-        this.appServerClient = this.useAppServer ? new CodexAppServerClient() : null;
+        this.appServerClient = this.useAppServer ? new CodexAppServerClient({ cwd: session.path }) : null;
     }
 
     protected createDisplay(context: RemoteLauncherDisplayContext): React.ReactElement {
@@ -806,7 +806,8 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                             mode: message.mode,
                             mcpServers,
                             cliOverrides: session.codexCliOverrides,
-                            trigger: session.client.getMetadata()?.trigger
+                            trigger: session.client.getMetadata()?.trigger,
+                            cwd: session.path
                         });
 
                         const resumeCandidate = session.sessionId;
@@ -852,7 +853,8 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                             threadId,
                             message: message.message,
                             mode: message.mode,
-                            cliOverrides: session.codexCliOverrides
+                            cliOverrides: session.codexCliOverrides,
+                            cwd: session.path
                         });
                         turnInFlight = true;
                         const turnResponse = await appServerClient.startTurn(turnParams, {
@@ -892,7 +894,8 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                         threadId: this.currentThreadId,
                         message: message.message,
                         mode: message.mode,
-                        cliOverrides: session.codexCliOverrides
+                        cliOverrides: session.codexCliOverrides,
+                        cwd: session.path
                     });
                     turnInFlight = true;
                     const turnResponse = await appServerClient.startTurn(turnParams, {

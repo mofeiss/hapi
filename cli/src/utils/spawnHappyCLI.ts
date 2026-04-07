@@ -114,7 +114,6 @@ export function spawnHappyCLI(args: string[], options: SpawnOptions = {}): Child
   const spawnOptions: SpawnOptions = (!isBunCompiled() && isBunRuntime)
     ? {
       ...options,
-      cwd: projectRoot,
       env: {
         ...(options.env ?? process.env),
         ...(requestedCwd ? { HAPI_TARGET_CWD: requestedCwd } : {})
