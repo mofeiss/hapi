@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { AgentState, ModelMode } from '@/types/api'
 import type { ConversationStatus } from '@/realtime/types'
 import { getContextBudgetTokens } from '@/chat/modelConfig'
+import { RefreshIcon } from '@/components/icons'
 import { useTranslation } from '@/lib/use-translation'
 
 function getConnectionStatus(
@@ -134,6 +135,7 @@ export function StatusBar(props: {
     agentFlavor?: string | null
     model?: string
     voiceStatus?: ConversationStatus
+    onRefresh?: () => void
     className?: string
 }) {
     const { t } = useTranslation()
@@ -178,6 +180,17 @@ export function StatusBar(props: {
                         />
                         <span className="truncate">{contextWarning.text}</span>
                     </span>
+                ) : null}
+                {props.onRefresh ? (
+                    <button
+                        type="button"
+                        onClick={props.onRefresh}
+                        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[var(--app-hint)] transition-colors hover:bg-[var(--app-secondary-bg)] hover:text-[var(--app-fg)]"
+                        title={t('misc.refreshRender')}
+                        aria-label={t('misc.refreshRender')}
+                    >
+                        <RefreshIcon className="h-3.5 w-3.5" />
+                    </button>
                 ) : null}
             </div>
         </div>

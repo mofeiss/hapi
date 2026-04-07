@@ -1053,6 +1053,7 @@ export function SessionChat(props: {
                                             agentFlavor={agentFlavor}
                                             model={props.session.metadata?.model}
                                             voiceStatus={sttVoiceStatus}
+                                            onRefresh={props.onRefresh}
                                             className="relative z-10 min-w-0 flex-1 self-end px-0 pb-2"
                                         />
 

@@ -615,6 +615,8 @@ export default {
   "misc.percentLeft": "{percent}% left",
   "misc.idle": "idle",
   "misc.executing": "executing",
+  "misc.refresh": "Refresh",
+  "misc.refreshRender": "Refresh rendering",
   "misc.newChat": "New Chat",
 
   // Queue send

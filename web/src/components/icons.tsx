@@ -103,6 +103,19 @@ export function ResendIcon(props: IconProps) {
   );
 }
 
+export function RefreshIcon(props: IconProps) {
+  return createIcon(
+    <>
+      <path d="M20 11a8 8 0 0 0-14.9-3" />
+      <path d="M4 5v4h4" />
+      <path d="M4 13a8 8 0 0 0 14.9 3" />
+      <path d="M20 19v-4h-4" />
+    </>,
+    props,
+    2,
+  );
+}
+
 export function EditIcon(props: IconProps) {
   return createIcon(
     <>

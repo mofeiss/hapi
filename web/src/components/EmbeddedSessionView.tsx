@@ -38,6 +38,8 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const THINKING_REFRESH_INTERVAL_MS = 2500;
+
 function shouldRetryPermissionSync(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
@@ -132,6 +134,7 @@ export function EmbeddedSessionView({
   const [quickNewSessionPending, setQuickNewSessionPending] = useState(false);
   const modeSyncKeyRef = useRef<string | null>(null);
   const hasHydratedFocusedDataRef = useRef(false);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
 
   const isRealtimeFocus = subscribeToSessionEvents
     && realtimeOwner.sessionId === sessionId
@@ -424,9 +427,39 @@ export function EmbeddedSessionView({
   );
 
   const refreshSelectedSession = useCallback(() => {
-    void refetchSession();
-    void refetchMessages();
+    const existing = refreshInFlightRef.current;
+    if (existing) {
+      return existing;
+    }
+
+    const refreshPromise = Promise.allSettled([
+      refetchSession(),
+      refetchMessages(),
+    ]).then(() => undefined);
+
+    refreshInFlightRef.current = refreshPromise;
+    void refreshPromise.finally(() => {
+      if (refreshInFlightRef.current === refreshPromise) {
+        refreshInFlightRef.current = null;
+      }
+    });
+
+    return refreshPromise;
   }, [refetchMessages, refetchSession]);
+
+  useEffect(() => {
+    if (!session?.thinking) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshSelectedSession();
+    }, THINKING_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [refreshSelectedSession, session?.thinking]);
 
   const handleQuickNewSession = useCallback(async () => {
     if (!api || !session || quickNewSessionPending) {

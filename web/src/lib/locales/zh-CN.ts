@@ -584,6 +584,8 @@ export default {
   'misc.percentLeft': '剩余 {percent}%',
   'misc.idle': '空闲中',
   'misc.executing': '执行中',
+  'misc.refresh': '刷新',
+  'misc.refreshRender': '刷新渲染',
   'misc.newChat': '新对话',
 
   // Queue send

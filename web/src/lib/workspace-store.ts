@@ -113,6 +113,7 @@ export function selectWorkspaceOverlay(overlay: WorkspaceOverlay): void {
 export function openWorkspaceSession(sessionId: string, subview: SessionSubview = 'chat'): void {
     setWorkspaceState({
         tab: 'sessions',
+        overlay: 'none',
         selectedSessionId: sessionId,
         sessionSubview: subview,
     })
@@ -125,6 +126,7 @@ export function clearWorkspaceSessionSelection(): void {
 export function openWorkspaceScheduledTask(taskId: string, runId?: string | null): void {
     setWorkspaceState({
         tab: 'scheduled',
+        overlay: 'none',
         selectedScheduledTaskId: taskId,
         selectedScheduledRunId: runId ?? null,
     })

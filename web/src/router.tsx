@@ -3150,12 +3150,6 @@ function SessionsPage() {
   const normalizedSessionSearch = sessionSearch.trim().toLowerCase();
   const hasSessionSearch = sessionSearch.length > 0;
   const hasAnySessions = sessions.length > 0;
-  const showSessionsEmptyState =
-    !isLoading &&
-    !error &&
-    !normalizedSessionSearch &&
-    !filterOnlineOnly &&
-    !hasAnySessions;
 
   const displaySessions = useMemo(() => {
     return sessions.filter((session) => {
@@ -3165,6 +3159,20 @@ function SessionsPage() {
       return matchesSessionSearch(session, normalizedSessionSearch);
     });
   }, [filterOnlineOnly, normalizedSessionSearch, sessions]);
+
+  const showFilteredSessionsEmptyState =
+    !isLoading &&
+    !error &&
+    !normalizedSessionSearch &&
+    filterOnlineOnly &&
+    hasAnySessions &&
+    displaySessions.length === 0;
+  const showSessionsEmptyState =
+    !isLoading &&
+    !error &&
+    !normalizedSessionSearch &&
+    !filterOnlineOnly &&
+    !hasAnySessions;
 
   const collapsedGroups = useMemo(
     () => groupSessionsByHost(displaySessions),
@@ -3765,6 +3773,10 @@ function SessionsPage() {
   activeSessionRef.current = activeSessionId;
 
   useEffect(() => {
+    if (isLoading || error) {
+      return;
+    }
+
     const sessionIds = new Set(sessions.map((session) => session.id));
 
     if (selectedSessionId && !sessionIds.has(selectedSessionId)) {
@@ -3777,7 +3789,7 @@ function SessionsPage() {
         prev.filter((sessionId) => sessionIds.has(sessionId)),
       );
     }
-  }, [selectedSessionId, sessions]);
+  }, [error, isLoading, selectedSessionId, sessions]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -5517,7 +5529,7 @@ function SessionsPage() {
                         {t("sessions.search.noMatch")}
                       </div>
                     </div>
-                  ) : showSessionsEmptyState ? (
+                  ) : showSessionsEmptyState || showFilteredSessionsEmptyState ? (
                     <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-col px-3 py-3">
                       <EmptyListState
                         icon={<SessionTabIcon className="h-8 w-8" />}
