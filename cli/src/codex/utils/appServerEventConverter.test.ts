@@ -619,6 +619,13 @@ describe('AppServerEventConverter', () => {
                     total_token_usage: {
                         total_tokens: 123
                     }
+                },
+                rate_limits: {
+                    primary: {
+                        used_percent: 2,
+                        window_minutes: 300,
+                        resets_at: 1775104229
+                    }
                 }
             }
         });
@@ -628,6 +635,39 @@ describe('AppServerEventConverter', () => {
             info: {
                 total_token_usage: {
                     total_tokens: 123
+                }
+            },
+            rate_limits: {
+                primary: {
+                    used_percent: 2,
+                    window_minutes: 300,
+                    resets_at: 1775104229
+                }
+            }
+        }]);
+    });
+
+    it('maps account rate limit updates into token_count usage events', () => {
+        const converter = new AppServerEventConverter();
+
+        const events = converter.handleNotification('account/rateLimits/updated', {
+            rateLimits: {
+                primary: {
+                    used_percent: 2,
+                    window_minutes: 300,
+                    resets_at: 1775104229
+                }
+            }
+        });
+
+        expect(events).toEqual([{
+            type: 'token_count',
+            info: {},
+            rate_limits: {
+                primary: {
+                    used_percent: 2,
+                    window_minutes: 300,
+                    resets_at: 1775104229
                 }
             }
         }]);

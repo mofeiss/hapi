@@ -11,6 +11,9 @@ export type UsageData = {
 export type ContextUsageData = UsageData & {
     context_tokens?: number
     context_window_tokens?: number
+    rate_limit_used_percent?: number
+    rate_limit_window_minutes?: number
+    rate_limit_resets_at?: number
 }
 
 export type AgentEvent =

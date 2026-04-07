@@ -31,6 +31,25 @@ function extractCodexContextWindowTokens(data: Record<string, unknown>): number 
         ?? null
 }
 
+function extractCodexRateLimitUsage(data: Record<string, unknown>): {
+    usedPercent?: number
+    windowMinutes?: number
+    resetsAt?: number
+} {
+    const rateLimits = isObject(data.rate_limits)
+        ? data.rate_limits
+        : isObject(data.rateLimits)
+            ? data.rateLimits
+            : null
+    const primary = isObject(rateLimits?.primary) ? rateLimits.primary : null
+
+    return {
+        usedPercent: asNumber(primary?.used_percent) ?? asNumber(primary?.usedPercent) ?? undefined,
+        windowMinutes: asNumber(primary?.window_minutes) ?? asNumber(primary?.windowMinutes) ?? undefined,
+        resetsAt: asNumber(primary?.resets_at) ?? asNumber(primary?.resetsAt) ?? undefined
+    }
+}
+
 function normalizeToolResultPermissions(value: unknown): ToolResultPermission | undefined {
     if (!isObject(value)) return undefined
     const date = asNumber(value.date)
@@ -418,7 +437,8 @@ export function normalizeAgentRecord(
 
         if (data.type === 'token_count') {
             const contextTokens = extractCodexContextTokens(data)
-            if (contextTokens === null) {
+            const rateLimit = extractCodexRateLimitUsage(data)
+            if (contextTokens === null && rateLimit.usedPercent === undefined) {
                 return null
             }
             const contextWindowTokens = extractCodexContextWindowTokens(data) ?? undefined
@@ -431,10 +451,13 @@ export function normalizeAgentRecord(
                 isSidechain: false,
                 content: [],
                 usage: {
-                    input_tokens: contextTokens,
+                    input_tokens: contextTokens ?? 0,
                     output_tokens: 0,
-                    context_tokens: contextTokens,
-                    context_window_tokens: contextWindowTokens
+                    context_tokens: contextTokens ?? undefined,
+                    context_window_tokens: contextWindowTokens,
+                    rate_limit_used_percent: rateLimit.usedPercent,
+                    rate_limit_window_minutes: rateLimit.windowMinutes,
+                    rate_limit_resets_at: rateLimit.resetsAt
                 },
                 meta
             }

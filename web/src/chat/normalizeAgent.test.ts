@@ -123,10 +123,20 @@ describe('normalizeAgentRecord codex reasoning alignment', () => {
             data: {
                 type: 'token_count',
                 info: {
-                    total: {
+                    lastTokenUsage: {
                         totalTokens: 12345
                     },
+                    total: {
+                        totalTokens: 67890
+                    },
                     modelContextWindow: 258400
+                },
+                rate_limits: {
+                    primary: {
+                        used_percent: 2,
+                        window_minutes: 300,
+                        resets_at: 1775104229
+                    }
                 }
             }
         })
@@ -135,10 +145,13 @@ describe('normalizeAgentRecord codex reasoning alignment', () => {
         if (!normalized || normalized.role !== 'agent') return
         expect(normalized.content).toEqual([])
         expect(normalized.usage).toEqual({
-            input_tokens: 12345,
+            input_tokens: 67890,
             output_tokens: 0,
-            context_tokens: 12345,
-            context_window_tokens: 258400
+            context_tokens: 67890,
+            context_window_tokens: 258400,
+            rate_limit_used_percent: 2,
+            rate_limit_window_minutes: 300,
+            rate_limit_resets_at: 1775104229
         })
     })
 
@@ -159,7 +172,37 @@ describe('normalizeAgentRecord codex reasoning alignment', () => {
             input_tokens: 54321,
             output_tokens: 0,
             context_tokens: 54321,
+            rate_limit_used_percent: undefined,
+            rate_limit_window_minutes: undefined,
+            rate_limit_resets_at: undefined,
             context_window_tokens: undefined
+        })
+    })
+
+    it('keeps rate limit info even when token usage info is missing', () => {
+        const normalized = normalizeAgentRecord('m7', null, 7, {
+            type: 'codex',
+            data: {
+                type: 'token_count',
+                info: null,
+                rate_limits: {
+                    primary: {
+                        used_percent: 20,
+                        window_minutes: 300,
+                        resets_at: 1775104229
+                    }
+                }
+            }
+        })
+
+        expect(normalized?.usage).toEqual({
+            input_tokens: 0,
+            output_tokens: 0,
+            context_tokens: undefined,
+            context_window_tokens: undefined,
+            rate_limit_used_percent: 20,
+            rate_limit_window_minutes: 300,
+            rate_limit_resets_at: 1775104229
         })
     })
 })

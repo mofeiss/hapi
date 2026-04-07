@@ -582,6 +582,8 @@ export default {
   'misc.unavailable': '不可交互',
   'misc.permissionRequired': '需要权限',
   'misc.percentLeft': '剩余 {percent}%',
+  'misc.rateLimitLeft': '额度剩余 {percent}%',
+  'misc.contextUsage': '{used} / {max}',
   'misc.idle': '空闲中',
   'misc.executing': '执行中',
   'misc.refresh': '刷新',

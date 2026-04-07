@@ -24,6 +24,7 @@ export type CodexMessage = {
 } | {
     type: 'token_count';
     info: Record<string, unknown>;
+    rate_limits?: Record<string, unknown>;
     id: string;
 } | {
     type: 'tool-call';
@@ -173,13 +174,15 @@ export function convertCodexEvent(rawEvent: unknown): CodexConversionResult | nu
 
         if (eventType === 'token_count') {
             const info = asRecord(payloadRecord.info);
-            if (!info) {
+            const rateLimits = asRecord(payloadRecord.rate_limits ?? payloadRecord.rateLimits) ?? undefined;
+            if (!info && !rateLimits) {
                 return null;
             }
             return {
                 message: {
                     type: 'token_count',
-                    info,
+                    info: info ?? {},
+                    ...(rateLimits ? { rate_limits: rateLimits } : {}),
                     id: randomUUID()
                 }
             };

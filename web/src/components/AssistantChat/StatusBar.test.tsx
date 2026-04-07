@@ -23,4 +23,22 @@ describe('StatusBar', () => {
 
         expect(onRefresh).toHaveBeenCalledTimes(1)
     })
+
+    it('shows quota and context as separate indicators', () => {
+        render(
+            <I18nProvider>
+                <StatusBar
+                    active
+                    thinking={false}
+                    agentState={null}
+                    rateLimitUsedPercent={2}
+                    contextSize={31643}
+                    contextWindowTokens={258400}
+                />
+            </I18nProvider>
+        )
+
+        expect(screen.getByText('quota 98% left')).toBeInTheDocument()
+        expect(screen.getByText('31.6K / 258K')).toBeInTheDocument()
+    })
 })

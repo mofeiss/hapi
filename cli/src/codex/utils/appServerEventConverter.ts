@@ -437,14 +437,36 @@ export class AppServerEventConverter {
 
         if (method === 'thread/tokenUsage/updated') {
             const info = asRecord(paramsRecord.tokenUsage ?? paramsRecord.token_usage ?? paramsRecord) ?? {};
-            events.push({ type: 'token_count', info });
+            const rateLimits = asRecord(paramsRecord.rate_limits ?? paramsRecord.rateLimits);
+            events.push({
+                type: 'token_count',
+                info,
+                ...(rateLimits ? { rate_limits: rateLimits } : {})
+            });
             return events;
         }
 
         if (method === 'codex/event/token_count') {
             const source = wrappedMsg ?? paramsRecord;
             const info = asRecord(source.info ?? source.tokenUsage ?? source.token_usage ?? source) ?? {};
-            events.push({ type: 'token_count', info });
+            const rateLimits = asRecord(source.rate_limits ?? source.rateLimits);
+            events.push({
+                type: 'token_count',
+                info,
+                ...(rateLimits ? { rate_limits: rateLimits } : {})
+            });
+            return events;
+        }
+
+        if (method === 'account/rateLimits/updated') {
+            const rateLimits = asRecord(paramsRecord.rateLimits ?? paramsRecord.rate_limits ?? paramsRecord);
+            if (rateLimits) {
+                events.push({
+                    type: 'token_count',
+                    info: {},
+                    rate_limits: rateLimits
+                });
+            }
             return events;
         }
 

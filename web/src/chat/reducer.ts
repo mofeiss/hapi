@@ -16,6 +16,15 @@ function calculateContextSize(usage: ContextUsageData): number {
     return (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0) + usage.input_tokens
 }
 
+function hasContextUsage(usage: ContextUsageData): boolean {
+    if (typeof usage.context_tokens === 'number') {
+        return true
+    }
+    return (usage.cache_creation_input_tokens || 0) > 0
+        || (usage.cache_read_input_tokens || 0) > 0
+        || usage.input_tokens > 0
+}
+
 function normalizeSubAgentPrompt(text: string): string {
     return text.replace(/\r\n/g, '\n').trim()
 }
@@ -45,8 +54,11 @@ export type LatestUsage = {
     outputTokens: number
     cacheCreation: number
     cacheRead: number
-    contextSize: number
+    contextSize?: number
     contextWindowTokens?: number
+    rateLimitUsedPercent?: number
+    rateLimitWindowMinutes?: number
+    rateLimitResetsAt?: number
     timestamp: number
 }
 
@@ -126,16 +138,34 @@ export function reduceChatBlocks(
     for (let i = normalized.length - 1; i >= 0; i--) {
         const msg = normalized[i]
         if (msg.usage) {
-            latestUsage = {
-                inputTokens: msg.usage.input_tokens,
-                outputTokens: msg.usage.output_tokens,
-                cacheCreation: msg.usage.cache_creation_input_tokens ?? 0,
-                cacheRead: msg.usage.cache_read_input_tokens ?? 0,
-                contextSize: calculateContextSize(msg.usage),
-                contextWindowTokens: msg.usage.context_window_tokens,
-                timestamp: msg.createdAt
+            if (!latestUsage) {
+                latestUsage = {
+                    inputTokens: msg.usage.input_tokens,
+                    outputTokens: msg.usage.output_tokens,
+                    cacheCreation: msg.usage.cache_creation_input_tokens ?? 0,
+                    cacheRead: msg.usage.cache_read_input_tokens ?? 0,
+                    timestamp: msg.createdAt
+                }
             }
-            break
+
+            if (latestUsage.contextSize === undefined && hasContextUsage(msg.usage)) {
+                latestUsage.inputTokens = msg.usage.input_tokens
+                latestUsage.outputTokens = msg.usage.output_tokens
+                latestUsage.cacheCreation = msg.usage.cache_creation_input_tokens ?? 0
+                latestUsage.cacheRead = msg.usage.cache_read_input_tokens ?? 0
+                latestUsage.contextSize = calculateContextSize(msg.usage)
+                latestUsage.contextWindowTokens = msg.usage.context_window_tokens
+            }
+
+            if (latestUsage.rateLimitUsedPercent === undefined && msg.usage.rate_limit_used_percent !== undefined) {
+                latestUsage.rateLimitUsedPercent = msg.usage.rate_limit_used_percent
+                latestUsage.rateLimitWindowMinutes = msg.usage.rate_limit_window_minutes
+                latestUsage.rateLimitResetsAt = msg.usage.rate_limit_resets_at
+            }
+
+            if (latestUsage.contextSize !== undefined && latestUsage.rateLimitUsedPercent !== undefined) {
+                break
+            }
         }
     }
 

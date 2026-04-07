@@ -1049,6 +1049,7 @@ export function SessionChat(props: {
                                             agentState={props.session.agentState}
                                             contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
                                             contextWindowTokens={reduced.latestUsage?.contextWindowTokens}
+                                            rateLimitUsedPercent={reduced.latestUsage?.rateLimitUsedPercent}
                                             modelMode={props.session.modelMode}
                                             agentFlavor={agentFlavor}
                                             model={props.session.metadata?.model}

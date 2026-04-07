@@ -56,6 +56,45 @@ describe('convertCodexEvent', () => {
         });
     });
 
+    it('keeps token count rate limits when present', () => {
+        const result = convertCodexEvent({
+            type: 'event_msg',
+            payload: {
+                type: 'token_count',
+                info: {
+                    last_token_usage: {
+                        total_tokens: 15939
+                    },
+                    model_context_window: 258400
+                },
+                rate_limits: {
+                    primary: {
+                        used_percent: 2,
+                        window_minutes: 300,
+                        resets_at: 1775104229
+                    }
+                }
+            }
+        });
+
+        expect(result?.message).toMatchObject({
+            type: 'token_count',
+            info: {
+                last_token_usage: {
+                    total_tokens: 15939
+                },
+                model_context_window: 258400
+            },
+            rate_limits: {
+                primary: {
+                    used_percent: 2,
+                    window_minutes: 300,
+                    resets_at: 1775104229
+                }
+            }
+        });
+    });
+
     it('converts function_call items', () => {
         const result = convertCodexEvent({
             type: 'response_item',

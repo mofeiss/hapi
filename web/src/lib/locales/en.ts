@@ -613,6 +613,8 @@ export default {
   "misc.unavailable": "unavailable",
   "misc.permissionRequired": "permission required",
   "misc.percentLeft": "{percent}% left",
+  "misc.rateLimitLeft": "quota {percent}% left",
+  "misc.contextUsage": "{used} / {max}",
   "misc.idle": "idle",
   "misc.executing": "executing",
   "misc.refresh": "Refresh",

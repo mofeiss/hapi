@@ -74,16 +74,44 @@ function getContextWarning(
     t: (key: string, params?: Record<string, string | number>) => string
 ): { text: string; color: string; usedPercentage: number } | null {
     const percentageUsed = Math.min(100, Math.max(0, (contextSize / maxContextSize) * 100))
-    const percentageRemaining = Math.max(0, 100 - percentageUsed)
+    const usedText = formatCompactTokens(contextSize)
+    const maxText = formatCompactTokens(maxContextSize)
 
-    const percent = Math.round(percentageRemaining)
-    if (percentageRemaining <= 5) {
-        return { text: t('misc.percentLeft', { percent }), color: 'text-red-500', usedPercentage: percentageUsed }
-    } else if (percentageRemaining <= 10) {
-        return { text: t('misc.percentLeft', { percent }), color: 'text-amber-500', usedPercentage: percentageUsed }
+    if (percentageUsed >= 95) {
+        return { text: t('misc.contextUsage', { used: usedText, max: maxText }), color: 'text-red-500', usedPercentage: percentageUsed }
+    } else if (percentageUsed >= 90) {
+        return { text: t('misc.contextUsage', { used: usedText, max: maxText }), color: 'text-amber-500', usedPercentage: percentageUsed }
     } else {
-        return { text: t('misc.percentLeft', { percent }), color: 'text-[var(--app-hint)]', usedPercentage: percentageUsed }
+        return { text: t('misc.contextUsage', { used: usedText, max: maxText }), color: 'text-[var(--app-hint)]', usedPercentage: percentageUsed }
     }
+}
+
+function formatCompactTokens(value: number): string {
+    if (value >= 1_000_000) {
+        const compact = value / 1_000_000
+        return `${Number.isInteger(compact) ? compact.toFixed(0) : compact.toFixed(1)}M`
+    }
+    if (value >= 1_000) {
+        const compact = value / 1_000
+        return `${compact >= 100 || Number.isInteger(compact) ? compact.toFixed(0) : compact.toFixed(1)}K`
+    }
+    return String(value)
+}
+
+function getRateLimitStatus(
+    usedPercent: number,
+    t: (key: string, params?: Record<string, string | number>) => string
+): { text: string; color: string; usedPercentage: number } {
+    const clampedUsed = Math.min(100, Math.max(0, usedPercent))
+    const percent = Math.round(Math.max(0, 100 - clampedUsed))
+
+    if (percent <= 5) {
+        return { text: t('misc.rateLimitLeft', { percent }), color: 'text-red-500', usedPercentage: clampedUsed }
+    }
+    if (percent <= 10) {
+        return { text: t('misc.rateLimitLeft', { percent }), color: 'text-amber-500', usedPercentage: clampedUsed }
+    }
+    return { text: t('misc.rateLimitLeft', { percent }), color: 'text-[var(--app-hint)]', usedPercentage: clampedUsed }
 }
 
 function ContextUsageRing(props: {
@@ -131,6 +159,7 @@ export function StatusBar(props: {
     agentState: AgentState | null | undefined
     contextSize?: number
     contextWindowTokens?: number
+    rateLimitUsedPercent?: number
     modelMode?: ModelMode
     agentFlavor?: string | null
     model?: string
@@ -159,6 +188,14 @@ export function StatusBar(props: {
         [props.contextSize, props.contextWindowTokens, props.modelMode, props.agentFlavor, props.model, t]
     )
 
+    const rateLimitStatus = useMemo(
+        () => {
+            if (props.rateLimitUsedPercent === undefined) return null
+            return getRateLimitStatus(props.rateLimitUsedPercent, t)
+        },
+        [props.rateLimitUsedPercent, t]
+    )
+
     return (
         <div className={`flex min-h-5 min-w-0 items-center overflow-hidden px-1 pb-1 ${props.className ?? ''}`}>
             <div className="flex min-w-0 flex-nowrap items-center gap-3 overflow-hidden">
@@ -172,6 +209,15 @@ export function StatusBar(props: {
                         {connectionStatus.text}
                     </span>
                 </div>
+                {rateLimitStatus ? (
+                    <span className={`inline-flex min-w-0 items-center gap-1.5 text-[10px] leading-none whitespace-nowrap ${rateLimitStatus.color}`}>
+                        <ContextUsageRing
+                            usedPercentage={rateLimitStatus.usedPercentage}
+                            className="h-3.5 w-3.5 shrink-0"
+                        />
+                        <span className="truncate">{rateLimitStatus.text}</span>
+                    </span>
+                ) : null}
                 {contextWarning ? (
                     <span className={`inline-flex min-w-0 items-center gap-1.5 text-[10px] leading-none whitespace-nowrap ${contextWarning.color}`}>
                         <ContextUsageRing
