@@ -1,5 +1,5 @@
 import type { AgentState } from '@/types/api'
-import type { ChatBlock, NormalizedMessage, UsageData } from '@/chat/types'
+import type { ChatBlock, ContextUsageData, NormalizedMessage } from '@/chat/types'
 import { traceMessages, type TracedMessage } from '@/chat/tracer'
 import { dedupeAgentEvents, foldApiErrorEvents } from '@/chat/reducerEvents'
 import { groupToolBlocksIntoSteps } from '@/chat/reducerSteps'
@@ -9,7 +9,10 @@ import { normalizeToolNameAsSkillRead } from '@/lib/skillRead'
 import { isObject } from '@hapi/protocol'
 
 // Calculate context size from usage data
-function calculateContextSize(usage: UsageData): number {
+function calculateContextSize(usage: ContextUsageData): number {
+    if (typeof usage.context_tokens === 'number') {
+        return usage.context_tokens
+    }
     return (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0) + usage.input_tokens
 }
 
@@ -43,6 +46,7 @@ export type LatestUsage = {
     cacheCreation: number
     cacheRead: number
     contextSize: number
+    contextWindowTokens?: number
     timestamp: number
 }
 
@@ -128,6 +132,7 @@ export function reduceChatBlocks(
                 cacheCreation: msg.usage.cache_creation_input_tokens ?? 0,
                 cacheRead: msg.usage.cache_read_input_tokens ?? 0,
                 contextSize: calculateContextSize(msg.usage),
+                contextWindowTokens: msg.usage.context_window_tokens,
                 timestamp: msg.createdAt
             }
             break

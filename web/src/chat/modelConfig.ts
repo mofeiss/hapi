@@ -19,9 +19,29 @@ const MODEL_CONTEXT_WINDOWS: Record<ModelMode, number> = {
     opus: 200_000
 }
 
-export function getContextBudgetTokens(modelMode: ModelMode | undefined): number | null {
+function getClaudeContextWindow(modelMode: ModelMode | undefined): number | null {
     const mode: ModelMode = modelMode ?? 'default'
     const windowTokens = MODEL_CONTEXT_WINDOWS[mode]
+    if (!windowTokens) return null
+    return windowTokens
+}
+
+function getCodexContextWindow(model: string | undefined): number {
+    const normalizedModel = model?.trim().toLowerCase()
+    if (normalizedModel === 'gpt-5.4') {
+        return 258_000
+    }
+    return 200_000
+}
+
+export function getContextBudgetTokens(args: {
+    modelMode?: ModelMode
+    agentFlavor?: string | null
+    model?: string | undefined
+}): number | null {
+    const windowTokens = args.agentFlavor === 'codex'
+        ? getCodexContextWindow(args.model)
+        : getClaudeContextWindow(args.modelMode)
     if (!windowTokens) return null
     return Math.max(1, windowTokens - CONTEXT_HEADROOM_TOKENS)
 }

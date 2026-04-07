@@ -1048,7 +1048,10 @@ export function SessionChat(props: {
                                             thinking={props.session.thinking}
                                             agentState={props.session.agentState}
                                             contextSize={contextSizeOverride ?? reduced.latestUsage?.contextSize}
+                                            contextWindowTokens={reduced.latestUsage?.contextWindowTokens}
                                             modelMode={props.session.modelMode}
+                                            agentFlavor={agentFlavor}
+                                            model={props.session.metadata?.model}
                                             voiceStatus={sttVoiceStatus}
                                             className="relative z-10 min-w-0 flex-1 self-end px-0 pb-2"
                                         />

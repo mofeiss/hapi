@@ -129,7 +129,10 @@ export function StatusBar(props: {
     thinking: boolean
     agentState: AgentState | null | undefined
     contextSize?: number
+    contextWindowTokens?: number
     modelMode?: ModelMode
+    agentFlavor?: string | null
+    model?: string
     voiceStatus?: ConversationStatus
     className?: string
 }) {
@@ -142,11 +145,16 @@ export function StatusBar(props: {
     const contextWarning = useMemo(
         () => {
             if (props.contextSize === undefined) return null
-            const maxContextSize = getContextBudgetTokens(props.modelMode)
+            const maxContextSize = props.contextWindowTokens
+                ?? getContextBudgetTokens({
+                    modelMode: props.modelMode,
+                    agentFlavor: props.agentFlavor,
+                    model: props.model
+                })
             if (!maxContextSize) return null
             return getContextWarning(props.contextSize, maxContextSize, t)
         },
-        [props.contextSize, props.modelMode, t]
+        [props.contextSize, props.contextWindowTokens, props.modelMode, props.agentFlavor, props.model, t]
     )
 
     return (

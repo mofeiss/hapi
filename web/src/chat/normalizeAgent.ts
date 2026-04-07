@@ -1,6 +1,36 @@
 import type { AgentEvent, NormalizedAgentContent, NormalizedMessage, ToolResultPermission } from '@/chat/types'
 import { asNumber, asString, isObject } from '@hapi/protocol'
 
+function extractCodexContextTokens(data: Record<string, unknown>): number | null {
+    const info = isObject(data.info) ? data.info : null
+    if (!info) return null
+
+    const total = isObject(info.total) ? info.total : null
+
+    const totalTokenUsage = isObject(info.total_token_usage)
+        ? info.total_token_usage
+        : isObject(info.totalTokenUsage)
+            ? info.totalTokenUsage
+            : null
+
+    return asNumber(totalTokenUsage?.total_tokens)
+        ?? asNumber(totalTokenUsage?.totalTokens)
+        ?? asNumber(total?.total_tokens)
+        ?? asNumber(total?.totalTokens)
+        ?? asNumber(info.total_tokens)
+        ?? asNumber(info.totalTokens)
+        ?? null
+}
+
+function extractCodexContextWindowTokens(data: Record<string, unknown>): number | null {
+    const info = isObject(data.info) ? data.info : null
+    if (!info) return null
+
+    return asNumber(info.model_context_window)
+        ?? asNumber(info.modelContextWindow)
+        ?? null
+}
+
 function normalizeToolResultPermissions(value: unknown): ToolResultPermission | undefined {
     if (!isObject(value)) return undefined
     const date = asNumber(value.date)
@@ -382,6 +412,30 @@ export function normalizeAgentRecord(
                 role: 'agent',
                 isSidechain: false,
                 content: [{ type: 'reasoning', text: data.message, uuid: messageId, parentUUID: null }],
+                meta
+            }
+        }
+
+        if (data.type === 'token_count') {
+            const contextTokens = extractCodexContextTokens(data)
+            if (contextTokens === null) {
+                return null
+            }
+            const contextWindowTokens = extractCodexContextWindowTokens(data) ?? undefined
+
+            return {
+                id: messageId,
+                localId,
+                createdAt,
+                role: 'agent',
+                isSidechain: false,
+                content: [],
+                usage: {
+                    input_tokens: contextTokens,
+                    output_tokens: 0,
+                    context_tokens: contextTokens,
+                    context_window_tokens: contextWindowTokens
+                },
                 meta
             }
         }

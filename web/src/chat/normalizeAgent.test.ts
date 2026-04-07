@@ -116,4 +116,50 @@ describe('normalizeAgentRecord codex reasoning alignment', () => {
             }
         ])
     })
+
+    it('maps Codex token_count event into usage-only message for context tracking', () => {
+        const normalized = normalizeAgentRecord('m5', null, 5, {
+            type: 'codex',
+            data: {
+                type: 'token_count',
+                info: {
+                    total: {
+                        totalTokens: 12345
+                    },
+                    modelContextWindow: 258400
+                }
+            }
+        })
+
+        expect(normalized?.role).toBe('agent')
+        if (!normalized || normalized.role !== 'agent') return
+        expect(normalized.content).toEqual([])
+        expect(normalized.usage).toEqual({
+            input_tokens: 12345,
+            output_tokens: 0,
+            context_tokens: 12345,
+            context_window_tokens: 258400
+        })
+    })
+
+    it('keeps compatibility with legacy token_count shape', () => {
+        const normalized = normalizeAgentRecord('m6', null, 6, {
+            type: 'codex',
+            data: {
+                type: 'token_count',
+                info: {
+                    total_token_usage: {
+                        total_tokens: 54321
+                    }
+                }
+            }
+        })
+
+        expect(normalized?.usage).toEqual({
+            input_tokens: 54321,
+            output_tokens: 0,
+            context_tokens: 54321,
+            context_window_tokens: undefined
+        })
+    })
 })

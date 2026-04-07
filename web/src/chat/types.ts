@@ -8,6 +8,11 @@ export type UsageData = {
     service_tier?: string
 }
 
+export type ContextUsageData = UsageData & {
+    context_tokens?: number
+    context_window_tokens?: number
+}
+
 export type AgentEvent =
     | { type: 'switch'; mode: 'local' | 'remote' }
     | { type: 'message'; message: string }
@@ -81,7 +86,7 @@ export type NormalizedMessage = ({
     createdAt: number
     isSidechain: boolean
     meta?: unknown
-    usage?: UsageData
+    usage?: ContextUsageData
     status?: MessageStatus
     originalText?: string
 }
