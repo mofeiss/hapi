@@ -93,6 +93,7 @@ import {
 } from "@/lib/storage";
 import {
   clearPendingSessionMode,
+  resolveSessionPermissionMode,
   setPendingSessionMode,
   usePendingSessionMode,
 } from "@/lib/pending-session-mode-store";
@@ -3768,6 +3769,7 @@ function SessionsPage() {
     selectedSessionId ? [selectedSessionId] : [],
   );
   const { session: activeSession } = useSession(api, activeSessionId);
+  const activePendingSessionMode = usePendingSessionMode(activeSessionId ?? "");
   const [quickNewSessionPending, setQuickNewSessionPending] = useState(false);
   const activeSessionRef = useRef(activeSessionId);
   activeSessionRef.current = activeSessionId;
@@ -3931,10 +3933,11 @@ function SessionsPage() {
       return;
     }
 
-    const permissionMode = activeSession.permissionMode ?? "default";
-    const basePermissionMode =
-      activeSession.basePermissionMode ??
-      (permissionMode === "plan" ? "default" : permissionMode);
+    const { permissionMode, basePermissionMode } = resolveSessionPermissionMode(
+      activeSession.permissionMode,
+      activeSession.basePermissionMode,
+      activePendingSessionMode,
+    );
     const spawnSessionType = activeSession.metadata?.worktree
       ? "worktree"
       : "simple";
@@ -3987,6 +3990,7 @@ function SessionsPage() {
     }
   }, [
     activeSession,
+    activePendingSessionMode,
     addToast,
     api,
     handleSelectSession,

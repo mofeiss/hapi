@@ -7,8 +7,10 @@
 
 import { logger } from "@/ui/logger";
 import { ApiSessionClient } from "@/api/apiSession";
+import type { CodexPermissionMode } from '@hapi/protocol/types';
 import {
     BasePermissionHandler,
+    type AutoApprovalDecision,
     type PendingPermissionRequest,
     type PermissionCompletion
 } from "@/modules/common/permission/BasePermissionHandler";
@@ -26,6 +28,7 @@ interface PermissionResult {
 }
 
 type CodexPermissionHandlerOptions = {
+    getPermissionMode?: () => CodexPermissionMode | undefined;
     onRequest?: (request: { id: string; toolName: string; input: unknown }) => void;
     onComplete?: (result: {
         id: string;
@@ -58,6 +61,14 @@ export class CodexPermissionHandler extends BasePermissionHandler<PermissionResp
         toolName: string,
         input: unknown
     ): Promise<PermissionResult> {
+        const mode = this.options?.getPermissionMode?.() ?? 'default';
+        const autoDecision = this.resolveAutoApprovalDecision(mode, toolName, toolCallId);
+        if (autoDecision) {
+            this.recordAutoApproval(toolCallId, toolName, input, autoDecision);
+            logger.debug(`[Codex] Auto-approved ${toolName} (${toolCallId}) mode=${autoDecision}`);
+            return { decision: autoDecision };
+        }
+
         return new Promise<PermissionResult>((resolve, reject) => {
             // Store the pending request
             this.addPendingRequest(toolCallId, toolName, input, { resolve, reject });
@@ -75,6 +86,38 @@ export class CodexPermissionHandler extends BasePermissionHandler<PermissionResp
             // );
 
             logger.debug(`[Codex] Permission request sent for tool: ${toolName} (${toolCallId})`);
+        });
+    }
+
+    private recordAutoApproval(
+        id: string,
+        toolName: string,
+        input: unknown,
+        decision: AutoApprovalDecision
+    ): void {
+        const now = Date.now();
+
+        this.client.updateAgentState((currentState) => ({
+            ...currentState,
+            completedRequests: {
+                ...currentState.completedRequests,
+                [id]: {
+                    tool: toolName,
+                    arguments: input,
+                    createdAt: now,
+                    completedAt: now,
+                    status: 'approved',
+                    decision
+                }
+            }
+        }));
+
+        this.options?.onComplete?.({
+            id,
+            toolName,
+            input,
+            approved: true,
+            decision
         });
     }
 

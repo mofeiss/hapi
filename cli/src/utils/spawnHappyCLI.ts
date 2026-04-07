@@ -67,7 +67,7 @@ export function getHappyCliCommand(args: string[]): HappyCliCommand {
     // Bun can run TypeScript directly
     return {
       command: process.execPath,
-      args: [entrypoint, ...args]
+      args: ['--cwd', projectRoot, entrypoint, ...args]
     };
   }
 
@@ -121,9 +121,7 @@ export function spawnHappyCLI(args: string[], options: SpawnOptions = {}): Child
     }
     : options;
 
-  const finalArgs = (!isBunCompiled() && isBunRuntime)
-    ? ['--cwd', projectRoot, ...spawnArgs]
-    : spawnArgs;
+  const finalArgs = spawnArgs;
 
   // Sanity check that the entrypoint path exists
   if (!isBunCompiled()) {

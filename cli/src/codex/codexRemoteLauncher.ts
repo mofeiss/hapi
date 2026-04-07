@@ -221,6 +221,7 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
         };
 
         const permissionHandler = new CodexPermissionHandler(session.client, {
+            getPermissionMode: () => session.getPermissionMode() as any,
             onRequest: ({ id, toolName, input }) => {
                 const inputRecord = input && typeof input === 'object' ? input as Record<string, unknown> : {};
                 const message = typeof inputRecord.message === 'string' ? inputRecord.message : undefined;
@@ -720,6 +721,11 @@ class CodexRemoteLauncher extends RemoteLauncherBase {
                 clientInfo: {
                     name: 'hapi-codex-client',
                     version: '1.0.0'
+                },
+                capabilities: {
+                    elicitation: {
+                        form: {}
+                    }
                 }
             });
         } else if (mcpClient) {

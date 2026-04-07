@@ -7,6 +7,14 @@ export interface InitializeParams {
         title?: string;
         version: string;
     };
+    capabilities?: {
+        elicitation?: {
+            form?: Record<string, never>;
+        };
+        optOutNotificationMethods?: string[];
+        experimentalApi?: boolean;
+        [key: string]: unknown;
+    };
 }
 
 export interface InitializeResponse {

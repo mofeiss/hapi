@@ -55,11 +55,31 @@ describe('spawnHappyCLI', () => {
         expect(spawnMock).toHaveBeenCalledTimes(1)
         const [command, args, spawnOptions] = spawnMock.mock.calls[0] as unknown as [string, string[], SpawnOptions]
         expect(command).toBe(process.execPath)
-        expect(args.slice(0, 2)).toEqual(['--cwd', '/Users/ofeiss/project/hapi/cli'])
+        expect(args.slice(0, 3)).toEqual([
+            '--cwd',
+            '/Users/ofeiss/project/hapi/cli',
+            '/Users/ofeiss/project/hapi/cli/src/index.ts'
+        ])
         expect(spawnOptions.cwd).toBe('/Users/ofeiss/project/dogclaw')
         expect(spawnOptions.env).toMatchObject({
             TEST_ENV: '1',
             HAPI_TARGET_CWD: '/Users/ofeiss/project/dogclaw',
         })
+    })
+
+    it('builds dev bun commands with project-root cwd for reuse outside spawnHappyCLI', async () => {
+        const { getHappyCliCommand } = await import('./spawnHappyCLI')
+
+        const result = getHappyCliCommand(['mcp', '--url', 'http://127.0.0.1:3000'])
+
+        expect(result.command).toBe(process.execPath)
+        expect(result.args).toEqual([
+            '--cwd',
+            '/Users/ofeiss/project/hapi/cli',
+            '/Users/ofeiss/project/hapi/cli/src/index.ts',
+            'mcp',
+            '--url',
+            'http://127.0.0.1:3000'
+        ])
     })
 })

@@ -24,6 +24,7 @@ import {
 import {
   setPendingSessionMode,
   clearPendingSessionMode,
+  resolveSessionPermissionMode,
   usePendingSessionMode,
 } from "@/lib/pending-session-mode-store";
 import { useRealtimeOwnerState } from "@/lib/realtime-owner-store";
@@ -478,10 +479,11 @@ export function EmbeddedSessionView({
       return;
     }
 
-    const permissionMode = session.permissionMode ?? "default";
-    const basePermissionMode =
-      session.basePermissionMode ??
-      (permissionMode === "plan" ? "default" : permissionMode);
+    const { permissionMode, basePermissionMode } = resolveSessionPermissionMode(
+      session.permissionMode,
+      session.basePermissionMode,
+      pendingSessionMode,
+    );
     const spawnSessionType = session.metadata?.worktree ? "worktree" : "simple";
     const worktreeName =
       spawnSessionType === "worktree"
@@ -537,6 +539,7 @@ export function EmbeddedSessionView({
     api,
     addToast,
     navigate,
+    pendingSessionMode,
     queryClient,
     quickNewSessionPending,
     session,

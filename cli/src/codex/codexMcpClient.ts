@@ -69,6 +69,33 @@ function extractCwd(params: Record<string, unknown>): string | null {
     return typeof cwd === 'string' && cwd.length > 0 ? cwd : null;
 }
 
+function extractMcpToolName(params: Record<string, unknown>): string {
+    const candidateKeys = [
+        'toolName',
+        'tool_name',
+        'name',
+        'mcp_tool_name',
+        'mcpToolName'
+    ];
+
+    for (const key of candidateKeys) {
+        const value = params[key];
+        if (typeof value === 'string' && value.length > 0) {
+            return value;
+        }
+    }
+
+    const command = extractCommand(params);
+    if (Array.isArray(command)) {
+        const first = command.find((item) => typeof item === 'string' && item.trim().length > 0);
+        if (first) {
+            return first;
+        }
+    }
+
+    return 'CodexPermission';
+}
+
 function buildElicitationResult(
     decision: 'approved' | 'approved_for_session' | 'denied' | 'abort',
     requestedSchema: ElicitRequestedSchema | null,
@@ -245,7 +272,7 @@ export class CodexMcpClient {
                 const toolCallId = extractToolCallId(params) ?? randomUUID();
                 const command = extractCommand(params);
                 const cwd = extractCwd(params);
-                const toolName = 'CodexPermission';
+                const toolName = extractMcpToolName(params);
 
                 // If no permission handler set, deny by default
                 if (!this.permissionHandler) {

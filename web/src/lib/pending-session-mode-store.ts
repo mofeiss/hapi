@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import type { PermissionMode } from '@/types/api'
 
-type PendingSessionMode = {
+export type PendingSessionMode = {
     permissionMode: PermissionMode
     basePermissionMode?: PermissionMode
     createdAt: number
@@ -39,6 +39,36 @@ function pruneExpired(now: number = Date.now()): void {
 
 function isExpired(entry: PendingSessionMode, now: number = Date.now()): boolean {
     return now - entry.createdAt > TTL_MS
+}
+
+export function resolveSessionPermissionMode(
+    currentPermissionMode: PermissionMode | undefined,
+    currentBasePermissionMode: PermissionMode | undefined,
+    pending: Pick<PendingSessionMode, 'permissionMode' | 'basePermissionMode'> | null
+): { permissionMode: PermissionMode; basePermissionMode: PermissionMode } {
+    if (!pending) {
+        const permissionMode = currentPermissionMode ?? 'default'
+        return {
+            permissionMode,
+            basePermissionMode: currentBasePermissionMode ?? (permissionMode === 'plan' ? 'default' : permissionMode)
+        }
+    }
+
+    if (currentPermissionMode === undefined || currentPermissionMode !== pending.permissionMode) {
+        const permissionMode = pending.permissionMode
+        return {
+            permissionMode,
+            basePermissionMode: pending.basePermissionMode ?? (permissionMode === 'plan' ? 'default' : permissionMode)
+        }
+    }
+
+    return {
+        permissionMode: currentPermissionMode,
+        basePermissionMode:
+            currentBasePermissionMode
+            ?? pending.basePermissionMode
+            ?? (currentPermissionMode === 'plan' ? 'default' : currentPermissionMode)
+    }
 }
 
 export function setPendingSessionMode(
