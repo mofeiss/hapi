@@ -25,6 +25,7 @@ CLI owns local agent execution, runner lifecycle, hub connectivity, auth helpers
 - Prefer repo-wide commands from root unless the task is clearly package-local.
 - When changing session or runner behavior, verify how hub RPC and shared protocol types are affected.
 - Packaging / release logic is sensitive; use the project skill `hapi-npm-publish` for the detailed workflow instead of re-deriving it from memory.
+- For npm release requests, never execute `npm publish`; build + `npm pack` + verification only, then output the canonical tarball-publish block defined by `hapi-npm-publish`.
 
 ## Local debug constraints
 

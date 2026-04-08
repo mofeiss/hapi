@@ -11,7 +11,7 @@
  * Run after `bun run build:exe:all`
  */
 
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -129,6 +129,28 @@ function generateMainPackageJson(
         optionalDependencies
     };
 }
+function removeStaleTarballs(npmDir: string): void {
+    let removedCount = 0;
+
+    for (const entry of readdirSync(npmDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) {
+            continue;
+        }
+
+        const packageDir = join(npmDir, entry.name);
+        for (const child of readdirSync(packageDir, { withFileTypes: true })) {
+            if (!child.isFile() || !child.name.endsWith('.tgz')) {
+                continue;
+            }
+
+            rmSync(join(packageDir, child.name));
+            removedCount += 1;
+        }
+    }
+
+    console.log(`Removed ${removedCount} stale npm tarball${removedCount === 1 ? '' : 's'}`);
+}
+
 
 function prepareMainPackage(
     mainPkg: MainPackageJson,
@@ -215,6 +237,8 @@ async function main(): Promise<void> {
 
     const distExeDir = join(projectRoot, 'dist-exe');
     const npmDir = join(projectRoot, 'npm');
+
+    removeStaleTarballs(npmDir);
 
     let hasErrors = false;
 
