@@ -28,7 +28,7 @@ def main() -> int:
         f'REPO_ROOT={shlex.quote(str(repo_root))}',
         f'EXPECTED_NPM_USER={shlex.quote(npm_user)}',
         f'EXPECTED_VERSION={shlex.quote(version)}',
-        'set -euo pipefail',
+        'set -eo pipefail',
         '',
         'cd "$REPO_ROOT"',
         '',

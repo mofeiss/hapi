@@ -15,6 +15,7 @@ Use this skill for any `@ofeiss/hapi` npm packaging or release request.
 - Version must already be bumped in `cli/package.json` before preparing artifacts.
 - All user-facing publish commands must use absolute paths and the concrete version from `cli/package.json`.
 - Do not use placeholder tokens such as `<ver>`, `<path>`, or `<user>` in the final command block.
+- Do not use `set -u` in the final publish block; terminal shell integrations may reference unset variables such as `TMUX`.
 - Publish order is fixed: `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-x64`, then `main`.
 - Publish the verified `.tgz` tarballs produced by `npm pack`. Do not publish package directories.
 - For npm release requests, do not emit `git push` or `git commit` commands unless the user explicitly asks for git operations.
