@@ -353,6 +353,9 @@ export default {
 
   // Machine
   'machine.unknown': '未知平台',
+  'machine.action.setRemark': '修改备注',
+  'machine.action.removeRemark': '移除备注',
+  'machine.remark.prompt': '机器备注',
 
   // Chat
   'chat.placeholder': '输入消息…',

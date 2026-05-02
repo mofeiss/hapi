@@ -64,7 +64,7 @@ export type RpcAgentModel = {
 
 export type RpcAgentModelsResponse = {
     success: boolean
-    source?: 'codex-app-server' | 'fallback-static'
+    source?: 'codex-app-server' | 'claude-cli' | 'fallback-static'
     models?: RpcAgentModel[]
     error?: string
 }

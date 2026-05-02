@@ -225,6 +225,38 @@ describe('registerScheduleTools', () => {
         }))
     })
 
+    it('allows scheduled tasks to use newly discovered agent model ids', async () => {
+        const { server, tools } = createMcpServerMock()
+        controlClientMocks.createRunnerScheduledTask.mockResolvedValue({
+            id: 'task-dynamic-model',
+            title: 'dynamic model task',
+            scheduleType: 'once',
+            phase: 'enabled',
+            scheduledSessionPermission: 'aware',
+            timezone: 'Asia/Shanghai',
+            runAt: 1
+        })
+
+        await registerScheduleTools(server as any, createClient())
+
+        const result = await tools.get('schedule_create')!.handler({
+            title: 'dynamic model task',
+            prompt: 'PONG',
+            agentFlavor: 'codex',
+            model: 'gpt-5.99-codex',
+            scheduleType: 'once',
+            delay: { minutes: 1 },
+            targetDirectory: '/tmp'
+        })
+
+        const parsed = parseToolResult(result)
+        expect(parsed.ok).toBe(true)
+        expect(controlClientMocks.createRunnerScheduledTask).toHaveBeenCalledWith(expect.objectContaining({
+            agentFlavor: 'codex',
+            model: 'gpt-5.99-codex'
+        }))
+    })
+
     it('rejects once schedule when both runAt and delay are provided', async () => {
         const { server, tools } = createMcpServerMock()
         await registerScheduleTools(server as any, createClient())

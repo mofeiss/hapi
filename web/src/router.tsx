@@ -4341,12 +4341,14 @@ function SessionsPage() {
   );
 
   const openNewSessionForHost = useCallback(
-    (host: string) => {
-      const matchedMachine = machines.find((machine) => {
-        const machineHost =
-          machine.metadata?.displayName ?? machine.metadata?.host ?? "";
-        return machineHost === host;
-      });
+    (machineKey: string) => {
+      const matchedMachine =
+        machines.find((machine) => machine.id === machineKey) ??
+        machines.find((machine) => {
+          const machineHost =
+            machine.metadata?.displayName ?? machine.metadata?.host ?? "";
+          return machineHost === machineKey;
+        });
 
       toggleSessionOverlay({ machineId: matchedMachine?.id ?? null });
     },
@@ -5547,6 +5549,7 @@ function SessionsPage() {
                     <div className="flex h-full min-h-0 flex-col py-3">
                       <SessionList
                         sessions={displaySessions}
+                        machines={machines}
                         selectedSessionId={activeSessionId}
                         onSelect={handleSelectSession}
                         onNewSession={() => {

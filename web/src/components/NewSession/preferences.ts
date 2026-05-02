@@ -1,6 +1,7 @@
 import { getBasePermissionModesForFlavor } from '@hapi/protocol'
 import type { AgentType } from './types'
 import type { PermissionMode } from '@/types/api'
+import { CLAUDE_DEFAULT_MODEL_OPTION_VALUE } from '@/lib/claudeModels'
 
 const AGENT_STORAGE_KEY = 'hapi:newSession:agent'
 const MODEL_STORAGE_KEY = 'hapi:newSession:model'
@@ -44,7 +45,7 @@ export function loadPreferredModel(): string {
     } catch {
         // Ignore storage errors
     }
-    return 'opus'
+    return CLAUDE_DEFAULT_MODEL_OPTION_VALUE
 }
 
 export function savePreferredModel(model: string): void {

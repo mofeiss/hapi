@@ -38,8 +38,9 @@ import { useAgentModels } from '@/hooks/queries/useAgentModels'
 import { buildCodexModelOptions, DEPRECATED_GEMINI_MODEL_OPTIONS, getHighestCodexReasoningEffort, MODEL_OPTIONS, type CodexModelOption } from '@/components/NewSession/types'
 import { loadPreferredModel, savePreferredModel } from '@/components/NewSession/preferences'
 import {
+    CLAUDE_DEFAULT_MODEL_OPTION_VALUE,
     buildClaudeComposerModelOptions,
-    isClaudePresetModel,
+    isClaudeKnownModelOption,
     loadClaudeCustomModelValue,
     normalizeClaudeModelValue,
     saveClaudeCustomModelValue
@@ -180,6 +181,11 @@ export function SessionChat(props: {
         isCodexSession ? (props.session.metadata?.machineId ?? null) : null,
         'codex'
     )
+    const { data: claudeAgentModelsData } = useAgentModels(
+        props.api,
+        isClaudeSession ? (props.session.metadata?.machineId ?? null) : null,
+        'claude'
+    )
     const codexModelOptions = useMemo<CodexModelOption[]>(
         () => isCodexSession ? buildCodexModelOptions(codexAgentModelsData?.models) : [],
         [isCodexSession, codexAgentModelsData?.models]
@@ -255,27 +261,40 @@ export function SessionChat(props: {
         () => normalizeClaudeModelValue(props.session.metadata?.model),
         [props.session.metadata?.model]
     )
+    const claudeComposerModelOptions = useMemo(
+        () => buildClaudeComposerModelOptions(claudeAgentModelsData?.models, null),
+        [claudeAgentModelsData?.models]
+    )
     useEffect(() => {
-        if (!isClaudeSession || !sessionClaudeModel || isClaudePresetModel(sessionClaudeModel) || sessionClaudeModel === 'auto') {
+        if (
+            !isClaudeSession
+            || !sessionClaudeModel
+            || isClaudeKnownModelOption(sessionClaudeModel, claudeComposerModelOptions)
+            || sessionClaudeModel === 'auto'
+        ) {
             return
         }
         saveClaudeCustomModelValue(sessionClaudeModel)
-    }, [isClaudeSession, sessionClaudeModel])
+    }, [claudeComposerModelOptions, isClaudeSession, sessionClaudeModel])
 
     const activeClaudeCustomModel = useMemo(() => {
-        if (sessionClaudeModel && !isClaudePresetModel(sessionClaudeModel) && sessionClaudeModel !== 'auto') {
+        if (
+            sessionClaudeModel
+            && !isClaudeKnownModelOption(sessionClaudeModel, claudeComposerModelOptions)
+            && sessionClaudeModel !== 'auto'
+        ) {
             return sessionClaudeModel
         }
         if (
             preferredClaudeModel
-            && !isClaudePresetModel(preferredClaudeModel)
+            && !isClaudeKnownModelOption(preferredClaudeModel, claudeComposerModelOptions)
             && preferredClaudeModel !== 'auto'
             && preferredClaudeModel !== 'custom'
         ) {
             return preferredClaudeModel
         }
         return preferredClaudeCustomModel
-    }, [sessionClaudeModel, preferredClaudeModel, preferredClaudeCustomModel])
+    }, [claudeComposerModelOptions, sessionClaudeModel, preferredClaudeModel, preferredClaudeCustomModel])
 
     const codexComposerModelOptions = useMemo(
         () => codexModelOptions.map((option) => ({
@@ -285,26 +304,26 @@ export function SessionChat(props: {
         [codexModelOptions]
     )
 
-    const claudeComposerModelOptions = useMemo(
-        () => buildClaudeComposerModelOptions(activeClaudeCustomModel),
-        [activeClaudeCustomModel]
+    const resolvedClaudeComposerModelOptions = useMemo(
+        () => buildClaudeComposerModelOptions(claudeAgentModelsData?.models, activeClaudeCustomModel),
+        [claudeAgentModelsData?.models, activeClaudeCustomModel]
     )
 
     useEffect(() => {
-        if (!isClaudeSession || claudeComposerModelOptions.length === 0) {
+        if (!isClaudeSession || resolvedClaudeComposerModelOptions.length === 0) {
             if (composerClaudeModel !== null) {
                 setComposerClaudeModel(null)
             }
             return
         }
 
-        const modelValues = new Set(claudeComposerModelOptions.map((entry) => entry.value))
+        const modelValues = new Set(resolvedClaudeComposerModelOptions.map((entry) => entry.value))
         const preferredModel = (
             (composerClaudeModel && modelValues.has(composerClaudeModel) ? composerClaudeModel : null)
             ?? (sessionClaudeModel && modelValues.has(sessionClaudeModel) ? sessionClaudeModel : null)
             ?? (preferredClaudeModel && modelValues.has(preferredClaudeModel) ? preferredClaudeModel : null)
             ?? (activeClaudeCustomModel && modelValues.has(activeClaudeCustomModel) ? activeClaudeCustomModel : null)
-            ?? 'auto'
+            ?? CLAUDE_DEFAULT_MODEL_OPTION_VALUE
         )
 
         if (preferredModel !== composerClaudeModel) {
@@ -312,7 +331,7 @@ export function SessionChat(props: {
         }
     }, [
         isClaudeSession,
-        claudeComposerModelOptions,
+        resolvedClaudeComposerModelOptions,
         sessionClaudeModel,
         preferredClaudeModel,
         activeClaudeCustomModel,
@@ -328,10 +347,10 @@ export function SessionChat(props: {
         setComposerClaudeModel(normalized)
         savePreferredModel(normalized)
 
-        if (!isClaudePresetModel(normalized) && normalized !== 'auto') {
+        if (!isClaudeKnownModelOption(normalized, resolvedClaudeComposerModelOptions) && normalized !== 'auto') {
             saveClaudeCustomModelValue(normalized)
         }
-    }, [])
+    }, [resolvedClaudeComposerModelOptions])
 
     useEffect(() => {
         if (!isGeminiSession) {
@@ -379,7 +398,9 @@ export function SessionChat(props: {
 
         if (isClaudeSession && composerClaudeModel) {
             return {
-                model: composerClaudeModel === 'auto' ? null : composerClaudeModel
+                model: composerClaudeModel === 'auto' || composerClaudeModel === CLAUDE_DEFAULT_MODEL_OPTION_VALUE
+                    ? null
+                    : composerClaudeModel
             }
         }
 
@@ -1111,7 +1132,7 @@ export function SessionChat(props: {
                                     onModelModeChange={handleModelModeChange}
                                     onPlanToggle={handlePlanToggle}
                                     claudeModel={composerClaudeModel}
-                                    claudeModelOptions={claudeComposerModelOptions}
+                                    claudeModelOptions={resolvedClaudeComposerModelOptions}
                                     onClaudeModelChange={handleClaudeModelChange}
                                     geminiModel={composerGeminiModel}
                                     geminiModelOptions={isGeminiSession ? DEPRECATED_GEMINI_MODEL_OPTIONS : []}

@@ -47,7 +47,7 @@ export type AgentModel = {
 
 export type AgentModelsResult = {
     success: boolean
-    source?: 'codex-app-server' | 'fallback-static'
+    source?: 'codex-app-server' | 'claude-cli' | 'fallback-static'
     models?: AgentModel[]
     error?: string
 }

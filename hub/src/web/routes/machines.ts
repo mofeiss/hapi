@@ -37,7 +37,7 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         }
 
         const namespace = c.get('namespace')
-        const machines = engine.getOnlineMachinesByNamespace(namespace)
+        const machines = engine.getMachinesByNamespace(namespace)
         return c.json({ machines })
     })
 

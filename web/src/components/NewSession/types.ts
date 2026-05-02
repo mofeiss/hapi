@@ -38,6 +38,10 @@ export const FALLBACK_CODEX_MODELS: CodexModelOption[] = [
     }
 ]
 
+function formatCodexModelLabel(label: string): string {
+    return label.replace(/^gpt(?=-)/i, 'GPT')
+}
+
 export function buildCodexModelOptions(models: AgentModel[] | undefined): CodexModelOption[] {
     if (!models || models.length === 0) {
         return FALLBACK_CODEX_MODELS
@@ -45,10 +49,9 @@ export function buildCodexModelOptions(models: AgentModel[] | undefined): CodexM
 
     const visible = models
         .filter((model) => !model.hidden)
-        .filter((model) => model.model === 'gpt-5.4')
         .map((model) => ({
             value: model.model,
-            label: model.displayName || model.model,
+            label: formatCodexModelLabel(model.displayName || model.model),
             description: model.description,
             isDefault: model.isDefault,
             defaultReasoningEffort: model.defaultReasoningEffort,

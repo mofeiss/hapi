@@ -156,7 +156,7 @@ export async function runClaude(options: StartOptions = {}): Promise<void> {
             throw new Error('Invalid model');
         }
         const trimmed = value.trim();
-        if (!trimmed || trimmed === 'auto') {
+        if (!trimmed || trimmed === 'auto' || trimmed === 'default') {
             return undefined;
         }
         return trimmed;

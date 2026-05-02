@@ -23,7 +23,7 @@ export function useAgentModels(
             }
             return await api.getAgentModels(machineId, agent)
         },
-        enabled: Boolean(api && machineId && agent === 'codex'),
+        enabled: Boolean(api && machineId && (agent === 'codex' || agent === 'claude')),
         staleTime: 30_000
     })
 

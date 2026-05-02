@@ -13,6 +13,7 @@ import {
     useState
 } from 'react'
 import type { AgentState, CodexReasoningEffort, ModelMode, PermissionMode, UserMessageMeta } from '@/types/api'
+import { CLAUDE_DEFAULT_MODEL_OPTION_VALUE } from '@/lib/claudeModels'
 import type { Suggestion } from '@/hooks/useActiveSuggestions'
 import type { ConversationStatus } from '@/realtime/types'
 import { useActiveWord } from '@/hooks/useActiveWord'
@@ -371,7 +372,7 @@ export function HappyComposer(props: {
         }
 
         return {
-            model: activeModel === 'auto' ? null : activeModel
+            model: activeModel === 'auto' || activeModel === CLAUDE_DEFAULT_MODEL_OPTION_VALUE ? null : activeModel
         }
     }, [agentFlavor, claudeModel, geminiModel])
     const codexMessageMeta = useMemo<UserMessageMeta | undefined>(() => {

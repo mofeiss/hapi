@@ -5,7 +5,6 @@ import { ApiClient } from '@/api/api';
 import { TrackedSession } from './types';
 import { RunnerState, Metadata } from '@/api/types';
 import {
-  AgentModel,
   AgentModelsResult,
   SpawnSessionOptions,
   SpawnSessionResult
@@ -26,7 +25,6 @@ import { createWorktree, removeWorktree, type WorktreeInfo } from './worktree';
 import { join } from 'path';
 import { buildMachineMetadata } from '@/agent/sessionFactory';
 import { resolveUserPath } from '@/utils/userPath';
-import { fetchCodexModelCatalog } from '@/codex/utils/modelCatalog';
 import { isDiagnosticLoggingEnabled } from '@/config/diagnosticLogging';
 import { createCleanRunnerEnvironment, getRunnerEnvironmentContamination } from './runnerLaunchEnv';
 import { RunnerSchedulerStore } from './scheduler/store';
@@ -35,82 +33,7 @@ import { buildScheduledPrompt } from './scheduler/buildScheduledPrompt';
 import type { SchedulerTriggerContext, CreateScheduledTaskInput, UpdateScheduledTaskInput } from './scheduler/types';
 import { configuration } from '@/configuration';
 import { getAuthToken } from '@/api/auth';
-
-const FALLBACK_CODEX_MODELS: AgentModel[] = [
-  {
-    id: 'gpt-5.3-codex',
-    model: 'gpt-5.3-codex',
-    displayName: 'gpt-5.3-codex',
-    description: 'Latest frontier agentic coding model.',
-    hidden: false,
-    isDefault: true,
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: [
-      { reasoningEffort: 'low', description: 'Fast responses with lighter reasoning' },
-      { reasoningEffort: 'medium', description: 'Balances speed and reasoning depth for everyday tasks' },
-      { reasoningEffort: 'high', description: 'Greater reasoning depth for complex problems' },
-      { reasoningEffort: 'xhigh', description: 'Extra high reasoning depth for complex problems' }
-    ]
-  },
-  {
-    id: 'gpt-5.2-codex',
-    model: 'gpt-5.2-codex',
-    displayName: 'gpt-5.2-codex',
-    description: 'Frontier agentic coding model.',
-    hidden: false,
-    isDefault: false,
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: [
-      { reasoningEffort: 'low', description: 'Fast responses with lighter reasoning' },
-      { reasoningEffort: 'medium', description: 'Balances speed and reasoning depth for everyday tasks' },
-      { reasoningEffort: 'high', description: 'Greater reasoning depth for complex problems' },
-      { reasoningEffort: 'xhigh', description: 'Extra high reasoning depth for complex problems' }
-    ]
-  },
-  {
-    id: 'gpt-5.1-codex-max',
-    model: 'gpt-5.1-codex-max',
-    displayName: 'gpt-5.1-codex-max',
-    description: 'Codex-optimized flagship for deep and fast reasoning.',
-    hidden: false,
-    isDefault: false,
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: [
-      { reasoningEffort: 'low', description: 'Fast responses with lighter reasoning' },
-      { reasoningEffort: 'medium', description: 'Balances speed and reasoning depth for everyday tasks' },
-      { reasoningEffort: 'high', description: 'Greater reasoning depth for complex problems' },
-      { reasoningEffort: 'xhigh', description: 'Extra high reasoning depth for complex problems' }
-    ]
-  },
-  {
-    id: 'gpt-5.2',
-    model: 'gpt-5.2',
-    displayName: 'gpt-5.2',
-    description: 'Latest frontier model with improvements across knowledge, reasoning and coding.',
-    hidden: false,
-    isDefault: false,
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: [
-      { reasoningEffort: 'low', description: 'Fast responses with lighter reasoning' },
-      { reasoningEffort: 'medium', description: 'Balances speed and reasoning depth for everyday tasks' },
-      { reasoningEffort: 'high', description: 'Greater reasoning depth for complex problems' },
-      { reasoningEffort: 'xhigh', description: 'Extra high reasoning depth for complex problems' }
-    ]
-  },
-  {
-    id: 'gpt-5.1-codex-mini',
-    model: 'gpt-5.1-codex-mini',
-    displayName: 'gpt-5.1-codex-mini',
-    description: 'Optimized for codex. Cheaper, faster, but less capable.',
-    hidden: false,
-    isDefault: false,
-    defaultReasoningEffort: 'medium',
-    supportedReasoningEfforts: [
-      { reasoningEffort: 'medium', description: 'Balances speed and reasoning depth for everyday tasks' },
-      { reasoningEffort: 'high', description: 'Greater reasoning depth for complex problems' }
-    ]
-  }
-];
+import { listRunnerAgentModels } from './agentModels';
 
 export async function startRunner(): Promise<void> {
   // We don't have cleanup function at the time of server construction
@@ -455,7 +378,7 @@ export async function startRunner(): Promise<void> {
             }
         }
         args.push('--hapi-starting-mode', 'remote', '--started-by', 'runner');
-        if (options.model && agent !== 'opencode') {
+        if (options.model && options.model !== 'default' && agent !== 'opencode') {
           args.push('--model', options.model);
         }
         if (agent === 'codex' && reasoningEffort) {
@@ -627,45 +550,7 @@ export async function startRunner(): Promise<void> {
     };
 
     const listAgentModels = async (agent: SpawnSessionOptions['agent']): Promise<AgentModelsResult> => {
-      const resolvedAgent = agent ?? 'codex';
-
-      if (resolvedAgent !== 'codex') {
-        return {
-          success: false,
-          error: `Model catalog is not supported for agent: ${resolvedAgent}`
-        };
-      }
-
-      try {
-        const models = await fetchCodexModelCatalog({
-          includeHidden: false,
-          limit: 100
-        });
-
-        if (models.length === 0) {
-          return {
-            success: true,
-            source: 'fallback-static',
-            models: FALLBACK_CODEX_MODELS,
-            error: 'Codex app-server returned an empty model list; using fallback list'
-          };
-        }
-
-        return {
-          success: true,
-          source: 'codex-app-server',
-          models
-        };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logger.debug(`[RUNNER RUN] Failed to fetch Codex models from app-server: ${message}`);
-        return {
-          success: true,
-          source: 'fallback-static',
-          models: FALLBACK_CODEX_MODELS,
-          error: `Failed to fetch Codex model list dynamically: ${message}`
-        };
-      }
+      return await listRunnerAgentModels(agent);
     };
 
     const schedulerStore = new RunnerSchedulerStore();

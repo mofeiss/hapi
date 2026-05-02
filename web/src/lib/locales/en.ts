@@ -367,6 +367,9 @@ export default {
 
   // Machine
   "machine.unknown": "Unknown platform",
+  "machine.action.setRemark": "Edit remark",
+  "machine.action.removeRemark": "Remove remark",
+  "machine.remark.prompt": "Machine remark",
 
   // Chat
   "chat.placeholder": "Type a message…",

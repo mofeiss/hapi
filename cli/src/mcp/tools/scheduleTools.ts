@@ -18,7 +18,7 @@ import {
 
 const scheduleAgentSchema = z.enum(['claude', 'codex'])
 const scheduleTypeSchema = z.enum(['once', 'cron'])
-const scheduleModelSchema = z.enum(['opus', 'sonnet', 'gpt-5.4'])
+const scheduleModelSchema = z.string().trim().min(1)
 const scheduledSessionPermissionSchema = z.enum(['aware', 'self_control', 'system_control'])
 const scheduledTaskOutcomeStatusSchema = z.enum(['completed', 'partial', 'blocked', 'abandoned'])
 const scheduledTaskPhaseSchema = z.enum(['enabled', 'paused', 'archived'])
@@ -75,12 +75,9 @@ function ensureSelfControlTarget(taskId: string, trigger: Extract<SessionTrigger
 }
 
 function validateAgentModel(agentFlavor: 'claude' | 'codex', model: string | undefined): SchedulerToolResult<never> | null {
-    if (!model) return null
-    if (agentFlavor === 'claude' && model !== 'opus' && model !== 'sonnet') {
-        return { ok: false, code: 'schedule.invalid_input', message: 'claude model must be opus or sonnet' }
-    }
-    if (agentFlavor === 'codex' && model !== 'gpt-5.4') {
-        return { ok: false, code: 'schedule.invalid_input', message: 'codex model must be gpt-5.4' }
+    void agentFlavor
+    if (model !== undefined && model.trim().length === 0) {
+        return { ok: false, code: 'schedule.invalid_input', message: 'model must not be empty' }
     }
     return null
 }

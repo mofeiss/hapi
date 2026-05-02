@@ -56,8 +56,10 @@ export const claudeCommand: CommandDefinition = {
                 if (!model) {
                     throw new Error('Missing --model value')
                 }
-                options.model = model
-                unknownArgs.push('--model', model)
+                if (model !== 'default') {
+                    options.model = model
+                    unknownArgs.push('--model', model)
+                }
             } else if (arg === '--started-by') {
                 options.startedBy = args[++i] as 'runner' | 'terminal'
             } else {

@@ -34,7 +34,7 @@ function parseArgs(argv: string[]): { url: string | null } {
 
 const scheduleAgentSchema = z.enum(['claude', 'codex']);
 const scheduleTypeSchema = z.enum(['once', 'cron']);
-const scheduleModelSchema = z.enum(['opus', 'sonnet', 'gpt-5.4']);
+const scheduleModelSchema = z.string().trim().min(1);
 const scheduledSessionPermissionSchema = z.enum(['aware', 'self_control', 'system_control']);
 const scheduledTaskOutcomeStatusSchema = z.enum(['completed', 'partial', 'blocked', 'abandoned']);
 const delaySchema = z.object({
@@ -65,7 +65,7 @@ const allToolDefinitions = [
       title: z.string().min(1).describe('A short title describing the scheduled task'),
       prompt: z.string().min(1).describe('The prompt to send when the schedule triggers'),
       agentFlavor: scheduleAgentSchema.describe('Target agent type'),
-      model: scheduleModelSchema.optional().describe('Allowed values: claude => opus/sonnet, codex => gpt-5.4'),
+      model: scheduleModelSchema.optional().describe('Optional model name or CLI-supported alias.'),
       scheduleType: scheduleTypeSchema.optional(),
       runAt: z.union([z.number(), z.string()]).optional().describe('For once tasks: epoch milliseconds or ISO datetime string. Use either runAt or delay, not both.'),
       delay: delaySchema.optional().describe('For once tasks: relative delay from now in years/months/days/hours/minutes/seconds. Use either delay or runAt.'),

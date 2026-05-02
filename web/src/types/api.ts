@@ -62,6 +62,7 @@ export type DecryptedMessage = ProtocolDecryptedMessage & {
 export type Machine = {
     id: string
     active: boolean
+    updatedAt: number
     metadata: {
         host: string
         platform: string
@@ -155,7 +156,7 @@ export type AgentModel = {
 
 export type AgentModelsResponse = {
     success: boolean
-    source?: 'codex-app-server' | 'fallback-static'
+    source?: 'codex-app-server' | 'claude-cli' | 'fallback-static'
     models?: AgentModel[]
     error?: string
 }

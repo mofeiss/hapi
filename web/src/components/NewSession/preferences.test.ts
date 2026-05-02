@@ -29,7 +29,7 @@ describe('NewSession preferences', () => {
         expect(loadPreferredPermissionMode('codex')).toBe('yolo')
         expect(loadPreferredPlanActive()).toBe(false)
         expect(loadPreferredDirectory()).toBe('~')
-        expect(loadPreferredModel()).toBe('opus')
+        expect(loadPreferredModel()).toBe('default')
         expect(loadPreferredReasoningEffort()).toBe('auto')
         expect(loadPreferredSessionType()).toBe('simple')
         expect(loadPreferredWorktreeName()).toBe('')

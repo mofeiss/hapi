@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen, fireEvent } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionList } from './SessionList'
 import type { SessionSummary } from '@/types/api'
 
@@ -65,6 +65,15 @@ vi.mock('@/components/AgentFlavorStatusIcon', () => ({
 }))
 
 describe('SessionList', () => {
+    beforeEach(() => {
+        localStorage.clear()
+    })
+
+    afterEach(() => {
+        cleanup()
+        vi.restoreAllMocks()
+    })
+
     it('renders current session and group title styles without legacy fixed-size classes', () => {
         const sessions: SessionSummary[] = [
             {
@@ -104,5 +113,115 @@ describe('SessionList', () => {
         expect(screen.getByText(new Date('2026-05-30T21:29:32').toLocaleString())).toBeInTheDocument()
         expect(screen.queryByText('codex')).not.toBeInTheDocument()
         expect(screen.getByText('project/hapi')).toBeInTheDocument()
+    })
+
+    it('shows machine remarks, status dots, and disables new sessions for offline machines', () => {
+        const sessions: SessionSummary[] = [
+            {
+                id: 'session-1',
+                createdAt: Date.now(),
+                active: true,
+                thinking: false,
+                activeAt: Date.now(),
+                updatedAt: Date.now(),
+                metadata: {
+                    name: 'Alpha session',
+                    path: '/Users/ofeiss/project/hapi',
+                    host: 'MacBook-Pro',
+                    machineId: 'machine-1',
+                    flavor: 'codex',
+                },
+                todoProgress: null,
+                pendingRequestsCount: 0,
+            },
+        ]
+        localStorage.setItem('hapi:machine-remarks', JSON.stringify({ 'machine-1': 'Desk Mini' }))
+
+        render(
+            <SessionList
+                sessions={sessions}
+                machines={[
+                    {
+                        id: 'machine-1',
+                        active: false,
+                        updatedAt: Date.now(),
+                        metadata: {
+                            host: 'MacBook-Pro',
+                            platform: 'darwin',
+                            happyCliVersion: '0.1.0',
+                        },
+                    },
+                ]}
+                onSelect={vi.fn()}
+                onNewSession={vi.fn()}
+                onNewSessionForHost={vi.fn()}
+                onRefresh={vi.fn()}
+                isLoading={false}
+                api={null}
+                selectedSessionId={null}
+            />
+        )
+
+        expect(screen.getByText('Desk Mini')).toBeInTheDocument()
+        expect(screen.queryByText('MacBook-Pro')).not.toBeInTheDocument()
+        expect(screen.getByLabelText('Desk Mini offline')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'sessions.new Desk Mini' })).toBeDisabled()
+    })
+
+    it('supports machine remark context menu actions', () => {
+        const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Desk Mini')
+        const sessions: SessionSummary[] = [
+            {
+                id: 'session-1',
+                createdAt: Date.now(),
+                active: true,
+                thinking: false,
+                activeAt: Date.now(),
+                updatedAt: Date.now(),
+                metadata: {
+                    name: 'Alpha session',
+                    path: '/Users/ofeiss/project/hapi',
+                    host: 'MacBook-Pro',
+                    machineId: 'machine-1',
+                    flavor: 'codex',
+                },
+                todoProgress: null,
+                pendingRequestsCount: 0,
+            },
+        ]
+
+        render(
+            <SessionList
+                sessions={sessions}
+                machines={[
+                    {
+                        id: 'machine-1',
+                        active: true,
+                        updatedAt: Date.now(),
+                        metadata: {
+                            host: 'MacBook-Pro',
+                            platform: 'darwin',
+                            happyCliVersion: '0.1.0',
+                        },
+                    },
+                ]}
+                onSelect={vi.fn()}
+                onNewSession={vi.fn()}
+                onNewSessionForHost={vi.fn()}
+                onRefresh={vi.fn()}
+                isLoading={false}
+                api={null}
+                selectedSessionId={null}
+            />
+        )
+
+        fireEvent.contextMenu(screen.getByRole('button', { name: 'MacBook-Pro (1)' }))
+        fireEvent.click(screen.getByRole('menuitem', { name: 'machine.action.setRemark' }))
+        expect(promptSpy).toHaveBeenCalled()
+        expect(screen.getByText('Desk Mini')).toBeInTheDocument()
+
+        fireEvent.contextMenu(screen.getByRole('button', { name: 'Desk Mini (1)' }))
+        fireEvent.click(screen.getByRole('menuitem', { name: 'machine.action.removeRemark' }))
+        expect(screen.getByText('MacBook-Pro')).toBeInTheDocument()
     })
 })

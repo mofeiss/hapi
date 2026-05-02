@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { SessionSummary } from "@/types/api";
+import type { Machine, SessionSummary } from "@/types/api";
 import type { ApiClient } from "@/api/client";
 import { useLongPress } from "@/hooks/useLongPress";
 import { usePlatform } from "@/hooks/usePlatform";
@@ -14,11 +14,39 @@ import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 import { readStorageJson, writeStorageJson } from "@/lib/storage";
 
 export type SessionGroup = {
+  key: string;
   host: string;
+  title: string;
+  machineId?: string;
+  machineActive: boolean;
   sessions: SessionSummary[];
   latestUpdatedAt: number;
   hasActiveSession: boolean;
 };
+
+const MACHINE_REMARKS_STORAGE_KEY = "hapi:machine-remarks";
+
+function getMachineTitle(machine: Machine | null | undefined): string {
+  if (machine?.metadata?.displayName) return machine.metadata.displayName;
+  if (machine?.metadata?.host) return machine.metadata.host;
+  if (machine?.id) return machine.id.slice(0, 8);
+  return "Unknown";
+}
+
+function loadMachineRemarks(): Record<string, string> {
+  return readStorageJson<Record<string, string>>("local", MACHINE_REMARKS_STORAGE_KEY) ?? {};
+}
+
+function saveMachineRemarks(remarks: Record<string, string>): void {
+  writeStorageJson("local", MACHINE_REMARKS_STORAGE_KEY, remarks);
+}
+
+function getMachineGroupTitle(machine: Machine | null | undefined, host: string, remarks: Record<string, string>): string {
+  if (machine?.id && remarks[machine.id]?.trim()) {
+    return remarks[machine.id].trim();
+  }
+  return machine ? getMachineTitle(machine) : host;
+}
 
 function getPathDisplayName(path: string): string {
   const parts = path.split(/[\\/]+/).filter(Boolean);
@@ -51,31 +79,53 @@ function formatSessionDateTime(value: number | undefined): string | null {
 
 export function groupSessionsByHost(
   sessions: SessionSummary[],
+  machines: Machine[] = [],
+  remarks: Record<string, string> = {},
 ): SessionGroup[] {
-  const groups = new Map<string, SessionSummary[]>();
+  const sessionsByMachine = new Map<string, SessionSummary[]>();
+  const machineById = new Map(machines.map((machine) => [machine.id, machine]));
+  const seenMachineIds = new Set<string>();
 
   sessions.forEach((session) => {
+    const machineId = session.metadata?.machineId;
     const host = session.metadata?.host ?? "Unknown";
-    if (!groups.has(host)) {
-      groups.set(host, []);
+    const key = machineId ? `machine:${machineId}` : `host:${host}`;
+    if (machineId) {
+      seenMachineIds.add(machineId);
     }
-    groups.get(host)!.push(session);
+    if (!sessionsByMachine.has(key)) {
+      sessionsByMachine.set(key, []);
+    }
+    sessionsByMachine.get(key)!.push(session);
   });
 
-  return Array.from(groups.entries())
-    .map(([host, groupSessions]) => {
+  for (const machine of machines) {
+    if (seenMachineIds.has(machine.id)) continue;
+    sessionsByMachine.set(`machine:${machine.id}`, []);
+  }
+
+  return Array.from(sessionsByMachine.entries())
+    .map(([key, groupSessions]) => {
+      const firstSession = groupSessions[0] ?? null;
+      const machineId = firstSession?.metadata?.machineId ?? (key.startsWith("machine:") ? key.slice("machine:".length) : undefined);
+      const machine = machineId ? machineById.get(machineId) : undefined;
+      const host = firstSession?.metadata?.host ?? machine?.metadata?.host ?? "Unknown";
       const sortedSessions = [...groupSessions].sort((a, b) => {
         if (a.active !== b.active) return a.active ? -1 : 1;
         return b.updatedAt - a.updatedAt;
       });
       const latestUpdatedAt = groupSessions.reduce(
         (max, s) => (s.updatedAt > max ? s.updatedAt : max),
-        -Infinity,
+        machine?.updatedAt ?? -Infinity,
       );
       const hasActiveSession = groupSessions.some((s) => s.active);
 
       return {
+        key,
         host,
+        title: getMachineGroupTitle(machine, host, remarks),
+        machineId,
+        machineActive: machine?.active ?? hasActiveSession,
         sessions: sortedSessions,
         latestUpdatedAt,
         hasActiveSession,
@@ -84,6 +134,9 @@ export function groupSessionsByHost(
     .sort((a, b) => {
       if (a.hasActiveSession !== b.hasActiveSession) {
         return a.hasActiveSession ? -1 : 1;
+      }
+      if (a.machineActive !== b.machineActive) {
+        return a.machineActive ? -1 : 1;
       }
       return b.latestUpdatedAt - a.latestUpdatedAt;
     });
@@ -147,6 +200,83 @@ function ChevronIcon(props: { className?: string; collapsed?: boolean }) {
     >
       <polyline points="9 18 15 12 9 6" />
     </svg>
+  );
+}
+
+function MachineActionMenu(props: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSetRemark: () => void;
+  onRemoveRemark: () => void;
+  canRemoveRemark: boolean;
+  anchorPoint: { x: number; y: number };
+}) {
+  const { t } = useTranslation();
+  const {
+    isOpen,
+    onClose,
+    onSetRemark,
+    onRemoveRemark,
+    canRemoveRemark,
+    anchorPoint,
+  } = props;
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = () => onClose();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const top = Math.min(Math.max(anchorPoint.y + 8, 8), window.innerHeight - 96);
+  const left = Math.min(Math.max(anchorPoint.x - 80, 8), window.innerWidth - 208);
+  const itemClassName =
+    "flex w-full items-center rounded-md px-3 py-2 text-left text-base transition-colors hover:bg-[var(--app-subtle-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--app-link)]";
+
+  return (
+    <div
+      role="menu"
+      className="fixed z-[100] min-w-[200px] rounded-lg border border-[var(--app-border)] bg-[var(--app-bg)] p-1 shadow-lg animate-menu-pop"
+      style={{ top, left }}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        className={itemClassName}
+        onClick={() => {
+          onClose();
+          onSetRemark();
+        }}
+      >
+        {t("machine.action.setRemark")}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        disabled={!canRemoveRemark}
+        className={`${itemClassName} ${canRemoveRemark ? "" : "cursor-not-allowed opacity-45"}`}
+        onClick={() => {
+          if (!canRemoveRemark) return;
+          onClose();
+          onRemoveRemark();
+        }}
+      >
+        {t("machine.action.removeRemark")}
+      </button>
+    </div>
   );
 }
 
@@ -495,6 +625,7 @@ function SessionItem(props: {
 
 export function SessionList(props: {
   sessions: SessionSummary[];
+  machines?: Machine[];
   onSelect: (sessionId: string) => void;
   onNewSession: () => void;
   onNewSessionForHost?: (host: string) => void;
@@ -522,6 +653,12 @@ export function SessionList(props: {
     deletingSessionIds,
     onBatchToggleSelect,
   } = props;
+  const machines = props.machines ?? [];
+  const [machineRemarks, setMachineRemarks] = useState<Record<string, string>>(loadMachineRemarks);
+  const [machineMenu, setMachineMenu] = useState<{
+    group: SessionGroup;
+    anchorPoint: { x: number; y: number };
+  } | null>(null);
 
   const filteredSessions = useMemo(() => {
     if (!batchMode) return props.sessions;
@@ -530,8 +667,8 @@ export function SessionList(props: {
   }, [props.sessions, batchMode]);
 
   const groups = useMemo(
-    () => groupSessionsByHost(filteredSessions),
-    [filteredSessions],
+    () => groupSessionsByHost(filteredSessions, machines, machineRemarks),
+    [filteredSessions, machineRemarks, machines],
   );
   const [collapseOverrides, setCollapseOverrides] = useState<
     Map<string, boolean>
@@ -545,7 +682,7 @@ export function SessionList(props: {
   });
   const isGroupCollapsed = (group: SessionGroup): boolean => {
     if (batchMode) return false;
-    const override = collapseOverrides.get(group.host);
+    const override = collapseOverrides.get(group.key);
     if (override !== undefined) return override;
     return false;
   };
@@ -557,7 +694,7 @@ export function SessionList(props: {
     for (const group of groups) {
       const collapsed = batchMode
         ? false
-        : (collapseOverrides.get(group.host) ?? false);
+        : (collapseOverrides.get(group.key) ?? false);
       if (collapsed) continue;
 
       for (const session of group.sessions) {
@@ -571,10 +708,10 @@ export function SessionList(props: {
     return ids;
   }, [batchMode, collapseOverrides, groups]);
 
-  const toggleGroup = (host: string, isCollapsed: boolean) => {
+  const toggleGroup = (key: string, isCollapsed: boolean) => {
     setCollapseOverrides((prev) => {
       const next = new Map(prev);
-      next.set(host, !isCollapsed);
+      next.set(key, !isCollapsed);
       writeStorageJson("session", "hapi:panel:group-collapsed", [...next.entries()]);
       return next;
     });
@@ -585,11 +722,11 @@ export function SessionList(props: {
     setCollapseOverrides((prev) => {
       if (prev.size === 0) return prev;
       const next = new Map(prev);
-      const knownGroups = new Set(groups.map((group) => group.host));
+      const knownGroups = new Set(groups.map((group) => group.key));
       let changed = false;
-      for (const host of next.keys()) {
-        if (!knownGroups.has(host)) {
-          next.delete(host);
+      for (const key of next.keys()) {
+        if (!knownGroups.has(key)) {
+          next.delete(key);
           changed = true;
         }
       }
@@ -599,6 +736,24 @@ export function SessionList(props: {
       return changed ? next : prev;
     });
   }, [groups]);
+
+  const setMachineRemark = (machineId: string, remark: string) => {
+    setMachineRemarks((current) => {
+      const next = { ...current, [machineId]: remark };
+      saveMachineRemarks(next);
+      return next;
+    });
+  };
+
+  const removeMachineRemark = (machineId: string) => {
+    setMachineRemarks((current) => {
+      const next = { ...current };
+      delete next[machineId];
+      saveMachineRemarks(next);
+      return next;
+    });
+  };
+  const machineMenuHasRemark = Boolean(machineMenu?.group.machineId && machineRemarks[machineMenu.group.machineId]?.trim());
 
   return (
     <div
@@ -642,7 +797,7 @@ export function SessionList(props: {
               const isCollapsed = isGroupCollapsed(group);
               return (
                 <div
-                  key={group.host}
+                  key={group.key}
                   className={
                     index > 0 ? "border-t border-[var(--app-subtle-solid-bg)]" : ""
                   }
@@ -650,7 +805,16 @@ export function SessionList(props: {
                   <div className="sticky top-0 z-10 flex items-center gap-2 bg-[var(--app-subtle-solid-bg)] px-3 py-2 relative">
                     <button
                       type="button"
-                      onClick={() => toggleGroup(group.host, isCollapsed)}
+                      aria-label={`${group.title} (${group.sessions.length})`}
+                      onClick={() => toggleGroup(group.key, isCollapsed)}
+                      onContextMenu={(event) => {
+                        if (!group.machineId) return;
+                        event.preventDefault();
+                        setMachineMenu({
+                          group,
+                          anchorPoint: { x: event.clientX, y: event.clientY },
+                        });
+                      }}
                       className={`flex min-w-0 flex-1 items-center gap-2 text-left ${props.onNewSessionForHost ? "pr-9" : ""}`}
                     >
                     <svg
@@ -675,9 +839,13 @@ export function SessionList(props: {
                       className="h-4 w-4 text-[var(--app-hint)]"
                       collapsed={isCollapsed}
                     />
+                    <span
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${group.machineActive ? "bg-emerald-500" : "bg-[var(--app-hint)] opacity-55"}`}
+                      aria-label={`${group.title} ${group.machineActive ? "online" : "offline"}`}
+                    />
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className="break-words text-base font-medium">
-                        {group.host}
+                        {group.title}
                       </span>
                       <span className="shrink-0 text-sm text-[var(--app-hint)]">
                         ({group.sessions.length})
@@ -688,11 +856,12 @@ export function SessionList(props: {
                       <button
                         type="button"
                         onClick={() => {
-                          props.onNewSessionForHost?.(group.host);
+                          props.onNewSessionForHost?.(group.machineId ?? group.host);
                         }}
-                        className="session-list-new-button absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]"
+                        disabled={!group.machineActive}
+                        className={`session-list-new-button absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full ${group.machineActive ? "text-[var(--app-link)] hover:bg-[var(--app-secondary-bg)]" : "cursor-not-allowed text-[var(--app-hint)] opacity-45"}`}
                         title={t("sessions.new")}
-                        aria-label={`${t("sessions.new")} ${group.host}`}
+                        aria-label={`${t("sessions.new")} ${group.title}`}
                       >
                         <NewChatIcon className="h-5 w-5" />
                       </button>
@@ -727,6 +896,29 @@ export function SessionList(props: {
           </div>
         </div>
       ) : null}
+      <MachineActionMenu
+        isOpen={machineMenu !== null}
+        onClose={() => setMachineMenu(null)}
+        anchorPoint={machineMenu?.anchorPoint ?? { x: 0, y: 0 }}
+        canRemoveRemark={machineMenuHasRemark}
+        onSetRemark={() => {
+          const group = machineMenu?.group;
+          if (!group?.machineId) return;
+          const next = window.prompt(t("machine.remark.prompt"), machineMenuHasRemark ? group.title : "");
+          if (next === null) return;
+          const trimmed = next.trim();
+          if (!trimmed) {
+            removeMachineRemark(group.machineId);
+            return;
+          }
+          setMachineRemark(group.machineId, trimmed);
+        }}
+        onRemoveRemark={() => {
+          const group = machineMenu?.group;
+          if (!group?.machineId) return;
+          removeMachineRemark(group.machineId);
+        }}
+      />
     </div>
   );
 }

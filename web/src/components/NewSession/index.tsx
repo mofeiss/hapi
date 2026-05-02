@@ -46,10 +46,14 @@ import {
 } from './preferences'
 import { setPendingSessionMode } from '@/lib/pending-session-mode-store'
 import {
+    CLAUDE_CUSTOM_MODEL_OPTION_VALUE,
+    CLAUDE_DEFAULT_MODEL_OPTION_VALUE,
+    buildClaudeModelOptions,
     buildClaudeComposerModelOptions,
-    isClaudePresetModel,
+    isClaudeKnownModelOption,
     loadClaudeCustomModelValue,
-    normalizeClaudeModelValue
+    normalizeClaudeModelValue,
+    saveClaudeCustomModelValue
 } from '@/lib/claudeModels'
 
 function ChevronDownIcon() {
@@ -246,7 +250,7 @@ export function NewSession(props: {
     const [isDirectoryFocused, setIsDirectoryFocused] = useState(false)
     const [pathExistence, setPathExistence] = useState<Record<string, boolean>>({})
     const [agent, setAgent] = useState<AgentType>(preferredAgent)
-    const [model, setModel] = useState(() => preferredModel ?? 'opus')
+    const [model, setModel] = useState(() => preferredModel ?? CLAUDE_DEFAULT_MODEL_OPTION_VALUE)
     const [basePermissionMode, setBasePermissionMode] = useState<PermissionMode>(() => loadPreferredPermissionMode(preferredAgent))
     const [isPlanActive, setIsPlanActive] = useState<boolean>(loadPreferredPlanActive)
     const [sessionType, setSessionType] = useState<SessionType>(loadPreferredSessionType)
@@ -314,38 +318,51 @@ export function NewSession(props: {
         []
     )
     const activeClaudeCustomModel = useMemo(() => {
+        const baseClaudeOptions = buildClaudeComposerModelOptions(agentModelsData?.models)
         if (
             agent === 'claude' &&
             preferredModel
-            && !isClaudePresetModel(preferredModel)
-            && preferredModel !== 'custom'
+            && !isClaudeKnownModelOption(preferredModel, baseClaudeOptions)
+            && preferredModel !== CLAUDE_CUSTOM_MODEL_OPTION_VALUE
             && !preferredModel.startsWith('gpt-')
         ) {
             return preferredModel
         }
         return preferredClaudeCustomModel
-    }, [agent, preferredClaudeCustomModel, preferredModel])
+    }, [agent, agentModelsData?.models, preferredClaudeCustomModel, preferredModel])
 
     const modelOptions = useMemo(
         () => agent === 'codex'
             ? codexModelOptions.map((entry) => ({ value: entry.value, label: entry.label }))
-            : buildClaudeComposerModelOptions(activeClaudeCustomModel),
-        [agent, codexModelOptions, activeClaudeCustomModel]
+            : buildClaudeModelOptions(agentModelsData?.models, activeClaudeCustomModel),
+        [agent, agentModelsData?.models, codexModelOptions, activeClaudeCustomModel]
     )
 
     useEffect(() => {
+        const fallbackModel = agent === 'codex'
+            ? (
+                codexModelOptions.find((entry) => entry.isDefault)?.value
+                ?? modelOptions[0]?.value
+                ?? 'gpt-5.4'
+            )
+            : (
+                modelOptions.find((option) => option.value === CLAUDE_DEFAULT_MODEL_OPTION_VALUE)?.value
+                ?? modelOptions[0]?.value
+                ?? CLAUDE_DEFAULT_MODEL_OPTION_VALUE
+            )
+
         if (modelOptions.length === 0) {
-            if (model !== (agent === 'codex' ? 'gpt-5.4' : 'opus')) {
-                setModel(agent === 'codex' ? 'gpt-5.4' : 'opus')
+            if (model !== fallbackModel) {
+                setModel(fallbackModel)
             }
             return
         }
 
         const exists = modelOptions.some((option) => option.value === model)
         if (!exists) {
-            setModel(agent === 'codex' ? 'gpt-5.4' : 'opus')
+            setModel(fallbackModel)
         }
-    }, [agent, model, modelOptions])
+    }, [agent, codexModelOptions, model, modelOptions])
 
     const recentPaths = useMemo(
         () => getRecentPaths(machineId),
@@ -500,8 +517,8 @@ export function NewSession(props: {
         [basePermissionMode, isPlanActive]
     )
     const claudeComposerModelOptions = useMemo(
-        () => buildClaudeComposerModelOptions(activeClaudeCustomModel),
-        [activeClaudeCustomModel]
+        () => buildClaudeComposerModelOptions(agentModelsData?.models, activeClaudeCustomModel),
+        [agentModelsData?.models, activeClaudeCustomModel]
     )
     const composerCodexModel = useMemo(
         () => {
@@ -554,6 +571,15 @@ export function NewSession(props: {
         },
         [agent, composerCodexModel, model]
     )
+    const resolvedClaudeModel = useMemo(() => {
+        if (model === CLAUDE_DEFAULT_MODEL_OPTION_VALUE) {
+            return undefined
+        }
+        if (model === CLAUDE_CUSTOM_MODEL_OPTION_VALUE) {
+            return activeClaudeCustomModel ?? undefined
+        }
+        return model || undefined
+    }, [activeClaudeCustomModel, model])
     const getInitialMessageMeta = useCallback((): UserMessageMeta | undefined => {
         if (agent === 'codex' && composerCodexModel) {
             return {
@@ -564,12 +590,12 @@ export function NewSession(props: {
 
         if (agent === 'claude') {
             return {
-                model: model || null
+                model: resolvedClaudeModel ?? null
             }
         }
 
         return undefined
-    }, [agent, composerCodexModel, composerCodexReasoningEffort, model])
+    }, [agent, composerCodexModel, composerCodexReasoningEffort, resolvedClaudeModel])
     const handleAgentChange = useCallback((value: string) => {
         setAgent(value as AgentType)
     }, [])
@@ -579,6 +605,18 @@ export function NewSession(props: {
     const handleCodexModelChange = useCallback((nextModel: string) => {
         setModel(nextModel)
     }, [])
+    const handleClaudeModelChange = useCallback((nextModel: string) => {
+        setModel(nextModel)
+        const normalized = normalizeClaudeModelValue(nextModel)
+        if (
+            normalized
+            && normalized !== CLAUDE_DEFAULT_MODEL_OPTION_VALUE
+            && normalized !== CLAUDE_CUSTOM_MODEL_OPTION_VALUE
+            && !isClaudeKnownModelOption(normalized, claudeComposerModelOptions)
+        ) {
+            saveClaudeCustomModelValue(normalized)
+        }
+    }, [claudeComposerModelOptions])
 
     const handleCreate = useCallback(async (payload?: {
         text?: string
@@ -595,9 +633,7 @@ export function NewSession(props: {
         try {
             const resolvedModel = agent === 'codex'
                 ? (composerCodexModel ?? undefined)
-                : model !== 'auto'
-                    ? model
-                    : undefined
+                : resolvedClaudeModel
             const resolvedReasoningEffort = agent === 'codex'
                 ? (composerCodexReasoningEffort ?? undefined)
                 : undefined
@@ -655,6 +691,7 @@ export function NewSession(props: {
         props,
         composerCodexModel,
         composerCodexReasoningEffort,
+        resolvedClaudeModel,
         sessionType,
         setLastUsedMachineId,
         spawnSession,
@@ -836,7 +873,7 @@ export function NewSession(props: {
                                             onPlanToggle={handlePlanToggle}
                                             claudeModel={agent === 'claude' ? model : null}
                                             claudeModelOptions={agent === 'claude' ? claudeComposerModelOptions : []}
-                                            onClaudeModelChange={agent === 'claude' ? setModel : undefined}
+                                            onClaudeModelChange={agent === 'claude' ? handleClaudeModelChange : undefined}
                                             codexModel={agent === 'codex' ? composerCodexModel : null}
                                             codexModelOptions={agent === 'codex' ? codexComposerModelOptions : []}
                                             codexReasoningEffort={agent === 'codex' ? composerCodexReasoningEffort : null}
