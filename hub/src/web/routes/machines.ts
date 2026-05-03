@@ -23,6 +23,10 @@ const pathsExistsSchema = z.object({
     paths: z.array(z.string().min(1)).max(1000)
 })
 
+const machineNameSchema = z.object({
+    displayName: z.string().trim().min(1).max(255).nullable()
+})
+
 const diagnosticLoggingSchema = z.object({
     enabled: z.boolean()
 })
@@ -118,6 +122,33 @@ export function createMachinesRoutes(getSyncEngine: () => SyncEngine | null): Ho
         const result = await engine.listAgentModels(machineId, parsed.data.agent)
         const status = result.success ? 200 : 502
         return c.json(result, status)
+    })
+
+    app.patch('/machines/:id/name', async (c) => {
+        const engine = getSyncEngine()
+        if (!engine) {
+            return c.json({ error: 'Not connected' }, 503)
+        }
+
+        const machineId = c.req.param('id')
+        const machine = requireMachine(c, engine, machineId)
+        if (machine instanceof Response) {
+            return machine
+        }
+
+        const body = await c.req.json().catch(() => null)
+        const parsed = machineNameSchema.safeParse(body)
+        if (!parsed.success) {
+            return c.json({ error: 'Invalid body' }, 400)
+        }
+
+        const namespace = c.get('namespace')
+        try {
+            await engine.renameMachine(machineId, parsed.data.displayName, namespace)
+            return c.json({ ok: true })
+        } catch (error) {
+            return c.json({ error: error instanceof Error ? error.message : 'Failed to rename machine' }, 409)
+        }
     })
 
     app.post('/machines/:id/paths/exists', async (c) => {

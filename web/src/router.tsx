@@ -3050,7 +3050,7 @@ function SessionsPage() {
   const { addToast } = useToast();
   const { isDark, toggleTheme } = useTheme();
   const { sessions, isLoading, error, refetch } = useSessions(api);
-  const { machines } = useMachines(api, true);
+  const { machines, refetch: refetchMachines } = useMachines(api, true);
   const {
     tasks: scheduledTasks,
     runs: scheduledRuns,
@@ -5556,6 +5556,9 @@ function SessionsPage() {
                           toggleSessionOverlay();
                         }}
                         onRefresh={handleRefresh}
+                        onMachinesRefresh={() => {
+                          void refetchMachines();
+                        }}
                         isLoading={isLoading}
                         renderHeader={false}
                         fillHeight

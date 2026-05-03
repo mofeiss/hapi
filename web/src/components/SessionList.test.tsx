@@ -1,6 +1,7 @@
 import { cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionList } from './SessionList'
+import type { ApiClient } from '@/api/client'
 import type { SessionSummary } from '@/types/api'
 
 vi.mock('@/hooks/useLongPress', () => ({
@@ -115,7 +116,7 @@ describe('SessionList', () => {
         expect(screen.getByText('project/hapi')).toBeInTheDocument()
     })
 
-    it('shows machine remarks, status dots, and disables new sessions for offline machines', () => {
+    it('shows machine display names, status dots, and disables new sessions for offline machines', () => {
         const sessions: SessionSummary[] = [
             {
                 id: 'session-1',
@@ -135,8 +136,6 @@ describe('SessionList', () => {
                 pendingRequestsCount: 0,
             },
         ]
-        localStorage.setItem('hapi:machine-remarks', JSON.stringify({ 'machine-1': 'Desk Mini' }))
-
         render(
             <SessionList
                 sessions={sessions}
@@ -149,6 +148,7 @@ describe('SessionList', () => {
                             host: 'MacBook-Pro',
                             platform: 'darwin',
                             happyCliVersion: '0.1.0',
+                            displayName: 'Desk Mini',
                         },
                     },
                 ]}
@@ -168,8 +168,10 @@ describe('SessionList', () => {
         expect(screen.getByRole('button', { name: 'sessions.new Desk Mini' })).toBeDisabled()
     })
 
-    it('supports machine remark context menu actions', () => {
+    it('renames machines from the context menu through the api', () => {
         const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Desk Mini')
+        const renameMachine = vi.fn().mockResolvedValue(undefined)
+        const api = { renameMachine } as unknown as ApiClient
         const sessions: SessionSummary[] = [
             {
                 id: 'session-1',
@@ -210,18 +212,68 @@ describe('SessionList', () => {
                 onNewSessionForHost={vi.fn()}
                 onRefresh={vi.fn()}
                 isLoading={false}
-                api={null}
+                api={api}
                 selectedSessionId={null}
             />
         )
 
         fireEvent.contextMenu(screen.getByRole('button', { name: 'MacBook-Pro (1)' }))
-        fireEvent.click(screen.getByRole('menuitem', { name: 'machine.action.setRemark' }))
+        fireEvent.click(screen.getByRole('menuitem', { name: 'machine.action.rename' }))
         expect(promptSpy).toHaveBeenCalled()
-        expect(screen.getByText('Desk Mini')).toBeInTheDocument()
+        expect(renameMachine).toHaveBeenCalledWith('machine-1', 'Desk Mini')
+    })
+
+    it('clears machine custom names from the context menu through the api', () => {
+        const renameMachine = vi.fn().mockResolvedValue(undefined)
+        const api = { renameMachine } as unknown as ApiClient
+        const sessions: SessionSummary[] = [
+            {
+                id: 'session-1',
+                createdAt: Date.now(),
+                active: true,
+                thinking: false,
+                activeAt: Date.now(),
+                updatedAt: Date.now(),
+                metadata: {
+                    name: 'Alpha session',
+                    path: '/Users/ofeiss/project/hapi',
+                    host: 'MacBook-Pro',
+                    machineId: 'machine-1',
+                    flavor: 'codex',
+                },
+                todoProgress: null,
+                pendingRequestsCount: 0,
+            },
+        ]
+
+        render(
+            <SessionList
+                sessions={sessions}
+                machines={[
+                    {
+                        id: 'machine-1',
+                        active: true,
+                        updatedAt: Date.now(),
+                        metadata: {
+                            host: 'MacBook-Pro',
+                            platform: 'darwin',
+                            happyCliVersion: '0.1.0',
+                            displayName: 'Desk Mini',
+                        },
+                    },
+                ]}
+                onSelect={vi.fn()}
+                onNewSession={vi.fn()}
+                onNewSessionForHost={vi.fn()}
+                onRefresh={vi.fn()}
+                isLoading={false}
+                api={api}
+                selectedSessionId={null}
+            />
+        )
 
         fireEvent.contextMenu(screen.getByRole('button', { name: 'Desk Mini (1)' }))
-        fireEvent.click(screen.getByRole('menuitem', { name: 'machine.action.removeRemark' }))
-        expect(screen.getByText('MacBook-Pro')).toBeInTheDocument()
+        fireEvent.click(screen.getByRole('menuitem', { name: 'machine.action.clearName' }))
+        expect(renameMachine).toHaveBeenCalledWith('machine-1', null)
     })
 })

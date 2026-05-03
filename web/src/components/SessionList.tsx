@@ -12,7 +12,7 @@ import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import { useToast } from "@/lib/toast-context";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 import { readStorageJson, writeStorageJson } from "@/lib/storage";
-import { getMachineDisplayTitle, loadMachineRemarks, saveMachineRemarks } from "@/lib/machineDisplay";
+import { getMachineDisplayTitle } from "@/lib/machineDisplay";
 
 export type SessionGroup = {
   key: string;
@@ -25,8 +25,8 @@ export type SessionGroup = {
   hasActiveSession: boolean;
 };
 
-function getMachineGroupTitle(machine: Machine | null | undefined, host: string, remarks: Record<string, string>): string {
-  return machine ? getMachineDisplayTitle(machine, remarks, "Unknown") : host;
+function getMachineGroupTitle(machine: Machine | null | undefined, host: string): string {
+  return machine ? getMachineDisplayTitle(machine, undefined, "Unknown") : host;
 }
 
 function getPathDisplayName(path: string): string {
@@ -61,7 +61,6 @@ function formatSessionDateTime(value: number | undefined): string | null {
 export function groupSessionsByHost(
   sessions: SessionSummary[],
   machines: Machine[] = [],
-  remarks: Record<string, string> = {},
 ): SessionGroup[] {
   const sessionsByMachine = new Map<string, SessionSummary[]>();
   const machineById = new Map(machines.map((machine) => [machine.id, machine]));
@@ -104,7 +103,7 @@ export function groupSessionsByHost(
       return {
         key,
         host,
-        title: getMachineGroupTitle(machine, host, remarks),
+        title: getMachineGroupTitle(machine, host),
         machineId,
         machineActive: machine?.active ?? hasActiveSession,
         sessions: sortedSessions,
@@ -187,18 +186,18 @@ function ChevronIcon(props: { className?: string; collapsed?: boolean }) {
 function MachineActionMenu(props: {
   isOpen: boolean;
   onClose: () => void;
-  onSetRemark: () => void;
-  onRemoveRemark: () => void;
-  canRemoveRemark: boolean;
+  onRename: () => void;
+  onClearName: () => void;
+  canClearName: boolean;
   anchorPoint: { x: number; y: number };
 }) {
   const { t } = useTranslation();
   const {
     isOpen,
     onClose,
-    onSetRemark,
-    onRemoveRemark,
-    canRemoveRemark,
+    onRename,
+    onClearName,
+    canClearName,
     anchorPoint,
   } = props;
   useEffect(() => {
@@ -239,23 +238,23 @@ function MachineActionMenu(props: {
         className={itemClassName}
         onClick={() => {
           onClose();
-          onSetRemark();
+          onRename();
         }}
       >
-        {t("machine.action.setRemark")}
+        {t("machine.action.rename")}
       </button>
       <button
         type="button"
         role="menuitem"
-        disabled={!canRemoveRemark}
-        className={`${itemClassName} ${canRemoveRemark ? "" : "cursor-not-allowed opacity-45"}`}
+        disabled={!canClearName}
+        className={`${itemClassName} ${canClearName ? "" : "cursor-not-allowed opacity-45"}`}
         onClick={() => {
-          if (!canRemoveRemark) return;
+          if (!canClearName) return;
           onClose();
-          onRemoveRemark();
+          onClearName();
         }}
       >
-        {t("machine.action.removeRemark")}
+        {t("machine.action.clearName")}
       </button>
     </div>
   );
@@ -611,6 +610,7 @@ export function SessionList(props: {
   onNewSession: () => void;
   onNewSessionForHost?: (host: string) => void;
   onRefresh: () => void;
+  onMachinesRefresh?: () => void;
   isLoading: boolean;
   renderHeader?: boolean;
   fillHeight?: boolean;
@@ -623,6 +623,7 @@ export function SessionList(props: {
   onBatchToggleSelect?: (sessionId: string) => void;
 }) {
   const { t } = useTranslation();
+  const { addToast } = useToast();
   const {
     renderHeader = true,
     fillHeight = false,
@@ -635,11 +636,11 @@ export function SessionList(props: {
     onBatchToggleSelect,
   } = props;
   const machines = props.machines ?? [];
-  const [machineRemarks, setMachineRemarks] = useState<Record<string, string>>(loadMachineRemarks);
   const [machineMenu, setMachineMenu] = useState<{
     group: SessionGroup;
     anchorPoint: { x: number; y: number };
   } | null>(null);
+  const machineById = useMemo(() => new Map(machines.map((machine) => [machine.id, machine])), [machines]);
 
   const filteredSessions = useMemo(() => {
     if (!batchMode) return props.sessions;
@@ -648,8 +649,8 @@ export function SessionList(props: {
   }, [props.sessions, batchMode]);
 
   const groups = useMemo(
-    () => groupSessionsByHost(filteredSessions, machines, machineRemarks),
-    [filteredSessions, machineRemarks, machines],
+    () => groupSessionsByHost(filteredSessions, machines),
+    [filteredSessions, machines],
   );
   const [collapseOverrides, setCollapseOverrides] = useState<
     Map<string, boolean>
@@ -718,23 +719,31 @@ export function SessionList(props: {
     });
   }, [groups]);
 
-  const setMachineRemark = (machineId: string, remark: string) => {
-    setMachineRemarks((current) => {
-      const next = { ...current, [machineId]: remark };
-      saveMachineRemarks(next);
-      return next;
-    });
+  const renameMachine = (machineId: string, displayName: string | null) => {
+    if (!api) return;
+    void api.renameMachine(machineId, displayName)
+      .then(() => {
+        props.onRefresh();
+        props.onMachinesRefresh?.();
+      })
+      .catch((error) => {
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : t("dialog.error.default");
+        addToast({
+          title: t("machine.action.rename"),
+          body: message,
+          sessionId: machineId,
+          url: `/machines/${encodeURIComponent(machineId)}`,
+          variant: "error",
+        });
+      });
   };
-
-  const removeMachineRemark = (machineId: string) => {
-    setMachineRemarks((current) => {
-      const next = { ...current };
-      delete next[machineId];
-      saveMachineRemarks(next);
-      return next;
-    });
-  };
-  const machineMenuHasRemark = Boolean(machineMenu?.group.machineId && machineRemarks[machineMenu.group.machineId]?.trim());
+  const machineMenuMachine = machineMenu?.group.machineId
+    ? machineById.get(machineMenu.group.machineId)
+    : undefined;
+  const machineMenuHasCustomName = Boolean(machineMenuMachine?.metadata?.displayName?.trim());
 
   return (
     <div
@@ -881,23 +890,21 @@ export function SessionList(props: {
         isOpen={machineMenu !== null}
         onClose={() => setMachineMenu(null)}
         anchorPoint={machineMenu?.anchorPoint ?? { x: 0, y: 0 }}
-        canRemoveRemark={machineMenuHasRemark}
-        onSetRemark={() => {
+        canClearName={machineMenuHasCustomName}
+        onRename={() => {
           const group = machineMenu?.group;
           if (!group?.machineId) return;
-          const next = window.prompt(t("machine.remark.prompt"), machineMenuHasRemark ? group.title : "");
+          const machine = machineById.get(group.machineId);
+          const currentName = machine ? getMachineDisplayTitle(machine, undefined, group.title) : group.title;
+          const next = window.prompt(t("machine.rename.prompt"), currentName);
           if (next === null) return;
           const trimmed = next.trim();
-          if (!trimmed) {
-            removeMachineRemark(group.machineId);
-            return;
-          }
-          setMachineRemark(group.machineId, trimmed);
+          renameMachine(group.machineId, trimmed || null);
         }}
-        onRemoveRemark={() => {
+        onClearName={() => {
           const group = machineMenu?.group;
           if (!group?.machineId) return;
-          removeMachineRemark(group.machineId);
+          renameMachine(group.machineId, null);
         }}
       />
     </div>

@@ -447,6 +447,13 @@ export class ApiClient {
         return await this.request<MachinesResponse>('/api/machines')
     }
 
+    async renameMachine(machineId: string, displayName: string | null): Promise<void> {
+        await this.request(`/api/machines/${encodeURIComponent(machineId)}/name`, {
+            method: 'PATCH',
+            body: JSON.stringify({ displayName })
+        })
+    }
+
     async getScheduledTasks(): Promise<ScheduledTasksResponse> {
         return await this.request<ScheduledTasksResponse>('/api/scheduled-tasks')
     }

@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import type { Machine } from '@/types/api'
 import { buildNewSessionMachineOptions } from './machineOptions'
@@ -19,16 +19,13 @@ function machine(id: string, host: string): Machine {
 }
 
 describe('buildNewSessionMachineOptions', () => {
-    beforeEach(() => {
-        localStorage.clear()
-    })
-
-    it('uses machine remarks from local storage for new session machine labels', () => {
-        localStorage.setItem('hapi:machine-remarks', JSON.stringify({ 'machine-1': 'Desk Mini' }))
+    it('uses hub machine display names for new session machine labels', () => {
+        const machineWithName = machine('machine-1', 'MacBook-Pro')
+        machineWithName.metadata!.displayName = 'Desk Mini'
 
         const options = buildNewSessionMachineOptions({
             isLoading: false,
-            machines: [machine('machine-1', 'MacBook-Pro')],
+            machines: [machineWithName],
             t
         })
 

@@ -13,6 +13,10 @@ const machineMetadataSchema = z.object({
     happyLibDir: z.string().optional()
 })
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export interface Machine {
     id: string
     namespace: string
@@ -81,6 +85,46 @@ export class MachineCache {
     getOrCreateMachine(id: string, metadata: unknown, runnerState: unknown, namespace: string): Machine {
         const stored = this.store.machines.getOrCreateMachine(id, metadata, runnerState, namespace)
         return this.refreshMachine(stored.id) ?? (() => { throw new Error('Failed to load machine') })()
+    }
+
+    renameMachine(machineId: string, displayName: string | null, namespace: string): void {
+        const machine = this.machines.get(machineId) ?? this.refreshMachine(machineId)
+        if (!machine || machine.namespace !== namespace) {
+            throw new Error('Machine not found')
+        }
+
+        const stored = this.store.machines.getMachineByNamespace(machineId, namespace)
+        if (!stored) {
+            throw new Error('Machine not found')
+        }
+
+        const currentMetadata = isRecord(stored.metadata) ? stored.metadata : {
+            host: 'unknown',
+            platform: 'unknown',
+            happyCliVersion: 'unknown'
+        }
+        const nextMetadata = { ...currentMetadata }
+        if (displayName === null) {
+            delete nextMetadata.displayName
+        } else {
+            nextMetadata.displayName = displayName
+        }
+
+        const result = this.store.machines.updateMachineMetadata(
+            machineId,
+            nextMetadata,
+            stored.metadataVersion,
+            namespace
+        )
+
+        if (result.result === 'error') {
+            throw new Error('Failed to update machine metadata')
+        }
+        if (result.result === 'version-mismatch') {
+            throw new Error('Machine was modified concurrently. Please try again.')
+        }
+
+        this.refreshMachine(machineId)
     }
 
     refreshMachine(machineId: string): Machine | null {
