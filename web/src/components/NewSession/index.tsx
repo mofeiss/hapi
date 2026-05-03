@@ -33,13 +33,13 @@ import { buildCodexModelOptions, getHighestCodexReasoningEffort } from './types'
 import {
     loadPreferredAgent,
     loadPreferredDirectory,
-    loadPreferredModel,
+    loadPreferredModelForAgent,
     loadPreferredPermissionMode,
     loadPreferredPlanActive,
     loadPreferredSessionType,
     savePreferredAgent,
     savePreferredDirectory,
-    savePreferredModel,
+    savePreferredModelForAgent,
     savePreferredPermissionMode,
     savePreferredPlanActive,
     savePreferredSessionType,
@@ -56,6 +56,7 @@ import {
     saveClaudeCustomModelValue
 } from '@/lib/claudeModels'
 import { buildNewSessionMachineOptions } from './machineOptions'
+import { selectNewSessionModel } from './modelSelection'
 
 function ChevronDownIcon() {
     return (
@@ -231,7 +232,7 @@ export function NewSession(props: {
     const { sessions } = useSessions(props.api)
     const { getRecentPaths, addRecentPath, getLastUsedMachineId, setLastUsedMachineId } = useRecentPaths()
     const preferredAgent = loadPreferredAgent()
-    const preferredModel = normalizeClaudeModelValue(loadPreferredModel())
+    const preferredModel = normalizeClaudeModelValue(loadPreferredModelForAgent(preferredAgent))
     const isFormDisabled = Boolean(isPending || props.isLoading)
     const entryMode = props.entryMode ?? 'session'
     const titleKey = entryMode === 'task' ? 'newTask.title' : 'newSession.title'
@@ -271,10 +272,6 @@ export function NewSession(props: {
     }, [directory])
 
     useEffect(() => {
-        savePreferredModel(model)
-    }, [model])
-
-    useEffect(() => {
         savePreferredSessionType(sessionType)
     }, [sessionType])
 
@@ -301,11 +298,13 @@ export function NewSession(props: {
         }
     }, [getLastUsedMachineId, machineId, props.initialMachineId, props.machines])
 
-    const { data: agentModelsData } = useAgentModels(props.api, machineId, agent)
+    const { data: agentModelsData, isLoading: agentModelsLoading } = useAgentModels(props.api, machineId, agent)
 
     const codexModelOptions = useMemo(
-        () => buildCodexModelOptions(agentModelsData?.models),
-        [agentModelsData?.models]
+        () => agent === 'codex' && agentModelsLoading && !agentModelsData?.models
+            ? []
+            : buildCodexModelOptions(agentModelsData?.models),
+        [agent, agentModelsData?.models, agentModelsLoading]
     )
     const preferredClaudeCustomModel = useMemo(
         () => normalizeClaudeModelValue(loadClaudeCustomModelValue()),
@@ -333,30 +332,17 @@ export function NewSession(props: {
     )
 
     useEffect(() => {
-        const fallbackModel = agent === 'codex'
-            ? (
-                codexModelOptions.find((entry) => entry.isDefault)?.value
-                ?? modelOptions[0]?.value
-                ?? 'gpt-5.4'
-            )
-            : (
-                modelOptions.find((option) => option.value === CLAUDE_DEFAULT_MODEL_OPTION_VALUE)?.value
-                ?? modelOptions[0]?.value
-                ?? CLAUDE_DEFAULT_MODEL_OPTION_VALUE
-            )
+        if (modelOptions.length === 0) return
 
-        if (modelOptions.length === 0) {
-            if (model !== fallbackModel) {
-                setModel(fallbackModel)
-            }
-            return
+        const nextModel = selectNewSessionModel({
+            currentModel: model,
+            preferredModel: normalizeClaudeModelValue(loadPreferredModelForAgent(agent)),
+            modelOptions
+        })
+        if (nextModel && nextModel !== model) {
+            setModel(nextModel)
         }
-
-        const exists = modelOptions.some((option) => option.value === model)
-        if (!exists) {
-            setModel(fallbackModel)
-        }
-    }, [agent, codexModelOptions, model, modelOptions])
+    }, [agent, model, modelOptions])
 
     const recentPaths = useMemo(
         () => getRecentPaths(machineId),
@@ -516,9 +502,7 @@ export function NewSession(props: {
                 return model
             }
 
-            return codexModelOptions.find((entry) => entry.isDefault)?.value
-                ?? codexModelOptions[0]?.value
-                ?? null
+            return codexModelOptions[0]?.value ?? null
         },
         [agent, codexModelOptions, model]
     )
@@ -590,9 +574,11 @@ export function NewSession(props: {
     }, [])
     const handleCodexModelChange = useCallback((nextModel: string) => {
         setModel(nextModel)
+        savePreferredModelForAgent('codex', nextModel)
     }, [])
     const handleClaudeModelChange = useCallback((nextModel: string) => {
         setModel(nextModel)
+        savePreferredModelForAgent('claude', nextModel)
         const normalized = normalizeClaudeModelValue(nextModel)
         if (
             normalized
@@ -645,6 +631,7 @@ export function NewSession(props: {
             }
 
             haptic.notification('success')
+            savePreferredModelForAgent(agent, resolvedModel ?? CLAUDE_DEFAULT_MODEL_OPTION_VALUE)
             setLastUsedMachineId(machineId)
             addRecentPath(machineId, directory.trim())
             setPendingSessionMode(result.sessionId, {

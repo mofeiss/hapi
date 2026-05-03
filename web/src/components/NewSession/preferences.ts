@@ -5,6 +5,10 @@ import { CLAUDE_DEFAULT_MODEL_OPTION_VALUE } from '@/lib/claudeModels'
 
 const AGENT_STORAGE_KEY = 'hapi:newSession:agent'
 const MODEL_STORAGE_KEY = 'hapi:newSession:model'
+const AGENT_MODEL_STORAGE_KEYS: Record<AgentType, string> = {
+    claude: 'hapi:newSession:model:claude',
+    codex: 'hapi:newSession:model:codex'
+}
 const REASONING_EFFORT_STORAGE_KEY = 'hapi:newSession:reasoningEffort'
 const PERMISSION_MODE_STORAGE_KEY = 'hapi:newSession:permissionMode:v2'
 const LEGACY_PERMISSION_MODE_STORAGE_KEY = 'hapi:newSession:permissionMode'
@@ -54,6 +58,41 @@ export function savePreferredModel(model: string): void {
         return
     }
     try {
+        localStorage.setItem(MODEL_STORAGE_KEY, trimmed)
+    } catch {
+        // Ignore storage errors
+    }
+}
+
+function readStoredModel(key: string): string | null {
+    try {
+        const stored = localStorage.getItem(key)
+        if (stored && stored.trim()) {
+            return stored.trim()
+        }
+    } catch {
+        // Ignore storage errors
+    }
+    return null
+}
+
+export function loadPreferredModelForAgent(agent: AgentType): string | null {
+    const stored = readStoredModel(AGENT_MODEL_STORAGE_KEYS[agent])
+    if (stored) {
+        return stored
+    }
+
+    return null
+}
+
+export function savePreferredModelForAgent(agent: AgentType, model: string): void {
+    const trimmed = model.trim()
+    if (!trimmed) {
+        return
+    }
+
+    try {
+        localStorage.setItem(AGENT_MODEL_STORAGE_KEYS[agent], trimmed)
         localStorage.setItem(MODEL_STORAGE_KEY, trimmed)
     } catch {
         // Ignore storage errors

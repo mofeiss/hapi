@@ -36,7 +36,7 @@ import { useToast } from '@/lib/toast-context'
 import { useTranslation } from '@/lib/use-translation'
 import { useAgentModels } from '@/hooks/queries/useAgentModels'
 import { buildCodexModelOptions, DEPRECATED_GEMINI_MODEL_OPTIONS, getHighestCodexReasoningEffort, MODEL_OPTIONS, type CodexModelOption } from '@/components/NewSession/types'
-import { loadPreferredModel, savePreferredModel } from '@/components/NewSession/preferences'
+import { loadPreferredModel, loadPreferredModelForAgent, savePreferredModel, savePreferredModelForAgent } from '@/components/NewSession/preferences'
 import {
     CLAUDE_DEFAULT_MODEL_OPTION_VALUE,
     buildClaudeComposerModelOptions,
@@ -168,7 +168,7 @@ export function SessionChat(props: {
     const isClaudeSession = agentFlavor === 'claude'
     const isGeminiSession = agentFlavor === 'gemini'
     const preferredClaudeModel = useMemo(
-        () => normalizeClaudeModelValue(loadPreferredModel()),
+        () => normalizeClaudeModelValue(loadPreferredModelForAgent('claude') ?? loadPreferredModel()),
         []
     )
     const preferredClaudeCustomModel = useMemo(
@@ -224,10 +224,11 @@ export function SessionChat(props: {
 
         const modelValues = new Set(codexModelOptions.map((entry) => entry.value))
         const sessionModel = props.session.metadata?.model?.trim()
+        const preferredCodexModel = loadPreferredModelForAgent('codex')
         const preferredModel = (
             (composerCodexModel && modelValues.has(composerCodexModel) ? composerCodexModel : null)
             ?? (sessionModel && modelValues.has(sessionModel) ? sessionModel : null)
-            ?? codexModelOptions.find((entry) => entry.isDefault)?.value
+            ?? (preferredCodexModel && modelValues.has(preferredCodexModel) ? preferredCodexModel : null)
             ?? codexModelOptions[0]?.value
             ?? null
         )
@@ -256,6 +257,11 @@ export function SessionChat(props: {
         composerCodexModel,
         composerCodexReasoningEffort
     ])
+
+    const handleCodexModelChange = useCallback((model: string) => {
+        setComposerCodexModel(model)
+        savePreferredModelForAgent('codex', model)
+    }, [])
 
     const sessionClaudeModel = useMemo(
         () => normalizeClaudeModelValue(props.session.metadata?.model),
@@ -346,6 +352,7 @@ export function SessionChat(props: {
 
         setComposerClaudeModel(normalized)
         savePreferredModel(normalized)
+        savePreferredModelForAgent('claude', normalized)
 
         if (!isClaudeKnownModelOption(normalized, resolvedClaudeComposerModelOptions) && normalized !== 'auto') {
             saveClaudeCustomModelValue(normalized)
@@ -1141,7 +1148,7 @@ export function SessionChat(props: {
                                     codexModelOptions={codexComposerModelOptions}
                                     codexReasoningEffort={composerCodexReasoningEffort}
                                     codexReasoningOptions={[]}
-                                    onCodexModelChange={setComposerCodexModel}
+                                    onCodexModelChange={handleCodexModelChange}
                                     onCodexReasoningEffortChange={setComposerCodexReasoningEffort}
                                     autocompleteSuggestions={props.autocompleteSuggestions}
                                     voiceStatus={sttVoiceStatus}

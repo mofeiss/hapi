@@ -62,12 +62,7 @@ export function buildCodexModelOptions(models: AgentModel[] | undefined): CodexM
         return FALLBACK_CODEX_MODELS
     }
 
-    visible.sort((left, right) => {
-        if (left.isDefault !== right.isDefault) {
-            return left.isDefault ? -1 : 1
-        }
-        return left.label.localeCompare(right.label)
-    })
+    visible.sort((left, right) => right.label.localeCompare(left.label, undefined, { numeric: true, sensitivity: 'base' }))
     return visible
 }
 

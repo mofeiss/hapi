@@ -21,15 +21,29 @@ function codexModel(model: string, isDefault = false): AgentModel {
 describe('buildCodexModelOptions', () => {
     it('keeps all visible dynamic Codex models returned by the runner', () => {
         const options = buildCodexModelOptions([
-            codexModel('gpt-5.4'),
-            codexModel('gpt-5.5-codex', true),
+            codexModel('gpt-5.4', true),
+            codexModel('gpt-5.5-codex'),
             codexModel('gpt-5.5-codex-mini')
         ])
 
         expect(options.map((option) => option.value)).toEqual([
+            'gpt-5.5-codex-mini',
             'gpt-5.5-codex',
+            'gpt-5.4'
+        ])
+    })
+
+    it('sorts Codex models from highest display label to lowest without pinning app defaults first', () => {
+        const options = buildCodexModelOptions([
+            codexModel('gpt-5.4', true),
+            codexModel('gpt-5.5'),
+            codexModel('gpt-5.3')
+        ])
+
+        expect(options.map((option) => option.value)).toEqual([
+            'gpt-5.5',
             'gpt-5.4',
-            'gpt-5.5-codex-mini'
+            'gpt-5.3'
         ])
     })
 

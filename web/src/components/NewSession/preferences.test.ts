@@ -3,6 +3,7 @@ import {
     loadPreferredAgent,
     loadPreferredDirectory,
     loadPreferredModel,
+    loadPreferredModelForAgent,
     loadPreferredPermissionMode,
     loadPreferredPlanActive,
     loadPreferredReasoningEffort,
@@ -11,6 +12,7 @@ import {
     savePreferredAgent,
     savePreferredDirectory,
     savePreferredModel,
+    savePreferredModelForAgent,
     savePreferredPermissionMode,
     savePreferredPlanActive,
     savePreferredReasoningEffort,
@@ -30,6 +32,8 @@ describe('NewSession preferences', () => {
         expect(loadPreferredPlanActive()).toBe(false)
         expect(loadPreferredDirectory()).toBe('~')
         expect(loadPreferredModel()).toBe('default')
+        expect(loadPreferredModelForAgent('claude')).toBe(null)
+        expect(loadPreferredModelForAgent('codex')).toBe(null)
         expect(loadPreferredReasoningEffort()).toBe('auto')
         expect(loadPreferredSessionType()).toBe('simple')
         expect(loadPreferredWorktreeName()).toBe('')
@@ -47,6 +51,8 @@ describe('NewSession preferences', () => {
 
         expect(loadPreferredAgent()).toBe('codex')
         expect(loadPreferredModel()).toBe('gpt-5.4')
+        expect(loadPreferredModelForAgent('codex')).toBe(null)
+        expect(loadPreferredModelForAgent('claude')).toBe(null)
         expect(loadPreferredReasoningEffort()).toBe('high')
         expect(loadPreferredPermissionMode()).toBe('safe-yolo')
         expect(loadPreferredPlanActive()).toBe(true)
@@ -77,6 +83,8 @@ describe('NewSession preferences', () => {
         savePreferredPlanActive(true)
         savePreferredDirectory('/tmp')
         savePreferredModel('gpt-5.4')
+        savePreferredModelForAgent('claude', 'sonnet')
+        savePreferredModelForAgent('codex', 'gpt-5.5')
         savePreferredReasoningEffort('xhigh')
         savePreferredSessionType('worktree')
         savePreferredWorktreeName('feature/remember-me')
@@ -85,7 +93,9 @@ describe('NewSession preferences', () => {
         expect(localStorage.getItem('hapi:newSession:permissionMode:v2')).toBe('bypassPermissions')
         expect(localStorage.getItem('hapi:newSession:planActive')).toBe('true')
         expect(localStorage.getItem('hapi:newSession:directory')).toBe('/tmp')
-        expect(localStorage.getItem('hapi:newSession:model')).toBe('gpt-5.4')
+        expect(localStorage.getItem('hapi:newSession:model')).toBe('gpt-5.5')
+        expect(localStorage.getItem('hapi:newSession:model:claude')).toBe('sonnet')
+        expect(localStorage.getItem('hapi:newSession:model:codex')).toBe('gpt-5.5')
         expect(localStorage.getItem('hapi:newSession:reasoningEffort')).toBe('xhigh')
         expect(localStorage.getItem('hapi:newSession:sessionType')).toBe('worktree')
         expect(localStorage.getItem('hapi:newSession:worktreeName')).toBe('feature/remember-me')
@@ -97,5 +107,15 @@ describe('NewSession preferences', () => {
 
         expect(loadPreferredReasoningEffort()).toBe('auto')
         expect(loadPreferredSessionType()).toBe('simple')
+    })
+
+    it('keeps agent model preferences separate and ignores the legacy model key for defaults', () => {
+        localStorage.setItem('hapi:newSession:model', 'gpt-5.4')
+        expect(loadPreferredModelForAgent('codex')).toBe(null)
+        expect(loadPreferredModelForAgent('claude')).toBe(null)
+
+        localStorage.setItem('hapi:newSession:model', 'sonnet')
+        expect(loadPreferredModelForAgent('claude')).toBe(null)
+        expect(loadPreferredModelForAgent('codex')).toBe(null)
     })
 })
