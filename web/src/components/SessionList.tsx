@@ -12,6 +12,7 @@ import { useSessionTitleOverride } from "@/lib/session-title-override-store";
 import { useToast } from "@/lib/toast-context";
 import { AgentFlavorStatusIcon } from "@/components/AgentFlavorStatusIcon";
 import { readStorageJson, writeStorageJson } from "@/lib/storage";
+import { getMachineDisplayTitle, loadMachineRemarks, saveMachineRemarks } from "@/lib/machineDisplay";
 
 export type SessionGroup = {
   key: string;
@@ -24,28 +25,8 @@ export type SessionGroup = {
   hasActiveSession: boolean;
 };
 
-const MACHINE_REMARKS_STORAGE_KEY = "hapi:machine-remarks";
-
-function getMachineTitle(machine: Machine | null | undefined): string {
-  if (machine?.metadata?.displayName) return machine.metadata.displayName;
-  if (machine?.metadata?.host) return machine.metadata.host;
-  if (machine?.id) return machine.id.slice(0, 8);
-  return "Unknown";
-}
-
-function loadMachineRemarks(): Record<string, string> {
-  return readStorageJson<Record<string, string>>("local", MACHINE_REMARKS_STORAGE_KEY) ?? {};
-}
-
-function saveMachineRemarks(remarks: Record<string, string>): void {
-  writeStorageJson("local", MACHINE_REMARKS_STORAGE_KEY, remarks);
-}
-
 function getMachineGroupTitle(machine: Machine | null | undefined, host: string, remarks: Record<string, string>): string {
-  if (machine?.id && remarks[machine.id]?.trim()) {
-    return remarks[machine.id].trim();
-  }
-  return machine ? getMachineTitle(machine) : host;
+  return machine ? getMachineDisplayTitle(machine, remarks, "Unknown") : host;
 }
 
 function getPathDisplayName(path: string): string {

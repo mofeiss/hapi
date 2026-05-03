@@ -55,6 +55,7 @@ import {
     normalizeClaudeModelValue,
     saveClaudeCustomModelValue
 } from '@/lib/claudeModels'
+import { buildNewSessionMachineOptions } from './machineOptions'
 
 function ChevronDownIcon() {
     return (
@@ -132,13 +133,6 @@ function LayersIcon() {
             <path d="m4 15 8 4 8-4" />
         </svg>
     )
-}
-
-function getMachineTitle(machine: Machine | null | undefined): string {
-    if (machine?.metadata?.displayName) return machine.metadata.displayName
-    if (machine?.metadata?.host) return machine.metadata.host
-    if (machine?.id) return machine.id.slice(0, 8)
-    return ''
 }
 
 const EMPTY_AGENT_STATE = null
@@ -482,19 +476,11 @@ export function NewSession(props: {
     ]), [])
 
     const machineOptions = useMemo(
-        () => {
-            if (props.isLoading) {
-                return [{ value: '', label: t('loading.machines') }]
-            }
-            if (props.machines.length === 0) {
-                return [{ value: '', label: t('misc.noMachines') }]
-            }
-
-            return props.machines.map((machine) => ({
-                value: machine.id,
-                label: getMachineTitle(machine)
-            }))
-        },
+        () => buildNewSessionMachineOptions({
+            isLoading: props.isLoading,
+            machines: props.machines,
+            t
+        }),
         [props.isLoading, props.machines, t]
     )
 
